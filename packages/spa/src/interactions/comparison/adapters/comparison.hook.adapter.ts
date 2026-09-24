@@ -10,7 +10,7 @@
  * something you can link to, go back out of, and reload into.
  */
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   comparisonSearch,
   resolveComparison,
@@ -66,6 +66,19 @@ export function useLocalComparison(): LocalComparisonState {
       }),
     [navigate]
   );
+
+  // A chosen comparison belongs to the branch it was chosen on; once checkout
+  // moves to another one, whatever it was pointed at is almost certainly not
+  // what you meant to see here. `undefined` marks "haven't seen a branch yet"
+  // so a deep link's own `?target=` survives the first render.
+  const previousBranchRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const previous = previousBranchRef.current;
+    previousBranchRef.current = branch;
+    if (previous !== undefined && previous !== branch) {
+      compareAgainst(null);
+    }
+  }, [branch, compareAgainst]);
 
   const names = useMemo(
     () => (branches.data ?? []).map((entry) => entry.name),

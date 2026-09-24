@@ -52,9 +52,9 @@ describe("clippedText", () => {
   });
 
   it("falls back to the row when the row itself clips", () => {
-    const row = sized(`Checkout and Update`, [[":scope", 400, 160]]);
+    const row = sized(`Checkout and update`, [[":scope", 400, 160]]);
 
-    expect(clippedText(row)).toBe("Checkout and Update");
+    expect(clippedText(row)).toBe("Checkout and update");
   });
 
   it("has nothing to say about a clipped row holding only icons", () => {

@@ -8,7 +8,7 @@
  * shape as the app's other module stores.
  *
  * The ref resets when the repository changes: a branch name means something
- * different, or nothing, in another root.
+ * different, or nothing, in another repository.
  */
 import { useSyncExternalStore } from "react";
 import { emptyLogQuery, type LogQuery } from "@/lib/api/types";
@@ -17,14 +17,11 @@ interface HistoryFilters {
   /** The ref whose history the dock lists, or null to follow HEAD. */
   readonly ref: string | null;
   readonly query: LogQuery;
-  /** Which root the merged history is narrowed to, for a multi-root project. */
-  readonly repo: string | null;
 }
 
 const initial: HistoryFilters = {
   ref: null,
   query: emptyLogQuery,
-  repo: null,
 };
 
 let state: HistoryFilters = initial;
@@ -41,7 +38,6 @@ const set = (patch: Partial<HistoryFilters>) => {
 
 export const setHistoryRef = (ref: string | null) => set({ ref });
 export const setHistoryQuery = (query: LogQuery) => set({ query });
-export const setHistoryRepo = (repo: string | null) => set({ repo });
 
 /** Follow one file's past — the "Show history" action, from wherever it is. */
 export const showPathHistory = (query: LogQuery) => set({ query });

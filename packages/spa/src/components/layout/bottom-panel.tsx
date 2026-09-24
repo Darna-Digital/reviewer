@@ -6,6 +6,7 @@ import {
   IconPlayerPlay,
   IconSearch,
   IconTerminal2,
+  IconX,
 } from "@tabler/icons-react";
 import { CommitHistory } from "@/components/git/commit-history";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -19,11 +20,11 @@ import {
 import { FindUsagesPanel } from "@/interactions/find-usages/components/find-usages-panel";
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
 import { ThreadsPage } from "@/interactions/threads/components/threads-page";
+import { island } from "@/lib/shell";
 import type { LogQuery } from "@/lib/api/types";
 import { dockPage } from "@/lib/shell-route";
 import type { BottomTab } from "@/lib/ui-prefs";
 import type { BranchInfo, CommitInfo } from "@reviewer/core/repo";
-import type { RepoEntry } from "@reviewer/core/workspace";
 import { useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
@@ -47,10 +48,29 @@ const TABS: ReadonlyArray<{
 }> = [
   { id: "branches", label: "Branches", icon: ICONS.branches },
   { id: "history", label: "History", icon: ICONS.history },
-  { id: "find", label: "Find", icon: ICONS.find },
+  { id: "find", label: "Find symbol", icon: ICONS.find },
   { id: "services", label: "Services", icon: ICONS.services },
   { id: "threads", label: "Terminal sessions", icon: ICONS.threads },
 ];
+
+/**
+ * The surfaces the macOS shell draws natively in its own bottom pane — its
+ * Branches, History, Terminal and Run — so inside an island the drawer holds
+ * only find usages and never mounts these.
+ */
+const NATIVE_IN_SHELL: ReadonlySet<BottomTab> = new Set([
+  "branches",
+  "history",
+  "services",
+  "threads",
+]);
+
+/** Whether `tab` is the shell's to draw rather than this document's. */
+export const nativeInShell = (tab: BottomTab): boolean =>
+  island !== undefined && NATIVE_IN_SHELL.has(tab);
+
+const shownTabs = () =>
+  island === undefined ? TABS : TABS.filter((t) => !NATIVE_IN_SHELL.has(t.id));
 
 interface BottomPanelProps {
   tab: BottomTab;
@@ -72,14 +92,6 @@ interface BottomPanelProps {
   branches: ReadonlyArray<BranchInfo>;
   currentBranch: string | null;
   commits: ReadonlyArray<CommitInfo>;
-  /** Which root each commit came from, for a project of several. */
-  commitRepos?: ReadonlyMap<string, RepoEntry>;
-  /** The project's roots and the one the history is narrowed to, if any. */
-  repos?: ReadonlyArray<RepoEntry>;
-  repoFilter?: string | null;
-  /** The project's own name, for the "all repositories" avatar. */
-  projectName?: string;
-  onRepoFilterChange?: (repoPath: string | null) => void;
   commitsLoading: boolean;
   commitsHaveMore: boolean;
   logRef: string | null;
@@ -108,10 +120,12 @@ const paneProps = (index: number, expanded: boolean): ComponentProps<"div"> =>
       };
 
 export function BottomPanel(props: BottomPanelProps) {
+  const tabs = shownTabs();
   const selectedIndex = Math.max(
     0,
-    TABS.findIndex((t) => t.id === props.tab)
+    tabs.findIndex((t) => t.id === props.tab)
   );
+  const at = (tab: BottomTab) => tabs.findIndex((t) => t.id === tab);
 
   // Services and Threads own live terminals, so once opened they stay mounted
   // while hidden. Until first opened they cost nothing.
@@ -127,17 +141,21 @@ export function BottomPanel(props: BottomPanelProps) {
       {props.expanded ? (
         <PageTrail tab={props.tab} />
       ) : (
-        <div className="flex h-9 shrink-0 items-center border-b border-hairline px-1">
+        // No left inset: a tab's own 10px of padding then puts its glyph on
+        // the 18px centre line the surface under it uses for its first column
+        // of icons — the Find rail's — so the strip reads as the top of that
+        // column rather than as a row that happens to sit above it.
+        <div className="flex h-9 shrink-0 items-center border-b border-hairline pr-1 pl-0">
           <TabsSubtle
             idPrefix="bottom-dock"
             className="min-w-0"
             selectedIndex={selectedIndex}
             onSelect={(index) => {
-              const next = TABS[index];
+              const next = tabs[index];
               if (next) props.onTabChange(next.id);
             }}
           >
-            {TABS.map((t, index) => (
+            {tabs.map((t, index) => (
               <TabsSubtleItem
                 key={t.id}
                 index={index}
@@ -147,14 +165,26 @@ export function BottomPanel(props: BottomPanelProps) {
             ))}
           </TabsSubtle>
           <div className="ml-auto flex items-center">
+            {/* Find is a three-column reading surface that already has the
+                width it wants in the drawer; a page of it is only the same
+                three columns with more air, so it does not offer one. */}
+            {props.tab !== "find" && (
+              <PanelButton
+                label="Expand to full page"
+                icon={IconArrowsDiagonal}
+                onClick={props.onExpand}
+              />
+            )}
+            {/* A drawer folds down into the strip it came from, and outside
+                the shell that strip is there under it — so the control is the
+                chevron that folds it. Inside the shell the drawer is an island
+                of its own, standing on nothing, with the surfaces it shares the
+                foot of the window with drawn natively beside it: there is
+                nothing to fold into, so it is dismissed instead, with the ✕
+                that dismisses a panel everywhere in macOS. */}
             <PanelButton
-              label="Expand to full page"
-              icon={IconArrowsDiagonal}
-              onClick={props.onExpand}
-            />
-            <PanelButton
-              label="Collapse panel"
-              icon={IconChevronDown}
+              label={island === undefined ? "Collapse panel" : "Close panel"}
+              icon={island === undefined ? IconChevronDown : IconX}
               onClick={props.onCollapse}
             />
           </div>
@@ -162,7 +192,7 @@ export function BottomPanel(props: BottomPanelProps) {
       )}
 
       <div
-        {...paneProps(0, props.expanded)}
+        {...paneProps(at("branches"), props.expanded)}
         hidden={props.tab !== "branches"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -173,7 +203,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(1, props.expanded)}
+        {...paneProps(at("history"), props.expanded)}
         hidden={props.tab !== "history"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -190,11 +220,6 @@ export function BottomPanel(props: BottomPanelProps) {
             hasMore={props.commitsHaveMore}
             selectedCommitSha={props.selectedCommitSha}
             selectedFile={props.selectedCommitFile}
-            commitRepos={props.commitRepos}
-            repos={props.repos}
-            repoFilter={props.repoFilter}
-            projectName={props.projectName}
-            onRepoFilterChange={props.onRepoFilterChange}
             onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}
             onQueryChange={props.onLogFiltersChange}
@@ -205,7 +230,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(2, props.expanded)}
+        {...paneProps(at("find"), props.expanded)}
         hidden={props.tab !== "find"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -215,27 +240,31 @@ export function BottomPanel(props: BottomPanelProps) {
         {props.active && props.tab === "find" && <FindUsagesPanel />}
       </div>
 
-      <div
-        {...paneProps(3, props.expanded)}
-        hidden={props.tab !== "services"}
-        className={cn(
-          "min-h-0 flex-1 overflow-hidden outline-none",
-          props.tab !== "services" && "hidden"
-        )}
-      >
-        {visitedTabs.has("services") && <LocalDevPage />}
-      </div>
+      {at("services") >= 0 && (
+        <div
+          {...paneProps(at("services"), props.expanded)}
+          hidden={props.tab !== "services"}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden outline-none",
+            props.tab !== "services" && "hidden"
+          )}
+        >
+          {visitedTabs.has("services") && <LocalDevPage />}
+        </div>
+      )}
 
-      <div
-        {...paneProps(4, props.expanded)}
-        hidden={props.tab !== "threads"}
-        className={cn(
-          "min-h-0 flex-1 overflow-hidden outline-none",
-          props.tab !== "threads" && "hidden"
-        )}
-      >
-        {visitedTabs.has("threads") && <ThreadsPage />}
-      </div>
+      {at("threads") >= 0 && (
+        <div
+          {...paneProps(at("threads"), props.expanded)}
+          hidden={props.tab !== "threads"}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden outline-none",
+            props.tab !== "threads" && "hidden"
+          )}
+        >
+          {visitedTabs.has("threads") && <ThreadsPage />}
+        </div>
+      )}
     </div>
   );
 }

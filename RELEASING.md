@@ -1,51 +1,122 @@
-# Releasing Reviewer (desktop)
+# Releasing Reviewer
 
-Two channels, each a separate signed app with its own release feed:
+Reviewer ships as one thing: the native macOS app in `packages/mac-os`,
+distributed as a signed, notarized disk image on this repository's GitHub
+releases. There is one channel and no beta.
 
-| Channel | Trigger | Publishes to | Signed | Notarized | Auto-update |
-| --- | --- | --- | --- | --- | --- |
-| **Beta** | push to `staging` | `darna-digital/reviewer-beta` | yes | no | no (manual download) |
-| **Production** | push to `main` | `darna-digital/reviewer` | yes | yes | yes |
+## Branches
 
-Local dev is unchanged: `pnpm dev:desktop`. It defaults to the production app
-identity and never touches CI or signing.
+| Branch          | What it is                         | What a push does                              |
+| --------------- | ---------------------------------- | --------------------------------------------- |
+| feature branch  | work in progress                   | nothing — its pull request runs CI            |
+| `staging`       | where development happens          | nothing                                       |
+| `main`          | what has shipped, or is shipping   | releases, **if** the version is new           |
+
+Work lands on `staging` through pull requests. Promote it with a
+`staging` → `main` merge.
+
+## CI and CD
+
+| Workflow         | Trigger                    | Does                                                                 |
+| ---------------- | -------------------------- | -------------------------------------------------------------------- |
+| `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
+| `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
+| `release.yml`    | push to `main`             | if the version is unreleased: check, build, sign, notarize, publish  |
+| `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.darnadigital.com                        |
+
+`release.yml` first reads the root `package.json` version and looks for a
+published release `vX.Y.Z` carrying a disk image. If there is one, the run
+ends there in seconds — so merges that don't bump the version ship nothing.
+If there isn't:
+
+1. `check.yml` runs; a red check stops the release.
+2. On a `macos-26` runner, the Developer ID certificate is imported and
+   `pnpm build:mac` builds the SPA, the server bundle and the Swift package,
+   and `scripts/bundle.sh` assembles `Reviewer.app` and stamps it with the
+   version. Handed a `Developer ID Application: …` identity, `bundle.sh`
+   signs every Mach-O with the hardened runtime and a secure timestamp —
+   node-pty's `pty.node` and `spawn-helper` included.
+3. `scripts/release.sh` notarizes and staples the app, wraps it in
+   `Reviewer-X.Y.Z-arm64.dmg`, then signs, notarizes and staples that too,
+   and checks both with `spctl` the way a downloader's Mac will.
+4. `gh release create vX.Y.Z` publishes the image as the latest release,
+   with notes GitHub generates from what merged since the previous version.
+
+A run that fails midway leaves no published release, so re-running it (or
+pushing again) picks up where it should. It can also be started by hand from
+the Actions tab (**release → Run workflow**).
 
 ## Versioning
 
-`packages/desktop/package.json`'s `version` is the single source of truth
-(plain semver). Pre-1.0 while the app is young: bump **minor** for features,
-**patch** for fixes; reserve **1.0.0** for the public launch.
+The root `package.json` `version` is the only place the version lives;
+`bundle.sh` writes it into both Info.plists (the app's and the widget's) at
+build time. The Info.plist values in the repository are never read.
 
-Beta builds derive their version automatically as `X.Y.Z-beta.<run-number>`, so
-they preview the `X.Y.Z` you are working toward.
+- Every release is a **patch**: `0.0.1` → `0.0.2` → `0.0.3` …
+- Plain `X.Y.Z` semver only. `0.0.1.1` is not a version, and a prerelease
+  like `0.0.2-1` sorts *below* `0.0.2`. When in doubt, take the next patch.
+- **Taken tags.** The retired Electron app released `v0.1.0` and
+  `v0.2.0`–`v0.2.8` here. `release.yml` never overwrites a release it
+  didn't make; a version that collides fails the run. A minor bump, if one
+  is ever wanted, goes straight to `0.3.0`.
 
-## The flow
+## Cutting a release
 
-1. **Feature work → `staging`.** Every push to `staging` publishes a signed
-   beta (`X.Y.Z-beta.N`) to `reviewer-beta`. Testers download the newest one and,
-   on first launch of a build, **right-click → Open** once (beta is signed but
-   not notarized, so Gatekeeper prompts once per build).
-2. **Ready to ship?** Make sure `packages/desktop/package.json` holds the version
-   you intend to release, then promote `staging → main`.
-3. **`main` publishes production.** `release-prod` builds the package version
-   and publishes it **only if that version has not already been released** — so
-   the version bump is the deliberate "ship it" signal, and merges that don't
-   change the version are no-ops. Real users auto-update from this release.
+1. Merge `staging` into `main` (or merge the pull request that does).
+2. Bump the patch in the root `package.json`, commit as `Release vX.Y.Z`, and
+   push to `main`.
+3. Merge `main` back into `staging`, so both sit on the released commit.
+4. Watch the run: `gh run watch $(gh run list -w release -L 1 --json databaseId -q '.[0].databaseId')`.
 
-## Notarization notes
+The `release` Claude skill (`.claude/skills/release`) walks through the same
+steps.
 
-- Production notarization is an automated Apple security scan (signing + malware
-  check), not App Store review. A correctly signed build gets `Accepted`.
-- The **first** notarization on a brand-new Apple Developer account can take
-  **hours** while Apple vets the account; every submission after that is minutes.
-- Inspect status directly with:
-  `xcrun notarytool history --key <AuthKey.p8> --key-id <id> --issuer <uuid>`
-  and `xcrun notarytool log <submission-id> ...` for the detailed result.
+## What users get
 
-## Required GitHub secrets (in `darna-digital/reviewer`)
+- Apple silicon only (`arm64`) — the runner builds for its own architecture.
+- macOS 26 or later.
+- `node` on the login shell's `PATH`: the app starts its bundled server with
+  it (see `ServerLauncher`).
+- No auto-update yet — a new version is a new download. The repository is
+  private, so downloading needs access to it.
 
-- `BETA_GITHUB_TOKEN` — PAT with `contents:write` on `reviewer-beta`
-- `APPLE_CERTIFICATE` — base64 of the Developer ID Application `.p12`
-- `APPLE_CERTIFICATE_PASSWORD` — password for that `.p12`
-- `APPLE_API_KEY` — base64 of the App Store Connect API `.p8`
-- `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` — that key's ID and issuer
+## Secrets
+
+Set in **Settings → Secrets and variables → Actions** of `Darna-Digital/reviewer`:
+
+| Secret                       | What                                                       |
+| ---------------------------- | ---------------------------------------------------------- |
+| `APPLE_CERTIFICATE`          | base64 of the Developer ID Application `.p12`              |
+| `APPLE_CERTIFICATE_PASSWORD` | that `.p12`'s password                                     |
+| `APPLE_API_KEY`              | base64 of the App Store Connect API key (`.p8`)            |
+| `APPLE_API_KEY_ID`           | that key's ID                                              |
+| `APPLE_API_ISSUER`           | that key's issuer UUID                                     |
+
+`GITHUB_TOKEN` is built in; it publishes the release.
+
+## A notarized build on your own Mac
+
+With the Developer ID certificate in your keychain and an API key on disk:
+
+```bash
+pnpm --filter spa build && pnpm --filter @reviewer/embedded-server build:bundle
+cd packages/mac-os
+swift build -c release --scratch-path .build-release
+SIGN_IDENTITY="Developer ID Application: …" SCRATCH_PATH=.build-release \
+  APP_PATH=.build-release/Reviewer.app scripts/bundle.sh release
+SIGN_IDENTITY="Developer ID Application: …" APPLE_API_KEY_PATH=AuthKey_XXXX.p8 \
+  APPLE_API_KEY_ID=XXXX APPLE_API_ISSUER=<uuid> \
+  scripts/release.sh .build-release/Reviewer.app .build-release/dist
+```
+
+The separate scratch path keeps this off `scripts/watch.sh`'s `.build`.
+
+## When notarization fails
+
+`release.sh` prints the notary service's log for a rejected submission; the
+usual cause is a Mach-O signed without the hardened runtime or a timestamp.
+To look at past submissions:
+
+```bash
+xcrun notarytool history --key AuthKey_XXXX.p8 --key-id XXXX --issuer <uuid>
+```

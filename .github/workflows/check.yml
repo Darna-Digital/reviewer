@@ -1,7 +1,6 @@
 name: check
 
-# Runs on PRs for validation, and is called by the release workflows
-# (staging/main) as a gating job before they sign and publish.
+# Runs on PRs for validation.
 on:
   pull_request:
   workflow_call:
@@ -19,21 +18,14 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      # The desktop package is skipped here: installing it downloads Electron,
-      # which none of the checks below need. The exclusion carries no `...`
-      # suffix — that would also drop desktop's dependencies, and `@reviewer/lint`
-      # is one of them, leaving every other package's eslint.config.js unable to
-      # resolve the shared ruleset it imports.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter "!@reviewer/desktop"
+        run: pnpm install --frozen-lockfile
 
-      # Excluded from the runs as well as the install: desktop's own scripts
-      # would look for a prettier that was never installed.
       - name: Lint
-        run: pnpm -r --if-present --filter "!@reviewer/desktop" lint
+        run: pnpm -r --if-present lint
 
       - name: Check formatting
-        run: pnpm -r --if-present --filter "!@reviewer/desktop" format:check
+        run: pnpm -r --if-present format:check
 
       - name: Test
-        run: pnpm -r --if-present --filter "!@reviewer/desktop" test
+        run: pnpm -r --if-present test

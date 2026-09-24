@@ -3,9 +3,10 @@
  * pointer rests on a symbol, and after a click a choice of declarations when
  * there is more than one. Usages have their own window — see `find-usages`.
  */
-import { IconArrowRight, IconLoader2 } from "@tabler/icons-react";
+import { IconArrowRight } from "@tabler/icons-react";
 import Markdown from "react-markdown";
 import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
+import { Orb } from "@/components/ui/orb";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import type { Location, SymbolTarget } from "@reviewer/core/language";
@@ -83,10 +84,10 @@ export function HoverDocumentation({
   onOpen?: (location: Location) => void;
 }) {
   if (contents.trim().length === 0) {
-    return <p className="px-1 text-xs text-muted-foreground">No information</p>;
+    return <p className="text-xs text-muted-foreground">No information</p>;
   }
   return (
-    <div className="markdown min-w-0 text-xs [&_pre]:my-1 [&_pre]:text-xs">
+    <div className="markdown hover-doc min-w-0 text-xs">
       <Markdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -150,14 +151,14 @@ export function TargetChoice({
   );
 }
 
-export function CardSpinner({ label }: { label: string }) {
+export function CardWait({ label }: { label: string }) {
   return (
     <p
       className={cn(
         "flex items-center gap-2 px-1 text-xs text-muted-foreground"
       )}
     >
-      <IconLoader2 className="size-3.5 animate-spin" />
+      <Orb size={14} />
       {label}
     </p>
   );

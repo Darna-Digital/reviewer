@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChatView } from "@/interactions/chats/components/chat-view";
+import { shellDrawsConversation } from "@/interactions/chats/components/chats-page.shell";
 import { chatQueryOptions } from "@/lib/queries";
 
 export const Route = createFileRoute("/_app/modes/agent-session/$chatId")({
@@ -18,6 +19,9 @@ export const Route = createFileRoute("/_app/modes/agent-session/$chatId")({
 
 function ChatRoute() {
   const { chatId } = Route.useParams();
+  // Inside the macOS shell the conversation is drawn natively in this page's
+  // place, from the shell's own socket; the page is the room it takes.
+  if (shellDrawsConversation) return null;
   // Keyed so switching threads resets the stream/composer state cleanly.
   return <ChatView key={chatId} chatId={chatId} />;
 }

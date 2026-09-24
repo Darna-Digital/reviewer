@@ -1,21 +1,18 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
 import { NotFound } from "../../../shared.ts";
-import type { DevCommand } from "../schema/local-dev.schema.ts";
+import {
+  normalizeDevCwd,
+  type DevCommand,
+} from "../schema/local-dev.schema.ts";
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,
   UpdateDevCommandInput,
 } from "./local-dev.repository.ts";
 
-const repoNameOf = (repoPath: string) =>
-  repoPath
-    .split("/")
-    .filter((part) => part.length > 0)
-    .at(-1) ?? repoPath;
-
-const byRepoThenAge = (a: DevCommand, b: DevCommand) =>
-  a.repo.localeCompare(b.repo) || a.createdAt.localeCompare(b.createdAt);
+const byAge = (a: DevCommand, b: DevCommand) =>
+  a.createdAt.localeCompare(b.createdAt);
 
 export const makeMemoryDevCommandsRepository = (
   seed: ReadonlyArray<DevCommand> = []
@@ -39,7 +36,7 @@ export const makeMemoryDevCommandsRepository = (
     };
     const repo: DevCommandsRepo = {
       list: Ref.get(store).pipe(
-        Effect.map((commands) => [...commands].sort(byRepoThenAge))
+        Effect.map((commands) => [...commands].sort(byAge))
       ),
       get: (id) =>
         Effect.flatMap(Ref.get(store), (commands) => find(commands, id)),
@@ -49,8 +46,7 @@ export const makeMemoryDevCommandsRepository = (
             id: nextId(),
             name: input.name.trim(),
             command: input.command.trim(),
-            repo: repoNameOf(input.repoPath),
-            repoPath: input.repoPath,
+            cwd: normalizeDevCwd(input.cwd ?? ""),
             createdAt: now(),
             updatedAt: now(),
           };
@@ -60,16 +56,8 @@ export const makeMemoryDevCommandsRepository = (
       update: (id, input: UpdateDevCommandInput) =>
         Effect.gen(function* () {
           const existing = yield* find(yield* Ref.get(store), id);
-          const moved =
-            input.repoPath !== undefined && input.repoPath.length > 0
-              ? {
-                  repo: repoNameOf(input.repoPath),
-                  repoPath: input.repoPath,
-                }
-              : {};
           const updated: DevCommand = {
             ...existing,
-            ...moved,
             name:
               input.name !== undefined && input.name.trim().length > 0
                 ? input.name.trim()
@@ -78,6 +66,10 @@ export const makeMemoryDevCommandsRepository = (
               input.command !== undefined && input.command.trim().length > 0
                 ? input.command.trim()
                 : existing.command,
+            cwd:
+              input.cwd !== undefined
+                ? normalizeDevCwd(input.cwd)
+                : existing.cwd,
             updatedAt: now(),
           };
           yield* Ref.update(store, (all) =>

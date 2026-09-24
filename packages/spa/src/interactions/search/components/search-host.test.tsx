@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IconFile } from "@tabler/icons-react";
@@ -12,12 +12,6 @@ const FILES = [
   "packages/spa/src/lib/queries.ts",
   "packages/spa/src/components/layout/app-shell.tsx",
 ];
-
-/** A multi-root project's files, named from the project root. */
-const PROJECT_FILES = ["backend/src/server.ts", "frontend/src/queries.ts"];
-
-/** Whether the open project holds more than one git root. */
-let multiRepo = false;
 
 const navigate = vi.fn();
 const git = vi.hoisted(() => ({
@@ -65,8 +59,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 vi.mock("@/lib/queries", () => ({
   useFiles: () => ({ data: { paths: FILES, gitStatus: [] } }),
-  useProjectFiles: () => ({ data: { paths: PROJECT_FILES, gitStatus: [] } }),
-  useMultiRepo: () => multiRepo,
   useRepo: () => ({ data: { currentBranch: "main", github: null } }),
   useBranches: () => ({ data: BRANCHES }),
   useRemoteBranches: () => ({ data: [] }),
@@ -90,10 +82,16 @@ vi.stubGlobal("matchMedia", () => ({
 Element.prototype.scrollIntoView = () => {};
 
 const { SearchHost } = await import("./search-host");
-const { resetSearchStore, useRegisterCommands } =
-  await import("../adapters/search.store");
-const { registerCodeSelection, resetCodeSelection } =
-  await import("@/interactions/find-in-file/adapters/code-selection.store");
+const {
+  openSearch,
+  resetSearchStore,
+  toggleCommandSearch,
+  useRegisterCommands,
+} = await import("../adapters/search.store");
+
+const openCommands = () => act(() => toggleCommandSearch());
+const openFiles = () => act(() => openSearch("files"));
+const openText = () => act(() => openSearch("text"));
 
 const pageCommand = vi.fn();
 
@@ -131,13 +129,11 @@ const dialog = () => screen.queryByRole("textbox", { name: /^Search/ });
 beforeEach(() => {
   vi.clearAllMocks();
   pathname = "/modes/agent-session";
-  multiRepo = false;
 });
 
 afterEach(() => {
   cleanup();
   resetSearchStore();
-  resetCodeSelection();
 });
 
 describe("SearchHost", () => {
@@ -147,37 +143,37 @@ describe("SearchHost", () => {
     expect(dialog()).toBeNull();
   });
 
-  it("opens the command list on Cmd+K from a page that shows no files", async () => {
-    const user = setup();
+  it("opens the command list from a page that shows no files", () => {
+    setup();
 
-    await user.keyboard("{Meta>}k{/Meta}");
+    openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
-    expect(screen.getByText("Git Actions…")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
+    expect(screen.getByText("Git actions…")).toBeDefined();
   });
 
   it("opens even while the page's own text box has focus", async () => {
     const user = setup();
 
     await user.click(screen.getByLabelText("Message"));
-    await user.keyboard("{Meta>}k{/Meta}");
+    openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
   });
 
   it("offers the commands the page registered alongside its own", async () => {
     const user = setup();
 
-    await user.keyboard("{Meta>}k{/Meta}");
+    openCommands();
     await user.click(screen.getByText("Do the Page Thing"));
 
     expect(pageCommand).toHaveBeenCalledOnce();
   });
 
-  it("forgets a page's commands once it leaves", async () => {
-    const user = setup({ withPage: false });
+  it("forgets a page's commands once it leaves", () => {
+    setup({ withPage: false });
 
-    await user.keyboard("{Meta>}k{/Meta}");
+    openCommands();
 
     expect(screen.queryByText("Do the Page Thing")).toBeNull();
   });
@@ -185,8 +181,8 @@ describe("SearchHost", () => {
   it("runs a git command straight from another page", async () => {
     const user = setup();
 
-    await user.keyboard("{Meta>}k{/Meta}");
-    await user.click(screen.getByText("Git Actions…"));
+    openCommands();
+    await user.click(screen.getByText("Git actions…"));
     await user.click(screen.getByText("Fetch"));
 
     expect(git.fetch).toHaveBeenCalledOnce();
@@ -195,97 +191,45 @@ describe("SearchHost", () => {
   it("checks out a branch found by name", async () => {
     const user = setup();
 
-    await user.keyboard("{Meta>}k{/Meta}");
-    await user.click(screen.getByText("Git Actions…"));
-    await user.click(screen.getByText("Switch Branch…"));
+    openCommands();
+    await user.click(screen.getByText("Git actions…"));
+    await user.click(screen.getByText("Switch branch…"));
     await user.type(dialog()!, "207{Enter}");
 
     expect(git.checkout).toHaveBeenCalledWith("task/BMB-207");
   });
 
-  it("drops the list you had walked into when Cmd+K is pressed again", async () => {
+  it("drops the list you had walked into when the commands are asked for again", async () => {
     const user = setup();
 
-    await user.keyboard("{Meta>}k{/Meta}");
-    await user.click(screen.getByText("Git Actions…"));
-    await user.keyboard("{Meta>}k{/Meta}");
+    openCommands();
+    await user.click(screen.getByText("Git actions…"));
+    openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
     expect(screen.queryByText("Fetch")).toBeNull();
   });
 
-  it("goes straight to the file search on a double-tap of Shift", async () => {
-    const user = setup();
+  it("goes straight to the file search", () => {
+    setup();
 
-    await user.keyboard("{Shift>}{/Shift}");
-    await user.keyboard("{Shift>}{/Shift}");
+    openFiles();
 
     expect(screen.getByText(/Type to find a file/)).toBeDefined();
   });
 
-  it("goes straight to the text search on Cmd+Shift+F", async () => {
-    const user = setup();
+  it("goes straight to the text search", () => {
+    setup();
 
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+    openText();
 
     expect(screen.getByText("Type to search.")).toBeDefined();
-  });
-
-  it("opens the text search on whatever the open file has highlighted", async () => {
-    const user = setup();
-    registerCodeSelection(() => "useProjectFiles");
-
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-
-    const box = dialog() as HTMLInputElement;
-    expect(box.value).toBe("useProjectFiles");
-    // Selected, so the next keystroke replaces it rather than appending to it.
-    expect(box.selectionStart).toBe(0);
-    expect(box.selectionEnd).toBe("useProjectFiles".length);
-  });
-
-  it("takes a fresh phrase every time, including the same one twice", async () => {
-    const user = setup();
-    let selected = "first";
-    registerCodeSelection(() => selected);
-
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-    await user.keyboard("{Escape}");
-    selected = "second";
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-    expect((dialog() as HTMLInputElement).value).toBe("second");
-
-    await user.type(dialog()!, "typed over");
-    await user.keyboard("{Escape}");
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-    expect((dialog() as HTMLInputElement).value).toBe("second");
-  });
-
-  it("keeps the last search when nothing is highlighted", async () => {
-    const user = setup();
-
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-    await user.type(dialog()!, "handler");
-    await user.keyboard("{Escape}");
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-
-    expect((dialog() as HTMLInputElement).value).toBe("handler");
-  });
-
-  it("will not carry a paragraph into the box", async () => {
-    const user = setup();
-    registerCodeSelection(() => "one line\nand another");
-
-    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
-
-    expect((dialog() as HTMLInputElement).value).toBe("");
   });
 
   it("opens a file on the code page when the current one cannot show it", async () => {
     const user = setup();
 
-    await user.keyboard("{Shift>}{/Shift}");
-    await user.keyboard("{Shift>}{/Shift}");
+    openFiles();
     await user.type(dialog()!, "queries");
     await user.click(screen.getByRole("button", { name: /queries\.ts/ }));
 
@@ -295,27 +239,11 @@ describe("SearchHost", () => {
     });
   });
 
-  it("finds a file in any root of a multi-root project", async () => {
-    multiRepo = true;
-    const user = setup();
-
-    await user.keyboard("{Shift>}{/Shift}");
-    await user.keyboard("{Shift>}{/Shift}");
-    await user.type(dialog()!, "server");
-    await user.click(screen.getByRole("button", { name: /server\.ts/ }));
-
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/modes/code/review",
-      search: { file: "backend/src/server.ts" },
-    });
-  });
-
   it("opens a file in place when the page already shows files", async () => {
     pathname = "/modes/code/review/pull/12";
     const user = setup();
 
-    await user.keyboard("{Shift>}{/Shift}");
-    await user.keyboard("{Shift>}{/Shift}");
+    openFiles();
     await user.type(dialog()!, "queries");
     await user.click(screen.getByRole("button", { name: /queries\.ts/ }));
 

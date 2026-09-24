@@ -1,8 +1,7 @@
 /**
  * The inbox button: it opens onto the last few messages and a composer, so a
- * reply never costs the surface you are on. Each caller fills the panel with
- * its own rows — the prototype's threads, the app's agent chats — so this only
- * carries the chrome the two share.
+ * reply never costs the surface you are on. The caller fills the panel with
+ * its own rows — the app's agent chats — so this only carries the chrome.
  */
 import { IconInbox } from "@tabler/icons-react";
 import { useRef, useState, type ReactNode } from "react";

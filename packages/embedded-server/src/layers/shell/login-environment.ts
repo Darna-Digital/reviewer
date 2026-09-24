@@ -3,7 +3,7 @@
  * itself.
  *
  * A process spawned from `process.env` sees only what the app was launched
- * with, and under a GUI launch — the Electron app from Finder, or an IDE — that
+ * with, and under a GUI launch — the mac app from Finder, or an IDE — that
  * is launchd's minimal PATH: no Homebrew, no `~/.local/bin`, and none of the
  * shims a version manager (rbenv, asdf, mise, nvm) puts a language's tools
  * behind. So `ruby-lsp` is "not installed" to reviewer while sitting right

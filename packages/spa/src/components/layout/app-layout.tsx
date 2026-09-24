@@ -6,7 +6,7 @@
  * with its own `WindowFrame`, mode rail, header and bottom dock. They were
  * siblings in the route tree, so moving between a diff and an agent session
  * unmounted one of them whole and built the other: the frame, the rail, the
- * browser and analysis panes, the tab overview, the search host, and the dock
+ * tab overview, the search host, and the dock
  * with whatever history you had scrolled and whichever terminals you had open.
  * All of it, on every trip, to swap the page in the middle.
  *
@@ -28,7 +28,6 @@ import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { openProjectPicker } from "@/interactions/workspace/adapters/project-picker.store";
-import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { useWorkspace } from "@/lib/queries";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
@@ -85,7 +84,7 @@ export function AppLayout() {
 
   const route = shellRoute(pathname, startingNew, soloSession);
   const gitChrome = showsGitChrome(route);
-  const current = workspace.data?.current ?? null;
+  const current = workspace.data?.project ?? null;
 
   /**
    * The blank composer is the one page the shell gets out of the way of
@@ -105,25 +104,20 @@ export function AppLayout() {
 
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
-  // beside it exactly where it was. The prototype is the one surface without
-  // one: its own sidebar carries the equivalent.
+  // beside it exactly where it was.
   //
-  // So is a conversation with the window to itself. Every button in the
+  // A conversation with the window to itself has no rail. Every button in the
   // sessions rail acts on the list, and on a session tab there is no list — the
   // column would be three controls for a surface that is not on screen, drawn
   // down the side of a page that has nothing else in the margin. The strip
   // above it mints a session and the trail leads back to the list, which is
   // what was worth having here.
-  const railed =
-    route.kind !== "experimentation" &&
-    !bare &&
-    !(route.kind === "session" && route.solo);
+  const railed = !bare && !(route.kind === "session" && route.solo);
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
     route.kind === "workspace" ||
     route.kind === "session" ||
-    route.kind === "experimentation" ||
     route.kind === "dock";
 
   /**
@@ -145,7 +139,7 @@ export function AppLayout() {
     () => [
       {
         id: "project-switch",
-        label: "Open Project…",
+        label: "Open project…",
         group: "Project",
         icon: IconRepeat,
         keywords: "open change repository folder picker switch",
@@ -155,7 +149,6 @@ export function AppLayout() {
     []
   );
   useRegisterCommands("app-shell", shellCommands);
-  useRepoCommands(workspace.data);
 
   return (
     /**
@@ -173,9 +166,9 @@ export function AppLayout() {
       <WindowFrame>
         {/* The rail and what stands against it are one box with no gap between
             them: the rail is not a sheet of its own but the left edge of the one
-            beside it, carrying the same paper as the header and the page with a
-            rule where they meet — see `app-rail`. Every other seam in here is
-            the frame showing through, and this is the one that is a line.
+            beside it, carrying the same paper as the header and the page and
+            drawing nothing where they meet — see `app-rail`. Every other seam in
+            here is the frame showing through; this one is not a seam at all.
 
             The header stands *on* the page rather than clear of it — the branch
             picker and the trail name what is underneath them, and a run of
@@ -194,6 +187,11 @@ export function AppLayout() {
             <div
               className={cn(
                 "relative flex min-h-0 flex-col",
+                // Every sheet with a corner on the rail is in here — the page,
+                // and the columns a split page lays out — so this is the box
+                // that carries the rail's paper behind them. See
+                // `app-rail-paper`.
+                railed && "app-rail-paper",
                 // Expanded, the dock is the canvas and the page is put away, so
                 // what is left here is the header: as tall as it is, and no more.
                 dockExpanded ? "shrink-0" : "flex-1"

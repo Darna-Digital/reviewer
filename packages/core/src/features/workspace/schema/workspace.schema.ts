@@ -1,28 +1,39 @@
 import * as Schema from "effect/Schema";
 
 /**
- * A git root inside the open project. A project is a folder — it may be a
- * repository itself (one entry, named after the folder) or a parent holding
- * several side by side (`backend`, `frontend`), which is what the IDEs call a
- * multi-root project.
+ * A git repository the machine holds, as the repository index lists it: the
+ * folder it lives in, the branch it is checked out on, and when it was last
+ * opened here — the opener's recents are the entries that carry a date.
  */
 export const RepoEntry = Schema.Struct({
-  /** Project-relative path, so nested roots read as `apps/web`. */
+  /** The folder's own name — `web-app` for `/a/b/web-app`. */
   name: Schema.String,
   path: Schema.String,
   /** The checked-out branch, or null when HEAD is detached/unreadable. */
   branch: Schema.NullOr(Schema.String),
+  /** ISO timestamp of the last open, or null for one never opened here. */
+  lastOpened: Schema.NullOr(Schema.String),
 });
 export type RepoEntry = typeof RepoEntry.Type;
-export const WorkspaceInfo = Schema.Struct({
-  /** The open project folder, or null when nothing is open. */
-  project: Schema.NullOr(Schema.String),
-  /** Every git root the project holds, ordered by project-relative name. */
+
+/**
+ * Every repository found on the machine, and whether the walk that finds them
+ * is still under way — a fresh index fills in as the scan reaches folders.
+ */
+export const RepoIndex = Schema.Struct({
   repos: Schema.Array(RepoEntry),
-  /** Where git actions run — one of the project's roots; null when it holds
-   * none. */
-  current: Schema.NullOr(Schema.String),
-  /** Recently opened projects, most-recent first. */
+  scanning: Schema.Boolean,
+  /** When the last complete scan finished, or null before the first has. */
+  scannedAt: Schema.NullOr(Schema.String),
+});
+export type RepoIndex = typeof RepoIndex.Type;
+
+export const WorkspaceInfo = Schema.Struct({
+  /** The open repository, or null when nothing is open. */
+  project: Schema.NullOr(Schema.String),
+  /** The branch it is on, or null when HEAD is detached or nothing is open. */
+  branch: Schema.NullOr(Schema.String),
+  /** Recently opened repositories, most-recent first. */
   recents: Schema.Array(Schema.String),
   home: Schema.String,
 });
@@ -31,15 +42,12 @@ export const BrowseEntry = Schema.Struct({
   name: Schema.String,
   path: Schema.String,
   isGitRepo: Schema.Boolean,
-  /** Git roots found inside this folder — what makes it openable as a project. */
-  repoCount: Schema.Number,
 });
 export type BrowseEntry = typeof BrowseEntry.Type;
 export const BrowsePayload = Schema.Struct({
   path: Schema.String,
   parent: Schema.NullOr(Schema.String),
   isGitRepo: Schema.Boolean,
-  repoCount: Schema.Number,
   entries: Schema.Array(BrowseEntry),
 });
 export type BrowsePayload = typeof BrowsePayload.Type;
@@ -79,47 +87,11 @@ export const SetWorkspace = Schema.Struct({
   path: Schema.String,
 });
 export type SetWorkspace = typeof SetWorkspace.Type;
-/** Which of the open project's git roots the git views should follow. */
-export const SelectRepo = Schema.Struct({
-  path: Schema.String,
-});
-export type SelectRepo = typeof SelectRepo.Type;
 export const WriteFile = Schema.Struct({
   path: Schema.String,
   contents: Schema.String,
 });
 export type WriteFile = typeof WriteFile.Type;
-export const RenameFile = Schema.Struct({
-  from: Schema.String,
-  to: Schema.String,
-});
-export type RenameFile = typeof RenameFile.Type;
-/** A file dropped in from outside the project — bytes, so binaries survive. */
-export const UploadFile = Schema.Struct({
-  path: Schema.String,
-  base64: Schema.String,
-});
-export type UploadFile = typeof UploadFile.Type;
-/**
- * Where a deleted path went. Deleting moves it into the project's own trash
- * rather than unlinking it, so undoing a delete is an ordinary rename back.
- */
-export const Trashed = Schema.Struct({
-  path: Schema.String,
-});
-export type Trashed = typeof Trashed.Type;
-export const CopyPath = Schema.Struct({
-  from: Schema.String,
-  to: Schema.String,
-});
-export type CopyPath = typeof CopyPath.Type;
-export const PathKind = Schema.Literals(["file", "directory"]);
-export type PathKind = typeof PathKind.Type;
-export const CreatePath = Schema.Struct({
-  path: Schema.String,
-  kind: PathKind,
-});
-export type CreatePath = typeof CreatePath.Type;
 export const BrowseQuery = Schema.Struct({
   path: Schema.optionalKey(Schema.String),
 });

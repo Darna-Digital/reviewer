@@ -9,10 +9,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
-  NEW_SESSION,
-  setChatMode,
-} from "@/interactions/chats/adapters/chat-mode.store";
-import {
   closeTab,
   NEW_SESSION_HREF,
   NEW_SESSION_TITLE,
@@ -25,16 +21,11 @@ import { nextTabId, updateWindowTabs } from "./window-tabs.store";
 type RouterHandle = ReturnType<typeof useRouter>;
 
 export interface WindowTabActions {
-  /**
-   * Take the window to `tab`. Settles once the page is actually there, so a
-   * surface that is covering the window while it navigates knows when it is
-   * safe to get out of the way.
-   */
+  /** Take the window to `tab`. Settles once the page is actually there. */
   readonly select: (tab: WindowTab) => Promise<void>;
   /**
-   * Take the window to a place in the app rather than to a tab. The launchpad
-   * picks sections, and which tab ends up holding one is the strip's own
-   * business — see `trackLocation`.
+   * Take the window to a place in the app rather than to a tab: which tab ends
+   * up holding it is the strip's own business — see `trackLocation`.
    */
   readonly visit: (href: string) => Promise<void>;
   readonly close: (id: string) => void;
@@ -114,9 +105,6 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
       });
     },
     openSession: () => {
-      // A session minted here is for building, whatever the last one opened
-      // from the analysis pane was for.
-      setChatMode(NEW_SESSION, "build");
       updateWindowTabs((state) =>
         openTab(state, {
           id: nextTabId(),

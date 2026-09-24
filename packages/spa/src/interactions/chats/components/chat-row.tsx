@@ -195,8 +195,8 @@ export function ChatRow({
               onOpenMenu(event.clientX, event.clientY);
             }}
             // The tab is opened here rather than left to the browser: a
-            // ⌘-click on a link opens a window Electron would hand to the
-            // system browser, which is not what "a tab of its own" means here.
+            // ⌘-click on a link opens a browser window, which is not what
+            // "a tab of its own" means here.
             // A shift-click is the sidebar's own, too — the browser would take
             // it as "open in a new window", and here it is a range of rows.
             onClick={(event) => {

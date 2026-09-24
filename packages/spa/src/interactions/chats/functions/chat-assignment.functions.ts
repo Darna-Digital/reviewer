@@ -1,7 +1,9 @@
-import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
+import {
+  type ChatModelCatalog,
+  type ChatProviderKind,
+  titleFromPrompt,
+} from "@reviewer/core/chats";
 import type { ReviewComment } from "@reviewer/core/comments";
-import type { VisualComment } from "@reviewer/core/visual-comments";
-import { formatStyleChanges } from "@/interactions/visual-comments/functions/visual-style.functions";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [
@@ -75,9 +77,21 @@ export const buildChatAssignmentSettings = (
   access: catalog?.defaults.access ?? "fullAccess",
 });
 
-export const buildReviewAssignmentTitle = (count: number): string => {
-  const plural = count === 1 ? "" : "s";
-  return `Fix ${count} review comment${plural}`;
+/**
+ * The chat is named after what was actually asked, so the sidebar reads
+ * "Rename this to sessionId" rather than "Fix 1 review comment". With several
+ * comments the first one leads and the rest are counted.
+ */
+export const buildReviewAssignmentTitle = (
+  comments: ReadonlyArray<ReviewComment>
+): string => {
+  const [first, ...rest] = comments;
+  const lead = titleFromPrompt(first?.body ?? "");
+  if (lead.length === 0) {
+    const plural = comments.length === 1 ? "" : "s";
+    return `Fix ${comments.length} review comment${plural}`;
+  }
+  return rest.length === 0 ? lead : `${lead} (+${rest.length} more)`;
 };
 
 export const buildReviewAssignmentPrompt = (
@@ -89,71 +103,4 @@ export const buildReviewAssignmentPrompt = (
     )
     .join("\n");
   return `Address these review comments in the codebase:\n\n${lines}`;
-};
-
-export const buildVisualAssignmentTitle = (count: number): string => {
-  const plural = count === 1 ? "" : "s";
-  return `Fix ${count} UI comment${plural}`;
-};
-
-/**
- * A visual comment points at rendered UI, not at a file, so the agent is given
- * the page and the selector and told where to go looking — plus a nudge that the
- * same browser pane is the thing to check the fix in.
- */
-export const buildVisualAssignmentPrompt = (
-  comments: ReadonlyArray<VisualComment>
-): string => {
-  const lines = comments
-    .map((comment) => {
-      // Tried on the element live, so these are the values that looked right,
-      // not a guess at them — the agent should land exactly these.
-      const changes = formatStyleChanges(comment.styleChanges ?? []);
-      return [
-        `${comment.url}`,
-        `Element: ${comment.selector} (${comment.elementLabel})`,
-        `Viewport: ${comment.viewport.width}×${comment.viewport.height}`,
-        ...(changes.length > 0
-          ? ["Style changes:", ...changes.map((change) => `  ${change}`)]
-          : []),
-        ...(comment.body.length > 0 ? [comment.body] : []),
-      ].join("\n");
-    })
-    .join("\n\n");
-  return [
-    "Address these comments left on the running UI:",
-    "",
-    lines,
-    "",
-    "Find the code that renders each element, then verify your change through",
-    "reviewer's browser API (see the reviewer skill) rather than assuming it worked.",
-  ].join("\n");
-};
-
-/**
- * A review handed over in one go.
- *
- * Notes left on the code and notes left on the running UI are one review — you
- * read the app and you read what renders it — so they go to the agent together
- * rather than as two hand-offs racing each other over the same files. Either
- * kind on its own is still described in its own words.
- */
-export const buildHandoffTitle = (review: number, visual: number): string => {
-  if (visual === 0) return buildReviewAssignmentTitle(review);
-  if (review === 0) return buildVisualAssignmentTitle(visual);
-  const total = review + visual;
-  return `Fix ${total} review comment${total === 1 ? "" : "s"}`;
-};
-
-export const buildHandoffPrompt = (
-  review: ReadonlyArray<ReviewComment>,
-  visual: ReadonlyArray<VisualComment>
-): string => {
-  if (visual.length === 0) return buildReviewAssignmentPrompt(review);
-  if (review.length === 0) return buildVisualAssignmentPrompt(visual);
-  return [
-    buildReviewAssignmentPrompt(review),
-    "",
-    buildVisualAssignmentPrompt(visual),
-  ].join("\n");
 };

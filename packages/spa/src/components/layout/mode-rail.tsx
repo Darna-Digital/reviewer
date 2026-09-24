@@ -15,7 +15,7 @@ import {
   IconTerminal2,
 } from "@tabler/icons-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { restoreDock, showDockPage } from "@/components/layout/dock-expansion";
+import { pickDockTab } from "@/components/layout/dock-expansion";
 import {
   Rail,
   RailButton,
@@ -31,12 +31,7 @@ import { SearchMenuItems } from "@/interactions/search/components/search-menu";
 // The Sessions tab is the way into the threads now, so the rail's inbox is parked.
 // import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
 import { REVIEW_HREF, REVIEWS_HREF, shellRoute } from "@/lib/shell-route";
-import {
-  openBottomTab,
-  setUiPrefs,
-  useUiPrefs,
-  type BottomTab,
-} from "@/lib/ui-prefs";
+import { useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 
 interface RailLink {
   to: string;
@@ -77,15 +72,6 @@ const GIT_LINKS: RailLink[] = [
   },
 ];
 
-/** Show a bottom-dock tab, or hide the dock if that tab is already active. */
-function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
-  if (visible && current === tab) {
-    setUiPrefs({ bottomVisible: false });
-    return;
-  }
-  openBottomTab(tab);
-}
-
 export function ModeRail() {
   const prefs = useUiPrefs();
   const navigate = useNavigate();
@@ -101,14 +87,7 @@ export function ModeRail() {
     expandedTab === null
       ? prefs.bottomVisible && prefs.bottomTab === tab
       : expandedTab === tab;
-  const pick = (tab: BottomTab) => {
-    if (expandedTab === null) {
-      toggleBottomTab(tab, prefs.bottomTab, prefs.bottomVisible);
-      return;
-    }
-    if (expandedTab === tab) restoreDock(navigate, tab);
-    else showDockPage(navigate, tab);
-  };
+  const pick = (tab: BottomTab) => pickDockTab(navigate, tab, expandedTab);
 
   const renderLink = ({
     to,

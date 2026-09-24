@@ -1,0 +1,37 @@
+name: mac
+
+# Proves a pull request still builds the macOS app: the SPA, the server bundle
+# and the Swift package, assembled into Reviewer.app exactly as a release is,
+# only ad-hoc signed — no certificates or secrets are needed, so it runs for
+# any branch. Signing, notarization and publishing are release.yml's.
+on:
+  pull_request:
+    paths-ignore:
+      - "packages/www/**"
+      - "docs/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+concurrency:
+  group: mac-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # macOS 26 image: the package's floor is the macOS 26 SDK, and the dock
+    # icon is compiled with the actool of its default Xcode 26.
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-mac
+
+      - name: Build Reviewer.app
+        run: pnpm build:mac
+
+      - name: Verify the bundle's signature seals everything in it
+        run: codesign --verify --deep --strict --verbose=2 packages/mac-os/.build/Reviewer.app

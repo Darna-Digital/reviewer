@@ -19,7 +19,11 @@
     "format:check": "prettier --check \"**/*.{ts,js}\""
   },
   "dependencies": {
-    "effect": "4.0.0-beta.74"
+    "@pierre/theme": "2.0.0",
+    "@pierre/theming": "1.0.1",
+    "@shikijs/themes": "4.4.3",
+    "effect": "4.0.0-beta.74",
+    "shiki": "4.4.3"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-beta.74",

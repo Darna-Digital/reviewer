@@ -47,11 +47,7 @@ import { findUsages } from "@/interactions/find-usages/adapters/find-usages.stor
 import { SymbolCard } from "./symbol-card";
 import { useCompletions } from "./use-completions";
 import { useSymbolMenu } from "./use-symbol-menu";
-import {
-  CardSpinner,
-  HoverDocumentation,
-  TargetChoice,
-} from "./symbol-overlay";
+import { CardWait, HoverDocumentation, TargetChoice } from "./symbol-overlay";
 
 /** How long the pointer must rest on a token before documentation is fetched. */
 const HOVER_DELAY_MS = 350;
@@ -153,9 +149,9 @@ export interface LanguageLayerOptions {
   /**
    * Whether a line number in the DOM is this file's own line number. False in a
    * diff, where a deletion row carries the line it had in the *other* file — so
-   * everything that resolves a position by reading the rendered code, rather
-   * than from a token event, has to stay off there: the underlines under
-   * problem tokens, and the right-click menu.
+   * the underlines under problem tokens, which are painted by walking the
+   * rendered rows, stay off there. The right-click menu reads one token at a
+   * time and tells the sides apart itself.
    */
   lineNumbersMatchFile?: boolean;
   /** Unsaved buffer to analyse, or null to analyse the file on disk. */
@@ -243,6 +239,14 @@ export function useLanguageLayer({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Guards against a slow response for a token the pointer already left. */
   const hoverToken = useRef<TokenSpan | null>(null);
+  /**
+   * Whether the pointer is in the card. React raises the card's enter from the
+   * token's `pointerout`, which arrives *before* the `pointerleave` the view
+   * reports the token from — so by the time the token says the pointer has
+   * gone, the card has already been entered, and a close timer armed then
+   * would have nothing left to cancel it.
+   */
+  const pointerInCard = useRef(false);
 
   const clearTimers = useCallback(() => {
     if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
@@ -327,6 +331,7 @@ export function useLanguageLayer({
       const token = spanOf(props);
       if (token === null) return;
       clearTimers();
+      pointerInCard.current = false;
       const anchor = anchorFor(props.tokenElement);
       hoverTimer.current = setTimeout(() => {
         hoverToken.current = token;
@@ -362,6 +367,7 @@ export function useLanguageLayer({
   const onTokenLeave = useCallback(() => {
     if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
     hoverTimer.current = null;
+    if (pointerInCard.current) return;
     closeTimer.current = setTimeout(() => {
       hoverToken.current = null;
       setCard((current) => (current?.kind === "hover" ? null : current));
@@ -439,11 +445,10 @@ export function useLanguageLayer({
   const symbolMenu = useSymbolMenu({
     editor,
     path,
-    // The menu finds its symbol by reading the rendered code, so it goes where
-    // the line numbers there are this file's own. It does not need a buffer:
-    // usages and definition are read-only questions, and the fixes it also
-    // carries leave themselves out when there is nothing to apply them to.
-    enabled: enabled && lineNumbersMatchFile,
+    // The menu does not need a buffer: usages and definition are read-only
+    // questions, and the fixes it also carries leave themselves out when there
+    // is nothing to apply them to.
+    enabled,
     getContainer,
     onOpen: closeCard,
     // No card and no spinner: the search is handed to the Find window, which
@@ -494,14 +499,23 @@ export function useLanguageLayer({
     getContainer,
   });
 
+  const enterCard = useCallback(() => {
+    pointerInCard.current = true;
+    clearTimers();
+  }, [clearTimers]);
+  const leaveCard = useCallback(() => {
+    pointerInCard.current = false;
+    if (card?.kind === "hover") closeCard();
+  }, [card?.kind, closeCard]);
+
   const cardNode = useMemo(() => {
     if (card === null) return null;
     const body =
       card.kind === "busy" ? (
-        <CardSpinner label="Resolving…" />
+        <CardWait label="Resolving…" />
       ) : card.kind === "hover" ? (
         card.contents === null ? (
-          <CardSpinner label="Reading…" />
+          <CardWait label="Reading…" />
         ) : (
           <HoverDocumentation contents={card.contents} onOpen={openFromCard} />
         )
@@ -518,13 +532,13 @@ export function useLanguageLayer({
         interactive={card.kind === "outcome"}
         // Keep a hover card open while the pointer travels into it, so its
         // contents can be read and selected.
-        onPointerEnter={clearTimers}
-        onPointerLeave={card.kind === "hover" ? closeCard : undefined}
+        onPointerEnter={enterCard}
+        onPointerLeave={leaveCard}
       >
         {body}
       </SymbolCard>
     );
-  }, [card, clearTimers, closeCard, openFromCard]);
+  }, [card, closeCard, enterCard, leaveCard, openFromCard]);
 
   return {
     diagnostics,

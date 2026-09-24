@@ -4,10 +4,10 @@ import { desktopApiBaseUrl } from "@/lib/desktop";
 import type { paths } from "./schema";
 
 /**
- * Browser/dev stays same-origin through Vite's proxy. Packaged Electron serves
- * the renderer over `reviewer://`, so the preload bridge supplies the local API
- * server origin — including inside a preview frame, which has no preload of its
- * own and takes the bridge from the window it hangs in (see `lib/desktop`).
+ * Browser/dev stays same-origin through Vite's proxy. The macOS shell serves
+ * the app over `reviewer://`, so its bridge supplies the local API server
+ * origin — including inside a preview frame, which has no bridge of its own
+ * and takes the one from the window it hangs in (see `lib/desktop`).
  */
 export const fetchClient = createFetchClient<paths>({
   baseUrl: desktopApiBaseUrl ?? "",
@@ -66,22 +66,6 @@ export const chatStreamUrl = (chatId: string): string => {
 };
 
 /**
- * The command socket for the window's browser pane. Same origin/port and `/api`
- * ws routing as {@link ptySocketUrl}; the pane holds it open while mounted and
- * answers the commands agents send through the browser API.
- */
-export const browserBridgeUrl = (): string => {
-  const origin =
-    desktopApiBaseUrl ??
-    (typeof window === "undefined"
-      ? "http://localhost"
-      : window.location.origin);
-  const url = new URL("/api/browser/bridge", origin);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  return url.toString();
-};
-
-/**
  * The PTY WebSocket URL for a Local Dev command's running process. Same
  * origin/port and `/api` ws routing as {@link ptySocketUrl}; the server attaches
  * the socket to the process the DevProcessManager already owns for `command`.
@@ -102,26 +86,5 @@ export const devPtySocketUrl = (params: {
   url.searchParams.set("command", params.command);
   url.searchParams.set("cols", String(params.cols));
   url.searchParams.set("rows", String(params.rows));
-  return url.toString();
-};
-
-/**
- * The server-sent event stream of a cloud run, relayed by the local server
- * (which holds the cloud token) from the last sequence number the client saw.
- * Plain HTTP rather than a WebSocket, so it follows the same `/api` routing as
- * every REST call: same-origin behind Vite's proxy, the desktop bridge's API
- * origin in the packaged app.
- */
-export const cloudRunEventsUrl = (runId: string, after: number): string => {
-  const origin =
-    desktopApiBaseUrl ??
-    (typeof window === "undefined"
-      ? "http://localhost"
-      : window.location.origin);
-  const url = new URL(
-    `/api/cloud/runs/${encodeURIComponent(runId)}/events`,
-    origin
-  );
-  url.searchParams.set("after", String(after));
   return url.toString();
 };

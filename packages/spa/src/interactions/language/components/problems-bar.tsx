@@ -10,17 +10,32 @@
  * expanded it is the list, worst first, and picking a problem jumps the
  * editor to its line.
  */
-import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
-import { useMemo } from "react";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconClipboardCopy,
+  IconClipboardList,
+  IconClipboardText,
+} from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 import type { Diagnostic } from "@reviewer/core/language";
 import { SEVERITY_STYLE } from "./diagnostics-annotation";
+import { pointerAnchor, type VirtualAnchor } from "../functions/anchors";
 import { countDiagnostics } from "../functions/language.functions";
 import {
   orderProblems,
   problemOrigin,
   problemPosition,
   problemsLabel,
+  problemText,
+  problemsText,
 } from "../functions/problems.functions";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 
 interface ProblemsBarProps {
@@ -29,8 +44,16 @@ interface ProblemsBarProps {
   onToggle: () => void;
   /** Jump the editor to the problem's line. */
   onSelect: (diagnostic: Diagnostic) => void;
+  /** Prefixes copied problems, so a paste still says which file they are in. */
+  path?: string;
   /** Positioning is the host's: the code view floats it over the code. */
   className?: string;
+}
+
+/** A right-click's target: one problem, or the strip as a whole. */
+interface OpenMenu {
+  anchor: VirtualAnchor;
+  problem: Diagnostic | null;
 }
 
 export function ProblemsBar({
@@ -38,10 +61,18 @@ export function ProblemsBar({
   expanded,
   onToggle,
   onSelect,
+  path,
   className,
 }: ProblemsBarProps) {
   const problems = useMemo(() => orderProblems(diagnostics), [diagnostics]);
   const counts = useMemo(() => countDiagnostics(diagnostics), [diagnostics]);
+  const [menu, setMenu] = useState<OpenMenu | null>(null);
+  const openMenuAt = (event: React.MouseEvent, problem: Diagnostic | null) => {
+    event.preventDefault();
+    setMenu({ anchor: pointerAnchor(event.clientX, event.clientY), problem });
+  };
+  const copy = (text: string) => void navigator.clipboard.writeText(text);
+  const picked = menu?.problem ?? null;
   const shown = [
     { key: "error" as const, value: counts.errors },
     { key: "warning" as const, value: counts.warnings },
@@ -60,6 +91,7 @@ export function ProblemsBar({
         aria-expanded={expanded}
         aria-label={`Problems: ${problemsLabel(counts)}`}
         onClick={onToggle}
+        onContextMenu={(event) => openMenuAt(event, null)}
         className="flex h-7 w-full items-center gap-2 px-3 text-xs text-muted-foreground outline-none hover:text-foreground"
       >
         <span className="flex items-center gap-2">
@@ -97,6 +129,7 @@ export function ProblemsBar({
                 <button
                   type="button"
                   onClick={() => onSelect(problem)}
+                  onContextMenu={(event) => openMenuAt(event, problem)}
                   className="flex w-full items-start gap-2 px-3 py-1 text-left text-xs leading-relaxed outline-none hover:bg-elevate"
                 >
                   <Icon
@@ -117,6 +150,39 @@ export function ProblemsBar({
             );
           })}
         </ul>
+      )}
+      {menu !== null && (
+        <ContextMenu open onOpenChange={(open) => !open && setMenu(null)}>
+          <ContextMenuContent
+            anchor={menu.anchor}
+            side="bottom"
+            align="start"
+            sideOffset={2}
+            className="w-56"
+          >
+            {picked !== null && (
+              <>
+                <ContextMenuItem
+                  onClick={() => copy(problemText(picked, path ?? null))}
+                >
+                  <IconClipboardCopy className="size-3.5 text-muted-foreground" />
+                  Copy problem
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => copy(picked.message)}>
+                  <IconClipboardText className="size-3.5 text-muted-foreground" />
+                  Copy message
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            )}
+            <ContextMenuItem
+              onClick={() => copy(problemsText(problems, path ?? null))}
+            >
+              <IconClipboardList className="size-3.5 text-muted-foreground" />
+              Copy all problems
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       )}
     </div>
   );

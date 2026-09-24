@@ -1,13 +1,41 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+
+/* The code faces on offer — every one declared up front, so a font is a name
+   away wherever code is set: the diff (pierre reads `--diffs-font-family`
+   through its shadow root, and @font-face is document-scoped, so a family
+   declared here reaches inside), comment code, the `font-mono` utilities. Only
+   the family in use is fetched: a browser loads a face on first use, not on
+   declaration. JetBrains Mono is the default; the rest are the usual
+   suspects, and the macOS shell offers them in its settings (`CodeFont`). */
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
+@import "@fontsource-variable/fira-code";
+@import "@fontsource-variable/cascadia-code";
+@import "@fontsource-variable/cascadia-code/wght-italic.css";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/source-code-pro";
+@import "@fontsource-variable/source-code-pro/wght-italic.css";
+@import "@fontsource-variable/roboto-mono";
+@import "@fontsource-variable/roboto-mono/wght-italic.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/400-italic.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/700.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Inside a web view of the macOS shell — see `.island` below. */
+@custom-variant island (&:is(.island *));
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  /* The UI takes the platform's own face — SF Pro on a Mac — so the web app
+     and the native macOS shell set their chrome in the same type. Code takes
+     the chosen code face (`--font-code`, below). */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-code);
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -24,7 +52,6 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-link: var(--link);
-  --color-collab-accent: var(--collab-accent);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -64,7 +91,6 @@
   --color-frame: var(--frame);
   --color-frame-border: var(--frame-border);
   --color-hairline: var(--hairline);
-  --color-pane: var(--pane);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -114,6 +140,14 @@
    links, status marks, the on-state of a switch — never wash into
    muted/accent/sidebar highlights. */
 :root {
+  /* The one face every code surface is set in. A `:root` custom property
+     rather than a theme token so it can be chosen at runtime: the macOS shell
+     writes it inline on the document (see `NativePalette.applyScript`), which
+     wins over this default. The stack behind the chosen family is the
+     platform's own mono, for anything the web font has no glyph for. */
+  --font-code:
+    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
   --brand-50: oklch(0.977 0.012 240.4);
   --brand-100: oklch(0.951 0.029 240.4);
   --brand-200: oklch(0.905 0.058 240.4);
@@ -702,8 +736,10 @@
      it is, so colour would be the fourth thing saying the same thing. */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  /* Brand as ink on light surfaces — links need more depth than brand-500. */
-  --link: var(--brand-700);
+  /* Brand as ink on light surfaces — links need more depth than brand-500.
+     A theme's own link colour takes over where a theme is on (see `.themed`);
+     the app's own palette, and the shell's islands on it, keep the brand. */
+  --link: var(--chrome-link, var(--brand-700));
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -723,11 +759,6 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.15 75);
   --warning-foreground: oklch(0.28 0.06 75);
-  /* Collaboration's section labels. Warm, and the one colour on an otherwise
-     grey page — it is what tells one tool on a project's page from the next
-     without a rule being drawn between them. Off the brand ramp on purpose:
-     brand is reserved for focus and links, and a section label is neither. */
-  --collab-accent: oklch(0.62 0.15 55);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -784,14 +815,6 @@
   --sheet-edge: rgb(0 0 0 / 0.06);
   --canvas: #ffffff;
   --canvas-edge: #f6f6f8;
-  /* The browser pane is a sheet like the canvas, not part of the surround, so
-     it sits at this theme's extreme rather than taking the frame's grey — beside
-     white paper (and usually a white page inside it) the frame tone reads as a
-     slab rather than as the same sheet continuing. */
-  --pane: #ffffff;
-  /* Held further open than the frame's tint: this is a white veil over the
-     material rather than a grey one, which is what keeps it reading as paper. */
-  --pane-translucent: rgb(255 255 255 / 0.62);
 }
 
 .dark {
@@ -806,7 +829,7 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --link: var(--brand-300);
+  --link: var(--chrome-link, var(--brand-300));
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -818,7 +841,6 @@
   --success-foreground: oklch(0.22 0.05 158);
   --warning: oklch(0.8 0.14 78);
   --warning-foreground: oklch(0.26 0.06 78);
-  --collab-accent: oklch(0.82 0.11 58);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -844,10 +866,6 @@
   --sheet-edge: rgb(255 255 255 / 0.06);
   --canvas: #141417;
   --canvas-edge: #1c1c21;
-  /* Here the frame's own true black is already the extreme, so the pane sinks
-     to it and the page inside carries the contrast. */
-  --pane: #000000;
-  --pane-translucent: rgb(0 0 0 / 0.35);
 }
 
 @layer base {
@@ -890,7 +908,6 @@
   }
   html {
     @apply font-sans antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss03";
   }
 }
 /* --- reviewer: the window frame and its content canvas ---------------------- */
@@ -899,7 +916,7 @@
    reads as curving up out of the frame rather than sinking into it. Panels
    drawn on it stay transparent, so the ramp shows through. */
 /* The page material, named once so the two things made of it agree: the canvas
-   every code surface rests on, and the sheet collaboration's column stands on.
+   every code surface rests on.
    The gradient reads `--canvas` lazily, so the dark theme's redefinition is
    picked up without a second copy of the paint. */
 :root {
@@ -919,11 +936,6 @@
      to read down the sides and the sheets looked cropped by the window rather
      than laid inside it. */
   --frame-inset: 0.5rem;
-  /* The band the trail takes along the foot of the page — a chrome row's 36px
-     and the hairline that tells it from the columns standing on it. Named here
-     as well as drawn in `PathBar`, because the seams between those columns are
-     placed rather than laid out and have to be told where to stop. */
-  --trail-band: calc(2.25rem + 1px);
   /* A sheet turns the same corner as a card: `--radius` itself, kept under its
      own name because a sheet is the one surface whose corner also has to answer
      to the window's.
@@ -951,6 +963,26 @@
      `corner-shape` is Chromium 139+, which the desktop app is well past; a
      browser tab without it falls back to the same radius drawn round. */
   --sheet-radius-foot: 0.625rem;
+  /* The composer is the one card that stands free on the page, with nothing
+     in its corners to hold them tight, so it turns the corner the macOS shell
+     draws round its own islands: `IslandMetrics.radius`, 16pt, on a continuous
+     curve. At the sheet's 6px it read as a text field cut into the page next to
+     the shell's own panels; matched, it reads as one of them. */
+  --composer-radius: 1rem;
+}
+
+/* The message box and the context strip tucked under it turn the same corner,
+   so the two read as one panel with the strip as its foot. `corner-shape` is
+   Chromium 139+; a browser tab without it draws the same radius round. */
+.composer-sheet {
+  border-radius: var(--composer-radius);
+  corner-shape: squircle;
+}
+.composer-foot {
+  border-end-start-radius: var(--composer-radius);
+  border-end-end-radius: var(--composer-radius);
+  corner-bottom-left-shape: squircle;
+  corner-bottom-right-shape: squircle;
 }
 
 .app-canvas {
@@ -1013,8 +1045,7 @@
   border-bottom-right-radius: 0;
 }
 .app-page-joined,
-.app-page-joined > .app-split > .app-sheet,
-.app-page-joined > .app-split > .app-columns > .app-sheet {
+.app-page-joined > .app-split > .app-sheet {
   /* Square corners, so the line has no bend to stop before: it runs the whole
      width, on the tone an inside rule wears rather than a lit outer edge. */
   --sheet-edge-tone: var(--hairline);
@@ -1023,21 +1054,10 @@
   border-top-right-radius: 0;
 }
 
-/* The mirror of the rule above, for any sheet standing flush under another: the
-   trail a page lays along its own foot, and the drawer that opens against that
-   trail. Same rule, same square corners — the line runs the full width because
-   there is no corner for it to stop before. */
-.app-sheet-joined-above {
-  --sheet-edge-tone: var(--hairline);
-  --sheet-edge-inset: 0px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
 /* The sheet standing against the rail. The rail is not a column beside it but
-   its left edge (see `app-rail`), so the two meet on the rule and nothing else:
+   its left edge (see `app-rail`), so the two meet flush and on nothing at all:
    square on that side, where a corner left the frame showing through as a notch
-   of window between them. The lit top edge is carried out to the rule for the
+   of window between them. The lit top edge is carried out to that join for the
    same reason — held off a corner that is no longer there, the line broke for a
    radius' worth at the join and started again a step to the right. */
 .app-sheet-joined-start {
@@ -1082,10 +1102,7 @@
 
 /* A page that lays out sheets of its own — a sidebar beside its content, or a
    review's three columns — marks its root `app-split`, and the box it is
-   rendered into stops being a sheet: it is only the run of frame they stand on.
-   Where such a page also wears a trail along its foot, the columns are a row of
-   their own (`app-columns`) with that bar under all of them, so the rule the
-   header draws has one more step to reach through. */
+   rendered into stops being a sheet: it is only the run of frame they stand on. */
 .app-page:has(> .app-split) {
   background: none;
   /* No corners and no rule of its own: the ones that matter are the sheets'
@@ -1118,12 +1135,139 @@
   background-color: var(--frame-translucent);
 }
 
+/* An island is one part of the app in a web view of the macOS shell's own —
+   the code surface, the tree, the dock — set in the window's native layout
+   (see `lib/shell`). The window draws the frame, the panel's own 16pt corner
+   and the ring around it (see `IslandPanel`), so the sheets inside run to
+   every edge of their view with no corner, no ring and no lit top edge: those
+   belong to a sheet standing in a frame, and here the frame is the view's. A
+   corner or a rule of the sheet's own inside the panel drew a second, smaller
+   box a step in from the panel's edge. The window behind is opaque material,
+   so the document shows nothing of its own. */
+.island body {
+  background-color: transparent;
+}
+.island .island-page,
+.island .app-page,
+.island .app-split .app-sheet {
+  --sheet-edge-tone: transparent;
+  border-radius: 0;
+}
+/* The one sheet inside an island that is *not* run to its edges: the drawer
+   under the page — find usages, the last of the dock's surfaces still the
+   page's own — which in the shell has nothing beside it and nothing under it.
+   Flush, it read as more page: a second band of the same paper, told apart from
+   the code above it only by the row of tabs at its top. So it is lifted off the
+   island's three edges by the same 6px that already separates it from the page,
+   and rounded, and floated on a shadow — a panel that has come up over the
+   page, which is what it is: something opened from a symbol in the code and
+   dismissed when it has been read.
+
+   It turns `--sheet-radius-foot` rather than the island's own 16pt corner, and
+   for the same reason a sheet's foot does: a corner held inside another one
+   stays parallel to it only at the outer radius less the inset it stands off —
+   16pt less 6px, near enough 10px — and on the continuous curve macOS draws.
+   Matched to the panel's 16pt instead, the two curves crossed. */
+.island .island-drawer {
+  --sheet-edge-tone: transparent;
+  margin-inline: var(--island-drawer-inset);
+  margin-block-end: var(--island-drawer-inset);
+  border-radius: var(--sheet-radius-foot);
+  corner-shape: squircle;
+  box-shadow: var(--elev-floating);
+}
+
+/* No run of window down the sides either: the shell holds the island's box off
+   the window's edge already. */
+.island {
+  --frame-inset: 0px;
+  /* The shell's own chips — the bar's buttons, the rail's, the pane heads' —
+     turn a 6pt corner (see `BarChipMetrics`), and the buttons, tabs and
+     comment cards inside an island all turn `md`. So the dial is set where
+     `md` lands on 6px, and the rest of the scale follows: `sm` 4px, `lg` 8px. */
+  --radius: 0.5rem;
+  /* How far the drawer stands off the island's edges — the gap the page above
+     it already keeps, so the panel is held clear by the same measure on all
+     four sides. See `island-drawer`. */
+  --island-drawer-inset: 0.375rem;
+}
+
+/* The window's palette is the theme's. The theme chosen in settings — one for
+   the light scheme, one for the dark — is read for the handful of colours the
+   window around the code is made of (`deriveChromeTokens` in core: the sheet
+   is the editor's background, the frame the sidebar's, the accent the focus
+   ring's, the rest derived from those), and they arrive here as `--chrome-*`:
+   set on the document by `lib/chrome-theme` in the browser, and by the macOS
+   shell for its islands (see `NativePalette`), which paints its own frame and
+   panes from the same tokens so the page is the same paper as the panels
+   beside it. The tokens the surfaces read are pointed at them: the canvas and
+   every sheet on it are the theme's sheet, the frame is what the sheets stand
+   on, type is the theme's type, rules are a wash of it, a row's fills are the
+   theme's own. Declared for both schemes at once: the values are already the
+   dark or the light ones. Nothing here applies until the tokens are on the
+   document, and on the app's own pair of themes — Reviewer Light and Dark,
+   the defaults — they never are: those are the palette above, exactly as it
+   stands, and a theme is a departure from it rather than a re-derivation. */
+.themed,
+.themed.dark,
+.island,
+.island.dark {
+  --canvas: var(--chrome-island);
+  --canvas-edge: var(--chrome-island);
+  --frame: var(--chrome-frame);
+  --surface-1: var(--chrome-island);
+  --surface-2: var(--chrome-control);
+  --surface-3: var(--chrome-popover);
+  --foreground: var(--chrome-text);
+  --card-foreground: var(--chrome-text);
+  --popover-foreground: var(--chrome-text);
+  --secondary-foreground: var(--chrome-text);
+  --accent-foreground: var(--chrome-text);
+  --sidebar-foreground: var(--chrome-text);
+  --muted-foreground: var(--chrome-text-secondary);
+  --accent: var(--chrome-hover);
+  --sidebar-accent: var(--chrome-hover);
+  --border: var(--chrome-separator);
+  --sidebar-border: var(--chrome-separator);
+  --hairline: var(--chrome-hairline);
+  --frame-border: var(--chrome-separator);
+  --input: var(--chrome-separator);
+  --ring-accent: var(--chrome-accent);
+}
+/* An island stands in a window the shell paints, so it gives up the veil a
+   translucent frame lays over the desktop — the material behind it is the
+   shell's — and takes the shell's prominent controls for its own: the
+   primary fill — the loud button, the checked box, the dirty dot — is the
+   theme's accent, so it matches the controls the shell draws around it in
+   the same colour. In the browser the primary stays the app's own near-black,
+   which the theme's accent is spent on rings and dots instead. */
+.island,
+.island.dark {
+  --frame-translucent: transparent;
+  --primary: var(--chrome-accent);
+  --primary-foreground: white;
+  /* The accent is a mid tone in both themes, under white type in both, so
+     the filled face wants the light reading everywhere — lit along the top,
+     lightened under the pointer, the type's edge drawn back — rather than
+     the dark theme's inversion, which was tuned for a near-white fill. */
+  --sheen-filled: linear-gradient(
+    180deg,
+    var(--sheen-strong) 0%,
+    var(--sheen-none) 100%
+  );
+  --text-shadow-filled: 0 0.5px 0.5px rgb(0 0 0 / 0.3);
+  --overlay-contrast-hover: rgb(255 255 255 / 0.12);
+  --overlay-contrast-pressed: rgb(255 255 255 / 0.24);
+}
+
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
-   as a strip of chrome floating on the frame — and through a translucent window
-   the icons stood on the desktop, which is the one thing a column of 20px glyphs
-   cannot be read against. So it is the left edge of the sheet beside it, the way
-   it was when the whole window was one canvas: the same paper, running under the
-   header and the page without a break, with a hairline where they meet.
+   as a strip of chrome floating on the frame. So it is the left edge of the
+   sheet beside it, the way it was when the whole window was one canvas: the
+   same paper, running under the header and the page without a break and with
+   nothing drawn where they meet: a rule there was the seam that made it a strip
+   again, and the icons' own column of space is separation enough. Through a
+   translucent window it is the frame instead — the other surface it can belong
+   to, rather than a third one of its own; see the override below.
 
    The tone is `--canvas` flat rather than `--canvas-paint`: the gradient is
    drawn to the box it is on, and a 36px column would fall away to the edge tone
@@ -1140,125 +1284,56 @@
   background-repeat: no-repeat;
   background-position: var(--sheet-radius) 0;
   background-size: calc(100% - var(--sheet-radius)) 1px;
-  border-right: 1px solid var(--hairline);
   border-start-start-radius: var(--sheet-radius);
   border-end-start-radius: var(--sheet-radius-foot);
   corner-bottom-left-shape: squircle;
 }
 
+/* Through a translucent window it gives that paper up and stands on the frame's
+   own material, so the left edge of the window is one surface from the traffic
+   lights down rather than a strip of paper hung under them. Transparent rather
+   than tinted: `.app-frame` beneath has already laid the frame's veil over the
+   material, and a second one here would stack into a column darker than the
+   band it is meant to carry on.
+
+   The lit top edge goes with the paper. It is the edge of the sheet beside it,
+   carried across the rail so the line crosses the two without a step; with no
+   paper under it there is no sheet here to catch the light, only a hairline
+   drawn on the window. The sheet still draws its own, out from its own left
+   edge, and that is the whole of the boundary: the tone the sheet is against
+   the material the rail lets through. */
+.desktop.translucent .app-rail {
+  background-color: transparent;
+  background-image: none;
+}
+
 /* The rail's paper, carried on under the sheets standing against it, so their
    corners turn on it rather than on a gap: they are flush with the rule, and a
    6px corner would otherwise cut a notch of frame out of it at every top and
-   bottom edge. Behind them — it is only ever seen through those corners. */
-.app-rail::after {
+   bottom edge. Behind them — it is only ever seen through those corners.
+
+   Carried by the box the sheets are in rather than by the rail itself, which is
+   as tall as the window: a strip that long ran on down past the last of them and
+   filled the first corner's worth of the seam the dock opens under the page, so
+   the one run of frame meant to cross the window whole started a step to the
+   right of the rule. Here it is as tall as the sheets it is for and no taller,
+   and the seam under them is frame again from the rule out. */
+.app-rail-paper::before {
   content: "";
   position: absolute;
   inset-block: 0;
-  left: 100%;
+  left: 0;
   z-index: -1;
-  /* A corner's worth, and the rule it starts behind: the strip is measured from
-     inside the rail's border, where the sheets begin a pixel further on. The
-     widest corner it has to cover is the foot's. */
-  width: calc(var(--sheet-radius-foot) + 1px);
+  /* A corner's worth, taken from inside the sheets rather than from the rail
+     they stand on — it is their corners it is for. The widest corner it has to
+     cover is the foot's. */
+  width: var(--sheet-radius-foot);
   background-color: var(--canvas);
 }
-
-/* The browser pane is its own sheet beside the canvas, on the `--pane` tone each
-   theme sets: white here, true black in the dark theme. The gap the split leaves
-   between the two is the frame itself, so with translucency on the seam is the
-   desktop showing through — which is the point of the split being a gap and not
-   a border. */
-.browser-pane {
-  background-color: var(--pane);
-  /* A sheet's corner and a sheet's lit top edge, from the sheet's own tokens —
-     the panes stand in the same row as the page and must turn, and catch the
-     light, the way it does. Painted rather than bordered for the same reason,
-     and as a background *image*, so the translucent overrides below can go on
-     setting the colour underneath it. */
-  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
-  background-repeat: no-repeat;
-  background-position: var(--sheet-radius) 0;
-  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
-  border-radius: var(--sheet-radius);
-  border-end-start-radius: var(--sheet-radius-foot);
-  border-end-end-radius: var(--sheet-radius-foot);
-  corner-bottom-left-shape: squircle;
-  corner-bottom-right-shape: squircle;
-}
-.desktop.translucent .browser-pane {
-  background-color: var(--pane-translucent);
-}
-
-/* The analysis pane is the browser's twin on the other side of the canvas, on
-   the same `--pane` tone. Its canvas is the exception: a dotted grid, which is
-   what says "this is a drawing surface" before a single node has loaded, and
-   gives the eye something fixed to read the pan and zoom against. The dots are
-   drawn in the border colour at low alpha so they recede in both themes rather
-   than needing a second value per theme. */
-.plans-pane {
-  background-color: var(--pane);
-  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
-  background-repeat: no-repeat;
-  background-position: var(--sheet-radius) 0;
-  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
-  border-radius: var(--sheet-radius);
-  border-end-start-radius: var(--sheet-radius-foot);
-  border-end-end-radius: var(--sheet-radius-foot);
-  corner-bottom-left-shape: squircle;
-  corner-bottom-right-shape: squircle;
-}
-.desktop.translucent .plans-pane {
-  background-color: var(--pane-translucent);
-}
-.plans-canvas {
-  --plans-dot: color-mix(in oklab, var(--border) 70%, transparent);
-  background-image: radial-gradient(var(--plans-dot) 1px, transparent 1px);
-  background-size: 16px 16px;
-  background-position: -1px -1px;
-  cursor: grab;
-}
-.plans-canvas:active {
-  cursor: grabbing;
-}
-/* The node boxes ride over the grid, so they carry the pane's own tone rather
-   than sitting transparent the way panels on the canvas do. */
-.plan-node {
-  background-color: var(--pane);
-}
-.desktop.translucent .plan-node {
-  background-color: var(--pane-translucent);
-}
-
-/* The outline below the drawing is a reading surface, so it takes the canvas
-   tone the editor uses rather than the pane's own: the pane is a true-black
-   sheet in the dark theme, which is right behind a dotted grid and far too deep
-   behind paragraphs of text. It also stays opaque with translucency on — the
-   grid can afford to show the desktop through it, body text cannot — so there
-   is deliberately no `.desktop.translucent` override here. */
-.plans-notes {
-  background-color: var(--canvas);
-}
-
-/* A note is written as a numbered list of its points, so the list is the note's
-   normal shape rather than an aside inside a paragraph: the items are spaced
-   apart enough to be read as separate findings, and the numbers are set in the
-   quiet tone outside the text column, so a point that wraps hangs under its own
-   first word instead of under its number. */
-.plan-note :where(ol, ul) {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-.plan-note :where(ol, ul) > li + li {
-  margin-top: 0.45rem;
-}
-.plan-note :where(ol, ul) > li::marker {
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-/* Nothing separates a note's items but the gap above, so a nested list keeps its
-   own indent without also inheriting that gap as a top margin. */
-.plan-note :where(li) > :where(ol, ul) {
-  margin-top: 0.45rem;
+/* Transparent along with the rail, or the corners it fills would be the one
+   opaque thing left on a column that is otherwise window. */
+.desktop.translucent .app-rail-paper::before {
+  background-color: transparent;
 }
 
 /* --- reviewer: agent brand marks ------------------------------------------- */
@@ -1339,28 +1414,6 @@
 @media (prefers-reduced-motion: reduce) {
   .shimmer-text {
     animation: none;
-  }
-}
-
-/* --- reviewer: Linear-style loading caret ---------------------------------- */
-/* Hard on/off blink (no fade), like a terminal typing cursor. */
-@keyframes loading-cursor-blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-.loading-cursor {
-  animation: loading-cursor-blink 1s step-end infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .loading-cursor {
-    animation: none;
-    opacity: 1;
   }
 }
 
@@ -1464,11 +1517,23 @@
   color: HighlightText;
 }
 
+/* The picture macOS gives a contact who has none: initials on a grey that is
+   lit from above. One material in both themes, only the light on it changes,
+   so the same person's monogram reads as the same object either side of the
+   appearance switch. */
+.monogram {
+  background-image: linear-gradient(180deg, #c9cdd3, #8f939b);
+  text-shadow: 0 0.5px 0 rgb(0 0 0 / 0.12);
+}
+.dark .monogram {
+  background-image: linear-gradient(180deg, #7a7e86, #55585f);
+}
+
 /* --- reviewer: review-comment markdown bodies ------------------------------ */
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */
 .markdown {
-  /* Comment prose uses the UI sans font (Inter) and wraps normally, overriding
+  /* Comment prose uses the UI sans font and wraps normally, overriding
      the monospace + `white-space: pre` it would otherwise inherit from the
      surrounding Pierre diff surface (which would make long lines overflow the
      card instead of wrapping). Only real code (code/pre, below) opts back in. */
@@ -1488,9 +1553,7 @@
   margin-bottom: 0;
 }
 .markdown :where(code, pre) {
-  font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+  font-family: var(--font-code);
 }
 .markdown :where(ul, ol) {
   padding-left: 1.25rem;
@@ -1523,10 +1586,31 @@
   text-decoration: underline;
 }
 
+/* The LSP hover card. What a server answers with is usually one fenced
+   signature, so the card is read as a single padded panel rather than a block
+   floating inside a frame: the code loses its own margin, and the popover's
+   `p-2` plus this padding come to the same inset on all four sides.
+
+   `text-box` trims the first line's half-leading and the last line's descent
+   gap, which is what made the card look top- and bottom-heavy — leading is not
+   padding, but it is drawn like it. These rules sit unlayered beside the
+   `.markdown` ones they refine; a Tailwind utility could not reach them, since
+   every utility is in `@layer utilities` and loses to unlayered CSS. */
+.hover-doc pre {
+  margin: 0;
+  padding: 0.75rem;
+  text-box: trim-both cap alphabetic;
+}
+
 /* highlight.js token colours for fenced code blocks (rehype-highlight adds the
-   `hljs-*` classes but ships no theme). Palette = GitHub light/dark, swapped by
-   the app's `.dark` class so comment code matches the rest of the UI. */
-.markdown {
+   `hljs-*` classes but ships no theme). Set on the root rather than on
+   `.markdown` so the chosen theme's own token colours can take them over:
+   `lib/syntax-theme` reads them off the theme the diff is highlighted with and
+   writes them here, which is how an LSP hover card ends up in the same palette
+   as the code behind it. Until it has — the first frames of a session, a theme
+   that fails to load — the palette below stands: GitHub light/dark, swapped by
+   the app's `.dark` class. */
+:root {
   --hljs-keyword: #d73a49;
   --hljs-entity: #6f42c1;
   --hljs-constant: #005cc5;
@@ -1534,16 +1618,15 @@
   --hljs-variable: #e36209;
   --hljs-comment: #6a737d;
   --hljs-tag: #22863a;
-  --hljs-fg: inherit;
 }
-.dark .markdown {
-  --hljs-keyword: #ff7b72;
-  --hljs-entity: #d2a8ff;
-  --hljs-constant: #79c0ff;
-  --hljs-string: #a5d6ff;
-  --hljs-variable: #ffa657;
-  --hljs-comment: #8b949e;
-  --hljs-tag: #7ee787;
+.dark {
+  --hljs-keyword: #f97583;
+  --hljs-entity: #b392f0;
+  --hljs-constant: #79b8ff;
+  --hljs-string: #9ecbff;
+  --hljs-variable: #ffab70;
+  --hljs-comment: #6a737d;
+  --hljs-tag: #85e89d;
 }
 .markdown
   :where(
@@ -1614,16 +1697,17 @@
    from --diffs-bg, so overriding the root recomputes them against our bg. */
 diffs-container {
   --diffs-bg: var(--background);
-  /* The file header falls back to system-ui, and the buttons we render into it
-     inherit that — so the same `font-plus` that reads as medium in Inter came
-     out looking bold in SF Pro. The weight was never wrong; the typeface was.
-     The header is app chrome, so it takes the app's face. (Only the header: the
-     code itself stays on pierre's mono stack.) */
+  /* The file header is app chrome, so it takes the app's face rather than
+     pierre's own fallback; the code takes the chosen code face rather than
+     pierre's own mono stack. Both are custom properties pierre reads through
+     its shadow root (see https://diffs.com/docs, "Custom CSS Variables"). */
   --diffs-header-font-family: var(--font-sans);
+  --diffs-font-family: var(--font-code);
   /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
      gutter's add-a-comment button is painted with it. Take it to `--primary` so
      that button flips near-black on light and near-white on dark like every
-     other filled control — its label reads `--diffs-bg`, so it inverts with it.
+     other filled control (its glyph is inked `--primary-foreground` from
+     inside the shadow root; see code-selection-css.ts).
 
      Both halves of selection are pinned back to pierre's blues on purpose: they
      derive from the same variable, but as `color-mix(…65-75%, black)`, so
@@ -1714,44 +1798,47 @@ file-tree-container {
 }
 
 /* --- reviewer: JetBrains-style split-diff connector ribbons ----------------- */
-.diff-connectors {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-}
-.diff-connectors path {
-  stroke-width: 1;
-}
-/* Connector colours mirror the original client: green add, red delete, and a
-   blue (accent) ribbon for modifications — not yellow. */
+/* The ribbons themselves are drawn inside each file's shadow root (see
+   `connectorsCSS` in diff-connectors.ts); only their colours are declared out
+   here, where the theme is, and inherit through. Green add, red delete, and a
+   blue (accent) ribbon for modifications — not yellow. A theme's own git
+   colours take these over where a theme is on (see `.themed`); the values
+   here are for the app's own palette, before one is. */
 :root {
-  --cx-add: #2da160;
-  --cx-del: #d4453a;
-  --cx-mod: var(--brand-600);
+  --cx-add: var(--chrome-added, #2da160);
+  --cx-del: var(--chrome-deleted, #d4453a);
+  --cx-mod: var(--chrome-modified, var(--brand-600));
 }
 .dark {
-  --cx-add: #4cc38a;
-  --cx-del: #f2645a;
-  --cx-mod: var(--brand-400);
+  --cx-add: var(--chrome-added, #4cc38a);
+  --cx-del: var(--chrome-deleted, #f2645a);
+  --cx-mod: var(--chrome-modified, var(--brand-400));
 }
-.diff-connectors .cx-add {
-  fill: var(--cx-add);
-  fill-opacity: 0.22;
-  stroke: var(--cx-add);
-  stroke-opacity: 0.7;
+
+/* The diff pane is one CodeView: the files stand a pixel apart in it (see
+   `LAYOUT` in diff-pane.tsx), and the rule between them is drawn into that
+   pixel from each file's foot. Positioned, so the ribbons painted into a
+   file's shadow root can lie over its code.
+
+   Both the pane and each file in it are sealed off — layout, paint and style
+   contained. A diff is the largest thing on screen and it sits in a shell
+   that is dragged about: without this, widening the sidebar or the bottom
+   dock costs a layout of every rendered file, and a file laying itself out
+   after its lines are measured reaches the rest of the pane. The seal is
+   what keeps that work where it belongs. Scroll anchoring is off for the
+   same reason: the viewer corrects its own layout as files are measured, and
+   the browser nudging the scroll position underneath that fights it. And the
+   pane keeps its overscroll to itself rather than handing it to the window
+   behind it. */
+.diff-pane {
+  contain: layout paint style;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
 }
-.diff-connectors .cx-del {
-  fill: var(--cx-del);
-  fill-opacity: 0.22;
-  stroke: var(--cx-del);
-  stroke-opacity: 0.7;
-}
-.diff-connectors .cx-mod {
-  fill: var(--cx-mod);
-  fill-opacity: 0.2;
-  stroke: var(--cx-mod);
-  stroke-opacity: 0.65;
+.diff-pane diffs-container {
+  position: relative;
+  box-shadow: 0 1px 0 var(--border);
+  contain: layout paint style;
 }
 
 /* Make native UI (scrollbars, form controls, caret) follow the app theme. */
@@ -1765,12 +1852,23 @@ file-tree-container {
 /* Native scrollbars for leftover overflow containers + the touch-primary
    ScrollArea fallback. Matches the Fluid Functionalism thumb ramp so custom
    and native scroll affordances share one look. Fine pointers only — touch
-   keeps the platform scrollbar. */
+   keeps the platform scrollbar. An island of the macOS shell keeps these too:
+   the system's overlay scroller only shows while a trackpad is scrolling, so
+   a diff or a file in the window's web view had no bar at all to say how long
+   it was or where in it the reader stood.
+
+   The standard `scrollbar-width` / `scrollbar-color` pair is for the engines
+   without the `::-webkit-scrollbar` pseudo-elements, and only for them: an
+   engine that has both lets the standard pair win, and WebKit answers it by
+   tinting its native scroller — the overlay one on macOS, gone at rest — so
+   set everywhere, the pair put away the very bar the rules below draw. */
 @media (pointer: fine) {
-  *,
-  .scroll-thin {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+  @supports not selector(::-webkit-scrollbar) {
+    *,
+    .scroll-thin {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+    }
   }
   *::-webkit-scrollbar,
   .scroll-thin::-webkit-scrollbar {
@@ -1807,6 +1905,27 @@ file-tree-container {
   *::-webkit-scrollbar-thumb:active,
   .scroll-thin::-webkit-scrollbar-thumb:active {
     background-color: rgb(var(--overlay) / 0.16);
+  }
+
+  /* In an island the bar stands beside the shell's own scrollers — the
+     outline, the lists — and should read as one of them: the macOS overlay
+     thumb is 7pt wide, set 3pt in from the edge. The thin bar above is 4px
+     wide and 5px in, which next to a native one looked like a different,
+     smaller control. */
+  .island *::-webkit-scrollbar,
+  .island .scroll-thin::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  .island *::-webkit-scrollbar-thumb:vertical,
+  .island .scroll-thin::-webkit-scrollbar-thumb:vertical {
+    border-left-width: 1px;
+    border-right-width: 3px;
+  }
+  .island *::-webkit-scrollbar-thumb:horizontal,
+  .island .scroll-thin::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 3px;
   }
 }
 
@@ -1947,8 +2066,9 @@ file-tree-container {
 }
 
 /* Custom drag handles for resizable panels (see ResizeHandle.tsx). The thin
-   strip straddles the panel border via a negative margin; a centred ::after
-   line lights up on hover / while dragging. */
+   strip straddles the panel border via a negative margin. Nothing lights up on
+   hover or while dragging: like an NSSplitView's divider, the cursor is the
+   only thing that says the seam can be pulled. */
 .resize-handle-col,
 .resize-handle-row {
   position: relative;
@@ -1994,46 +2114,16 @@ file-tree-container {
      under it are still reached; the handle is the one part that is not. */
   pointer-events: auto;
 }
-
-/* The same, laid the other way: the dock's seam, where the page it opens under
-   ends in a trail. The run of frame then lies above that bar rather than below
-   it, which puts it inside the page — so the handle leaves the dock's row and
-   is hung over the page with the column seams, placed off the band's height. */
-.resize-handle-row.resize-handle-crossing {
-  position: absolute;
-  inset-inline: 0;
-  height: var(--frame-seam);
-  margin-block: 0;
-  pointer-events: auto;
-}
-.resize-handle-col::after,
-.resize-handle-row::after {
+/* A handle that is also the border between the two panes it sits between, for a
+   split where neither side draws one of its own — two readings of the same file
+   would otherwise run together with nothing to say where one ends. A hairline,
+   the weight of every other border in the app. */
+.resize-handle-col.resize-handle-divider::after,
+.resize-handle-row.resize-handle-divider::after {
   content: "";
   position: absolute;
   inset: 0;
   margin: auto;
-  background: transparent;
-  transition: background 0.12s ease;
-}
-.resize-handle-col::after {
-  width: 2px;
-}
-.resize-handle-row::after {
-  height: 2px;
-}
-.resize-handle-col:hover::after,
-.resize-handle-row:hover::after,
-.resize-handle-col[data-dragging]::after,
-.resize-handle-row[data-dragging]::after {
-  background: var(--primary);
-}
-/* A handle that is also the border between the two panes it sits between, for a
-   split where neither side draws one of its own — two readings of the same file
-   would otherwise run together with nothing to say where one ends. A hairline at
-   rest, the weight of every other border in the app; the usual line under the
-   pointer, so it still reads as something to pull. */
-.resize-handle-col.resize-handle-divider::after,
-.resize-handle-row.resize-handle-divider::after {
   background: var(--border);
 }
 .resize-handle-col.resize-handle-divider::after {
@@ -2042,36 +2132,6 @@ file-tree-container {
 .resize-handle-row.resize-handle-divider::after {
   height: 1px;
 }
-/* The primary line is repeated rather than inherited from the rule above: this
-   variant's resting colour is written with a class more than that rule carries,
-   so it would win the cascade on hover too and the seam would never light up. */
-.resize-handle-col.resize-handle-divider:hover::after,
-.resize-handle-col.resize-handle-divider[data-dragging]::after {
-  width: 2px;
-  background: var(--primary);
-}
-.resize-handle-row.resize-handle-divider:hover::after,
-.resize-handle-row.resize-handle-divider[data-dragging]::after {
-  height: 2px;
-  background: var(--primary);
-}
-/* A seam that lies where the pointer passes on its way to everything else — the
-   launchpad's, along the top of the page — holds off before lighting up, so
-   crossing it is not an event. Pressing it is one, and the line is there at
-   once.
-
-   The drag drops the transition rather than zeroing its delay: a transition
-   still counting out its delay is kept, not restarted, when the value it is
-   heading for has not changed — so a `transition-delay: 0s` here would sit and
-   wait out the second the hover had already started. */
-.resize-handle-quiet:hover::after {
-  transition-delay: 1s;
-}
-.resize-handle-quiet[data-dragging]::after {
-  background: var(--primary);
-  transition: none;
-}
-
 /* While dragging, force the resize cursor everywhere and suppress selection. */
 body.is-resizing-col,
 body.is-resizing-col * {
@@ -2082,121 +2142,4 @@ body.is-resizing-row,
 body.is-resizing-row * {
   cursor: row-resize !important;
   user-select: none;
-}
-
-/* --- reviewer: the markdown document editor -------------------------------- */
-/* The block editor's own surface. It sits inside the code pane, which sets a
-   monospace font and `white-space: pre` for diffs, so prose has to say plainly
-   that it is prose. Soft line breaks in a paragraph are kept as the newlines
-   the file actually holds — see `mdast-to-doc` — which is why `pre-wrap` rather
-   than `normal`: a hard-wrapped document should look hard-wrapped. */
-.document-content {
-  font-family: var(--font-sans);
-  white-space: pre-wrap;
-  line-height: 1.65;
-  font-size: 0.9375rem;
-  overflow-wrap: anywhere;
-}
-.document-content > * + * {
-  margin-top: 0.5rem;
-}
-.document-content :where(h1, h2, h3, h4, h5, h6) {
-  font-weight: 600;
-  line-height: 1.3;
-  margin-top: 1.5rem;
-}
-.document-content h1 {
-  font-size: 1.75rem;
-}
-.document-content h2 {
-  font-size: 1.4rem;
-}
-.document-content h3 {
-  font-size: 1.15rem;
-}
-.document-content :where(h4, h5, h6) {
-  font-size: 1rem;
-}
-.document-content :where(ul, ol) {
-  padding-left: 1.4rem;
-  list-style: revert;
-}
-/* A to-do list is a list of checkboxes, not of bullets. */
-.document-content ul[data-type="taskList"] {
-  padding-left: 0;
-  list-style: none;
-}
-.document-content ul[data-type="taskList"] li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-.document-content ul[data-type="taskList"] li > label {
-  margin-top: 0.3rem;
-}
-.document-content blockquote {
-  border-left: 2px solid var(--border);
-  padding-left: 0.85rem;
-  color: var(--muted-foreground);
-}
-.document-content :where(code, pre) {
-  font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
-}
-.document-content code {
-  font-size: 0.85em;
-  background: var(--muted);
-  border-radius: var(--radius-sm);
-  padding: 0.1em 0.3em;
-}
-.document-content pre {
-  background: var(--muted);
-  border-radius: var(--radius-md);
-  padding: 0.7rem 0.85rem;
-  font-size: 0.85em;
-}
-.document-content pre code {
-  background: transparent;
-  padding: 0;
-}
-.document-content a {
-  color: var(--link);
-  text-decoration: underline;
-}
-.document-content hr {
-  border-top: 1px solid var(--border);
-  margin: 1.25rem 0;
-}
-.document-content table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-.document-content :where(th, td) {
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.5rem;
-  vertical-align: top;
-}
-.document-content th {
-  background: var(--muted);
-  font-weight: 600;
-}
-/* The empty-block hint the Placeholder extension paints. It is a pseudo-element
-   so it can never be selected, copied, or saved into the file. */
-.document-content p.is-empty::before,
-.document-content h1.is-empty::before,
-.document-content h2.is-empty::before,
-.document-content h3.is-empty::before {
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-  color: var(--muted-foreground);
-}
-/* A block dragged by its handle lands where this cursor says it will. */
-.document-content .ProseMirror-selectednode {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }

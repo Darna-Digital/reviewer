@@ -1,8 +1,8 @@
 /**
  * The actions a branch offers, shared by the compact top-bar menu and the
  * branches dock. The two surfaces arrange branches differently, but acting on
- * one must mean the same thing in both places — including following another
- * repository before the action and using the same create/rename/delete dialogs.
+ * one must mean the same thing in both places, down to the same
+ * create/rename/delete dialogs.
  */
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -35,16 +35,12 @@ export interface BranchActionTarget {
 }
 
 export interface BranchActionScope {
-  /** Null means the repository the git views already follow. */
-  readonly repoPath: string | null;
-  /** Checked-out branch in this repository, used by compare/merge/rebase copy. */
+  /** The checked-out branch, used by compare/merge/rebase copy. */
   readonly head: string;
 }
 
 export interface BranchActionControlProps {
   readonly busy: boolean;
-  readonly currentRepoPath: string | null;
-  readonly onFollowRepo?: (repoPath: string) => Promise<boolean>;
   readonly onCheckout: (ref: string) => void;
   readonly onCheckoutAndUpdate: (ref: string) => void;
   readonly onCreateBranch: (name: string, startPoint: string | null) => void;
@@ -62,18 +58,9 @@ type BranchPrompt =
       readonly kind: "create";
       readonly startPoint: string | null;
       readonly label: string;
-      readonly repoPath: string | null;
     }
-  | {
-      readonly kind: "rename";
-      readonly from: string;
-      readonly repoPath: string | null;
-    }
-  | {
-      readonly kind: "delete";
-      readonly name: string;
-      readonly repoPath: string | null;
-    };
+  | { readonly kind: "rename"; readonly from: string }
+  | { readonly kind: "delete"; readonly name: string };
 
 /** Branch names make these labels long; the menu item clips them deliberately. */
 const ActionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -89,18 +76,6 @@ export function useBranchActionControls(props: BranchActionControlProps) {
   const targets = useBranchTargetActions();
   const navigate = useNavigate();
 
-  const runInRepo = (repoPath: string | null, action: () => void) => {
-    if (repoPath === null || repoPath === props.currentRepoPath) {
-      action();
-      return;
-    }
-    const following = props.onFollowRepo?.(repoPath);
-    if (following === undefined) return;
-    void following.then((ok) => {
-      if (ok) action();
-    });
-  };
-
   const actionItems = (
     target: BranchActionTarget,
     scope: BranchActionScope
@@ -108,11 +83,7 @@ export function useBranchActionControls(props: BranchActionControlProps) {
     return (
       <>
         {!target.isCurrent && (
-          <DropdownMenuItem
-            onClick={() =>
-              runInRepo(scope.repoPath, () => props.onCheckout(target.ref))
-            }
-          >
+          <DropdownMenuItem onClick={() => props.onCheckout(target.ref)}>
             Checkout
           </DropdownMenuItem>
         )}
@@ -122,31 +93,22 @@ export function useBranchActionControls(props: BranchActionControlProps) {
               kind: "create",
               startPoint: target.ref,
               label: target.display,
-              repoPath: scope.repoPath,
             })
           }
         >
           <IconPlus className="size-3.5 text-muted-foreground" />
-          <ActionLabel>New Branch from ‘{target.display}’</ActionLabel>
+          <ActionLabel>New branch from ‘{target.display}’</ActionLabel>
         </DropdownMenuItem>
         {!target.isCurrent && (
           <>
             <DropdownMenuItem
-              onClick={() =>
-                runInRepo(scope.repoPath, () =>
-                  props.onCheckoutAndUpdate(target.ref)
-                )
-              }
+              onClick={() => props.onCheckoutAndUpdate(target.ref)}
             >
               Checkout and Update
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() =>
-                runInRepo(scope.repoPath, () =>
-                  props.onCompare(scope.head, target.ref)
-                )
-              }
+              onClick={() => props.onCompare(scope.head, target.ref)}
             >
               <ActionLabel>Compare with ‘{scope.head}’</ActionLabel>
             </DropdownMenuItem>
@@ -154,35 +116,25 @@ export function useBranchActionControls(props: BranchActionControlProps) {
               aimed at — everything since the merge base, uncommitted work
               included. Aiming is remembered, so the next read needs no menu. */}
             <DropdownMenuItem
-              onClick={() =>
-                runInRepo(scope.repoPath, () => {
-                  void targets.aim(scope.head, target.ref);
-                  void navigate({
-                    to: REVIEW_HREF,
-                    search: { target: target.ref },
-                  });
-                })
-              }
+              onClick={() => {
+                void targets.aim(scope.head, target.ref);
+                void navigate({
+                  to: REVIEW_HREF,
+                  search: { target: target.ref },
+                });
+              }}
             >
               <IconGitCompare className="size-3.5 text-muted-foreground" />
               <ActionLabel>
                 Review ‘{scope.head}’ against ‘{target.display}’
               </ActionLabel>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                runInRepo(scope.repoPath, () => props.onMerge(target.ref))
-              }
-            >
+            <DropdownMenuItem onClick={() => props.onMerge(target.ref)}>
               <ActionLabel>
                 Merge ‘{target.display}’ into ‘{scope.head}’
               </ActionLabel>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                runInRepo(scope.repoPath, () => props.onRebase(target.ref))
-              }
-            >
+            <DropdownMenuItem onClick={() => props.onRebase(target.ref)}>
               <ActionLabel>
                 Rebase ‘{scope.head}’ onto ‘{target.display}’
               </ActionLabel>
@@ -190,16 +142,10 @@ export function useBranchActionControls(props: BranchActionControlProps) {
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          disabled={props.busy}
-          onClick={() => runInRepo(scope.repoPath, props.onFetch)}
-        >
+        <DropdownMenuItem disabled={props.busy} onClick={() => props.onFetch()}>
           Update
         </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={props.busy}
-          onClick={() => runInRepo(scope.repoPath, props.onPush)}
-        >
+        <DropdownMenuItem disabled={props.busy} onClick={() => props.onPush()}>
           Push…
         </DropdownMenuItem>
         {!target.isRemote && (
@@ -210,7 +156,6 @@ export function useBranchActionControls(props: BranchActionControlProps) {
                 setPrompt({
                   kind: "rename",
                   from: target.ref,
-                  repoPath: scope.repoPath,
                 })
               }
             >
@@ -223,7 +168,6 @@ export function useBranchActionControls(props: BranchActionControlProps) {
                   setPrompt({
                     kind: "delete",
                     name: target.ref,
-                    repoPath: scope.repoPath,
                   })
                 }
               >
@@ -241,35 +185,21 @@ export function useBranchActionControls(props: BranchActionControlProps) {
       prompt={prompt}
       onClose={() => setPrompt(null)}
       onCreateBranch={(name, startPoint) =>
-        runInRepo(prompt?.repoPath ?? null, () =>
-          props.onCreateBranch(name, startPoint)
-        )
+        props.onCreateBranch(name, startPoint)
       }
-      onRenameBranch={(from, to) =>
-        runInRepo(prompt?.repoPath ?? null, () =>
-          props.onRenameBranch(from, to)
-        )
-      }
-      onDeleteBranch={(name) =>
-        runInRepo(prompt?.repoPath ?? null, () => props.onDeleteBranch(name))
-      }
+      onRenameBranch={(from, to) => props.onRenameBranch(from, to)}
+      onDeleteBranch={(name) => props.onDeleteBranch(name)}
     />
   );
 
   return {
     actionItems,
     dialog,
-    checkout: (target: BranchActionTarget, scope: BranchActionScope) =>
-      runInRepo(scope.repoPath, () => props.onCheckout(target.ref)),
-    createBranch: (repoPath: string | null) =>
-      setPrompt({
-        kind: "create",
-        startPoint: null,
-        label: "",
-        repoPath,
-      }),
-    fetch: (repoPath: string | null) => runInRepo(repoPath, props.onFetch),
-    push: (repoPath: string | null) => runInRepo(repoPath, props.onPush),
+    checkout: (target: BranchActionTarget) => props.onCheckout(target.ref),
+    createBranch: () =>
+      setPrompt({ kind: "create", startPoint: null, label: "" }),
+    fetch: () => props.onFetch(),
+    push: () => props.onPush(),
   };
 }
 

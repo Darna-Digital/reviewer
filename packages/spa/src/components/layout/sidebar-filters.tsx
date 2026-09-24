@@ -47,7 +47,7 @@ export function SidebarSearch({
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
-  /** For a box whose list answers keys of its own — see the launchpad's. */
+  /** For a box whose list answers keys of its own. */
   onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
   /** For a box something else decides the moment to put the caret in. */
   inputRef?: Ref<HTMLInputElement>;

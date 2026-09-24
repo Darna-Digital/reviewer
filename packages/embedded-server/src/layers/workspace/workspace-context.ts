@@ -4,58 +4,50 @@
  * server's analogue of a database connection in the darna-stack: a single infra
  * service the feature repositories build on.
  *
- * Two things are open at once. The **project** is the folder the user picked;
- * it may be a repository itself or a parent holding several side by side. The
- * **current repo** is the one git runs in — always one of the project's roots.
- * For a single-repo project the two are the same path, which is why every
- * repo-scoped feature keeps working untouched.
+ * What is open is one git repository — the project. It is persisted to
+ * ~/.reviewer/state.json together with the repositories opened before and
+ * when each was, and seeded at boot from REVIEWER_REPO / cwd. Only primitives
+ * (paths, timestamps) cross this boundary — domain shapes live in the
+ * workspace feature's schema.
  *
- * Both are persisted to ~/.reviewer/state.json, together with a recents list of
- * projects and the root each project was last left on, and seeded at boot from
- * REVIEWER_REPO / cwd. Only primitives (paths) cross this boundary — domain
- * shapes live in the workspace feature's schema.
+ * Several servers can be up at once — one per Reviewer window, each on its
+ * own port — sharing the one state file, so a write folds into what the
+ * file holds by then rather than replacing it. A server booted on an
+ * explicit REVIEWER_REPO is a window opened beside the main one, and leaves
+ * the remembered project to that one: the next plain launch comes back to
+ * where the main window was, not to whichever window wrote last.
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir } from "node:os";
-import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected } from "@reviewer/core/shared";
-import { chooseRepo, InvalidRepo } from "@reviewer/core/workspace";
-import type { RepoEntry } from "@reviewer/core/workspace";
+import { folderName, InvalidRepo } from "@reviewer/core/workspace";
 import { importLegacyJson } from "../db/legacy-import.ts";
 import { rememberProject } from "../db/scope.ts";
-import {
-  getCurrentProject,
-  getCurrentRepo,
-  setCurrentProject,
-  setCurrentRepo,
-} from "./current-repo.ts";
-import { scanRepos } from "./repo-scan.ts";
+import { getCurrentRepo, setCurrentRepo } from "./current-repo.ts";
+
+/** A repository opened before, and when it last was. */
+export interface OpenedRepo {
+  readonly path: string;
+  readonly openedAt: string;
+}
 
 export interface WorkspaceContextShape {
-  /** The selected repo root, or fail with NoRepoSelected when none is set. */
+  /** The open repository, or fail with NoRepoSelected when none is. */
   readonly requireCurrent: Effect.Effect<string, NoRepoSelected>;
-  /** The selected repo root, or null when the project holds none. */
+  /** The open repository, or null when nothing is open. */
   readonly current: Effect.Effect<string | null>;
-  /** The open project folder, or null when nothing is open. */
-  readonly project: Effect.Effect<string | null>;
-  /** The open project folder, or fail with NoRepoSelected when none is. */
-  readonly requireProject: Effect.Effect<string, NoRepoSelected>;
-  /** Recently opened projects, most-recent first. */
+  /** Recently opened repositories, most-recent first. */
   readonly recents: Effect.Effect<ReadonlyArray<string>>;
-  /**
-   * Open an already-resolved folder as the project: its roots are discovered,
-   * the one it was last left on (or its first) becomes current, and both are
-   * persisted. Returns the root that ended up current — null for a folder
-   * holding none.
-   */
-  readonly selectProject: (project: string) => Effect.Effect<string | null>;
-  /** Point the git views at one of the open project's roots, and remember it. */
+  /** Every repository opened here, with its last open, most-recent first. */
+  readonly opened: Effect.Effect<ReadonlyArray<OpenedRepo>>;
+  /** Open an already-resolved repository root as the project, and persist it. */
   readonly selectRepo: (repo: string) => Effect.Effect<void>;
   /** The user's home directory (for the picker's default browse root). */
   readonly home: string;
@@ -68,15 +60,13 @@ export class WorkspaceContext extends Context.Service<
 
 const STATE_DIR = `${homedir()}/.reviewer`;
 const STATE_FILE = `${STATE_DIR}/state.json`;
-const MAX_RECENTS = 10;
+const MAX_RECENTS = 20;
 
 interface PersistedState {
-  /** The open project folder. */
+  /** The open repository. */
   readonly current: string | null;
-  /** Recently opened projects, most-recent first. */
-  readonly recents: ReadonlyArray<string>;
-  /** The root each project was last left on, keyed by project path. */
-  readonly repos: Readonly<Record<string, string>>;
+  /** Repositories opened before, most-recent first, each with its last open. */
+  readonly recents: ReadonlyArray<OpenedRepo>;
 }
 
 export interface InitialSelection {
@@ -113,10 +103,10 @@ export const validateRepo = (
   );
 
 /**
- * Canonical workspace path for `path`: the git root if it (or an ancestor) is a
- * repo, otherwise the directory itself. Null when it isn't a directory.
+ * The repository root `path` belongs to — itself or an ancestor — or null
+ * when it is not a directory inside a repository.
  */
-export const resolveWorkspace = (
+export const resolveRepo = (
   fs: FileSystem.FileSystem,
   spawner: ChildProcessSpawner.ChildProcessSpawner["Service"],
   path: string
@@ -126,49 +116,81 @@ export const resolveWorkspace = (
       .stat(path)
       .pipe(Effect.catch(() => Effect.succeed(null)));
     if (stat === null || stat.type !== "Directory") return null;
-    const root = yield* validateRepo(spawner, path).pipe(
+    return yield* validateRepo(spawner, path).pipe(
       Effect.catch(() => Effect.succeed(null))
     );
-    return root ?? pathResolve(path);
   });
+
+/**
+ * State written before opens were dated listed recents as bare paths. Those
+ * are dated from when the file was last written, a second apart so the order
+ * they were kept in survives — the file was written at the newest open.
+ */
+const readRecents = (
+  raw: unknown,
+  writtenAt: Date
+): ReadonlyArray<OpenedRepo> => {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((entry: unknown, index): OpenedRepo[] => {
+    if (typeof entry === "string") {
+      return [
+        {
+          path: entry,
+          openedAt: new Date(writtenAt.getTime() - index * 1000).toISOString(),
+        },
+      ];
+    }
+    if (
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as { path?: unknown }).path === "string" &&
+      typeof (entry as { openedAt?: unknown }).openedAt === "string"
+    ) {
+      const { openedAt, path } = entry as OpenedRepo;
+      return [{ path, openedAt }];
+    }
+    return [];
+  });
+};
+
+/** Two windows' opens as one list, each repository at its latest, newest first. */
+const mergeOpened = (
+  ours: ReadonlyArray<OpenedRepo>,
+  theirs: ReadonlyArray<OpenedRepo>
+): ReadonlyArray<OpenedRepo> => {
+  const latest = new Map<string, string>();
+  for (const entry of [...ours, ...theirs]) {
+    const known = latest.get(entry.path);
+    if (known === undefined || known < entry.openedAt) {
+      latest.set(entry.path, entry.openedAt);
+    }
+  }
+  return [...latest]
+    .map(([path, openedAt]) => ({ path, openedAt }))
+    .sort((a, b) => b.openedAt.localeCompare(a.openedAt))
+    .slice(0, MAX_RECENTS);
+};
 
 export const make = (initial: InitialSelection | null) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
-    const EMPTY_STATE: PersistedState = {
-      current: null,
-      recents: [],
-      repos: {},
-    };
+    const EMPTY_STATE: PersistedState = { current: null, recents: [] };
 
-    // State written before projects existed has no `repos` map; its `current`
-    // was a repository, which is a project holding exactly itself, so it reads
-    // back correctly with nothing to migrate.
     const readState: Effect.Effect<PersistedState> = Effect.gen(function* () {
       const present = yield* fs.exists(STATE_FILE);
       if (!present) return EMPTY_STATE;
       const raw = yield* fs.readFileString(STATE_FILE);
+      const writtenAt = yield* fs.stat(STATE_FILE).pipe(
+        Effect.map((info) => Option.getOrElse(info.mtime, () => new Date())),
+        Effect.catch(() => Effect.succeed(new Date()))
+      );
       try {
         const parsed = JSON.parse(raw);
-        const repos =
-          typeof parsed?.repos === "object" && parsed.repos !== null
-            ? Object.fromEntries(
-                Object.entries(parsed.repos as Record<string, unknown>).filter(
-                  (entry): entry is [string, string] =>
-                    typeof entry[1] === "string"
-                )
-              )
-            : {};
         return {
           current: typeof parsed?.current === "string" ? parsed.current : null,
-          recents: Array.isArray(parsed?.recents)
-            ? parsed.recents.filter(
-                (entry: unknown): entry is string => typeof entry === "string"
-              )
-            : [],
-          repos,
+          recents: readRecents(parsed?.recents, writtenAt),
         };
       } catch {
         return EMPTY_STATE;
@@ -182,11 +204,9 @@ export const make = (initial: InitialSelection | null) =>
       }).pipe(Effect.catch(() => Effect.void));
 
     const validOrNull = (path: string | null) =>
-      path === null
-        ? Effect.succeed(null)
-        : resolveWorkspace(fs, spawner, path);
+      path === null ? Effect.succeed(null) : resolveRepo(fs, spawner, path);
 
-    // Boot order: explicit REVIEWER_REPO > last workspace used > cwd guess.
+    // Boot order: explicit REVIEWER_REPO > last repository used > cwd guess.
     const persisted = yield* readState;
     const explicitValid =
       initial !== null && initial.explicit
@@ -201,117 +221,80 @@ export const make = (initial: InitialSelection | null) =>
           )
         : null;
 
-    const initialProject = explicitValid ?? persistedValid ?? fallbackValid;
-    const recentsRef = yield* Ref.make<ReadonlyArray<string>>(
+    const initialRepo = explicitValid ?? persistedValid ?? fallbackValid;
+    const recentsRef = yield* Ref.make<ReadonlyArray<OpenedRepo>>(
       persisted.recents
     );
-    const rememberedRef = yield* Ref.make<Readonly<Record<string, string>>>(
-      persisted.repos
-    );
 
-    /** Persist whatever is open now, alongside recents and the per-project roots. */
+    const remembersCurrent = explicitValid === null;
+
     const persist = Effect.gen(function* () {
+      const onDisk = yield* readState;
       yield* writeState({
-        current: getCurrentProject(),
-        recents: yield* Ref.get(recentsRef),
-        repos: yield* Ref.get(rememberedRef),
+        current: remembersCurrent ? getCurrentRepo() : onDisk.current,
+        recents: mergeOpened(yield* Ref.get(recentsRef), onDisk.recents),
       });
     });
 
     /**
-     * Register the project and every root it holds, and take across anything
-     * those roots still keep in `.reviewer/*.json`.
-     *
-     * Both are per-root on purpose: a folder holding a `backend` and a
-     * `frontend` is one project made of two repositories, and each of them
-     * carries its own history. Neither call fails an open — a project that
-     * cannot be recorded is still a project the user can work in.
+     * Register the repository and take across anything it still keeps in
+     * `.reviewer/*.json`. Neither call fails an open — a repository that
+     * cannot be recorded is still one the user can work in.
      */
-    const adoptRoots = (project: string, repos: ReadonlyArray<RepoEntry>) =>
+    const adopt = (repo: string) =>
       Effect.sync(() => {
         try {
-          rememberProject(project, repos);
-          for (const repo of repos) importLegacyJson(repo.path);
+          rememberProject(repo, [{ name: folderName(repo), path: repo }]);
+          importLegacyJson(repo);
         } catch (error) {
           console.warn(
-            "reviewer: could not register the open project —",
+            "reviewer: could not register the open repository —",
             error instanceof Error ? error.message : error
           );
         }
       });
 
-    /** Open `project` on the root it was last left on, or on its first. */
-    const openRoots = (project: string) =>
+    const open = (repo: string) =>
       Effect.gen(function* () {
-        const repos = yield* scanRepos(fs, project);
-        yield* adoptRoots(project, repos);
-        const remembered = yield* Ref.get(rememberedRef);
-        const chosen = chooseRepo(repos, remembered[project] ?? null);
-        // `current-repo.ts` is the single store for the selection: an Effect Ref
-        // couldn't be read by the PTY socket / chat runtime, which run outside
-        // the Effect runtime, so those (and this service) share the one module
-        // snapshot. The project moves first so a listener woken by the repo
-        // change already sees the project it belongs to.
-        setCurrentProject(project);
-        setCurrentRepo(chosen);
-        return chosen;
+        yield* adopt(repo);
+        // `current-repo.ts` is the single store for the selection: an Effect
+        // Ref couldn't be read by the PTY socket / chat runtime, which run
+        // outside the Effect runtime, so those (and this service) share the
+        // one module snapshot.
+        setCurrentRepo(repo);
       });
 
-    if (initialProject !== null) yield* openRoots(initialProject);
+    if (initialRepo !== null) yield* open(initialRepo);
 
     const current: Effect.Effect<string | null> = Effect.sync(getCurrentRepo);
-    const project: Effect.Effect<string | null> =
-      Effect.sync(getCurrentProject);
-
-    const selectProject: WorkspaceContextShape["selectProject"] = (root) =>
-      Effect.gen(function* () {
-        const chosen = yield* openRoots(root);
-        yield* Ref.update(recentsRef, (existing) =>
-          [root, ...existing.filter((entry) => entry !== root)].slice(
-            0,
-            MAX_RECENTS
-          )
-        );
-        if (chosen !== null) {
-          yield* Ref.update(rememberedRef, (existing) => ({
-            ...existing,
-            [root]: chosen,
-          }));
-        }
-        yield* persist;
-        return chosen;
-      });
 
     const selectRepo: WorkspaceContextShape["selectRepo"] = (repo) =>
       Effect.gen(function* () {
-        setCurrentRepo(repo);
-        const open = getCurrentProject();
-        if (open !== null) {
-          yield* Ref.update(rememberedRef, (existing) => ({
-            ...existing,
-            [open]: repo,
-          }));
-        }
+        yield* open(repo);
+        const openedAt = new Date().toISOString();
+        yield* Ref.update(recentsRef, (existing) =>
+          [
+            { path: repo, openedAt },
+            ...existing.filter((entry) => entry.path !== repo),
+          ].slice(0, MAX_RECENTS)
+        );
         yield* persist;
       });
 
-    const orNoSelection = (path: Effect.Effect<string | null>) =>
-      path.pipe(
+    return WorkspaceContext.of({
+      home: homedir(),
+      current,
+      recents: Effect.map(Ref.get(recentsRef), (recents) =>
+        recents.map((entry) => entry.path)
+      ),
+      opened: Ref.get(recentsRef),
+      requireCurrent: current.pipe(
         Effect.flatMap((selected) =>
           selected === null
             ? Effect.fail(new NoRepoSelected())
             : Effect.succeed(selected)
         )
-      );
-
-    return WorkspaceContext.of({
-      home: homedir(),
-      current,
-      project,
-      recents: Ref.get(recentsRef),
-      requireCurrent: orNoSelection(current),
-      requireProject: orNoSelection(project),
-      selectProject,
+      ),
       selectRepo,
     });
   });
@@ -324,44 +307,37 @@ export const layer = (
   FileSystem.FileSystem | ChildProcessSpawner.ChildProcessSpawner
 > => Layer.effect(WorkspaceContext)(make(initial));
 
-/**
- * Test seam: an in-memory context with no filesystem/git/persistence. The
- * seeded folder stands in for a single-repo project, where the project and the
- * current root are the same path.
- */
+/** Test seam: an in-memory context with no filesystem/git/persistence. */
 export const makeMemory = (initial: string | null = null) =>
   Effect.gen(function* () {
-    const projectRef = yield* Ref.make<string | null>(initial);
     const currentRef = yield* Ref.make<string | null>(initial);
-    const recentsRef = yield* Ref.make<ReadonlyArray<string>>(
-      initial === null ? [] : [initial]
+    const recentsRef = yield* Ref.make<ReadonlyArray<OpenedRepo>>(
+      initial === null
+        ? []
+        : [{ path: initial, openedAt: "2026-01-01T00:00:00.000Z" }]
     );
-    const orNoSelection = (path: Effect.Effect<string | null>) =>
-      path.pipe(
+    return WorkspaceContext.of({
+      home: "/home/test",
+      current: Ref.get(currentRef),
+      recents: Effect.map(Ref.get(recentsRef), (recents) =>
+        recents.map((entry) => entry.path)
+      ),
+      opened: Ref.get(recentsRef),
+      requireCurrent: Ref.get(currentRef).pipe(
         Effect.flatMap((selected) =>
           selected === null
             ? Effect.fail(new NoRepoSelected())
             : Effect.succeed(selected)
         )
-      );
-    return WorkspaceContext.of({
-      home: "/home/test",
-      current: Ref.get(currentRef),
-      project: Ref.get(projectRef),
-      recents: Ref.get(recentsRef),
-      requireCurrent: orNoSelection(Ref.get(currentRef)),
-      requireProject: orNoSelection(Ref.get(projectRef)),
-      selectProject: (root) =>
+      ),
+      selectRepo: (repo) =>
         Effect.gen(function* () {
-          yield* Ref.set(projectRef, root);
-          yield* Ref.set(currentRef, root);
+          yield* Ref.set(currentRef, repo);
           yield* Ref.update(recentsRef, (existing) => [
-            root,
-            ...existing.filter((entry) => entry !== root),
+            { path: repo, openedAt: "2026-01-01T00:00:00.000Z" },
+            ...existing.filter((entry) => entry.path !== repo),
           ]);
-          return root;
         }),
-      selectRepo: (repo) => Ref.set(currentRef, repo),
     });
   });
 

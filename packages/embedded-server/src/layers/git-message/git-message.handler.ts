@@ -14,7 +14,7 @@ import { WorkspaceContext } from "../workspace/workspace-context.ts";
  */
 const openProject = Effect.gen(function* () {
   const workspace = yield* WorkspaceContext;
-  const project = yield* workspace.project;
+  const project = yield* workspace.current;
   return project ?? "";
 });
 

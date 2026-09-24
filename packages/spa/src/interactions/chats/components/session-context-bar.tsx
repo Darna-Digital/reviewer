@@ -13,12 +13,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { activeRepo } from "@reviewer/core/workspace";
-import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
-  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -28,11 +25,6 @@ export function SessionContextBar() {
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
-  const workspaceActions = useWorkspaceActions();
-  const projectBranchList = useProjectBranches();
-  /** Make a root current before a menu action runs in it. */
-  const followRepo = (repoPath: string) =>
-    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -40,8 +32,10 @@ export function SessionContextBar() {
 
   const current = repo.data ?? null;
 
+  // Tucked under the composer by its full corner radius, so the strip's own
+  // square top corners never show through where the composer's curve away.
   return (
-    <div className="-mt-3 flex items-center gap-1 rounded-b-lg border border-t-0 bg-elevate px-2 pt-4 pb-1.5">
+    <div className="composer-foot -mt-4 flex items-center gap-1 border border-t-0 bg-elevate px-2 pt-5 pb-1.5">
       <ProjectPicker
         workspace={workspace.data}
         open={projectPickerOpen}
@@ -66,9 +60,6 @@ export function SessionContextBar() {
         onRebase={(o) => void git.rebase(o)}
         onRenameBranch={(from, to) => void git.renameBranch(from, to)}
         onDeleteBranch={(name) => void git.deleteBranch(name)}
-        repos={projectBranchList.data?.repos}
-        currentRepo={activeRepo(workspace.data ?? { repos: [], current: null })}
-        onFollowRepo={followRepo}
         onFetch={() => void git.fetch()}
         onPush={() => void git.push()}
       />

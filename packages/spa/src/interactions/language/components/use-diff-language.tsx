@@ -6,7 +6,9 @@
  * server has an opinion about. The deletions side is the previous revision, and
  * asking about a symbol there would answer from the wrong file. So everything
  * here is gated on the side the pointer is actually over — which the diff token
- * hooks report, so it never has to be inferred from the DOM.
+ * hooks report, so it never has to be inferred from the DOM. The right-click
+ * menu is the one exception: it starts from a `contextmenu` event rather than a
+ * token hook, and reads the side off the rendered row itself.
  *
  * Token squiggles are deliberately absent. Painting them means finding the
  * additions rows in the rendered grid, and in split mode each column numbers by
@@ -68,6 +70,8 @@ export interface DiffLanguage {
   };
   /** Render inside the section. */
   readonly card: React.ReactNode;
+  /** The right-click menu over a symbol on the additions side, when open. */
+  readonly menu: React.ReactNode;
 }
 
 export function useDiffLanguage({
@@ -155,5 +159,6 @@ export function useDiffLanguage({
     annotations,
     viewOptions,
     card: layer.card,
+    menu: layer.menu,
   };
 }

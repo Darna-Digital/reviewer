@@ -1,9 +1,7 @@
 /**
- * `search` feature — one dialog, a handful of lists, three ways in: ⌘K for the
- * commands it opens on, a double-tap of Shift to go straight to files, and ⌘⇧F
- * to go straight to a content grep. Every list past the commands is also a plain
- * entry in the command list, so the keyboard shortcuts are accelerators for
- * something you can always find by reading.
+ * `search` feature — one dialog, a handful of lists: the commands it opens on,
+ * files, and a content grep. Every list past the commands is also a plain
+ * entry in the command list. The chords that open it are the native shell's.
  *
  * The searches themselves are one call each, but the rules around them (what is
  * too short to search for, how matches group under their file, which slice of a
@@ -35,12 +33,12 @@ export interface Crumb {
 export interface Submenu {
   readonly mode: Exclude<SearchMode, "commands">;
   readonly parent: SearchMode;
-  /** How the row that opens it reads, e.g. "Go to File…". */
+  /** How the row that opens it reads, e.g. "Go to file…". */
   readonly label: string;
   readonly group: string;
   readonly icon: React.ComponentType<{ className?: string }>;
   readonly keywords: string;
-  /** Right-aligned shortcut on the row that opens it. */
+  /** Right-aligned hint on the row that opens it. */
   readonly hint?: string;
 }
 
@@ -54,7 +52,7 @@ export interface Command {
   readonly icon: React.ComponentType<{ className?: string }>;
   /** Extra search terms not shown in the label (e.g. "dark light system"). */
   readonly keywords?: string;
-  /** Right-aligned hint — a current value or shortcut. */
+  /** Right-aligned hint — a current value. */
   readonly hint?: string;
   /** The list the command lives in; the root command list when omitted. */
   readonly submenu?: SearchMode;
@@ -79,14 +77,6 @@ export interface GrepOptions {
   readonly wholeWord: boolean;
   readonly regex: boolean;
 }
-
-/**
- * How wide a search runs: the repository being followed, or every root the open
- * project holds. A multi-root project searches the project — a match in
- * `backend` is as findable as one in `frontend`, and comes back named from the
- * project root (`backend/src/a.ts`) so opening it needs nothing else.
- */
-export type SearchScope = "repo" | "project";
 
 export interface GrepResults {
   readonly matches: ReadonlyArray<ContentMatch>;
@@ -114,38 +104,12 @@ export interface SearchDependencies {
   sideEffects: {
     readonly grep: (
       query: string,
-      options: GrepOptions,
-      scope: SearchScope
+      options: GrepOptions
     ) => Promise<GrepResults>;
   };
 }
 
 export interface SearchFunctions {
   /** Search file contents; too-short queries resolve empty without a request. */
-  readonly grep: (
-    query: string,
-    options: GrepOptions,
-    scope: SearchScope
-  ) => Promise<GrepResults>;
-}
-
-/** Keyboard event fields the shortcut rules read — a plain object in tests. */
-export interface KeyChord {
-  readonly key: string;
-  readonly metaKey: boolean;
-  readonly ctrlKey: boolean;
-  readonly altKey: boolean;
-  readonly shiftKey: boolean;
-  /** Set while a key is held down and auto-repeating. */
-  readonly repeat: boolean;
-}
-
-/** When Shift was last tapped on its own, if it still counts towards a pair. */
-export interface ShiftTaps {
-  readonly lastTapAt: number | null;
-}
-
-export interface ShiftTapOutcome {
-  readonly taps: ShiftTaps;
-  readonly doubleTapped: boolean;
+  readonly grep: (query: string, options: GrepOptions) => Promise<GrepResults>;
 }

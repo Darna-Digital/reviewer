@@ -7,7 +7,7 @@
  *
  * On POSIX the command runs *through the user's login + interactive shell*
  * (`$SHELL -lic`), not a bare `sh -c`. A bare spawn searches only
- * `process.env.PATH`, which under a GUI launch (the Electron app from Finder, or
+ * `process.env.PATH`, which under a GUI launch (the mac app from Finder, or
  * an IDE) is launchd's minimal PATH — missing `~/.local/bin`, version managers,
  * Homebrew, `~/.bun/bin`, etc. — so an agent CLI installed there isn't found.
  * Sourcing the startup files gives the command the exact PATH the developer sees

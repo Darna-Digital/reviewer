@@ -11,17 +11,18 @@ import type {
 } from "@reviewer/core/chats";
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
 import {
-  CHAT_MODES,
-  type ChatMode,
-} from "@/interactions/chats/functions/chat-mode.functions";
-import type { MarkdownView } from "@/interactions/markdown/interfaces/markdown.interfaces";
-import { asMarkdownView } from "@/interactions/markdown/functions/markdown-view.functions";
-import { isPreviewWindow } from "@/lib/preview-window";
-import { asEditMode } from "@/interactions/edit-mode/functions/edit-mode.functions";
-import type { EditMode } from "@/interactions/edit-mode/interfaces/edit-mode.interfaces";
+  DEFAULT_DARK_THEME,
+  DEFAULT_LIGHT_THEME,
+  themeNameOrDefault,
+} from "@reviewer/core/themes";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
+/**
+ * The theme a code surface is drawn with in each scheme, in the shape
+ * `@pierre/diffs` takes it: the pair, with `themeType` picking the side.
+ */
+export type CodeThemes = { readonly light: string; readonly dark: string };
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
@@ -36,7 +37,7 @@ export type BottomTab =
  * choice again on every session — and a review handed to a new chat always went
  * to Claude, whoever you had actually been working with. So the choices are
  * kept: the next session, started from the composer or handed a review, opens
- * on the agent, model and mode the last one used.
+ * on the agent and model the last one used.
  */
 export interface LastSession {
   /**
@@ -48,8 +49,6 @@ export interface LastSession {
   model?: string;
   effort?: ChatEffort;
   access?: ChatAccess;
-  /** Always answered — a composer is in a mode whether or not you picked it. */
-  mode: ChatMode;
 }
 
 export interface UiPrefs {
@@ -57,6 +56,14 @@ export interface UiPrefs {
   theme: ThemePref;
   /** The concrete theme to render (system resolved against the OS). */
   resolvedTheme: Theme;
+  /**
+   * Which theme paints the light scheme and which the dark — names from the
+   * catalog in `@reviewer/core/themes`. One choice per scheme rather than one
+   * for both: a theme is written for one scheme, and following the system
+   * from day to night means switching between two of them.
+   */
+  lightTheme: string;
+  darkTheme: string;
   diffStyle: DiffStyle;
   connectors: boolean;
   /**
@@ -66,16 +73,6 @@ export interface UiPrefs {
   translucency: boolean;
   /** Whether the shell's left sidebar (the file tree) shows. */
   sidebarVisible: boolean;
-  /**
-   * How an open file answers the keyboard — typing, modal editing, or
-   * commenting rather than editing at all.
-   */
-  editMode: EditMode;
-  /**
-   * Whether saving a file runs the project's own formatter over it first. Inert
-   * in a project that configures none.
-   */
-  formatOnSave: boolean;
   bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab;
@@ -83,18 +80,10 @@ export interface UiPrefs {
   sidebarWidth: number;
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
   workspaceSidebarWidth: number;
-  /** Drag-resizable width of the inbox's message list, in px. */
+  /** Drag-resizable width of the sessions page's list, in px. */
   inboxListWidth: number;
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number;
-  /**
-   * Which of the three readings a markdown file opens on: its source, its
-   * document, or both. One preference for every `.md` file rather than one per
-   * file — it is a way of working, not a property of a document.
-   */
-  markdownView: MarkdownView;
-  /** Drag-resizable source pane width in the split markdown view, in px. */
-  markdownSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number;
   /** Drag-resizable width of the Find window's results list, in px. */
@@ -129,35 +118,34 @@ export interface UiPrefs {
   chatModelFavorites: string[];
   /** Drag-resizable height of the chat composer's prompt box, in px. */
   composerHeight: number;
-  /** Whether the browser pane splits the canvas. Native shell only. */
-  browserPaneOpen: boolean;
-  /** Drag-resizable browser pane width, in px. */
-  browserPaneWidth: number;
-  /**
-   * The page the browser pane last showed, per repository path. Keyed rather
-   * than single so switching repos doesn't carry the last app's URL over.
-   */
-  browserPaneUrls: Record<string, string>;
-  /** Whether the analysis pane splits the canvas. Native shell only. */
-  plansPaneOpen: boolean;
-  /** Drag-resizable analysis pane width, in px. */
-  plansPaneWidth: number;
-  /** Drag-resizable height of the notes list under the analysis graph, in px. */
-  plansNotesHeight: number;
-  /** Drag-resizable height of the launchpad panel, in px. */
-  launchpadHeight: number;
-  /** The agent, model and mode the last session was composed with. */
+  /** The agent and model the last session was composed with. */
   lastSession: LastSession;
 }
 
 const STORE_KEY = "reviewer-ui";
 const THEME_KEY = "reviewer-theme";
+/**
+ * The theme names, kept beside the mode under keys of their own rather than
+ * inside the store: the macOS shell, which owns the choice there, writes them
+ * before the page's first script (see `NativePalette`), and the pre-paint
+ * script in `__root` reads them back the same way.
+ */
+const LIGHT_THEME_KEY = "reviewer-theme-light";
+const DARK_THEME_KEY = "reviewer-theme-dark";
+/** What the shell dispatches once it has rewritten the keys above. */
+export const THEMES_CHANGED_EVENT = "reviewer:themes";
 
-const systemTheme = (): Theme =>
-  typeof window !== "undefined" &&
-  window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+/**
+ * The OS's scheme, where there is an OS to ask: a test's DOM has no
+ * `matchMedia`, and a module that loads there — every code surface imports
+ * this store for its theme pair — must not fall over asking.
+ */
+const osScheme = (): MediaQueryList | undefined =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : undefined;
+
+const systemTheme = (): Theme => (osScheme()?.matches ? "dark" : "light");
 
 const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
@@ -172,20 +160,18 @@ const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
 
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
+  lightTheme: DEFAULT_LIGHT_THEME,
+  darkTheme: DEFAULT_DARK_THEME,
   diffStyle: "split",
   connectors: true,
   translucency: true,
   sidebarVisible: true,
-  editMode: "normal",
-  formatOnSave: true,
   bottomVisible: true,
   bottomTab: "history",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
   svgSourceWidth: 420,
-  markdownView: "source",
-  markdownSourceWidth: 480,
   bottomHeight: 256,
   findResultsWidth: 380,
   commitFilesHeight: 180,
@@ -193,25 +179,17 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   reviewInfoWidth: 320,
   reviewTreeWidth: 300,
   reviewTreeVisible: true,
-  commitDetailsWidth: 320,
+  commitDetailsWidth: 520,
   commitAgent: "claude",
   chatModelFavorites: [],
   composerHeight: 92,
-  browserPaneOpen: false,
-  browserPaneWidth: 480,
-  browserPaneUrls: {},
-  plansPaneOpen: false,
-  plansPaneWidth: 560,
-  plansNotesHeight: 220,
-  launchpadHeight: 380,
-  lastSession: { mode: "build" },
+  lastSession: {},
 };
 
 /**
  * Storage holds whatever the last version of the app wrote, so a session read
- * back out of it is filled in from the defaults and checked: an agent that is
- * no longer assignable, or a mode that no longer exists, is not one the
- * composer could open on.
+ * back out of it is checked: an agent that is no longer assignable is not one
+ * the composer could open on.
  */
 const readLastSession = (stored: LastSession | undefined): LastSession => {
   const merged = { ...defaults.lastSession, ...stored };
@@ -221,65 +199,53 @@ const readLastSession = (stored: LastSession | undefined): LastSession => {
       merged.provider !== undefined && isChatProviderKind(merged.provider)
         ? merged.provider
         : undefined,
-    mode: CHAT_MODES.includes(merged.mode) ? merged.mode : "build",
   };
 };
 
-/** The panes that split the canvas beside the page: analysis and browser. */
-export type SidePane = "analysis" | "browser";
-
-export const SIDE_PANE_MIN: Readonly<Record<SidePane, number>> = {
-  analysis: 380,
-  browser: 320,
-};
-
 /**
- * A pane opens at half the window at most.
- *
- * Widths are remembered in pixels, so a pane pulled out on a large display
- * reopened at that same width on a laptop — half the pane hanging off nothing
- * and the page beside it squeezed to a sliver. Dragging one wider than half is
- * still allowed; it is the width a pane *opens* at that is fitted to whatever
- * window it is opening in.
+ * The commit details panel used to open at 320px — too narrow to read a diff
+ * in. A stored width still sitting at that old default was never dragged
+ * there, so it follows the new default rather than being kept.
  */
-export const fitSidePane = (pane: SidePane, width: number): number =>
-  typeof window === "undefined"
-    ? width
-    : Math.max(
-        SIDE_PANE_MIN[pane],
-        Math.min(width, Math.round(window.innerWidth / 2))
-      );
+const LEGACY_COMMIT_DETAILS_WIDTH = 320;
 
 /** Storage holds whatever the last version of the app wrote, whatever that was. */
-type StoredPrefs = Partial<typeof defaults> & { readonly vimMode?: unknown };
+type StoredPrefs = Partial<typeof defaults>;
 
 function load(): UiPrefs {
   let prefs = { ...defaults };
   if (typeof window !== "undefined") {
-    // Held as it was read as well as merged in: the edit mode is worked out
-    // from the whole stored profile, since a profile old enough states it as a
-    // `vimMode` boolean instead.
-    let storedPrefs: StoredPrefs = {};
     try {
       const raw = window.localStorage.getItem(STORE_KEY);
       if (raw !== null) {
-        storedPrefs = JSON.parse(raw) as StoredPrefs;
-        prefs = { ...prefs, ...storedPrefs };
+        prefs = { ...prefs, ...(JSON.parse(raw) as StoredPrefs) };
       }
     } catch {
       // ignore malformed storage
     }
-    prefs.editMode = asEditMode(storedPrefs);
+    if (prefs.commitDetailsWidth === LEGACY_COMMIT_DETAILS_WIDTH)
+      prefs.commitDetailsWidth = defaults.commitDetailsWidth;
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
-    prefs.markdownView = asMarkdownView(prefs.markdownView);
-    prefs.plansPaneWidth = fitSidePane("analysis", prefs.plansPaneWidth);
-    prefs.browserPaneWidth = fitSidePane("browser", prefs.browserPaneWidth);
     prefs.lastSession = readLastSession(prefs.lastSession);
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
       prefs.theme = stored;
+    Object.assign(prefs, readThemeNames());
   }
   return { ...prefs, resolvedTheme: resolve(prefs.theme) };
+}
+
+/**
+ * The stored names, each checked against the catalog and against its scheme
+ * — a name this build no longer ships, or a dark theme filed under light,
+ * falls back to the scheme's default rather than leaving code unhighlighted.
+ */
+function readThemeNames(): Pick<UiPrefs, "lightTheme" | "darkTheme"> {
+  const read = (key: string) => window.localStorage.getItem(key) ?? undefined;
+  return {
+    lightTheme: themeNameOrDefault(read(LIGHT_THEME_KEY), "light"),
+    darkTheme: themeNameOrDefault(read(DARK_THEME_KEY), "dark"),
+  };
 }
 
 let state: UiPrefs = load();
@@ -290,26 +256,22 @@ function emit() {
 }
 
 function persist() {
-  // A preview shares the window's storage: what a page does while being looked
-  // at — marking the inbox read, sizing a pane — is not the window's doing.
-  if (typeof window === "undefined" || isPreviewWindow) return;
+  if (typeof window === "undefined") return;
   try {
     const {
       theme,
+      lightTheme,
+      darkTheme,
       diffStyle,
       connectors,
       translucency,
       sidebarVisible,
-      editMode,
-      formatOnSave,
       bottomVisible,
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
       inboxListWidth,
       svgSourceWidth,
-      markdownView,
-      markdownSourceWidth,
       bottomHeight,
       findResultsWidth,
       commitFilesHeight,
@@ -321,33 +283,24 @@ function persist() {
       commitAgent,
       chatModelFavorites,
       composerHeight,
-      browserPaneOpen,
-      browserPaneWidth,
-      browserPaneUrls,
-      plansPaneOpen,
-      plansPaneWidth,
-      plansNotesHeight,
-      launchpadHeight,
       lastSession,
     } = state;
     window.localStorage.setItem(
       STORE_KEY,
       JSON.stringify({
         theme,
+        lightTheme,
+        darkTheme,
         diffStyle,
         connectors,
         translucency,
         sidebarVisible,
-        editMode,
-        formatOnSave,
         bottomVisible,
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
         inboxListWidth,
         svgSourceWidth,
-        markdownView,
-        markdownSourceWidth,
         bottomHeight,
         findResultsWidth,
         commitFilesHeight,
@@ -359,17 +312,12 @@ function persist() {
         commitAgent,
         chatModelFavorites,
         composerHeight,
-        browserPaneOpen,
-        browserPaneWidth,
-        browserPaneUrls,
-        plansPaneOpen,
-        plansPaneWidth,
-        plansNotesHeight,
-        launchpadHeight,
         lastSession,
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);
+    window.localStorage.setItem(LIGHT_THEME_KEY, state.lightTheme);
+    window.localStorage.setItem(DARK_THEME_KEY, state.darkTheme);
   } catch {
     // ignore quota errors
   }
@@ -403,6 +351,10 @@ export function setUiPrefs(patch: UiPrefsPatch) {
   if (!changed) return;
 
   state = { ...state, ...patch };
+  if (patch.lightTheme !== undefined)
+    state.lightTheme = themeNameOrDefault(patch.lightTheme, "light");
+  if (patch.darkTheme !== undefined)
+    state.darkTheme = themeNameOrDefault(patch.darkTheme, "dark");
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme);
     applyTheme();
@@ -428,29 +380,35 @@ export function rememberSession(patch: Partial<LastSession>) {
 /** The preferences as they stand, for stores that read them outside React. */
 export const readUiPrefs = (): UiPrefs => state;
 
+/**
+ * The pair a code surface is drawn with. One object per pair of names, so a
+ * view handed it as an option sees the same value until a name changes —
+ * `@pierre/diffs` re-highlights on new options, and would on every render.
+ */
+let codeThemesCache: CodeThemes = {
+  light: defaults.lightTheme,
+  dark: defaults.darkTheme,
+};
+export const codeThemesOf = (prefs: UiPrefs): CodeThemes => {
+  if (
+    codeThemesCache.light !== prefs.lightTheme ||
+    codeThemesCache.dark !== prefs.darkTheme
+  )
+    codeThemesCache = { light: prefs.lightTheme, dark: prefs.darkTheme };
+  return codeThemesCache;
+};
+
+/**
+ * The one of the pair that is actually on screen — the theme everything
+ * derived from a theme is derived from: the window's palette (see
+ * `lib/chrome-theme`) and the colours code is set in (see `lib/syntax-theme`).
+ */
+export const themeNameOf = (prefs: UiPrefs): string =>
+  prefs.resolvedTheme === "dark" ? prefs.darkTheme : prefs.lightTheme;
+
 /** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
-}
-
-/** Expand or collapse the bottom dock; its tab strip stays put either way. */
-export function toggleBottomVisible() {
-  setUiPrefs({ bottomVisible: !state.bottomVisible });
-}
-
-/** Show or hide a side pane, at a width this window has the room for. */
-export function toggleSidePane(pane: SidePane) {
-  setUiPrefs(
-    pane === "browser"
-      ? {
-          browserPaneOpen: !state.browserPaneOpen,
-          browserPaneWidth: fitSidePane(pane, state.browserPaneWidth),
-        }
-      : {
-          plansPaneOpen: !state.plansPaneOpen,
-          plansPaneWidth: fitSidePane(pane, state.plansPaneWidth),
-        }
-  );
 }
 
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"];
@@ -461,28 +419,38 @@ export function cycleTheme() {
 }
 
 // Track the OS theme so "system" updates live.
+osScheme()?.addEventListener("change", () => {
+  if (state.theme === "system") {
+    // New object reference so useSyncExternalStore's Object.is check sees a
+    // change and re-renders. Components reading resolvedTheme through a React
+    // prop (e.g. pierre's FileDiff themeType) won't update otherwise — the
+    // <html> class flips via applyTheme() but the prop value would be stale.
+    state = { ...state, resolvedTheme: systemTheme() };
+    applyTheme();
+    emit();
+  }
+});
+
+// The macOS shell owns the theme names there, and says so by rewriting the
+// keys and dispatching the event: the store takes them up as a choice made on
+// its own settings page would have been (see `NativePalette.applyScript`).
 if (typeof window !== "undefined") {
-  window
-    .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", () => {
-      if (state.theme === "system") {
-        // New object reference so useSyncExternalStore's Object.is check sees a
-        // change and re-renders. Components reading resolvedTheme through a React
-        // prop (e.g. pierre's FileDiff themeType) won't update otherwise — the
-        // <html> class flips via applyTheme() but the prop value would be stale.
-        state = { ...state, resolvedTheme: systemTheme() };
-        applyTheme();
-        emit();
-      }
-    });
+  window.addEventListener(THEMES_CHANGED_EVENT, () => {
+    setUiPrefs(readThemeNames());
+  });
+}
+
+/** Called on every change; for what keeps in step with the prefs outside React. */
+export function subscribeUiPrefs(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function useUiPrefs(): UiPrefs {
   return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
+    subscribeUiPrefs,
     () => state,
     () => state
   );

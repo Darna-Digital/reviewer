@@ -8,7 +8,7 @@ import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { useFileBytes } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs, type Theme } from "@/lib/ui-prefs";
 
@@ -41,7 +41,7 @@ function Preview({ path }: { path: string }) {
   if (bytes.isPending) {
     return (
       <div className="p-8">
-        <LoadingCursor label={`Loading ${path}…`} />
+        <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );
   }

@@ -72,6 +72,12 @@ describe("parseFiles", () => {
     const files = fns().parseFiles("+++ b/src/a.ts\n+++ b/src/b.ts");
     expect(files.map((f) => f.name)).toEqual(["src/a.ts", "src/b.ts"]);
   });
+  it("drops the app's own files", () => {
+    const files = fns().parseFiles(
+      "+++ b/src/a.ts\n+++ b/.reviewer/comments.json"
+    );
+    expect(files.map((f) => f.name)).toEqual(["src/a.ts"]);
+  });
 });
 
 describe("tree derivations", () => {
@@ -150,13 +156,13 @@ describe("tree derivations", () => {
         { path: "src/new.ts", status: "untracked" },
         { path: ".reviewer/comments.json", status: "modified" },
       ],
-      parsedFiles: file("src/a.ts", "src/committed.ts"),
+      parsedFiles: file("src/a.ts", "src/committed.ts", "src/new.ts"),
       comparing: true,
     });
     expect(badges).toEqual([
       { path: "src/a.ts", status: "modified" },
       { path: "src/committed.ts", status: "modified" },
-      // `git diff` never carries an untracked file, so its own badge stands.
+      // The diff carries the untracked file as a new one; its own badge stands.
       { path: "src/new.ts", status: "untracked" },
     ]);
   });

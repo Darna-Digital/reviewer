@@ -2,7 +2,7 @@
 
 The brand studio — a local Vite SPA on **:41813** that draws the reviewer mark
 from its grid definition and exports every asset the app, the site and the
-desktop build need.
+macOS build need.
 
 ```sh
 pnpm dev:brand           # or: pnpm --filter @reviewer/brand dev
@@ -37,6 +37,6 @@ pnpm dev:brand           # or: pnpm --filter @reviewer/brand dev
   coordinates small enough to print in exponential notation).
 - `src/brand/raster.ts`, `pack.ts` — PNG, ICO and the zipped pack.
 
-Space Grotesk is vendored under `public/fonts` (SIL Open Font License 1.1) so
-the studio works offline and the outlines never depend on what is installed
+Space Grotesk is vendored under `public/fonts` (SIL Open Font License 1.1) so\
+the studio works offline and the outlines never depend on what is installed\
 locally.

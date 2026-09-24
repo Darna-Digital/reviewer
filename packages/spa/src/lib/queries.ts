@@ -6,8 +6,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
-import { isCloudRunActive } from "@reviewer/core/cloud";
-import { isMultiRepo } from "@reviewer/core/workspace";
+import { island } from "@/lib/shell";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
 /**
@@ -61,74 +60,6 @@ export const useBranchTargets = () =>
   api.useQuery("get", "/api/branch-targets", {}, OWN_DATA);
 export const useComments = () =>
   api.useQuery("get", "/api/comments", {}, OWN_DATA);
-
-// --- Project-wide git (every root the open project holds) ------------------
-// The `/api/repo`-backed hooks above answer for the selected repository; these
-// answer for the whole project, each entry carrying the root it came from.
-
-/** Whether the open project holds more than one root — which reads to use. */
-export const useMultiRepo = (): boolean => {
-  const workspace = useWorkspace();
-  return isMultiRepo({ repos: workspace.data?.repos ?? [] });
-};
-
-/** Every root's files, named from the project root so the tree nests them. */
-export const useProjectFiles = (enabled: boolean) =>
-  api.useQuery("get", "/api/project/files", {}, { ...GIT_DATA, enabled });
-
-/** Every root's uncommitted diff as one diff, with project-relative paths. */
-export const useProjectDiff = (enabled: boolean) =>
-  api.useQuery("get", "/api/project/diff", {}, { ...GIT_DATA, enabled });
-
-/** Uncommitted work in every root — the commit view's per-repository groups. */
-export const useProjectChanges = () =>
-  api.useQuery("get", "/api/project/changes", {}, GIT_DATA);
-
-/** Every root's branches — the branch popup's per-repository sections. */
-export const useProjectBranches = () =>
-  api.useQuery("get", "/api/project/branches", {}, GIT_DATA);
-
-/**
- * Every root's history merged, one page at a time — the project-wide twin of
- * `usePagedLog`, with the same append-only paging so scrolling walks back
- * through the merged history instead of stopping at the first page.
- *
- * The filters mean the same thing in every root, so they go out unchanged and
- * the server applies them per root before merging: an author or a message
- * searched for here is searched for across the whole project.
- */
-export const usePagedProjectLog = (enabled: boolean, filters: LogQuery) => {
-  const query = useInfiniteQuery({
-    queryKey: ["project-log-pages", filters],
-    ...HISTORY,
-    enabled,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await fetchClient.GET("/api/project/log", {
-        params: { query: logSearchParams(null, filters, pageParam) },
-      });
-      if (error !== undefined) throw error;
-      return data?.commits ?? [];
-    },
-    // A short page is the end of the merged history; a full one may have more.
-    getNextPageParam: (lastPage, pages) =>
-      lastPage.length < LOG_PAGE_SIZE
-        ? undefined
-        : pages.reduce((count, page) => count + page.length, 0),
-  });
-
-  const entries = useMemo(
-    () => (query.data?.pages ?? []).flat(),
-    [query.data?.pages]
-  );
-
-  return {
-    entries,
-    loading: query.isPending,
-    hasMore: query.hasNextPage,
-    loadMore: query.fetchNextPage,
-  };
-};
 
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () =>
@@ -197,10 +128,34 @@ const RECENT_CHATS = 30;
  * A turn that settles only reaches the list when the list is asked again. The
  * chat's own socket asks for the session in front of the reader, but nothing
  * asks for the ones working in the background — so a list with work in it is
- * watched, the way the cloud runs are, and left alone the moment it settles.
- * Without this a row that finished elsewhere keeps its orb spinning.
+ * watched, and left alone the moment it settles. Without this a row that
+ * finished elsewhere keeps its orb spinning.
  */
 const RUNNING_TURN_POLL_MS = 4_000;
+
+/**
+ * A turn that *starts* elsewhere reaches the list the same way: not at all.
+ * Nothing invalidates a list over work this document never touched, so a
+ * session set going in another window — or in the shell, by an agent in a tab
+ * whose conversation this island is not the one holding — sits there unmarked
+ * until something else happens to ask.
+ *
+ * In the shell that is the common case rather than the edge: the list is the
+ * sidebar, always on screen, and the sessions in it are as often another
+ * window's as this one's. So it is watched on a slow beat even while it holds
+ * nothing running, which is how a row that began working elsewhere comes to
+ * wear its orb; the fast beat above takes over from there. In a browser tab
+ * the list is a page the reader is looking at, and their own sends are what
+ * move it, so it is left alone as before.
+ */
+const IDLE_LIST_POLL_MS = 10_000;
+
+const listPoll = (running: boolean): number | false =>
+  running
+    ? RUNNING_TURN_POLL_MS
+    : island === undefined
+      ? false
+      : IDLE_LIST_POLL_MS;
 
 const hasRunningTurn = (
   items: ReadonlyArray<{ readonly turnState: string | null }> | undefined
@@ -214,7 +169,7 @@ export const recentChatsOptions = () =>
     {
       ...OWN_DATA,
       refetchInterval: (query) =>
-        hasRunningTurn(query.state.data?.items) ? RUNNING_TURN_POLL_MS : false,
+        listPoll(hasRunningTurn(query.state.data?.items)),
     }
   );
 
@@ -222,8 +177,8 @@ export const recentChatsOptions = () =>
 export const useRecentChats = () => useQuery(recentChatsOptions());
 
 /** Every project holding a session, for the list's filter menu. */
-export const useChatProjects = () =>
-  api.useQuery("get", "/api/chats/projects", {}, OWN_DATA);
+export const useChatProjects = (enabled = true) =>
+  api.useQuery("get", "/api/chats/projects", {}, { ...OWN_DATA, enabled });
 
 /** How many hits the search popover shows — one screenful, not a second list. */
 const SEARCH_HITS = 12;
@@ -282,9 +237,11 @@ export const useChatPages = (filters: ChatListFilters, enabled = true) => {
     // it, a page can come back short and still have more after it.
     getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
     refetchInterval: (list) =>
-      (list.state.data?.pages ?? []).some((page) => hasRunningTurn(page?.items))
-        ? RUNNING_TURN_POLL_MS
-        : false,
+      listPoll(
+        (list.state.data?.pages ?? []).some((page) =>
+          hasRunningTurn(page?.items)
+        )
+      ),
   });
 
   const sessions = useMemo(
@@ -334,7 +291,7 @@ export const useThread = (id: string | null) =>
     { ...OWN_DATA, enabled: id !== null }
   );
 
-/** Saved Local Dev commands across the project's repos, with runtime status. */
+/** Saved Local Dev commands of the open repository, with runtime status. */
 export const useDevCommands = () =>
   api.useQuery("get", "/api/local-dev/commands", {}, OWN_DATA);
 
@@ -544,66 +501,18 @@ export const useFileBytes = (path: string | null) =>
     { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
   );
 
-export const useFile = (path: string | null) =>
-  api.useQuery(
+/**
+ * One file's text, under the key the viewer and the prerender share — so a
+ * file read ahead of a click (see `usePrerenderFile`) is the read the viewer
+ * finds waiting when the click lands.
+ */
+export const fileQueryOptions = (path: string) =>
+  api.queryOptions(
     "get",
     "/api/file",
-    { params: { query: { path: path ?? "" } } },
-    { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
+    { params: { query: { path } } },
+    { ...GIT_DATA, ...FILE_READ }
   );
 
-// --- reviewer cloud ---------------------------------------------------------
-
-/**
- * Whether the app is connected to reviewer cloud, and as whom. Refetched on
- * focus: the approval half of connecting happens in a browser tab, and coming
- * back to the window is the moment the answer is most likely to have changed.
- */
-export const cloudStatusOptions = () =>
-  api.queryOptions(
-    "get",
-    "/api/cloud/status",
-    {},
-    { staleTime: 30_000, refetchOnWindowFocus: "always" }
-  );
-
-export const useCloudStatus = () => useQuery(cloudStatusOptions());
-
-/** The repositories linked in the cloud — asked for only once connected. */
-export const useCloudRepos = (enabled: boolean) =>
-  api.useQuery("get", "/api/cloud/repos", {}, { ...REMOTE, enabled });
-
-/**
- * Every cloud run, newest first. Watched while any of them is still working,
- * since the sidebar's dots are read off their status.
- */
-export const useCloudRuns = (enabled: boolean) =>
-  api.useQuery(
-    "get",
-    "/api/cloud/runs",
-    {},
-    {
-      staleTime: 5_000,
-      enabled,
-      refetchInterval: (query) =>
-        query.state.data?.some((run) => isCloudRunActive(run.status)) === true
-          ? 5_000
-          : false,
-    }
-  );
-
-/**
- * One cloud run's snapshot, under the key the live view seeds itself from and
- * writes its latest fold back to — so reopening a run paints from the cache
- * instead of waiting on the stream.
- */
-export const cloudRunQueryOptions = (id: string) =>
-  api.queryOptions(
-    "get",
-    "/api/cloud/runs/{id}",
-    { params: { path: { id } } },
-    { staleTime: 15_000 }
-  );
-
-export const useCloudRun = (id: string | null) =>
-  useQuery({ ...cloudRunQueryOptions(id ?? ""), enabled: id !== null });
+export const useFile = (path: string | null) =>
+  useQuery({ ...fileQueryOptions(path ?? ""), enabled: path !== null });

@@ -1,0 +1,352 @@
+/**
+ * The native shell's islands, and the channel between an island and the shell.
+ *
+ * The macOS app (packages/mac-os) is a native window that hosts parts of this
+ * app in web views of its own — the code surface with its dock — each one a
+ * document of its own, loaded from the same build, told which island it is by
+ * the bridge the shell installs before the first script runs
+ * (`window.reviewer.island`, see `lib/desktop`). The chrome around an island —
+ * the file tree in the sidebar — is the shell's own, drawn natively from what
+ * the island reports. The window tabs are not: they are the island's own strip,
+ * the same one the window bar draws in a browser tab, so a tab is
+ * switched the way the router switches a page — in the document, primed ahead
+ * of the click — rather than by a trip over the bridge and back. What the shell
+ * has of them is a picture, for its menus.
+ *
+ * Islands cannot share a JavaScript heap, so what two of them both need — the
+ * open project, where the code surface is pointed — lives in the shell, and the
+ * shell is the one that navigates between them. An island never moves itself
+ * out of its part of the app; it *reports* where it is, and it goes where it is
+ * *told*. That is the whole contract, in the two unions below.
+ *
+ * Absent the shell, `shell` is a channel nobody is on the other end of, so an
+ * island renders in a plain browser tab exactly as it does in the window — the
+ * way every island is developed.
+ */
+import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
+import type { AppMode } from "@/lib/api/types";
+import type { DateFilter } from "@/lib/date-filter";
+import { islandBridge } from "@/lib/desktop";
+import type { CommitAgent } from "@/lib/ui-prefs";
+import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
+import type { CommitDraft } from "@reviewer/core/git-message";
+import type { GitStatusEntry } from "@reviewer/core/repo";
+
+export type Island = "code";
+
+/** Shell → island. */
+export type ShellEvent =
+  | { readonly type: "navigate"; readonly href: string }
+  /** Something changed behind the island's back — a save, an agent turn ending,
+   * a project switch — so everything it holds is re-asked for. */
+  | { readonly type: "refresh" }
+  /** A menu chord for the window tabs — see `ShellWindowTabAction`. */
+  | { readonly type: "windowTabs"; readonly action: ShellWindowTabAction }
+  /** The shell's own file tree was acted on — see `ShellTree`. */
+  | { readonly type: "tree"; readonly action: ShellTreeAction }
+  /** The shell's own sessions list was acted on — see `ShellSessions`. */
+  | { readonly type: "sessions"; readonly action: ShellSessionAction }
+  /** The shell's own assign bar was acted on — see `ShellReview`. */
+  | { readonly type: "review"; readonly action: ShellReviewAction }
+  /** The shell's palette asked for a view preference the page keeps — see
+   * `ShellViewAction`. */
+  | { readonly type: "view"; readonly action: ShellViewAction };
+
+/** Island → shell. */
+export type ShellIntent =
+  | { readonly type: "ready"; readonly island: Island }
+  | { readonly type: "navigated"; readonly href: string }
+  /** The window tabs as the strip stands, for the shell's menus to name. */
+  | { readonly type: "windowTabs"; readonly strip: ShellWindowTabStrip }
+  /** The code page's file tree as it stands, for the shell to draw in its
+   * sidebar; null once the page stops showing one. */
+  | { readonly type: "tree"; readonly tree: ShellTree | null }
+  /** What moves under the tree without the listing moving — the selection, the
+   * commit composer — sent apart so a click does not carry every path again. */
+  | { readonly type: "treeState"; readonly state: ShellTreeState }
+  /** The sessions list as the sessions surface holds it, for the shell to draw
+   * in its sidebar; null once the page leaves the surface. */
+  | { readonly type: "sessions"; readonly list: ShellSessions | null }
+  /** The page asked for one file's past — from its path bar, a file's tab —
+   * and the History surface is the shell's own, so the ask crosses over. */
+  | { readonly type: "history"; readonly path: string }
+  /** The review comments the page is holding for a hand-off, for the shell
+   * to float its assign bar over the page; null once there are none. */
+  | { readonly type: "review"; readonly review: ShellReview | null }
+  /** The empty pane's ways in — the palette's lists, the settings window —
+   * which inside the shell are the shell's own, so the click crosses over. */
+  | { readonly type: "open"; readonly target: ShellOpenTarget };
+
+/** What the shell opens for the page: one of its palette's lists, or the
+ * settings window — the same four the page's empty pane lists with their
+ * chords. */
+export type ShellOpenTarget = "commands" | "files" | "text" | "settings";
+
+/**
+ * The window tabs, as the shell draws them on its toolbar and names them in
+ * its menus: the strip in the order it is shown, which of them holds the
+ * window, and what each is. The strip itself — the store, the priming, the
+ * switch — is the island's; what crosses is the picture, so the toolbar can
+ * draw the tabs, the Tabs menu can list the sessions ⌘1–9 reach and Close Tab
+ * can stand down on a pinned one.
+ */
+export interface ShellWindowTabStrip {
+  readonly tabs: ReadonlyArray<ShellWindowTab>;
+  readonly activeId: string;
+}
+
+export interface ShellWindowTab {
+  readonly id: string;
+  readonly title: string;
+  readonly kind: WindowTabKind;
+  readonly pinned: boolean;
+  /** Its agent is mid-turn — the tab wears the orb. */
+  readonly working: boolean;
+  /** Its thread has moved since it was last read — the tab wears the dot. */
+  readonly waiting: boolean;
+}
+
+/**
+ * What the shell asks of the strip — a tab pressed on its toolbar, and the
+ * window bar's own chords, claimed by menu items so they answer while a native
+ * view has the keyboard — handed back to the strip that answers them
+ * everywhere else.
+ */
+export type ShellWindowTabAction =
+  | { readonly kind: "select"; readonly id: string }
+  | { readonly kind: "close"; readonly id: string }
+  /** A tab dragged along the native strip and dropped on the leading or
+   * trailing half of `toId` — the shell has the geometry, the strip has the
+   * slots. */
+  | {
+      readonly kind: "move";
+      readonly id: string;
+      readonly toId: string;
+      readonly after: boolean;
+    }
+  | { readonly kind: "newSession" }
+  | { readonly kind: "closeActive" }
+  /** The tab beside the active one, wrapping round. */
+  | { readonly kind: "step"; readonly offset: 1 | -1 }
+  /** The way of working after the one the window is on — Code, Sessions — ⌘G. */
+  | { readonly kind: "mode" };
+
+/**
+ * The file tree, as the shell draws it in its sidebar: what the web tree is
+ * given — the paths, the git status of each, the mode that decides the layout
+ * (the project, or the changed files) — and what it may do to them, since a
+ * review lists somebody else's files and a diff read against a branch has
+ * nothing of its own to discard.
+ */
+export interface ShellTree {
+  readonly mode: AppMode;
+  readonly paths: ReadonlyArray<string>;
+  readonly gitStatus: ReadonlyArray<GitStatusEntry>;
+  readonly loading: boolean;
+  /** The open project folder, for the absolute path the menu copies. */
+  readonly projectPath: string | null;
+  /** Whether a row's working-tree changes can be discarded. */
+  readonly discardable: boolean;
+}
+
+/**
+ * The file the page is on, and the commit composer the web sidebar has under
+ * the tree in commit mode.
+ */
+export interface ShellTreeState {
+  readonly selected: string | null;
+  readonly commit: ShellCommitComposer | null;
+  /** What your own changes are read against — a question only your own
+   * changes have, so null on every other surface. See `LocalComparison`. */
+  readonly comparison: ShellComparison | null;
+}
+
+/**
+ * The local comparison, flattened for the wire: the branch the changes are
+ * read against, or null for what is merely uncommitted, and where the branch's
+ * work is aimed, which the shell's picker marks the way the web one does.
+ */
+export interface ShellComparison {
+  readonly against: string | null;
+  readonly aim: string | null;
+}
+
+export interface ShellCommitComposer {
+  readonly changes: ReadonlyArray<GitStatusEntry>;
+  /** The server's drafting run — running, finished, or nothing yet. */
+  readonly draft: CommitDraft | null;
+}
+
+/**
+ * What the shell's tree can do — the tree's own props again, minus the DOM,
+ * with the shell having already asked whatever the web tree asks first (a yes
+ * to a discard).
+ */
+export type ShellTreeAction =
+  | { readonly kind: "select"; readonly path: string }
+  /** The pointer has reached a file's row in the shell's tree. */
+  | { readonly kind: "intent"; readonly path: string }
+  | { readonly kind: "history"; readonly path: string }
+  | { readonly kind: "discard"; readonly paths: ReadonlyArray<string> }
+  | {
+      readonly kind: "commit";
+      readonly message: string;
+      readonly paths: ReadonlyArray<string>;
+      readonly push: boolean;
+    }
+  | {
+      readonly kind: "draft";
+      readonly paths: ReadonlyArray<string>;
+      readonly agent: CommitAgent;
+    }
+  /** The finished draft has been taken into the composer, so it can go. */
+  | { readonly kind: "draftSettled" };
+
+/**
+ * The sessions list, as the shell draws it in its sidebar: the rows the
+ * sessions surface would list beside the conversation — every project's
+ * sessions, newest first, under the filters the surface keeps. The list itself
+ * — the paged fetch, the filters, the marks read off each session — stays the
+ * page's; what crosses is the rows, and what was done to them comes back as a
+ * `ShellSessionAction`.
+ */
+export interface ShellSessions {
+  readonly sessions: ReadonlyArray<ShellSession>;
+  /** The session the page is on, if any. */
+  readonly activeId: string | null;
+  /** The first page still on its way. */
+  readonly loading: boolean;
+  /** Whether the server has more rows after the loaded ones. */
+  readonly hasMore: boolean;
+  /** What the list is narrowed to, and what it could be narrowed to. */
+  readonly filters: ShellSessionFilters;
+}
+
+/** The state a row wears, as `ChatRow` reads it off the session. */
+export type ShellSessionMark = "running" | "error" | "unread";
+
+export interface ShellSession {
+  readonly id: string;
+  readonly title: string;
+  /** Where the session runs — its project. */
+  readonly origin: string;
+  readonly updatedAt: string;
+  readonly mark: ShellSessionMark | null;
+  /** For the preview the shell shows over a row — what the web card shows
+   * before the tail arrives. */
+  readonly messageCount: number;
+  readonly lastMessage: string | null;
+}
+
+/**
+ * The three ways the web narrows the list — the rail's search, and the filter
+ * popover's project and date — all of them part of what the page asks the
+ * server for, so the shell's field and menu narrow every session rather than
+ * the pages loaded so far. The projects are the ones the filter can name, with
+ * how many sessions each holds. See `chatListFilters`.
+ */
+export interface ShellSessionFilters {
+  readonly search: string;
+  /** `all`, or a project folder's absolute path. */
+  readonly project: string;
+  readonly date: DateFilter;
+  readonly projects: ReadonlyArray<ChatProjectTally>;
+}
+
+/**
+ * What the shell's list can do — the row's own gestures, and the list's:
+ * a click shows the session on the Sessions tab, the menu lifts it into a tab
+ * of its own or deletes it, scrolling to the foot asks for the next page, and
+ * the field and the filter menu narrow what is asked for. `refetch` is the
+ * conversation's: inside the shell the conversation is drawn natively, read
+ * from the server by the shell itself, so the rows' marks — a turn running, a
+ * session just started, one just opened — are re-read when it says they moved.
+ */
+export type ShellSessionAction =
+  | { readonly kind: "select"; readonly id: string }
+  | { readonly kind: "openInTab"; readonly id: string }
+  /** Already confirmed on the shell's side where there is more than one. */
+  | { readonly kind: "delete"; readonly ids: ReadonlyArray<string> }
+  | { readonly kind: "loadMore" }
+  | { readonly kind: "refetch" }
+  | { readonly kind: "search"; readonly text: string }
+  | {
+      readonly kind: "filter";
+      readonly project?: string;
+      readonly date?: DateFilter;
+    };
+
+/**
+ * What the shell's palette asks of the page's own preferences: the one
+ * command in the web palette the shell cannot answer itself. The diff style
+ * is the page's — the diff is its to lay out, and the toggle on the island's
+ * band is the page's own — so the command crosses over and the page flips it.
+ */
+export type ShellViewAction = { readonly kind: "toggleDiffStyle" };
+
+/**
+ * The review in hand, as the shell floats its assign bar over the page: the
+ * comments left on the diff and on the running app, flattened the way the web
+ * bar lists them (see `AssignBarComment`), the branch they are about — the
+ * sessions already working there lead the shell's picker — and whether a
+ * hand-off is under way, so the bar can say so while the page does it. The
+ * comments, the hand-off itself — the chat made, the prompt built, the
+ * comments resolved after — and the jump to a comment's line stay the page's;
+ * what crosses is the picture, and what was done to it comes back as a
+ * `ShellReviewAction`.
+ */
+export interface ShellReview {
+  readonly comments: ReadonlyArray<ShellReviewComment>;
+  readonly branch: string;
+  readonly assigning: boolean;
+}
+
+export interface ShellReviewComment {
+  readonly id: string;
+  readonly file: string;
+  readonly line: number;
+  readonly body: string;
+}
+
+/**
+ * Where the shell's bar hands the review: a fresh chat with an agent on a
+ * model, or a session already running — `AssignTarget`, on the wire.
+ */
+export type ShellReviewTarget =
+  | {
+      readonly kind: "new";
+      readonly agent: ChatProviderKind;
+      readonly model: string;
+    }
+  | { readonly kind: "existing"; readonly chatId: string };
+
+/** What the shell's bar can do — the web bar's own three. */
+export type ShellReviewAction =
+  | { readonly kind: "assign"; readonly target: ShellReviewTarget }
+  | { readonly kind: "open"; readonly id: string }
+  | { readonly kind: "delete"; readonly id: string };
+
+export interface ShellChannel {
+  post: (intent: ShellIntent) => Promise<void>;
+  subscribe: (listener: (event: ShellEvent) => void) => () => void;
+  /** Called by the shell, never by the island. */
+  dispatch: (event: ShellEvent) => void;
+}
+
+const ISLANDS: ReadonlySet<string> = new Set<Island>(["code"]);
+
+const isIsland = (value: unknown): value is Island =>
+  typeof value === "string" && ISLANDS.has(value);
+
+/** Which island this document is, or undefined for the whole app. */
+export const island: Island | undefined = isIsland(islandBridge?.island)
+  ? islandBridge.island
+  : undefined;
+
+const unhosted: ShellChannel = {
+  post: () => Promise.resolve(),
+  subscribe: () => () => {},
+  dispatch: () => {},
+};
+
+export const shell: ShellChannel = islandBridge?.shell ?? unhosted;

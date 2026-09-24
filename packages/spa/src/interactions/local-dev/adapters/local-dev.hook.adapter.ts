@@ -2,7 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchClient } from "@/lib/api/client";
 import { createLocalDevFunctions } from "../functions/local-dev.functions";
-import type { LocalDevFunctions } from "../interfaces/local-dev.interfaces";
+import type {
+  DevCommandDraft,
+  LocalDevFunctions,
+} from "../interfaces/local-dev.interfaces";
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback);
@@ -50,17 +53,15 @@ export function useLocalDevActions() {
               params: { path: { id } },
             });
           },
-          startAll: async (repoPath) => {
+          startAll: async () => {
             const { error } = await fetchClient.POST(
               "/api/local-dev/start-all",
-              { body: repoPath === undefined ? {} : { repoPath } }
+              {}
             );
             if (error) fail(error, "failed to start commands");
           },
-          stopAll: async (repoPath) => {
-            await fetchClient.POST("/api/local-dev/stop-all", {
-              body: repoPath === undefined ? {} : { repoPath },
-            });
+          stopAll: async () => {
+            await fetchClient.POST("/api/local-dev/stop-all", {});
           },
         },
       }),
@@ -74,18 +75,13 @@ export function useLocalDevActions() {
   };
 
   return {
-    create: async (name: string, command: string, repoPath: string) => {
-      const created = await fns.create(name, command, repoPath);
+    create: async (draft: DevCommandDraft) => {
+      const created = await fns.create(draft);
       invalidate();
       return created;
     },
-    update: async (
-      id: string,
-      name: string,
-      command: string,
-      repoPath: string
-    ) => {
-      const updated = await fns.update(id, name, command, repoPath);
+    update: async (id: string, draft: DevCommandDraft) => {
+      const updated = await fns.update(id, draft);
       invalidate();
       return updated;
     },
@@ -101,12 +97,12 @@ export function useLocalDevActions() {
       await fns.stop(id);
       invalidate();
     },
-    startAll: async (repoPath?: string) => {
-      await fns.startAll(repoPath);
+    startAll: async () => {
+      await fns.startAll();
       invalidate();
     },
-    stopAll: async (repoPath?: string) => {
-      await fns.stopAll(repoPath);
+    stopAll: async () => {
+      await fns.stopAll();
       invalidate();
     },
   };

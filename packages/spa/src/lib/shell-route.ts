@@ -3,7 +3,7 @@
  *
  * The app has one layout, and the layout has to know which of a few shapes the
  * current page is: a code surface with a repository behind it, one agent
- * session, the collaboration prototype, or settings. That used to be encoded in
+ * session, or settings. That used to be encoded in
  * *which layout route matched* — two pathless layouts, each with its own frame,
  * header and dock — so moving between them threw one whole shell away and built
  * the other. Reading it from the path instead lets one shell stay put and
@@ -48,18 +48,7 @@ export type ShellRoute =
        */
       readonly solo: boolean;
     }
-  /**
-   * The collaboration prototype, kept whole under `/modes/experimentation` as
-   * the reference the redesign was measured against. It wears the chrome it
-   * always wore — its own sidebar, its workspace picker, its strip of open
-   * surfaces — which is the point of keeping it: the two shapes can be put
-   * side by side without either being bent towards the other.
-   */
-  | { readonly kind: "experimentation" }
   | { readonly kind: "settings" };
-
-/** The collaboration prototype, which is not one of the app's own surfaces. */
-const EXPERIMENTATION_PREFIX = "/modes/experimentation";
 
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
 const CODE_WORKSPACE_PAGES = ["reviews"];
@@ -129,8 +118,8 @@ export const isBrowsingCode = (pathname: string): boolean =>
 
 /**
  * A dock surface as a page of its own: where it lives, and what it is called
- * wherever it is named — the launchpad's card, the window bar's tab, and the
- * trail along the foot of the page itself.
+ * wherever it is named — the window bar's tab, and the trail along the foot of
+ * the page itself.
  */
 export interface DockPage {
   readonly tab: BottomTab;
@@ -195,10 +184,6 @@ export function shellRoute(
     // and it says so in the search rather than in the path.
     return { kind: "session", composing: startingNew, solo: soloSession };
   }
-  if (pathname.startsWith(EXPERIMENTATION_PREFIX)) {
-    return { kind: "experimentation" };
-  }
-
   if (pathname.startsWith("/modes/code/")) {
     const rest = pathname.slice("/modes/code/".length);
     const page = rest.split("/")[0] ?? "";
@@ -215,17 +200,6 @@ export function shellRoute(
   // resolves against.
   return { kind: "code", mode: "review" };
 }
-
-/**
- * Whether the window is on one of the app's own surfaces rather than on the
- * collaboration prototype.
- *
- * The prototype wears its own chrome and carries its own search, so the shell's
- * — ⌘K, ⌘B, the window menu's panes — stays out of its way. Everything else in
- * the app is code work and gets all of it.
- */
-export const isCodeSurface = (pathname: string): boolean =>
-  !pathname.startsWith(EXPERIMENTATION_PREFIX);
 
 /** Whether the page beneath the layout is one of the git/code surfaces. */
 export const showsGitChrome = (route: ShellRoute): boolean =>

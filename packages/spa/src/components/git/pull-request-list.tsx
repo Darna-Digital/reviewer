@@ -26,7 +26,7 @@ import {
 } from "@/components/layout/sidebar-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BlockedIcon, ChecksIcon } from "@/components/git/pull-request-status";
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
@@ -205,7 +205,7 @@ export function PullRequestList({
           </p>
         ) : loading ? (
           <div className="px-3 py-2">
-            <LoadingCursor label="Loading merge requests…" />
+            <Orb size={16} label="Loading merge requests…" />
           </div>
         ) : pulls.length === 0 ? (
           (empty ?? (

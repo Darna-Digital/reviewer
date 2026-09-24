@@ -24,36 +24,27 @@ import {
   useRouter,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
+import { useEffect } from "react";
 import { BranchesPanel } from "@/components/git/branches-panel";
-import { BottomPanel } from "@/components/layout/bottom-panel";
+import { BottomPanel, nativeInShell } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
-import { usePageTrail } from "@/components/layout/page-trail";
 import { ResizeHandle } from "@/components/layout/resize-handle";
-import { useSeamSlot } from "@/components/layout/seam-slot";
 import { usePanelSize } from "@/components/layout/use-panel-size";
-import { filterCommitsByRepo } from "@reviewer/core/project";
-import { activeRepo, folderName, isMultiRepo } from "@reviewer/core/workspace";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { resetFindUsages } from "@/interactions/find-usages/adapters/find-usages.store";
 import {
   resetHistoryFilters,
   setHistoryQuery,
   setHistoryRef,
-  setHistoryRepo,
   useHistoryFilters,
 } from "@/interactions/history/history-filters.store";
 import {
   useBranches,
   usePagedLog,
-  usePagedProjectLog,
-  useProjectBranches,
   useRemoteBranches,
   useRepo,
-  useWorkspace,
 } from "@/lib/queries";
+import { island } from "@/lib/shell";
 import { REVIEW_HREF } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -80,24 +71,23 @@ export function GitBottomDock({
 
   const expanded = expandedTab !== undefined;
   const tab = expandedTab ?? prefs.bottomTab;
-  const shown = expanded || prefs.bottomVisible;
+  // A preference left on a surface the shell draws itself opens nothing here:
+  // the drawer has no such tab to stand on.
+  const shown = expanded || (prefs.bottomVisible && !nativeInShell(tab));
 
   const repo = useRepo();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
-  const projectBranches = useProjectBranches();
-  const workspace = useWorkspace();
-  const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
 
   // Held outside the dock so a file's "Show history", asked for from the page
   // below, can reach it — see `history-filters.store`.
-  const { ref: logRef, query: logFilters, repo: logRepo } = useHistoryFilters();
+  const { ref: logRef, query: logFilters } = useHistoryFilters();
 
-  // A ref belongs to the root it was read from, so following another root
-  // starts the history over rather than listing a branch that root has never
-  // heard of — and takes the Find window's results with it, for the same
-  // reason.
+  // A ref belongs to the repository it was read from, so opening another
+  // starts the history over rather than listing a branch that repository has
+  // never heard of — and takes the Find window's results with it, for the
+  // same reason.
   const root = repo.data?.root ?? null;
   useEffect(() => {
     resetHistoryFilters();
@@ -108,18 +98,6 @@ export function GitBottomDock({
   // Not React state: the dock holds the history list and the terminals, and a
   // drag re-rendering them per pointer frame is the jank. See `usePanelSize`.
   const dock = usePanelSize("bottom-h", prefs.bottomHeight, "height");
-
-  /**
-   * Whether the page above ends in a trail — see `page-trail`.
-   *
-   * The drawer opens against that bar rather than under the whole page: the run
-   * of frame between the two belongs above it, so the bar rides on the drawer
-   * and the two read as one stack at the foot of the window. That moves the
-   * seam this is dragged by out of the row, up over the page, where it is hung
-   * in the same box the column seams are — see `seam-slot`.
-   */
-  const onTrail = usePageTrail() && shown && !expanded;
-  const seamSlot = useSeamSlot();
 
   const dockSeam = (
     <ResizeHandle
@@ -140,42 +118,12 @@ export function GitBottomDock({
         setUiPrefs({ bottomVisible: false });
       }}
       label="Resize bottom panel"
-      className={onTrail ? "resize-handle-crossing" : "resize-handle-seam"}
-      style={onTrail ? { bottom: "var(--trail-band)" } : undefined}
+      className="resize-handle-seam"
     />
   );
 
   const ref = logRef ?? repo.data?.currentBranch ?? null;
-  const log = usePagedLog(ref, logFilters);
-
-  // A project of several roots shows one history covering all of them, each row
-  // saying where it came from; a single-root project has nothing to say, so it
-  // keeps the paged per-branch log.
-  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
-  const projectLog = usePagedProjectLog(multiRepo, logFilters);
-  const projectHistory = useMemo(() => {
-    const entries = filterCommitsByRepo(projectLog.entries, logRepo);
-    return {
-      commits: entries.map((entry) => entry.commit),
-      repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
-    };
-  }, [projectLog.entries, logRepo]);
-
-  const history = multiRepo
-    ? {
-        commits: projectHistory.commits,
-        repos: projectHistory.repos,
-        loading: projectLog.loading,
-        hasMore: projectLog.hasMore,
-        loadMore: projectLog.loadMore,
-      }
-    : {
-        commits: log.commits,
-        repos: undefined,
-        loading: log.loading,
-        hasMore: log.hasMore,
-        loadMore: log.loadMore,
-      };
+  const history = usePagedLog(ref, logFilters);
 
   /**
    * Picking something out of a surface that has the window to itself is asking
@@ -192,21 +140,7 @@ export function GitBottomDock({
     if (expanded) keepDockDrawer("branches");
   };
 
-  /**
-   * Open a commit from the history. In a project of several roots the commit
-   * may belong to one that is not current, so that root is followed first —
-   * every git view reads from the current root, and a sha means nothing to the
-   * wrong one.
-   */
-  const openCommit = async (commit: CommitInfo) => {
-    const owner = history.repos?.get(commit.sha) ?? null;
-    if (owner !== null) {
-      const followed = await workspaceActions.followRepo(
-        owner.path,
-        workspace.data?.current ?? null
-      );
-      if (!followed) return;
-    }
+  const openCommit = (commit: CommitInfo) => {
     leaving();
     void navigate({
       to: "/modes/code/browse/commit/$sha",
@@ -214,6 +148,7 @@ export function GitBottomDock({
       search: (prev: Record<string, unknown>) => ({
         ...prev,
         path: logFilters.path ?? undefined,
+        history: logFilters.path ?? undefined,
         file: undefined,
       }),
     });
@@ -222,28 +157,31 @@ export function GitBottomDock({
   return (
     <>
       {/* A page has no seam to drag: it is as tall as the window, and the height
-          the drawer was left at is waiting for it to be put back down.
-
-          Where the page ends in a trail the seam is not in this row either — it
-          lies above that bar, over the page, and is hung in the box that spans
-          the header and the page the way the column seams are. */}
-      {!expanded &&
-        prefs.bottomVisible &&
-        (onTrail
-          ? seamSlot !== null && createPortal(dockSeam, seamSlot)
-          : dockSeam)}
+          the drawer was left at is waiting for it to be put back down. */}
+      {!expanded && prefs.bottomVisible && dockSeam}
       {/* Expanded, the dock stands where the page did: directly under the
           header, which carries no bottom corners of its own. Its own top ones
           would open a notch either side of that seam, so they go too.
 
-          Under a trail it does the same against the bar: the negative margin
-          takes back the gap the layout leaves between the page and the dock,
-          since that run of frame has moved above the bar. */}
+          On the left it stands on the rail's rule in every one of those shapes,
+          so it gives up its start corners to it — held off a corner that is not
+          there, the lit top edge broke for a radius' worth at the join and
+          started again a step to the right, with a notch of frame in the gap.
+          See `app-sheet-joined-start`.
+
+          Except as a drawer inside the macOS shell, where there is no rail to
+          stand against and no row of sheets to be one of: the page above runs
+          to every edge of the island, and the surfaces this one used to share
+          the foot of the window with are drawn natively elsewhere. So it lifts
+          off the island's edges as a panel of its own — see `island-drawer`. A
+          page is the whole island again, and joins its edges as before. */}
       <div
         className={cn(
           "app-sheet overflow-hidden",
+          expanded || island === undefined
+            ? "app-sheet-joined-start"
+            : "island-drawer",
           expanded ? "app-page-joined min-h-0 flex-1" : "shrink-0",
-          onTrail && "app-sheet-joined-above -mt-1.5",
           !shown && "hidden"
         )}
         style={expanded ? undefined : dock.style}
@@ -288,30 +226,11 @@ export function GitBottomDock({
               onPush={() => void git.push()}
               onRenameBranch={(from, to) => void git.renameBranch(from, to)}
               onDeleteBranch={(name) => void git.deleteBranch(name)}
-              repos={projectBranches.data?.repos}
-              currentRepo={activeRepo(
-                workspace.data ?? { repos: [], current: null }
-              )}
-              onFollowRepo={(repoPath) =>
-                workspaceActions.followRepo(
-                  repoPath,
-                  workspace.data?.current ?? null
-                )
-              }
             />
           }
           branches={branches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
           commits={history.commits}
-          commitRepos={history.repos}
-          repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
-          repoFilter={logRepo}
-          projectName={
-            workspace.data?.project == null
-              ? undefined
-              : folderName(workspace.data.project)
-          }
-          onRepoFilterChange={setHistoryRepo}
           commitsLoading={history.loading}
           commitsHaveMore={history.hasMore}
           logRef={ref}
@@ -321,7 +240,7 @@ export function GitBottomDock({
           onLoadMoreCommits={history.loadMore}
           onLogRefChange={setHistoryRef}
           onLogFiltersChange={setHistoryQuery}
-          onSelectCommit={(c) => void openCommit(c)}
+          onSelectCommit={openCommit}
           onSelectCommitFile={(p) => {
             leaving();
             void navigate({ to: "/modes/code/browse", search: { file: p } });

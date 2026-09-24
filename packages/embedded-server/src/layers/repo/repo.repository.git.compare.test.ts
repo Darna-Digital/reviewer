@@ -8,16 +8,25 @@ import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 const MERGE_BASE = "abc1234";
 const ROOT = "/repo";
+const LIST_UNTRACKED = ["ls-files", "--others", "--exclude-standard", "-z"];
 
 /**
- * Records every `git` invocation and answers the two the comparison needs: the
- * merge base, and the diff taken from it.
+ * Records every `git` invocation and answers the ones the comparison needs:
+ * the merge base, the diff taken from it, and the untracked files the diff is
+ * completed with.
  */
-const recordingGit = (calls: Array<ReadonlyArray<string>>): GitExecShape => {
+const recordingGit = (
+  calls: Array<ReadonlyArray<string>>,
+  untracked: ReadonlyArray<string> = []
+): GitExecShape => {
   const run = (...args: ReadonlyArray<string>) => {
     calls.push(args);
     if (args[0] === "merge-base") return Effect.succeed(`${MERGE_BASE}\n`);
     if (args[0] === "rev-parse") return Effect.succeed(`${ROOT}\n`);
+    if (args[0] === "ls-files")
+      return Effect.succeed(untracked.map((path) => `${path}\0`).join(""));
+    if (args[0] === "diff" && args[1] === "--no-index")
+      return Effect.succeed(`diff --git a/${args[4]} b/${args[4]}\n`);
     if (args[0] === "diff") return Effect.succeed("diff --git a/a.ts b/a.ts\n");
     if (args[0] === "show") return Effect.succeed("old contents");
     return Effect.succeed("");
@@ -31,7 +40,8 @@ const recordingGit = (calls: Array<ReadonlyArray<string>>): GitExecShape => {
 };
 
 const withGit = <A>(
-  use: (repo: RepoRepo) => Effect.Effect<A, unknown>
+  use: (repo: RepoRepo) => Effect.Effect<A, unknown>,
+  untracked: ReadonlyArray<string> = []
 ): Promise<{
   readonly value: A;
   readonly calls: Array<ReadonlyArray<string>>;
@@ -48,7 +58,7 @@ const withGit = <A>(
       Effect.map((value) => ({ value, calls })),
       Effect.provide(
         Layer.mergeAll(
-          Layer.succeed(GitExec)(GitExec.of(recordingGit(calls))),
+          Layer.succeed(GitExec)(GitExec.of(recordingGit(calls, untracked))),
           FileSystem.layerNoop({
             readFileString: () => Effect.succeed("new contents"),
           })
@@ -75,6 +85,24 @@ describe("targetDiff", () => {
       // No second ref: the right-hand side is the working tree, so work that
       // is written but not yet committed is part of the answer.
       ["diff", MERGE_BASE],
+      LIST_UNTRACKED,
+    ]);
+  });
+
+  it("appends the untracked files as new files", async () => {
+    const { value, calls } = await withGit(
+      (repo) => repo.targetDiff("main"),
+      ["new.ts", "sub dir/other.ts"]
+    );
+
+    expect(value).toBe(
+      "diff --git a/a.ts b/a.ts\n" +
+        "diff --git a/new.ts b/new.ts\n" +
+        "diff --git a/sub dir/other.ts b/sub dir/other.ts\n"
+    );
+    expect(calls.slice(3)).toEqual([
+      ["diff", "--no-index", "--", "/dev/null", "new.ts"],
+      ["diff", "--no-index", "--", "/dev/null", "sub dir/other.ts"],
     ]);
   });
 

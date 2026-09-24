@@ -1,7 +1,6 @@
 /**
  * Task-list editing for every box the app is typed into — the session composer,
- * a review comment, a note taken on the page in the browser pane: continuing a
- * list on the newline key and re-nesting it with Tab. Sub-items are numbered
+ * a review comment: continuing a list on the newline key and re-nesting it with Tab. Sub-items are numbered
  * under their parent (2 → 2.1), and every structural edit renumbers the
  * surrounding block, so a list stays in order no matter where items were
  * inserted or how they were re-nested.

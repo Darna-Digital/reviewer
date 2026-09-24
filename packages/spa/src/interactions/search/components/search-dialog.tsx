@@ -50,7 +50,6 @@ import type {
   Command,
   GrepOptions,
   SearchMode,
-  SearchScope,
 } from "../interfaces/search.interfaces";
 
 interface SearchDialogProps {
@@ -64,10 +63,8 @@ interface SearchDialogProps {
    */
   seed?: SearchSeed | null;
   commands: ReadonlyArray<Command>;
-  /** Every path the search covers, named as `scope` names them. */
+  /** Every path the search covers. */
   files: ReadonlyArray<string>;
-  /** How wide the content search runs — one root, or the whole project. */
-  scope: SearchScope;
   /** Local and remote branches, for the checkout list. */
   branches: ReadonlyArray<BranchChoice>;
   onOpenFile: (path: string) => void;
@@ -145,7 +142,6 @@ export function SearchDialog({
   seed = null,
   commands,
   files,
-  scope,
   branches,
   onOpenFile,
   onOpenLocation,
@@ -184,12 +180,7 @@ export function SearchDialog({
 
   // Always the text query, whatever mode is on screen: the debounce inside the
   // hook must never be left holding a command-list query when text mode opens.
-  const search = useGrepSearch(
-    queries.text,
-    options,
-    open && mode === "text",
-    scope
-  );
+  const search = useGrepSearch(queries.text, options, open && mode === "text");
   const results = search.data ?? EMPTY_GREP_RESULTS;
 
   const rows = useMemo<ReadonlyArray<Row>>(() => {
@@ -461,7 +452,6 @@ export function SearchDialog({
                 <EmptyState
                   mode={mode}
                   query={query}
-                  scope={scope}
                   loading={search.isFetching}
                   error={search.error}
                 />
@@ -563,13 +553,11 @@ function Summary({
 function EmptyState({
   mode,
   query,
-  scope,
   loading,
   error,
 }: {
   mode: SearchMode;
   query: string;
-  scope: SearchScope;
   loading: boolean;
   error: unknown;
 }) {
@@ -589,11 +577,7 @@ function EmptyState({
     );
   }
   if (error !== null && error !== undefined) {
-    return scope === "project" ? (
-      <>Could not search this project.</>
-    ) : (
-      <>Could not search this repository.</>
-    );
+    return <>Could not search this repository.</>;
   }
   if (query.trim().length < MIN_QUERY_LENGTH) return <>Type to search.</>;
   if (loading) return <>Searching…</>;

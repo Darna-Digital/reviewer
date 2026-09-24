@@ -18,18 +18,6 @@ export const SESSIONS_HREF = "/modes/agent-session";
 export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
-/**
- * The collaboration prototype, kept as a reference.
- *
- * It belongs to no tab in the strip. The two the bar leads with are ways of
- * working, and the prototype is not one — it is the previous draft of one, kept
- * reachable by its URL. Letting Code hold it would leave that tab labelled
- * after the old design and pointing there, since a pinned tab remembers where
- * it was left. So the strip stays as it was while the prototype is on screen —
- * see `tabForLocation`.
- */
-const EXPERIMENTATION_PREFIX = "/modes/experimentation";
-
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
   // Longest first: `/reviews` starts with `/review`, and a prefix match reads
@@ -42,9 +30,6 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
     page.href,
     page.title,
   ]),
-  // Longest first: `startsWith` takes the first entry that matches.
-  ["/modes/experimentation/collaboration/inbox", "Inbox"],
-  ["/modes/experimentation/collaboration", "Experimentation"],
   ["/settings", "Settings"],
 ];
 
@@ -76,11 +61,10 @@ export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
 
 /**
  * The tabs the strip shows. With its button switched off Sessions stays in the
- * strip — the launchpad goes on listing it, and a conversation still has
- * somewhere to be handed back to — but leads the window no more than the
- * launchpad does, so it is left out of the bar, leaving ⌘G nowhere to cross to.
- * It comes back for as long as the window is on it: a bar showing a page while
- * highlighting none of its tabs reads as having lost its place.
+ * strip — a conversation still has somewhere to be handed back to — but is left
+ * out of the bar, leaving ⌘G nowhere to cross to. It comes back for as long as
+ * the window is on it: a bar showing a page while highlighting none of its tabs
+ * reads as having lost its place.
  */
 export function stripTabs({
   tabs,
@@ -98,10 +82,6 @@ const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
 const inSessions = (pathname: string): boolean =>
   pathname.startsWith(SESSIONS_PREFIX);
 
-/** Whether a location is the prototype's, which no tab in the strip holds. */
-const inExperimentation = (pathname: string): boolean =>
-  pathname.startsWith(EXPERIMENTATION_PREFIX);
-
 /** A pinned tab that is named after wherever it has been left. */
 const followsLocation = (tab: WindowTab): boolean => tab.kind === "project";
 
@@ -115,17 +95,18 @@ const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
 
 /**
  * Collaboration was a mode of its own, with a pinned tab and pages under
- * `/modes/collaboration`. Both are gone, but a strip saved before they went
+ * `/modes/collaboration`, and its prototype lived on for a while under
+ * `/modes/experimentation`. Both are gone, but a strip saved before they went
  * still names those pages, so no tab owns them any more — which sends the one
  * that was left there back to its own default rather than restoring it pointed
  * at a route that no longer exists.
  */
-const LEGACY_COLLABORATION_PREFIX = "/modes/collaboration";
+const LEGACY_PREFIXES = ["/modes/collaboration", "/modes/experimentation"];
 
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
-  if (pathname.startsWith(LEGACY_COLLABORATION_PREFIX)) return false;
-  if (inExperimentation(pathname)) return false;
+  if (LEGACY_PREFIXES.some((prefix) => pathname.startsWith(prefix)))
+    return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
   return tab.kind === "project";
 }
@@ -195,18 +176,11 @@ export const onSessionTab = (state: WindowTabsState): boolean =>
  * anything inside Sessions; everything else lands on the pinned tab that owns
  * that part of the app, whichever tab you set off from — leaving Sessions from
  * a chat hands the window back to Code rather than overwriting the chat.
- *
- * A surface with no tab of its own — the collaboration prototype — is not the
- * active tab's to take either: a strip that let it in would rename whichever
- * tab you were on and point it somewhere it does not belong.
  */
 function tabForLocation(
   state: WindowTabsState,
   pathname: string
 ): WindowTab | null {
-  // The prototype is nobody's: the strip keeps its place rather than renaming
-  // a mode button after a reference surface. See `EXPERIMENTATION_PREFIX`.
-  if (inExperimentation(pathname)) return null;
   const current = activeTab(state);
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
@@ -314,6 +288,25 @@ export function moveTab(
 }
 
 /**
+ * Drop a session tab on the side of another — what a drag along the macOS
+ * shell's native strip comes to. The shell has the tabs under the pointer and
+ * which half of one it is over; which slot that is in the strip is this side's
+ * to work out, since a tab leaving its own place shifts every slot after it.
+ */
+export function moveTabBeside(
+  state: WindowTabsState,
+  id: string,
+  toId: string,
+  after: boolean
+): WindowTabsState {
+  const from = state.tabs.findIndex((tab) => tab.id === id);
+  const target = state.tabs.findIndex((tab) => tab.id === toId);
+  if (from < 0 || target < 0) return state;
+  const slot = after ? target + 1 : target;
+  return moveTab(state, id, from < slot ? slot - 1 : slot);
+}
+
+/**
  * The way of working after the one the window is on, wrapping round — what ⌘G
  * crosses to. The pinned tabs are those ways of working, so the crossing is a
  * step along them — Code then Sessions, in strip order — and from a
@@ -328,6 +321,22 @@ export function nextModeTab(
   if (modes.length < 2) return null;
   const at = modes.findIndex((tab) => tab.id === activeId);
   return modes[(at + 1) % modes.length] ?? null;
+}
+
+/**
+ * The tab `offset` places along from the active one, wrapping round at either
+ * end — what the macOS shell's Next Tab and Previous Tab step through. Every
+ * tab counts, pinned or not: it is a walk along the strip as drawn, not the
+ * ⌘<digit> run of the sessions alone.
+ */
+export function stepTab(
+  tabs: ReadonlyArray<WindowTab>,
+  activeId: string | null,
+  offset: number
+): WindowTab | null {
+  if (tabs.length === 0) return null;
+  const at = tabs.findIndex((tab) => tab.id === activeId);
+  return tabs[(at + offset + tabs.length) % tabs.length] ?? null;
 }
 
 /**

@@ -2,9 +2,6 @@
  * What a repository has uncommitted, in the shape a drafted commit message is
  * written from: the diff against HEAD, the untracked files that diff cannot
  * show, and the branch whose name may carry an issue slug.
- *
- * Taking a GitExec rather than reading one from context is what lets a project
- * holding several roots collect the same thing from each of them.
  */
 import * as Effect from "effect/Effect";
 import type { GitExecShape, GitFailure } from "../../../ports/git-exec.ts";

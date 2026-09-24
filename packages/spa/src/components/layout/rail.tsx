@@ -9,16 +9,15 @@
  * drawing their own column is how the page beneath ends up stepping sideways on
  * the way across.
  *
- * It measures 36px inside its rule — the same as the window bar's band, the
- * header's, and the tab strip's inside its own — with a 28px button in it, the
- * square the project chip beside it and the tabs above it are. The 37 is that 36
- * plus the rule, so the band reads the same whichever way it is turned.
+ * It measures 36px — the same as the window bar's band, the header's, and the
+ * tab strip's inside its own — with a 28px button in it, the square the project
+ * chip beside it and the tabs above it are.
  *
  * It is not a sheet standing on the frame: it is the left edge of the sheet
  * beside it, on the same paper as the header and the page, which stand flush
- * against its rule rather than a seam away from it — see `app-rail`. That is
- * what puts the same 4px between the rule and the icons on one side of it as
- * between the rule and the first chip on the other.
+ * against it rather than a seam away from it — see `app-rail`. Nothing is drawn
+ * where the two meet, so the 4px between the icons and that join is the same
+ * 4px as between the join and the first chip on the other side of it.
  */
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,7 +39,7 @@ export function Rail({
   return (
     <nav
       aria-label={label}
-      className="app-rail relative flex h-full w-[37px] shrink-0 flex-col items-center py-1"
+      className="app-rail relative flex h-full w-9 shrink-0 flex-col items-center py-1"
     >
       <div className="flex w-full flex-1 flex-col items-center gap-1">
         {children}

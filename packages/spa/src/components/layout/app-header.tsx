@@ -4,41 +4,25 @@
  * There used to be two: the code shell's `TopBar`, taking twenty-odd props
  * drilled down from the shell that owned them, and the workspace shell's own
  * `<header>` rendering nearly the same controls from its own queries. Between
- * them they covered the same states — a project, a session, the collaboration
- * prototype — and neither could be used by the other.
+ * them they covered the same states — a project, a session — and neither could
+ * be used by the other.
  *
  * This one reads what it shows: the route says which state it is in, and the
  * queries and preferences say what to put in it. Nothing above it has to hold
  * anything on its behalf, which is what lets it sit in the layout and stay
  * mounted while the page beneath it changes.
  */
-import {
-  useNavigate,
-  useParams,
-  useRouterState,
-  useSearch,
-} from "@tanstack/react-router";
+import { useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
+import { HeaderDiffFileInView } from "@/components/layout/diff-file-in-view";
+import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
 import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
-import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
-import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
-import { activeRepo } from "@reviewer/core/workspace";
-import {
-  useBranches,
-  useProjectBranches,
-  useRemoteBranches,
-  useRepo,
-  useWorkspace,
-} from "@/lib/queries";
+import { useBranches, useRemoteBranches, useRepo } from "@/lib/queries";
 import { useHeaderLeadWidths } from "@/components/layout/header-lead";
 import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import {
   REVIEW_HREF,
   reviewSourceOf,
@@ -124,49 +108,16 @@ function HeaderRow({
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
-  const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const prefs = useUiPrefs();
 
   const repo = useRepo();
-  const workspace = useWorkspace();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
-  const projectBranchList = useProjectBranches();
-  const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
   const comparing = useLocalComparison();
 
-  /** Make a root current before a menu action runs in it. */
-  const followRepo = (repoPath: string) =>
-    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
-
-  // The collaboration prototype drops the git chrome entirely — its own sidebar
-  // carries what the branch switcher would have said.
-  if (route.kind === "experimentation") {
-    return (
-      <HeaderRow>
-        <WorkspacePicker />
-        <NewTaskButton />
-        <CollaborationSearch />
-      </HeaderRow>
-    );
-  }
-
   const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
-
-  /**
-   * The diff-style toggle belongs to a diff, so it shows when one is on screen:
-   * a code page, with no file open over it, pointed at something to diff.
-   */
-  const showDiffStyleToggle =
-    route.kind === "code" &&
-    search.file === undefined &&
-    (route.mode === "review" ||
-      (route.mode === "browse" &&
-        (params.sha !== undefined ||
-          (search.base !== undefined && search.head !== undefined))));
 
   /**
    * What your own changes are read against — a question only your own changes
@@ -181,9 +132,8 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     repo.data != null;
 
   /**
-   * What stands over the page's first column: the branch you are on, and what
-   * its changes are read against — the two of them one sentence, and both about
-   * the repository the tree beside them is of.
+   * What stands over the page's first column: the branch you are on, which is
+   * what the tree beneath it is a tree of.
    */
   const lead = (
     <>
@@ -214,14 +164,20 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onDeleteBranch={(name) => void git.deleteBranch(name)}
           onFetch={() => void git.fetch()}
           onPush={() => void git.push()}
-          repos={projectBranchList.data?.repos}
-          currentRepo={activeRepo(
-            workspace.data ?? { repos: [], current: null }
-          )}
-          onFollowRepo={followRepo}
         />
       )}
+    </>
+  );
 
+  /* Every page that reaches here wears the rail: the two surfaces that go
+     without one — the blank composer and a conversation with the window to
+     itself — wear no header either. See `AppLayout`. */
+  return (
+    <HeaderRow lead={lead} railed>
+      {/* What the diff is read against stands over the diff, at the head of its
+          band: it names what is in the pane, not what is in the tree, and over
+          the tree it was cut to that column's width — a branch name shortened
+          by how wide you happen to keep the file list. */}
       {showComparePicker && (
         <ComparePicker
           comparison={comparing.comparison}
@@ -232,19 +188,15 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onSelect={comparing.compareAgainst}
         />
       )}
-    </>
-  );
 
-  /* Every page that reaches here wears the rail: the prototype is answered
-     above, and the two surfaces that go without one — the blank composer and a
-     conversation with the window to itself — wear no header either. See
-     `AppLayout`. */
-  return (
-    <HeaderRow lead={lead} railed>
+      {/* The file the diff is scrolled to, at the head of the band beside what
+          it is read against. */}
+      <HeaderDiffFileInView route={route} />
+
       {/* Lent to the page beneath, which hangs its open-file strip here: the
           tabs choose what the pane holds, which is the same kind of control as
-          the picker at the head of the row. It stands over the pane rather than
-          over the tree, because what it names is what is in the pane. */}
+          the picker beside them. It stands over the pane rather than over the
+          tree, because what it names is what is in the pane. */}
       <div
         ref={setHeaderTabsSlot}
         className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
@@ -252,12 +204,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
-        {showDiffStyleToggle && (
-          <DiffStyleToggle
-            value={prefs.diffStyle}
-            onChange={(diffStyle) => setUiPrefs({ diffStyle })}
-          />
-        )}
+        <HeaderDiffStyleToggle route={route} />
       </div>
     </HeaderRow>
   );

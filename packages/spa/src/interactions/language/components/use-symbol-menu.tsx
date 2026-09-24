@@ -79,11 +79,31 @@ const tokenFromEvent = (
   return container === null ? token : null;
 };
 
-const lineNumberOf = (token: HTMLElement): number | null => {
+/**
+ * The line number of the file on disk that a token sits on, or null when the
+ * token is not on one.
+ *
+ * In a diff two files are interleaved, and only the additions side is the file
+ * the language server knows: a deletion row carries the line it had in the
+ * previous revision, so a menu opened there would answer about the wrong code.
+ * Split mode says which file a column is in on the `<code>` element; unified
+ * mode marks each deleted row on the row itself, and every other row — added
+ * or context — is numbered by the additions side.
+ */
+const fileLineNumberOf = (token: HTMLElement): number | null => {
   const line = token.closest("[data-line]");
-  const value = line?.getAttribute("data-line");
-  if (value === undefined || value === null) return null;
-  const parsed = Number.parseInt(value, 10);
+  if (line === null) return null;
+  const code = line.closest(
+    "[data-deletions], [data-additions], [data-unified]"
+  );
+  if (code?.hasAttribute("data-deletions")) return null;
+  if (
+    code?.hasAttribute("data-unified") &&
+    line.getAttribute("data-line-type") === "change-deletion"
+  ) {
+    return null;
+  }
+  const parsed = Number.parseInt(line.getAttribute("data-line") ?? "", 10);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -173,7 +193,7 @@ export function useSymbolMenu({
     const onContextMenu = (event: MouseEvent) => {
       const element = tokenFromEvent(event, getContainer());
       if (element === null) return;
-      const lineNumber = lineNumberOf(element);
+      const lineNumber = fileLineNumberOf(element);
       const charStart = Number.parseInt(
         element.getAttribute("data-char") ?? "",
         10

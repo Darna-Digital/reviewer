@@ -11,6 +11,7 @@ import {
   openTab,
   orderTabs,
   pruneTabs,
+  reconcileTabs,
   syncActive,
   tabToRestore,
   togglePin,
@@ -302,5 +303,64 @@ describe("pruneTabs", () => {
   it("is a no-op when every file still exists", () => {
     const state = openTab(EMPTY_TABS, "a", "permanent");
     expect(pruneTabs(state, () => true)).toBe(state);
+  });
+});
+
+describe("reconcileTabs", () => {
+  const strip = () => {
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    return state;
+  };
+
+  it("restores the file that was in front when the URL names none", () => {
+    const { open, tabs } = reconcileTabs(strip(), {
+      viewing: null,
+      switched: false,
+      canRestore: true,
+    });
+    expect(open).toBe("b");
+    expect(show(tabs)).toBe("a b");
+  });
+
+  it("leaves the strip alone off the browse page, where there is none to restore", () => {
+    const { open, tabs } = reconcileTabs(strip(), {
+      viewing: null,
+      switched: false,
+      canRestore: false,
+    });
+    expect(open).toBeNull();
+    expect(tabs.active).toBeNull();
+    expect(show(tabs)).toBe("a b");
+  });
+
+  it("follows the file the URL names into the strip", () => {
+    const { open, tabs } = reconcileTabs(strip(), {
+      viewing: "c",
+      switched: false,
+      canRestore: true,
+    });
+    expect(open).toBe("c");
+    expect(show(tabs)).toBe("a b ~c");
+  });
+
+  it("leaves the file the last repository had open behind, restoring this one's", () => {
+    const { open, tabs } = reconcileTabs(strip(), {
+      viewing: "elsewhere/gone.ts",
+      switched: true,
+      canRestore: true,
+    });
+    expect(open).toBe("b");
+    expect(show(tabs)).toBe("a b");
+  });
+
+  it("empties the screen on a switch into a repository with no strip of its own", () => {
+    const { open, tabs } = reconcileTabs(EMPTY_TABS, {
+      viewing: "elsewhere/gone.ts",
+      switched: true,
+      canRestore: true,
+    });
+    expect(open).toBeNull();
+    expect(show(tabs)).toBe("");
   });
 });

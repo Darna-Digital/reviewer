@@ -30,14 +30,19 @@ describe("providersFor", () => {
     const ids = providersFor(root).providers.map((provider) => provider.id);
     expect(ids).toContain("typescript");
     expect(ids).toContain("lsp:ruby");
+    expect(ids).toContain("lsp:swift");
   });
 
-  it("claims Ruby files for the Ruby provider, and .ts for TypeScript", () => {
+  it("claims Ruby files for the Ruby provider, Swift for Swift, and .ts for TypeScript", () => {
     const { providers } = providersFor(root);
     expect(selectProvider(providers, "app/models/user.rb")?.id).toBe(
       "lsp:ruby"
     );
     expect(selectProvider(providers, "Gemfile")?.id).toBe("lsp:ruby");
+    expect(selectProvider(providers, "Sources/App/main.swift")?.id).toBe(
+      "lsp:swift"
+    );
+    expect(selectProvider(providers, "Package.swift")?.id).toBe("lsp:swift");
     expect(selectProvider(providers, "src/main.ts")?.id).toBe("typescript");
     expect(selectProvider(providers, "notes.md")).toBeNull();
   });

@@ -4,6 +4,8 @@ import {
   problemOrigin,
   problemPosition,
   problemsLabel,
+  problemText,
+  problemsText,
 } from "./problems.functions";
 import { diagnostic, range } from "./language.functions.mock";
 import { countDiagnostics } from "./language.functions";
@@ -78,5 +80,46 @@ describe("problemsLabel", () => {
 
   it("says so when the file is clean", () => {
     expect(problemsLabel(countDiagnostics([]))).toBe("No problems");
+  });
+});
+
+describe("problemText", () => {
+  it("prints one problem the way tsc does", () => {
+    const problem = diagnostic({
+      severity: "error",
+      range: range(11, 4),
+      source: "ts",
+      code: "2322",
+      message: "Type 'string' is not assignable to type 'number'.",
+    });
+    expect(problemText(problem, "src/main.ts")).toBe(
+      "src/main.ts:12:5 - error ts(2322): Type 'string' is not assignable to type 'number'."
+    );
+  });
+
+  it("leaves the path out when the bar does not know it", () => {
+    const problem = diagnostic({ range: range(0, 0), message: "Oops." });
+    expect(problemText(problem)).toMatch(/^1:1 - /);
+  });
+});
+
+describe("problemsText", () => {
+  it("lists every problem worst first, one per line", () => {
+    const hint = diagnostic({
+      severity: "hint",
+      range: range(0, 0),
+      message: "Hint.",
+    });
+    const error = diagnostic({
+      severity: "error",
+      range: range(3, 0),
+      message: "Error.",
+    });
+    expect(problemsText([hint, error], "a.ts")).toBe(
+      [
+        "a.ts:4:1 - error ts(2322): Error.",
+        "a.ts:1:1 - hint ts(2322): Hint.",
+      ].join("\n")
+    );
   });
 });

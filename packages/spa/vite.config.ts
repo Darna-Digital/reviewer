@@ -8,7 +8,7 @@ const SERVER_URL = process.env.REVIEWER_SERVER_URL ?? "http://localhost:41811";
 const isProduction = process.env.NODE_ENV === "production";
 
 // Assets are always referenced from the root of the origin, never relative to
-// the document. The desktop shell serves the built client over a custom
+// the document. The macOS shell serves the built client over a custom
 // `reviewer://` scheme and the router rewrites the address as you navigate, so
 // document-relative URLs resolve against whatever route is open — reloading on
 // `/modes/code/branches` would look for `/modes/code/assets/...`, get the HTML
@@ -31,8 +31,8 @@ const config = defineConfig({
       "/api": { target: SERVER_URL, changeOrigin: true, ws: true },
     },
   },
-  // The desktop shell loads the built SPA via `vite preview` in prod; keep the
-  // port and `/api` proxy aligned with the dev server above.
+  // `vite preview` serves the built SPA; keep the port and `/api` proxy aligned
+  // with the dev server above.
   preview: {
     port: 41812,
     proxy: {

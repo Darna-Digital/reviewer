@@ -1,16 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Asciify } from "#/components/canvasui/Asciify";
+import { NoteCard, PointCard, ShowcaseCard } from "#/components/card";
+import { Container } from "#/components/container";
 import {
-  Container,
-  FeatureSection,
-  SectionDivider,
-} from "#/components/feature-section";
-import { GitHub } from "#/components/icons";
-import { Logo } from "#/components/logo";
+  Branch,
+  Bubble,
+  Bubbles,
+  Command,
+  Folders,
+  GitHub,
+  History,
+  Laptop,
+  Play,
+  PullRequest,
+  Sparkles,
+  Terminal,
+} from "#/components/icons";
+import { AppIcon } from "#/components/logo";
+import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
 import { SpaSnapshot } from "#/components/spa-snapshot";
-import { usePrefersDark } from "#/hooks/use-prefers-dark";
 import { GITHUB_URL } from "#/lib/links";
 
 const HERO_SNAPSHOT = {
@@ -22,10 +31,16 @@ const HERO_SNAPSHOT = {
 /** Every section snapshot is framed on the app canvas, so they share a box. */
 const SECTION_FRAME = { width: 1428, height: 854 };
 
+export const Route = createFileRoute("/")({
+  component: Home,
+  head: () => ({
+    links: [{ rel: "preload", as: "fetch", href: HERO_SNAPSHOT.src }],
+  }),
+});
+
 function SectionSnapshot({ label, name }: { label: string; name: string }) {
   return (
     <SpaSnapshot
-      className="rounded-xl ring-1 ring-black/10 dark:ring-white/10"
       height={SECTION_FRAME.height}
       label={label}
       src={`/spa-snapshots/${name}.json`}
@@ -34,288 +49,163 @@ function SectionSnapshot({ label, name }: { label: string; name: string }) {
   );
 }
 
-export const Route = createFileRoute("/")({
-  component: Home,
-  head: () => ({
-    links: [{ rel: "preload", as: "fetch", href: HERO_SNAPSHOT.src }],
-  }),
-});
-
-const ASCII_INK_DARK: [number, number, number] = [0.42, 0.42, 0.42];
-
-const VIDEO_CREDIT_TOOLTIP_ID = "background-video-credit";
-
-function GithubCta() {
+function Hero() {
   return (
-    <a
-      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-900 px-5 text-[15px] font-medium whitespace-nowrap text-white transition-colors hover:bg-neutral-900/90 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-      href={GITHUB_URL}
-    >
-      <GitHub className="size-4" />
-      View on GitHub
-    </a>
-  );
-}
+    <section className="flex flex-col items-center gap-6 pt-28 pb-16 text-center sm:pt-36">
+      <AppIcon className="size-[84px] rounded-[22.37%] shadow-[0_14px_30px_rgba(0,0,0,0.14),0_3px_8px_rgba(0,0,0,0.10)] dark:shadow-[0_14px_30px_rgba(0,0,0,0.5)]" />
 
-function StatementWord({ word, index }: { word: string; index: string }) {
-  return (
-    <>
-      <span className="relative isolate inline-block">
-        {word}
-        <span
-          aria-hidden="true"
-          className="absolute -inset-x-1 top-1/2 -z-10 h-7 -translate-y-1/2 rounded-lg bg-black/6 md:h-9 dark:bg-white/10"
-        />
-      </span>
-      <span className="relative top-1 inline-flex justify-center pr-1 pl-2 align-top font-mono text-[10px] leading-none text-neutral-500">
-        {index}
-      </span>
-    </>
-  );
-}
+      <h1 className="bg-gradient-to-b from-neutral-900 to-neutral-500 bg-clip-text text-[64px] leading-none font-semibold tracking-[-0.03em] text-transparent sm:text-[88px] dark:from-white dark:to-neutral-400">
+        Reviewer
+      </h1>
 
-function VideoCredit() {
-  return (
-    <span className="group absolute right-6 bottom-6 z-20 inline-flex">
-      <button
-        aria-describedby={VIDEO_CREDIT_TOOLTIP_ID}
-        className="cursor-default rounded-full bg-white/60 px-3 py-1 font-mono text-[10px] tracking-wide text-neutral-600 ring-1 ring-black/5 backdrop-blur-sm transition-colors hover:text-neutral-900 dark:bg-white/5 dark:text-neutral-400 dark:ring-white/10 dark:hover:text-white"
-        type="button"
+      <p className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
+        Tools for conversation based development.
+      </p>
+
+      <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] dark:text-neutral-400">
+        Reviewer reviews what the agent wrote, runs it on your machine, and
+        keeps the conversation on the line it belongs to.
+      </p>
+
+      <a
+        className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 text-[15px] font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+        href={GITHUB_URL}
       >
-        Video copyright
-      </button>
-      <span className="pointer-events-none absolute top-1/2 right-full translate-x-1 -translate-y-1/2 pr-2 opacity-0 transition duration-150 group-focus-within:pointer-events-auto group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
-        <span
-          className="block rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs whitespace-nowrap text-white shadow-lg dark:bg-white dark:text-neutral-950"
-          id={VIDEO_CREDIT_TOOLTIP_ID}
-          role="tooltip"
-        >
-          【=◈︿◈=】porter robinson - worlds
-        </span>
-      </span>
-    </span>
+        <GitHub className="size-4" />
+        View on GitHub
+      </a>
+
+      <p className="text-[13px] leading-relaxed text-neutral-400 dark:text-neutral-500">
+        Free and open source.
+        <br />
+        Runs on your own machine, against your own repository.
+      </p>
+    </section>
   );
 }
 
 function Home() {
-  const prefersDark = usePrefersDark();
-
   return (
     <>
       <SiteHeader />
 
-      <div className="relative isolate overflow-hidden bg-white dark:bg-neutral-950">
-        <div className="pointer-events-none absolute inset-0">
-          <Asciify className="h-full" ink={prefersDark ? ASCII_INK_DARK : null}>
-            <video
-              className="size-full object-cover"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              aria-hidden="true"
-              tabIndex={-1}
-            >
-              <source
-                src="/background-video.av1.mp4"
-                type='video/mp4; codecs="av01.0.08M.08"'
-              />
-              <source
-                src="/background-video.mp4"
-                type='video/mp4; codecs="avc1.640032"'
-              />
-            </video>
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.3)_0%,rgba(255,255,255,0.06)_10%,rgba(255,255,255,0)_26%,rgba(255,255,255,0.55)_78%,white_93%)] dark:bg-[linear-gradient(to_bottom,rgba(10,10,10,0.78)_0%,rgba(10,10,10,0.66)_10%,rgba(10,10,10,0.6)_30%,rgba(10,10,10,0.88)_78%,#0a0a0a_93%)]" />
-          </Asciify>
-        </div>
-
-        <section className="relative mt-8 lg:mt-16">
-          <Container>
-            <div className="flex flex-col items-start gap-5 pt-24 pb-72 text-neutral-900 lg:pt-48 lg:pb-[30rem] dark:text-white">
-              <h1 className="max-w-lg text-5xl leading-[1.02] font-medium tracking-[-0.02em] text-balance sm:text-[56px] md:text-[64px] lg:max-w-3xl lg:text-[72px]">
-                Tools for conversation based development.
-              </h1>
-              <p className="max-w-2xl text-lg text-pretty text-neutral-800 md:text-xl dark:text-neutral-100">
-                Engineered for writing reliable, maintainable and testable code
-                — with the agents you already run, on your own machine.
-              </p>
-            </div>
-          </Container>
-        </section>
-
-        <div className="relative z-10 -mt-52 pb-24 sm:pb-32 lg:-mt-[26rem]">
-          <Container className="flex min-[1648px]:justify-center">
-            <div className="hero-app-shadow w-[1600px] shrink-0">
-              <SpaSnapshot
-                className="rounded-xl ring-1 ring-black/10 dark:ring-white/10"
-                eager
-                height={HERO_SNAPSHOT.height}
-                label="Reviewer reviewing a commit, with the file tree, the split diff and the project history"
-                src={HERO_SNAPSHOT.src}
-                width={HERO_SNAPSHOT.width}
-              />
-            </div>
-          </Container>
-        </div>
-
-        <VideoCredit />
-      </div>
-
-      <section className="py-16 md:py-32">
+      <main className="flex flex-col gap-6">
         <Container>
-          <p className="max-w-3xl text-[24px] leading-snug font-medium tracking-tight text-pretty text-neutral-900 sm:text-[32px] dark:text-neutral-100">
-            Reviewer <StatementWord index="01" word="reviews" />
-            what the agent wrote, <StatementWord index="02" word="runs" />
-            it on your machine, and <StatementWord index="03" word="keeps" />
-            the conversation on the line it belongs to.
-          </p>
+          <Hero />
         </Container>
-      </section>
 
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Inline comments",
-          "Local changes",
-          "Commits & ranges",
-          "GitHub pull requests",
-          "Threaded replies",
-          "Resolve",
-          "Comment-carrying file tree",
-        ]}
-        capabilitiesLabel="Review anywhere"
-        description="Comment on any line of any file — your local changes, a single commit, a range of them, or a GitHub pull request. Comments are stored with the code, so the next agent to open the repository reads exactly what you wrote, against the lines you wrote it about."
-        index="01"
-        title="Say it on the line it belongs to"
-      >
-        <SectionSnapshot
-          label="A comment being written against a line of the diff, in the file it belongs to"
-          name="review"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Claude Code",
-          "Codex",
-          "opencode",
-          "Cursor",
-          "Terminal sessions",
-          "Custom CLIs",
-          "Per-branch sessions",
-          "Work log",
-        ]}
-        capabilitiesLabel="Agents, on your machine"
-        description="Claude Code, Codex, opencode, Cursor, or a plain shell. Reviewer builds the command, drops the prompt in, and streams back whatever the tool prints. Point it at your own CLI with a {prompt} token and it behaves like the built-in ones."
-        index="02"
-        title="Hand the review to whichever agent you already run"
-      >
-        <SectionSnapshot
-          label="An agent session in Reviewer: the thread, the model picker and the branch it runs on"
-          name="agents"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Front-to-back flow graph",
-          "Layer lanes",
-          "Notes anchored to lines",
-          "Anchor re-checking",
-          "Relocated & lost anchors",
-          "Drafts and saved analyses",
-        ]}
-        capabilitiesLabel="Analyses that age honestly"
-        description="An analysis is a graph: how one behaviour travels from the frontend through to storage, with notes pinned to real files and lines. When the code moves on, Reviewer re-checks every anchor and tells you which parts of the analysis it can still stand behind."
-        index="03"
-        title="The flow an agent worked out, drawn front to back"
-      >
-        <SectionSnapshot
-          label="An analysis drawn front to back, with notes anchored to real files and lines"
-          name="plans"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Run configurations",
-          "Service logs",
-          "Start & stop all",
-          "Browser pane",
-          "Element picker",
-          "Visual comments",
-        ]}
-        capabilitiesLabel="From the diff to the running app"
-        description="Named run configurations start your services from inside the app and keep their logs beside the diff. The browser pane loads the running site; pick an element and the comment is filed with a shot of what you were pointing at."
-        index="04"
-        title="Run it, look at it, point at what is wrong"
-      >
-        <SectionSnapshot
-          label="A run configuration and its service logs, docked beneath the code"
-          name="local-dev"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Browse & edit",
-          "Commit & push",
-          "Branch switcher",
-          "History graph",
-          "Pull requests",
-          "Conflict resolution",
-          "Multi-repo roots",
-        ]}
-        capabilitiesLabel="Git, in full"
-        description="Browse and edit files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
-        index="05"
-        title="The whole repository, not only the diff"
-      >
-        <SectionSnapshot
-          label="The project history graph with branch refs, beside the file being browsed"
-          name="git"
-        />
-      </FeatureSection>
-
-      <footer className="w-full overflow-hidden bg-gradient-to-b from-neutral-100 to-white dark:from-neutral-900 dark:to-neutral-950">
-        <Container className="relative">
-          <div className="absolute top-0 left-1/2 h-px w-screen -translate-x-1/2 bg-black/8 dark:bg-white/10" />
-
-          <div className="flex flex-col items-start gap-6 py-20 md:gap-10 md:py-36">
-            <h2 className="text-4xl leading-[1.05] font-medium tracking-[-0.02em] text-neutral-900 md:text-[48px] dark:text-white">
-              <span className="block">Tools for conversation</span>
-              <span className="block">based development.</span>
-            </h2>
-            <p className="max-w-xl text-base text-balance text-neutral-600 dark:text-neutral-400">
-              Reviewer runs on your machine, against your repository, with the
-              agents you already run.
-            </p>
-            <GithubCta />
-          </div>
-
-          <div
-            className="h-px w-full bg-black/8 dark:bg-white/10"
-            role="separator"
-          />
-
-          <div className="flex flex-col items-start justify-between gap-6 py-10 md:flex-row md:items-center">
-            <Logo className="h-6 w-auto shrink-0" />
-            <p className="text-xs text-neutral-400 dark:text-neutral-500">
-              © 2026 Darna Digital. All rights reserved.
-            </p>
+        <Container>
+          <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
+            <SpaSnapshot
+              eager
+              height={HERO_SNAPSHOT.height}
+              label="Reviewer reviewing a commit, with the file tree, the split diff and the project history"
+              src={HERO_SNAPSHOT.src}
+              width={HERO_SNAPSHOT.width}
+            />
           </div>
         </Container>
-      </footer>
+
+        <Container className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <PointCard icon={<Bubble className="size-7" />}>
+            Comment on any line of any file, and the next agent reads it.
+          </PointCard>
+          <PointCard icon={<Sparkles className="size-7" />}>
+            Hand the review to whichever agent you already run.
+          </PointCard>
+          <PointCard icon={<Play className="size-7" />}>
+            Start the services and keep their logs beside the diff.
+          </PointCard>
+        </Container>
+
+        <Container className="mt-6 flex flex-col gap-4">
+          <ShowcaseCard
+            description="Comment on your local changes, a single commit, a range of them, or a GitHub pull request. Comments are stored with the code, so the next agent to open the repository reads exactly what you wrote, against the lines you wrote it about."
+            icon={<Bubble className="size-7" />}
+            title="Say it on the line it belongs to"
+          >
+            <SectionSnapshot
+              label="A comment being written against a line of the diff, in the file it belongs to"
+              name="review"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Claude Code, Codex, opencode, Cursor, or a plain shell. Reviewer builds the command, drops the prompt in, and streams back whatever the tool prints. Point it at your own CLI with a {prompt} token and it behaves like the built-in ones."
+            icon={<Sparkles className="size-7" />}
+            title="Hand it to the agent you already run"
+          >
+            <SectionSnapshot
+              label="An agent session in Reviewer: the thread, the model picker and the branch it runs on"
+              name="agents"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Named run configurations start your services from inside the app and keep their logs beside the diff, so the change and what it does at runtime are read in one window."
+            icon={<Play className="size-7" />}
+            title="Run it and look at it"
+          >
+            <SectionSnapshot
+              label="A run configuration and its service logs, docked beneath the code"
+              name="local-dev"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Browse files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
+            icon={<Branch className="size-7" />}
+            title="The whole repository, not only the diff"
+          >
+            <SectionSnapshot
+              label="The project history graph with branch refs, beside the file being browsed"
+              name="git"
+            />
+          </ShowcaseCard>
+        </Container>
+
+        <Container className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <NoteCard icon={<Bubbles className="size-7" />} title="Threads">
+            Reply on a comment and resolve it, with the file tree marking every
+            file still carrying one.
+          </NoteCard>
+          <NoteCard icon={<History className="size-7" />} title="History">
+            Page through the project graph with its branch refs, and review any
+            commit or range of them.
+          </NoteCard>
+          <NoteCard
+            icon={<PullRequest className="size-7" />}
+            title="Pull requests"
+          >
+            Open a pull request, review one from GitHub, and resolve conflicts
+            without leaving the window.
+          </NoteCard>
+          <NoteCard icon={<Folders className="size-7" />} title="Multi-repo">
+            Several repository roots sit in one window when a project spans more
+            than a single checkout.
+          </NoteCard>
+          <NoteCard icon={<Terminal className="size-7" />} title="Terminals">
+            Terminal sessions as tabs, per branch, beside the code they were
+            opened against.
+          </NoteCard>
+          <NoteCard icon={<Command className="size-7" />} title="Keyboard">
+            A command palette on ⌘K reaches every file, branch and action in the
+            project.
+          </NoteCard>
+          <NoteCard icon={<Laptop className="size-7" />} title="Local">
+            Your repository never leaves the machine — Reviewer runs the agents
+            you have already installed.
+          </NoteCard>
+          <NoteCard icon={<GitHub className="size-7" />} title="Open source">
+            Read the source, file an issue, or build it yourself from the
+            repository.
+          </NoteCard>
+        </Container>
+
+        <div className="mt-16">
+          <SiteFooter />
+        </div>
+      </main>
     </>
   );
 }

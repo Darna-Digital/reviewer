@@ -1,0 +1,266 @@
+// The palette: the web app's search dialog drawn natively, as a Liquid
+// Glass pane hung near the top of the window over the page — a breadcrumb
+// naming the list that is up, one box, one list. It opens on Commands
+// (⌘K), and some of those rows lead deeper rather than acting: Files (also
+// ⇧⇧) is a name search over every path, Text (also ⌘⇧F) greps the working
+// tree with the match modifiers (case, whole word, regex) on the box's
+// trailing edge, Git holds the git actions and leads on to Branches, which
+// checks one out. The keyboard drives it the way the web one is driven:
+// ↑/↓ walk the list, Home and End jump to its ends, Return runs the row,
+// Backspace on an empty box walks back up the trail, Escape — or a click
+// beside the pane — puts it away.
+//
+// The pane is frosted glass rather than an opaque sheet so the code stays
+// visible through it: a result is read against what it will open over. It is
+// a box and a list and nothing else — no footer of keys, since the keys are
+// the ones every dialog has. What it holds is the model's
+// (`CommandPalette`); the only state here is which row the keyboard is on.
+// The list itself is AppKit's (`PaletteList`), so five hundred grep hits
+// scroll as a table does, on reused rows.
+import SwiftUI
+
+struct PaletteOverlay: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                // A clear backdrop, so the pane is the one thing that changes
+                // and a click anywhere else is how the mouse dismisses it.
+                Color.black.opacity(0.08)
+                    .ignoresSafeArea()
+                    .onTapGesture { model.palette.close() }
+                PalettePanel()
+                    .frame(width: min(680, proxy.size.width - 32))
+                    .frame(height: min(PalettePanel.height, proxy.size.height * 0.7))
+                    .padding(.top, proxy.size.height * 0.12)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+private struct PalettePanel: View {
+    /// The system's own large radius, so the pane reads as one of the
+    /// window's glass panels rather than a sheet cut to a smaller family.
+    static let radius: CGFloat = 26
+    /// The pane is one size whatever is in it: a list that grew with its
+    /// rows would jump under the pointer as a grep narrowed, and the
+    /// window would flash between an empty box and five hundred hits.
+    /// The list keeps whatever the header and footer leave and scrolls.
+    static let height: CGFloat = 600
+
+    @Environment(AppModel.self) private var model
+    @State private var active = 0
+    @FocusState private var fieldFocused: Bool
+
+    private var palette: CommandPalette { model.palette }
+
+    var body: some View {
+        @Bindable var palette = palette
+        let rows = palette.rows
+        VStack(spacing: 0) {
+            header(palette: $palette)
+            ThemedDivider()
+            list(rows)
+        }
+        .glassEffect(.regular, in: .rect(cornerRadius: PalettePanel.radius))
+        .shadow(color: .black.opacity(0.22), radius: 28, y: 12)
+        // Every way the field could hand focus to the list is answered
+        // here instead, so the caret never leaves the box.
+        .onKeyPress(.upArrow) { step(-1, in: rows.count); return .handled }
+        .onKeyPress(.downArrow) { step(1, in: rows.count); return .handled }
+        .onKeyPress(.home) { active = 0; return .handled }
+        .onKeyPress(.end) { active = max(0, rows.count - 1); return .handled }
+        .onKeyPress(.escape) { palette.close(); return .handled }
+        .onExitCommand { palette.close() }
+        .onChange(of: rows.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
+        .onChange(of: palette.query) { active = 0 }
+        .onChange(of: palette.mode) { active = 0 }
+        // Whichever row is lit — by the arrows or by the pointer — is the
+        // one Return or a click is about to open, so its file is rendered
+        // now rather than then.
+        .onChange(of: rows.indices.contains(active) ? rows[active].path : nil, initial: true) { _, path in
+            if let path { palette.onIntent?(path) }
+        }
+        .onAppear {
+            // The web view under the pane holds the window's focus, and
+            // SwiftUI moves it to the field only once the field is on
+            // screen — a turn of the run loop after this.
+            Task { @MainActor in fieldFocused = true }
+            backspaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                let key = event.keyCode
+                let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                return MainActor.assumeIsolated { walksBack(key: key, modifiers: modifiers) } ? nil : event
+            }
+        }
+        .onDisappear {
+            if let backspaceMonitor { NSEvent.removeMonitor(backspaceMonitor) }
+            backspaceMonitor = nil
+        }
+    }
+
+    /// Backspace with nothing left to delete walks back up the trail. The
+    /// box's own editor answers the key before SwiftUI is asked — it
+    /// forwards the arrows and Return, but a delete it takes as its own,
+    /// even with nothing to delete — so the key is heard ahead of the
+    /// window, as ⇧⇧ is, and only this one press is kept from the box.
+    @State private var backspaceMonitor: Any?
+    private static let backspaceKeyCode: UInt16 = 51
+
+    private func walksBack(key: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
+        guard key == Self.backspaceKeyCode, modifiers.isEmpty, palette.query.isEmpty else { return false }
+        return palette.back()
+    }
+
+    // MARK: header
+
+    private func header(palette: Bindable<CommandPalette>) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            crumbs
+                .padding(.top, 10)
+                .padding(.horizontal, 12)
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField(palette.wrappedValue.mode.placeholder, text: palette.query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 15))
+                    .focused($fieldFocused)
+                    .autocorrectionDisabled()
+                    .onSubmit { run(rowAt: active) }
+                if palette.wrappedValue.mode == .text {
+                    grepToggles(palette: palette)
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+        }
+    }
+
+    /// Where you are in the palette: the trail from the command list down
+    /// to the list that is up, each earlier step a way back to it.
+    private var crumbs: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(palette.mode.crumbs.enumerated()), id: \.element) { position, crumb in
+                if position > 0 {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                if crumb == palette.mode {
+                    Text(crumb.title)
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 4)
+                } else {
+                    Button(crumb.title) { palette.show(crumb) }
+                        .buttonStyle(CrumbStyle())
+                }
+            }
+        }
+        .font(.system(size: 11))
+        .foregroundStyle(.secondary)
+    }
+
+    /// The `git grep` flags, as the web box wears them: three glyphs on
+    /// the trailing edge, each lit while it is on.
+    private func grepToggles(palette: Bindable<CommandPalette>) -> some View {
+        HStack(spacing: 2) {
+            GrepToggle(glyph: "Aa", label: "Match case", isOn: palette.options.caseSensitive)
+            GrepToggle(glyph: "ab", label: "Match whole word", isOn: palette.options.wholeWord)
+            GrepToggle(glyph: ".*", label: "Use regular expression", isOn: palette.options.regex)
+        }
+    }
+
+    // MARK: list
+
+    @ViewBuilder
+    private func list(_ rows: [PaletteRow]) -> some View {
+        Group {
+            if rows.isEmpty {
+                EmptyResults(palette: palette)
+                    .padding(.horizontal, 14)
+            } else {
+                PaletteList(
+                    rows: rows, query: palette.query, options: palette.options, mode: palette.mode, active: $active
+                ) { index in
+                    run(rowAt: index)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: keys
+
+    private func step(_ offset: Int, in count: Int) {
+        guard count > 0 else { return }
+        active = (active + offset + count) % count
+    }
+
+    private func run(rowAt index: Int) {
+        let rows = palette.rows
+        guard rows.indices.contains(index) else { return }
+        palette.run(rows[index])
+    }
+}
+
+/// A crumb that is a way back: a quiet chip, lit under the pointer.
+private struct CrumbStyle: ButtonStyle {
+    @State private var isHovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isHovering ? .primary : .secondary)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(Color.primary.opacity(isHovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 5))
+            .contentShape(Rectangle())
+            .onHover { isHovering = $0 }
+    }
+}
+
+private struct GrepToggle: View {
+    let glyph: String
+    let label: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Button { isOn.toggle() } label: {
+            Text(glyph)
+                .font(.system(size: 11))
+                .foregroundStyle(isOn ? .primary : .secondary)
+                .frame(width: 24, height: 24)
+                .background(isOn ? Color.primary.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .help(label)
+    }
+}
+
+private struct EmptyResults: View {
+    let palette: CommandPalette
+
+    var body: some View {
+        Text(message)
+            .font(.system(size: 13))
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+    }
+
+    private var message: String {
+        let typed = palette.query.trimmingCharacters(in: .whitespaces)
+        switch palette.mode {
+        case .commands, .git:
+            return "No commands found."
+        case .branches:
+            return typed.isEmpty ? "This repository has no branches." : "No branches match."
+        case .files:
+            if let error = palette.searchError { return error }
+            return typed.isEmpty ? "Type to find a file by name." : "No files match."
+        case .text:
+            if palette.searchError != nil { return "Could not search this repository." }
+            if typed.count < CommandPalette.minimumQueryLength { return "Type to search." }
+            return palette.isSearching ? "Searching…" : "No matches found."
+        }
+    }
+}

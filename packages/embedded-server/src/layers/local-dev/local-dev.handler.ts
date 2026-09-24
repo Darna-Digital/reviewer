@@ -1,13 +1,56 @@
+import { statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { NotFound } from "@reviewer/core/shared";
 import { Api } from "../../api.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type { DevRunStatus } from "../terminal/dev-process-manager.ts";
-import { DevRuntime } from "./local-dev.runtime.ts";
+import { DevRuntime, type StartCommandInput } from "./local-dev.runtime.ts";
 import type { DevCommand, DevCommandView } from "@reviewer/core/local-dev";
 import { LocalDevService } from "@reviewer/core/local-dev";
 
 const ok = { ok: true } as const;
+
+/**
+ * The absolute folder a command runs in: its `cwd` under the repository,
+ * which has to still be a folder there — a package renamed since the command
+ * was written is a NotFound rather than a process started somewhere else.
+ */
+const commandFolder = (
+  repoPath: string,
+  command: DevCommand
+): Effect.Effect<string, NotFound> => {
+  const folder = resolve(join(repoPath, command.cwd));
+  const inside = !relative(repoPath, folder).startsWith("..");
+  const isFolder = (() => {
+    try {
+      return statSync(folder).isDirectory();
+    } catch {
+      return false;
+    }
+  })();
+  if (!inside || !isFolder) {
+    return Effect.fail(
+      new NotFound({
+        reason: `folder ${command.cwd || "."} not found in repository`,
+      })
+    );
+  }
+  return Effect.succeed(folder);
+};
+
+/** What the runtime starts for a command: the command line, in its folder. */
+const launch = (
+  repoPath: string,
+  command: DevCommand
+): Effect.Effect<StartCommandInput, NotFound> =>
+  Effect.map(commandFolder(repoPath, command), (cwd) => ({
+    commandId: command.id,
+    repoPath,
+    cwd,
+    command: command.command,
+  }));
 
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
@@ -41,7 +84,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
           s.create({
             name: payload.name,
             command: payload.command,
-            repoPath: payload.repoPath,
+            cwd: payload.cwd,
           })
         )
       )
@@ -53,7 +96,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
           s.update(params.id, {
             name: payload.name,
             command: payload.command,
-            repoPath: payload.repoPath,
+            cwd: payload.cwd,
           })
         )
       )
@@ -71,50 +114,38 @@ export const LocalDevHandler = HttpApiBuilder.group(
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
           const command = yield* dev.get(params.id);
-          const status = yield* runtime.start({
-            commandId: command.id,
-            repoPath: command.repoPath,
-            command: command.command,
-          });
+          const status = yield* runtime.start(yield* launch(repoPath, command));
           return toView(command, status);
         })
       )
       .handle("stop", ({ params }) =>
         Effect.flatMap(DevRuntime, (r) => r.stop(params.id)).pipe(Effect.as(ok))
       )
-      .handle("startAll", ({ payload }) =>
+      .handle("startAll", () =>
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
-          // Each command runs in the root it belongs to, so a project's backend
-          // and frontend come up together from one Run all.
-          const scoped =
-            payload.repoPath === undefined
-              ? commands
-              : commands.filter((c) => c.repoPath === payload.repoPath);
           const views: DevCommandView[] = [];
-          for (const command of scoped) {
-            const status = yield* runtime.start({
-              commandId: command.id,
-              repoPath: command.repoPath,
-              command: command.command,
-            });
+          for (const command of commands) {
+            const status = yield* runtime.start(
+              yield* launch(repoPath, command)
+            );
             views.push(toView(command, status));
           }
           return views;
         })
       )
-      .handle("stopAll", ({ payload }) =>
+      .handle("stopAll", () =>
         Effect.gen(function* () {
           const runtime = yield* DevRuntime;
           const ctx = yield* WorkspaceContext;
-          if (payload.repoPath !== undefined) {
-            yield* runtime.stopRepo(payload.repoPath);
-            return ok;
-          }
-          yield* runtime.stopProject(yield* ctx.requireProject);
+          yield* runtime.stopRepo(yield* ctx.requireCurrent);
           return ok;
         })
       )

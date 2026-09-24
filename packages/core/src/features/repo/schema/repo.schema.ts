@@ -25,8 +25,25 @@ export const RepoInfo = Schema.Struct({
   currentBranch: Schema.String,
   remoteUrl: Schema.NullOr(Schema.String),
   github: Schema.NullOr(GitHubRemote),
+  /**
+   * Who writes here — git's `user.name`, the name the commits carry. A note
+   * filed from the app is signed with it, so the composer shows it before the
+   * server has. "you" when git has no name set.
+   */
+  user: Schema.String,
 });
 export type RepoInfo = typeof RepoInfo.Type;
+/**
+ * The identity git signs commits with here — `user.name` and `user.email` as
+ * the repository resolves them, its own config over the global one. Null where
+ * git has nothing set, unlike `RepoInfo.user`, which stands in with "you": a
+ * settings screen wants to say the name is missing, not sign for it.
+ */
+export const GitIdentity = Schema.Struct({
+  name: Schema.NullOr(Schema.String),
+  email: Schema.NullOr(Schema.String),
+});
+export type GitIdentity = typeof GitIdentity.Type;
 export const BranchInfo = Schema.Struct({
   name: Schema.String,
   sha: Schema.String,
@@ -96,7 +113,19 @@ export const CommitDetail = Schema.Struct({
   files: Schema.Array(CommitFileChange),
 });
 export type CommitDetail = typeof CommitDetail.Type;
+/**
+ * Every file in the open repository, and what git makes of each.
+ *
+ * The listing names the repository it lists. A client holds this answer and
+ * the repository's identity as two separate readings, and a project switch
+ * replaces them a moment apart — so for that moment one of them is still the
+ * project just left. Anything deciding what a repository holds (a strip of
+ * open files, a tree) has to be able to tell the two apart, and `root` is how:
+ * the same `rev-parse --show-toplevel` `RepoInfo.root` carries, so the two can
+ * simply be compared.
+ */
 export const FilesPayload = Schema.Struct({
+  root: Schema.String,
   paths: Schema.Array(Schema.String),
   gitStatus: Schema.Array(GitStatusEntry),
 });

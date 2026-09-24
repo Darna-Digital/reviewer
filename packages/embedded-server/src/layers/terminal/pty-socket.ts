@@ -2,15 +2,9 @@
  * Live terminal sessions over WebSocket. Each connection to `/api/threads/pty`
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
  * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
- * its normal interactive mode — started in the open project folder. This is
+ * its normal interactive mode — started in the open repository. This is
  * the reviewer (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
- *
- * The project folder, not the selected repository: a project holding several
- * repositories (`backend`, `frontend`) opens at the level you can `cd` into any
- * of them from, and a session stays put when the repository selection moves
- * underneath it. Thread bookkeeping still lives in the selected repository's
- * `.reviewer/threads.json`, which is where the threads feature keeps it.
  *
  * It is attached straight onto the Node HTTP server's `upgrade` event rather than
  * going through the Effect HttpApi, since a PTY is a long-lived bidirectional
@@ -50,10 +44,6 @@ import {
   agentSessionArgs,
   type PtyProgram,
 } from "./agent-pty.ts";
-import {
-  BROWSER_BRIDGE_PATH,
-  startBrowserBridge,
-} from "../browser/browser-bridge.ts";
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts";
 import {
   clearThreadInitialPrompt,
@@ -61,10 +51,7 @@ import {
   readThreadAgentSessionId,
   readThreadInitialPrompt,
 } from "../threads/store.ts";
-import {
-  getCurrentProject,
-  getCurrentRepo,
-} from "../workspace/current-repo.ts";
+import { getCurrentRepo } from "../workspace/current-repo.ts";
 import {
   recentAgentSessions,
   writesDiscoverableSessions,
@@ -76,11 +63,10 @@ import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts";
 const PTY_PATH = "/api/threads/pty";
 
 // node-pty is a native module. Load it lazily and tolerate failure so the
-// server always boots even where the binary is missing or ABI-incompatible
-// (e.g. a packaged Electron build before it has been rebuilt for Electron's
-// Node ABI). Terminals then degrade to a clear error instead of crashing the
-// whole server. createRequire works both under tsx (ESM) and in the esbuild
-// CJS bundle, where node-pty is kept external.
+// server always boots even where the binary is missing or ABI-incompatible.
+// Terminals then degrade to a clear error instead of crashing the whole server.
+// createRequire works both under tsx (ESM) and in the esbuild CJS bundle, where
+// node-pty is kept external.
 type NodePty = typeof NodePtyModule;
 // In the esbuild CJS bundle a real `require` exists (and `import.meta.url` is
 // undefined); under tsx/ESM it's the reverse. Pick whichever is available.
@@ -131,34 +117,22 @@ const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
 
 const loadNodePty = (): NodePty | null => {
   if (ptyModule !== undefined) return ptyModule;
-  // The desktop main process passes the exact node-pty location it resolved
-  // (only in the packaged path, where the server shares Electron's Node ABI), so
-  // resolution doesn't depend on walking up through the asar. Fall back to a
-  // bare specifier for dev / standalone, where node-pty is in node_modules.
-  const candidates = [
-    process.env["REVIEWER_NODE_PTY"],
-    "@lydell/node-pty",
-  ].filter((c): c is string => typeof c === "string" && c.length > 0);
-  for (const candidate of candidates) {
-    try {
-      ptyModule = requireFn(candidate) as NodePty;
-      try {
-        ensureSpawnHelperExecutable(requireFn.resolve(candidate));
-      } catch {
-        // resolution is best-effort; the module already loaded
-      }
-      return ptyModule;
-    } catch {
-      // try the next candidate
-    }
+  try {
+    ptyModule = requireFn("@lydell/node-pty") as NodePty;
+  } catch {
+    ptyModule = null;
+    return ptyModule;
   }
-  ptyModule = null;
+  try {
+    ensureSpawnHelperExecutable(requireFn.resolve("@lydell/node-pty"));
+  } catch {
+    // resolution is best-effort; the module already loaded
+  }
   return ptyModule;
 };
 
-/** Where a session's program runs — the project folder holding every root. */
-const sessionCwd = (): string =>
-  getCurrentProject() ?? getCurrentRepo() ?? process.cwd();
+/** Where a session's program runs — the open repository. */
+const sessionCwd = (): string => getCurrentRepo() ?? process.cwd();
 
 /** Where a thread's record lives — `.reviewer/` in the selected repository. */
 const threadStore = (): string => getCurrentRepo() ?? process.cwd();
@@ -663,12 +637,6 @@ export const attachPtyServer = (server: Server): void => {
       wss.handleUpgrade(request, socket, head, (ws) =>
         startChatStream(ws, request)
       );
-      return;
-    }
-    // The window's browser pane, held open for as long as it is mounted so the
-    // browser API has something to relay an agent's commands to.
-    if (pathname === BROWSER_BRIDGE_PATH) {
-      wss.handleUpgrade(request, socket, head, (ws) => startBrowserBridge(ws));
       return;
     }
     for (const delegate of delegates)

@@ -15,7 +15,10 @@ import { useTouchPrimary } from "@/hooks/use-touch-primary";
 /**
  * Touch devices scroll natively — their momentum and rubber-banding beat
  * anything scripted — so the custom scrollbar sits out; `ScrollBar` reads this
- * to render nothing there.
+ * to render nothing there. An island of the macOS shell keeps the custom bar:
+ * the system's overlay scroller is only there while a trackpad scrolls, and
+ * the plain overflow containers beside it show the thin bar always (see
+ * `styles.css`), so the two would not match.
  */
 const NativeScrollingContext = createContext<boolean>(false);
 

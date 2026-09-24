@@ -18,37 +18,46 @@
 import { File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useMemo, useRef } from "react";
 import {
-  THEMES,
+  useCodeThemes,
   fileForHighlighting,
   useHighlightPrimed,
 } from "@/components/editor/highlighter";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
+import { useLanguageLayer } from "@/interactions/language/components/language-layer";
 import { useRevealLine } from "@/interactions/language/components/use-reveal-line";
 import { useFile } from "@/lib/queries";
 import type { Theme } from "@/lib/ui-prefs";
 import type { Location } from "@reviewer/core/language";
 
 /**
- * The band under the usage. Warmer than the selection in the tree beside it on
- * purpose: the two are showing the same result and would otherwise compete for
- * the eye, and this is the colour every editor uses for "the thing you searched
- * for is here".
+ * The band under the usage. The accent blue rather than the grey selection in
+ * the tree beside it: the two are showing the same result and would otherwise
+ * compete for the eye, and blue is what a macOS search dialog lights a match
+ * with — inside the shell it is the system accent itself.
  */
 const selectedLineCSS = (line: number): string => `
 [data-line="${line}"] {
-  background-color: color-mix(in oklab, var(--warning, #eab308) 18%, transparent);
+  background-color: color-mix(in oklab, var(--ring-accent, #00a6f4) 18%, transparent);
 }
 `;
 
 export function UsagePreview({
   location,
   theme,
+  onOpenLocation,
 }: {
   /** The usage to show, or null while nothing is selected. */
   readonly location: Location | null;
   readonly theme: Theme;
+  /**
+   * Where a symbol resolved in the pane goes. The pane only ever shows results
+   * of the search it belongs to, so a definition somewhere else has nowhere to
+   * be drawn here and opens in the editor, exactly as the header's path does.
+   */
+  readonly onOpenLocation: (location: Location) => void;
 }) {
+  const codeThemes = useCodeThemes();
   const path = location?.path ?? null;
   const line = location === null ? null : location.range.start.line + 1;
   const file = useFile(path);
@@ -89,6 +98,25 @@ export function UsagePreview({
     false
   );
 
+  /**
+   * The same IDE layer the editor and the diff wear — hover documentation,
+   * modifier-click navigation and the right-click menu. A result is read here
+   * before it is opened, and reading code means asking what the names in it
+   * are; without this the one file in the window you are actually looking at
+   * was the one file that could not answer.
+   *
+   * Read-only, so there is no editor: completions and quick fixes leave
+   * themselves out, and hover and navigation — which are questions rather than
+   * edits — work regardless.
+   */
+  const language = useLanguageLayer({
+    path: path ?? "",
+    editor: null,
+    enabled: path !== null,
+    getContainer: useCallback(() => scrollWrapper.current, []),
+    onOpenLocation,
+  });
+
   if (location === null || path === null) {
     return (
       <div className="grid h-full place-items-center p-4 text-center text-xs text-muted-foreground">
@@ -99,7 +127,7 @@ export function UsagePreview({
   if (file.isPending || !primed) {
     return (
       <div className="p-6">
-        <LoadingCursor label={`Loading ${path}…`} />
+        <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );
   }
@@ -123,17 +151,23 @@ export function UsagePreview({
             key={path}
             file={highlightFile}
             options={{
-              theme: THEMES,
+              theme: codeThemes,
               themeType: theme,
-              overflow: "wrap",
+              overflow: "scroll",
               stickyHeader: false,
               // The pane's own header carries the path and the line; the view's
               // would say it a second time, in a bar that scrolls away.
               disableFileHeader: true,
-              unsafeCSS: line === null ? "" : selectedLineCSS(line),
+              // Token hooks + the pass that underlines problems.
+              ...language.viewOptions,
+              // The view keeps one stylesheet, and both the selected line and
+              // the diagnostic marks are written into it.
+              unsafeCSS: `${line === null ? "" : selectedLineCSS(line)}\n${language.viewOptions.unsafeCSS}`,
             }}
           />
         </section>
+        {language.card}
+        {language.menu}
       </Virtualizer>
     </div>
   );

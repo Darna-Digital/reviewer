@@ -18,6 +18,21 @@ export function NoReviews() {
   );
 }
 
+/**
+ * Inside the macOS shell the list is the window's own, drawn natively in its
+ * sidebar, so the page holds the room the diff will take and says where the
+ * choice is made.
+ */
+export function PickReview() {
+  return (
+    <ReviewsEmpty
+      icon={IconGitPullRequest}
+      title="Pick a merge request"
+      body="Choose one in the sidebar to read its diff here, with what it is and the files it touches beside it."
+    />
+  );
+}
+
 export function NoReviewRemote() {
   return (
     <ReviewsEmpty

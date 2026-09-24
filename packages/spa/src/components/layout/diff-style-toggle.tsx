@@ -1,12 +1,14 @@
 import { IconLayoutColumns, IconLayoutRows } from "@tabler/icons-react";
+import { useParams, useSearch } from "@tanstack/react-router";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
+import type { ShellRoute } from "@/lib/shell-route";
+import { type DiffStyle, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import type { DiffStyle } from "@/lib/ui-prefs";
 
 type PreviewLineKind = "context" | "removed" | "added" | "filler";
 
@@ -116,10 +118,10 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
   const activeIndex = OPTIONS.findIndex((option) => option.value === active);
 
   return (
-    <div className="relative flex items-center rounded-lg border p-0.5">
+    <div className="relative flex items-center rounded-lg border p-0.5 island:rounded-full">
       <div
         aria-hidden
-        className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none island:rounded-full"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
       {OPTIONS.map((option) => {
@@ -143,7 +145,7 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
                     }
                   }}
                   className={cn(
-                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full",
                     active === option.value
                       ? "text-secondary-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -178,5 +180,41 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Whether a diff is on screen, which is where the toggle belongs: a code page,
+ * with no file open over it, pointed at something to diff — your own changes
+ * or a pull request, a commit, or a range.
+ */
+export function useShowsDiffStyleToggle(route: ShellRoute): boolean {
+  const params = useParams({ strict: false });
+  const search = useSearch({ strict: false });
+  return (
+    route.kind === "code" &&
+    search.file === undefined &&
+    (route.mode === "review" ||
+      (route.mode === "browse" &&
+        (params.sha !== undefined ||
+          (search.base !== undefined && search.head !== undefined))))
+  );
+}
+
+/**
+ * The toggle as a chrome row wears it: up while a diff is on screen, and
+ * wired to the preference the diff pane reads. The header band has it at its
+ * end in the browser tab, and the macOS shell's island bar has it in the same
+ * place — see `IslandBar`.
+ */
+export function HeaderDiffStyleToggle({ route }: { route: ShellRoute }) {
+  const shown = useShowsDiffStyleToggle(route);
+  const prefs = useUiPrefs();
+  if (!shown) return null;
+  return (
+    <DiffStyleToggle
+      value={prefs.diffStyle}
+      onChange={(diffStyle) => setUiPrefs({ diffStyle })}
+    />
   );
 }

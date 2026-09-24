@@ -13,7 +13,6 @@ import { IconArrowsDiagonalMinimize2 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { restoreDock } from "@/components/layout/dock-expansion";
 import { Button } from "@/components/ui/button";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -41,13 +40,7 @@ export function DockRestore({ tab }: { readonly tab: BottomTab }) {
       >
         <IconArrowsDiagonalMinimize2 className="size-4" />
       </TooltipTrigger>
-      <TooltipContent side="bottom">
-        {LABEL}
-        <KbdGroup>
-          <Kbd>⌘</Kbd>
-          <Kbd>B</Kbd>
-        </KbdGroup>
-      </TooltipContent>
+      <TooltipContent side="bottom">{LABEL}</TooltipContent>
     </Tooltip>
   );
 }

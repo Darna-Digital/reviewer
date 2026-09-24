@@ -10,6 +10,7 @@ import type {
   DiffFileContents,
   DiffFileTarget,
   FilesPayload,
+  GitIdentity,
   MergeState,
   RemoteBranchInfo,
   RepoInfo,
@@ -20,6 +21,7 @@ import type {
 
 export interface RepoRepo {
   readonly info: Effect.Effect<RepoInfo, GitFailure>;
+  readonly identity: Effect.Effect<GitIdentity, GitFailure>;
   readonly files: Effect.Effect<FilesPayload, GitFailure>;
   readonly status: Effect.Effect<RepoStatus, GitFailure>;
   readonly branches: Effect.Effect<ReadonlyArray<BranchInfo>, GitFailure>;

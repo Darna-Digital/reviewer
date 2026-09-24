@@ -1,7 +1,7 @@
 /**
  * Editing a file in place.
  *
- * A file in browse mode is editable the moment it opens — there is no mode to
+ * An editable file is editable the moment it opens — there is no mode to
  * switch into, so this owns the editor instance, the dirty buffer, saving, and
  * the one command the library does not provide, for as long as the file is on
  * screen.
@@ -16,8 +16,7 @@
  * to be something the editor has no command for, or ⌘/ and friends would be
  * stopped on their way down to it.
  */
-import { type File as EditableFile, type FileContents } from "@pierre/diffs";
-import type { TextEdit } from "@reviewer/core/language";
+import type { FileContents } from "@pierre/diffs";
 import {
   Editor,
   type EditorOptions,
@@ -31,7 +30,6 @@ import {
   caretAfterDelete,
   deleteLinesEdits,
 } from "@/components/editor/editor-commands";
-import { minimalEdit } from "@/interactions/formatting/functions/format-edit";
 import { fetchClient } from "@/lib/api/client";
 
 /** How long typing settles before the buffer is handed to the analyser. */
@@ -75,15 +73,6 @@ export interface FileEditing {
    * only says back what was just written — see `CodeView`.
    */
   readonly readBuffer: () => string | null;
-  /**
-   * Replace the buffer with `text`, as the smallest edit that gets there.
-   *
-   * For a second view over the same file — the document editor beside a split
-   * markdown file. Applying an edit rather than resetting the document is what
-   * keeps the caret, the selection and the undo history intact on the side the
-   * user is not typing in.
-   */
-  readonly replaceBuffer: (text: string) => void;
   readonly dirty: boolean;
   readonly saving: boolean;
   readonly save: () => void;
@@ -100,31 +89,16 @@ export interface FileEditingOptions {
   /** Repository-relative path of the file being edited. */
   readonly path: string;
   /**
-   * Whether the view is holding an edit session open. False in comment mode,
-   * where the file is read rather than written: the session is torn down and
-   * the editor with it, so everything that reaches for one — folding, find,
-   * the caret — has to be told there is no longer one to reach for.
+   * Whether the view is holding an edit session open. False for a file that is
+   * read rather than written: the session is torn down and the editor with it,
+   * so everything that reaches for one — find, the caret — has to be told
+   * there is no longer one to reach for.
    */
   readonly editing: boolean;
   /** What was loaded from disk, or undefined while it is still being read. */
   readonly loadedContents: string | undefined;
   /** Called after the buffer is written back, so git state can refresh. */
   readonly onSaved: () => void;
-  /**
-   * Called with the file component the editor attached to. It is the only way
-   * to reach the optional collapsed-region hooks a plain file leaves
-   * unimplemented — see `useFolding`.
-   */
-  readonly onAttach?: (component: EditableFile<undefined, undefined>) => void;
-  /**
-   * Run the project's formatter over the buffer on its way to disk, answering
-   * with the text to write and the edit that brings the buffer to it. Omit to
-   * save exactly what the user typed.
-   */
-  readonly formatBeforeSave?: (
-    path: string,
-    contents: string
-  ) => Promise<{ readonly contents: string; readonly edit: TextEdit | null }>;
   /**
    * Build the popover the editor floats over a user-made selection. The editor
    * owns when it appears and where; this only says what it is.
@@ -149,8 +123,6 @@ export function useFileEditing({
   editing,
   loadedContents,
   onSaved,
-  onAttach,
-  formatBeforeSave,
   renderSelectionAction,
 }: FileEditingOptions): FileEditing {
   const [dirty, setDirty] = useState(false);
@@ -199,8 +171,6 @@ export function useFileEditing({
    * the debounced hand-off to the analyser all hang off ours. The view's own
    * callbacks are still called, so nothing it registered is lost.
    */
-  const attachRef = useRef(onAttach);
-  attachRef.current = onAttach;
   const selectionActionRef = useRef(renderSelectionAction);
   selectionActionRef.current = renderSelectionAction;
 
@@ -214,12 +184,6 @@ export function useFileEditing({
         editorType,
         {
           ...options,
-          onAttach: (attached, component) => {
-            attachRef.current?.(
-              component as EditableFile<undefined, undefined>
-            );
-            options.onAttach?.(attached, component);
-          },
           // Comment tokens for the filetypes the library's own table misses, and
           // the bindings this app adds to its defaults.
           languageCommentConfig: {
@@ -300,39 +264,11 @@ export function useFileEditing({
     setBufferForAnalysis(null);
   }, [loadedContents]);
 
-  /**
-   * The buffer as it should be written: formatted, if the project formats and
-   * the editor is there to take the result.
-   *
-   * Two things it refuses to do. It never writes formatted text the editor does
-   * not also hold — the file on disk and the buffer on screen would disagree,
-   * and the tab would go clean over a document nobody had seen. And it drops a
-   * result that arrived about a buffer the user has since typed past: the edit
-   * was computed against text that no longer exists, so what is on screen now
-   * is saved instead, unformatted.
-   */
-  const formatRef = useRef(formatBeforeSave);
-  formatRef.current = formatBeforeSave;
-  const editorRef = useRef(editor);
-  editorRef.current = editor;
-
-  const contentsToWrite = useCallback(async () => {
-    const format = formatRef.current;
-    const instance = editorRef.current;
-    const requested = valueRef.current;
-    if (format === undefined || instance === null) return requested;
-    const outcome = await format(path, requested);
-    if (outcome.edit === null || valueRef.current !== requested)
-      return valueRef.current;
-    instance.applyEdits([outcome.edit], true);
-    return outcome.contents;
-  }, [path]);
-
   const save = useCallback(async () => {
     if (valueRef.current === originalRef.current) return;
     setSaving(true);
     try {
-      const contents = await contentsToWrite();
+      const contents = valueRef.current;
       const { error } = await fetchClient.PUT("/api/file", {
         body: { path, contents },
       });
@@ -354,7 +290,7 @@ export function useFileEditing({
     } finally {
       setSaving(false);
     }
-  }, [path, onSaved, contentsToWrite]);
+  }, [path, onSaved]);
   saveRef.current = () => void save();
 
   /**
@@ -418,14 +354,6 @@ export function useFileEditing({
     setBufferForAnalysis(null);
   }, []);
 
-  const replaceBuffer = useCallback((text: string) => {
-    const instance = editorRef.current;
-    if (instance === null) return;
-    const edit = minimalEdit(valueRef.current, text);
-    if (edit === null) return;
-    instance.applyEdits([edit], true);
-  }, []);
-
   const subscribe = useCallback((listener: () => void) => {
     listeners.current.add(listener);
     return () => listeners.current.delete(listener);
@@ -440,7 +368,6 @@ export function useFileEditing({
       () => (editor === null ? null : valueRef.current),
       [editor]
     ),
-    replaceBuffer,
     dirty,
     saving,
     save: useCallback(() => void save(), [save]),

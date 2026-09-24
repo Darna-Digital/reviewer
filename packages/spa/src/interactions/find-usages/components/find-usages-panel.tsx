@@ -22,16 +22,19 @@ import {
   IconRefresh,
   IconSearch,
 } from "@tabler/icons-react";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { usePrerenderFile } from "@/components/editor/prerender";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
+import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { pathName } from "@/lib/display-path";
 import { useOpenInEditor } from "@/lib/open-in-editor";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -55,6 +58,13 @@ import { UsageTree } from "./usage-tree";
 
 /** Below this the results column is narrower than a path, so it stops there. */
 const MIN_RESULTS_WIDTH = 220;
+
+/**
+ * How many of the results' files are read and highlighted ahead of time. The
+ * list runs to a thousand usages across as many files; the first few dozen are
+ * the ones stepping down it reaches before the pointer can say what is next.
+ */
+const IDLE_PRERENDERED_FILES = 24;
 
 export function FindUsagesPanel() {
   const prefs = useUiPrefs();
@@ -87,6 +97,32 @@ export function FindUsagesPanel() {
     selectUsage(usages[0].id);
   }, [selected, usages]);
 
+  // The files the results sit in, read and highlighted while the window is
+  // idle — as the open tabs are — so stepping onto the next file's usage
+  // paints the preview coloured instead of behind a loader, and opening one
+  // lands on a file that is already rendered. The rows add the one under the
+  // pointer, wherever it is in the list.
+  const prerenderFile = usePrerenderFile();
+  const resultPaths = useMemo(
+    () =>
+      [
+        ...new Set(fns.usages().map((usage) => usage.reference.location.path)),
+      ].slice(0, IDLE_PRERENDERED_FILES),
+    [fns]
+  );
+  useEffect(() => {
+    if (resultPaths.length === 0) return;
+    const warm = () => {
+      for (const path of resultPaths) prerenderFile(path);
+    };
+    const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
+    return () => window.cancelIdleCallback(idle);
+  }, [resultPaths, prerenderFile]);
+  const prerenderRow = (node: UsageNode) => {
+    const path = fns.previewed(node.id)?.reference.location.path;
+    if (path !== undefined) prerenderFile(path);
+  };
+
   const results = usages.length;
   const symbol = query?.symbol ?? "";
 
@@ -95,8 +131,13 @@ export function FindUsagesPanel() {
   const previewed = fns.previewed(selected);
   const selectedLocation = previewed?.reference.location ?? null;
 
-  const open = (location: Location) =>
-    openInEditor(location.path, location.range.start.line + 1);
+  // Stable: the preview's IDE layer hangs its token handlers off this, and a
+  // fresh function each render would rebuild the view's options every time.
+  const open = useCallback(
+    (location: Location) =>
+      openInEditor(location.path, location.range.start.line + 1),
+    [openInEditor]
+  );
 
   const onOpen = (node: UsageNode) => {
     selectUsage(node.id);
@@ -112,10 +153,14 @@ export function FindUsagesPanel() {
     selectUsage(next.id);
   };
 
+  // Sized on its own element: nothing outside the column is laid out by its
+  // width, so the drag's style recalc need not reach past it.
+  const resultsColumn = useRef<HTMLDivElement>(null);
   const resultsPane = usePanelSize(
     "find-results",
     prefs.findResultsWidth,
-    "width"
+    "width",
+    resultsColumn
   );
 
   return (
@@ -135,6 +180,7 @@ export function FindUsagesPanel() {
       />
 
       <div
+        ref={resultsColumn}
         className="flex min-w-0 shrink-0 flex-col border-r"
         style={resultsPane.style}
       >
@@ -146,7 +192,7 @@ export function FindUsagesPanel() {
           />
         ) : search.isPending ? (
           <div className="p-4">
-            <LoadingCursor label={`Searching for ${symbol}…`} />
+            <Orb size={16} label={`Searching for ${symbol}…`} />
           </div>
         ) : search.error ? (
           <Empty title="Could not find usages" detail={search.error.message} />
@@ -163,6 +209,7 @@ export function FindUsagesPanel() {
             onSelect={(node) => selectUsage(node.id)}
             onToggle={(id) => setUsageCollapsed(toggleCollapsed(collapsed, id))}
             onOpen={onOpen}
+            onIntent={prerenderRow}
           />
         )}
       </div>
@@ -178,11 +225,16 @@ export function FindUsagesPanel() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <PreviewHeader location={selectedLocation} onOpen={open} />
+        <PreviewHeader
+          location={selectedLocation}
+          onOpen={open}
+          onIntent={prerenderFile}
+        />
         <div className="min-h-0 flex-1 overflow-hidden">
           <UsagePreview
             location={selectedLocation}
             theme={prefs.resolvedTheme}
+            onOpenLocation={open}
           />
         </div>
       </div>
@@ -308,7 +360,10 @@ function ResultsHeader({
   readonly results: number;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-xs">
+    // The glyph sits in the tree's chevron column and the symbol where a
+    // top-level row's label starts, so the bar reads as the first line of the
+    // list rather than as something indented past it.
+    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b pr-2 pl-1 text-xs">
       <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 truncate">
         {symbol === "" ? (
@@ -335,33 +390,81 @@ function ResultsHeader({
  * and the name of it — sitting right there over the code — is what a hand
  * reaches for. Opening it lands on the same line the preview is showing.
  */
+/**
+ * The previewed file, named as the header names the file a diff is scrolled
+ * to (see `HeaderDiffFileInView`): the same pill, the same hover, the folders
+ * giving way first and the name keeping its room.
+ */
 function PreviewHeader({
   location,
   onOpen,
+  onIntent,
 }: {
   readonly location: Location | null;
   readonly onOpen: (location: Location) => void;
+  readonly onIntent: (path: string) => void;
 }) {
   return (
     <div
       className={cn(
-        "flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-[11px]",
-        location === null && "text-muted-foreground"
+        "flex h-9 shrink-0 items-center border-b px-1 text-xs",
+        location === null && "px-2 text-muted-foreground"
       )}
     >
       {location === null ? (
         "Preview"
       ) : (
-        <button
-          type="button"
-          className="min-w-0 cursor-pointer truncate font-mono hover:underline hover:underline-offset-2"
-          onClick={() => onOpen(location)}
-          title="Open this file"
-        >
-          {location.path}:{location.range.start.line + 1}
-        </button>
+        <PreviewFileLink
+          location={location}
+          onOpen={onOpen}
+          onIntent={onIntent}
+        />
       )}
     </div>
+  );
+}
+
+function PreviewFileLink({
+  location,
+  onOpen,
+  onIntent,
+}: {
+  readonly location: Location;
+  readonly onOpen: (location: Location) => void;
+  readonly onIntent: (path: string) => void;
+}) {
+  const { path } = location;
+  const name = pathName(path);
+  const folders = path.slice(0, path.length - name.length);
+  const line = location.range.start.line + 1;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            onClick={() => onOpen(location)}
+            onPointerEnter={() => onIntent(path)}
+          />
+        }
+        className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full"
+      >
+        <FileTypeIcon path={path} className="mr-1.5 size-3.5" />
+        <span className="min-w-0 truncate text-muted-foreground">
+          {folders}
+        </span>
+        <span className="shrink-0 text-foreground">
+          {name}:{line}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-none whitespace-nowrap"
+      >
+        {path}:{line}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

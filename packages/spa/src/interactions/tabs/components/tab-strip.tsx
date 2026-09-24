@@ -13,13 +13,15 @@
  * past the last tab opens an empty one.
  *
  * A tab shows only the file's name; its path is a tooltip, and what acts on the
- * file — edit it, read its history — sits on the path bar under the pane.
+ * file — read its history, pin it, close it — is a right-click away on the tab
+ * itself, which is the one thing on screen naming that file inside the macOS
+ * shell, where the trail along the foot of the pane is the window's own.
  *
  * It draws no band of its own: the header lends it one (see `header-tabs`), and
  * a strip with its own background and rule inside that band would be a second
  * header drawn on top of the first.
  */
-import { IconPin, IconPinnedFilled } from "@tabler/icons-react";
+import { IconHistory, IconPin, IconPinnedFilled } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import {
   TAB_STRIP,
@@ -59,12 +61,16 @@ export interface TabStripProps {
   /** Paths whose buffer has unsaved changes. */
   readonly dirty: ReadonlySet<string>;
   readonly onSelect: (path: string) => void;
+  /** The pointer has reached a tab: the moment to render its file ahead. */
+  readonly onIntent?: (path: string) => void;
   /** A double click settles a preview tab, as in every IDE. */
   readonly onKeep: (path: string) => void;
   readonly onClose: (path: string) => void;
   readonly onTogglePin: (path: string) => void;
   readonly onCloseOthers: (path: string) => void;
   readonly onCloseAll: () => void;
+  /** Read this file's past. Absent where there is no history to read. */
+  readonly onShowHistory?: (path: string) => void;
   /** Drop the dragged tab at `toIndex` of the strip's order. */
   readonly onMove: (path: string, toIndex: number) => void;
 }
@@ -74,11 +80,13 @@ export function TabStrip({
   active,
   dirty,
   onSelect,
+  onIntent,
   onKeep,
   onClose,
   onTogglePin,
   onCloseOthers,
   onCloseAll,
+  onShowHistory,
   onMove,
 }: TabStripProps) {
   const ordered = orderTabs(tabs);
@@ -153,6 +161,7 @@ export function TabStrip({
                   event.preventDefault();
                   endDrag();
                 }}
+                onPointerEnter={() => onIntent?.(tab.path)}
                 onClick={(event) => {
                   // Shift-click closes, so a tab can go without aiming for its ✕.
                   if (event.shiftKey) {
@@ -262,6 +271,16 @@ export function TabStrip({
                 </>
               )}
             </DropdownMenuItem>
+            {onShowHistory !== undefined && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onShowHistory(menu.path);
+                  setMenu(null);
+                }}
+              >
+                <IconHistory /> History
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {

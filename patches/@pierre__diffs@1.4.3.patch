@@ -1,0 +1,66 @@
+diff --git a/dist/components/File.js b/dist/components/File.js
+index a46f84cdf7b98511a2e24a03d143d40fc670af6e..c4065b3505988c8424cdd72ecb5673a0c54422a3 100644
+--- a/dist/components/File.js
++++ b/dist/components/File.js
+@@ -664,7 +664,6 @@ var File = class {
+ 		this.headerMetadata?.remove();
+ 		this.headerCustom?.remove();
+ 		this.pre?.remove();
+-		this.spriteSVG?.remove();
+ 		this.themeCSSStyle?.remove();
+ 		this.unsafeCSSStyle?.remove();
+ 		this.bufferAfter = void 0;
+@@ -677,7 +676,6 @@ var File = class {
+ 		this.headerMetadata = void 0;
+ 		this.headerCustom = void 0;
+ 		this.pre = void 0;
+-		this.spriteSVG = void 0;
+ 		this.themeCSSStyle = void 0;
+ 		this.appliedThemeCSS = void 0;
+ 		this.hasAdoptedThemeCSS = false;
+diff --git a/dist/components/FileDiff.js b/dist/components/FileDiff.js
+index 6758a7b9d07f2f971f971afbf52b831a7388e999..81ca45d13edbbdfdfe3b38f61cce7b16d68ae669 100644
+--- a/dist/components/FileDiff.js
++++ b/dist/components/FileDiff.js
+@@ -1162,7 +1162,6 @@ var FileDiff = class {
+ 		this.headerMetadata?.remove();
+ 		this.headerCustom?.remove();
+ 		this.pre?.remove();
+-		this.spriteSVG?.remove();
+ 		this.themeCSSStyle?.remove();
+ 		this.unsafeCSSStyle?.remove();
+ 		this.bufferAfter = void 0;
+@@ -1177,7 +1176,6 @@ var FileDiff = class {
+ 		this.headerMetadata = void 0;
+ 		this.headerCustom = void 0;
+ 		this.pre = void 0;
+-		this.spriteSVG = void 0;
+ 		this.themeCSSStyle = void 0;
+ 		this.appliedThemeCSS = void 0;
+ 		this.hasAdoptedThemeCSS = false;
+diff --git a/dist/components/VirtualizedFile.js b/dist/components/VirtualizedFile.js
+index 64d62764b4ce85ec472c81129107012ce19a9800..fd11a35b2d0a6f5a39483870f7c233b2ac65d7d7 100644
+--- a/dist/components/VirtualizedFile.js
++++ b/dist/components/VirtualizedFile.js
+@@ -447,7 +447,7 @@ var VirtualizedFile = class extends File {
+ 		return this.isAdvancedMode() || super.shouldDisableVirtualizationBuffers();
+ 	}
+ 	shouldGuardRebuildScroll() {
+-		return false;
++		return this.isSimpleMode() && super.shouldGuardRebuildScroll();
+ 	}
+ 	isSimpleMode() {
+ 		return this.virtualizer.type === "simple";
+diff --git a/dist/utils/platform.js b/dist/utils/platform.js
+index 745b9fca5395223bc19871b8a0638acb940ded25..ce5bbdbd9f7683bed133f465971e66147b7c04b8 100644
+--- a/dist/utils/platform.js
++++ b/dist/utils/platform.js
+@@ -20,7 +20,7 @@ function isLinux() {
+ 	return _isLinux ??= /Linux/i.test(getPlatform());
+ }
+ function isSafari() {
+-	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
++	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || /AppleWebKit/.test(navigator.userAgent) && !/chrome|android/i.test(navigator.userAgent);
+ }
+ function getPlatform() {
+ 	const navigator = globalThis.navigator;

@@ -14,7 +14,7 @@
  * the project to fail to open. A feature that failed stays unmarked and is
  * retried next time, which is what you want if the file was mid-write.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import * as Schema from "effect/Schema";
 import {
   ChatAccess,
@@ -25,10 +25,11 @@ import {
   ChatTurn,
 } from "@reviewer/core/chats";
 import { ReviewComment } from "@reviewer/core/comments";
-import { DevCommandDefinition } from "@reviewer/core/local-dev";
-import { Plan } from "@reviewer/core/plans";
+import {
+  decodeStoredDevCommand,
+  type DevCommand,
+} from "@reviewer/core/local-dev";
 import { Thread } from "@reviewer/core/threads";
-import { VisualComment } from "@reviewer/core/visual-comments";
 import { database, transact } from "./database.ts";
 import { documentTable } from "./documents.ts";
 
@@ -56,14 +57,11 @@ const LegacyChat = Schema.Struct({
 
 const decodeChats = Schema.decodeUnknownSync(Schema.Array(LegacyChat));
 const decodeComments = Schema.decodeUnknownSync(Schema.Array(ReviewComment));
-const decodeVisualComments = Schema.decodeUnknownSync(
-  Schema.Array(VisualComment)
-);
 const decodeThreads = Schema.decodeUnknownSync(Schema.Array(Thread));
-const decodeDevCommands = Schema.decodeUnknownSync(
-  Schema.Array(DevCommandDefinition)
-);
-const decodePlan = Schema.decodeUnknownSync(Plan);
+const decodeDevCommands = (raw: unknown): ReadonlyArray<DevCommand> =>
+  Schema.decodeUnknownSync(Schema.Array(Schema.Unknown))(raw).map(
+    decodeStoredDevCommand
+  );
 
 /** Parse a `.reviewer` file, or null when it isn't there. */
 const readJson = (path: string): unknown | null => {
@@ -121,29 +119,17 @@ const comments = documentTable<ReviewComment>({
   direction: "asc",
   decode: Schema.decodeUnknownSync(ReviewComment),
 });
-const visualComments = documentTable<VisualComment>({
-  table: "visual_comment",
-  sortColumn: "created_at",
-  direction: "asc",
-  decode: Schema.decodeUnknownSync(VisualComment),
-});
 const threads = documentTable<Thread>({
   table: "thread",
   sortColumn: "updated_at",
   direction: "desc",
   decode: Schema.decodeUnknownSync(Thread),
 });
-const plans = documentTable<Plan>({
-  table: "plan",
-  sortColumn: "updated_at",
-  direction: "desc",
-  decode: decodePlan,
-});
-const devCommands = documentTable<DevCommandDefinition>({
+const devCommands = documentTable<DevCommand>({
   table: "dev_command",
   sortColumn: "created_at",
   direction: "asc",
-  decode: Schema.decodeUnknownSync(DevCommandDefinition),
+  decode: decodeStoredDevCommand,
 });
 
 const importChats = (repoPath: string): void => {
@@ -219,31 +205,6 @@ const importChats = (repoPath: string): void => {
   }
 };
 
-const importPlans = (repoPath: string): void => {
-  const dir = `${repoPath}/.reviewer/plans`;
-  let names: ReadonlyArray<string>;
-  try {
-    names = readdirSync(dir);
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return;
-    }
-    throw error;
-  }
-  for (const name of names.filter((entry) => entry.endsWith(".json"))) {
-    // One analysis written by an older schema drops out rather than taking the
-    // rest of the import with it — the same rule the file store had.
-    try {
-      const plan = decodePlan(
-        JSON.parse(readFileSync(`${dir}/${name}`, "utf8"))
-      );
-      plans.put(repoPath, plan.id, plan.updatedAt, plan);
-    } catch {
-      continue;
-    }
-  }
-};
-
 /**
  * Take everything one git root still keeps in `.reviewer/*.json` into the
  * database. Returns the features that were imported this time (empty once the
@@ -263,13 +224,6 @@ export const importLegacyJson = (repoPath: string): ReadonlyArray<string> => {
       comments.put(repoPath, comment.id, comment.createdAt, comment);
     }
   });
-  run("visual-comments", () => {
-    const raw = readJson(`${repoPath}/.reviewer/visual-comments.json`);
-    if (raw === null) return;
-    for (const comment of decodeVisualComments(raw)) {
-      visualComments.put(repoPath, comment.id, comment.createdAt, comment);
-    }
-  });
   run("threads", () => {
     const raw = readJson(`${repoPath}/.reviewer/threads.json`);
     if (raw === null) return;
@@ -286,7 +240,6 @@ export const importLegacyJson = (repoPath: string): ReadonlyArray<string> => {
       threads.put(repoPath, thread.id, thread.updatedAt, thread);
     }
   });
-  run("plans", () => importPlans(repoPath));
   run("dev-commands", () => {
     const raw = readJson(`${repoPath}/.reviewer/dev-commands.json`);
     if (raw === null) return;

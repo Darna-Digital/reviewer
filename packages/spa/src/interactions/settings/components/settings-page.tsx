@@ -12,10 +12,9 @@ import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { CloudSetting } from "@/interactions/cloud/components/cloud-setting";
-import { FormatOnSaveSetting } from "@/interactions/formatting/components/format-on-save-setting";
 import { LanguagesSetting } from "@/interactions/language/components/languages-setting";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
+import { ThemeSelect } from "@/interactions/settings/components/theme-select";
 import { isDesktop } from "@/lib/desktop";
 import {
   setUiPrefs,
@@ -23,10 +22,6 @@ import {
   type DiffStyle,
   type ThemePref,
 } from "@/lib/ui-prefs";
-import {
-  EDIT_MODE_OPTIONS,
-  editModeOption,
-} from "@/interactions/edit-mode/components/edit-mode-options";
 import { cn } from "@/lib/utils";
 
 type SettingsIcon = ComponentType<{ className?: string }>;
@@ -108,6 +103,26 @@ export function SettingsPage() {
                     ))}
                   </div>
                 </SettingRow>
+                {/* One theme per scheme rather than one for both: a theme is
+                    written for a light or a dark editor, and "system" walks
+                    between the two as the day does. */}
+                <SettingRow
+                  title="Light theme"
+                  detail="What the code and the window are drawn in by day"
+                >
+                  <ThemeSelect
+                    scheme="light"
+                    value={prefs.lightTheme}
+                    onChange={(lightTheme) => setUiPrefs({ lightTheme })}
+                  />
+                </SettingRow>
+                <SettingRow title="Dark theme" detail="And by night">
+                  <ThemeSelect
+                    scheme="dark"
+                    value={prefs.darkTheme}
+                    onChange={(darkTheme) => setUiPrefs({ darkTheme })}
+                  />
+                </SettingRow>
                 <SettingRow title="Diff layout">
                   <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
                     {DIFF_OPTIONS.map((option) => (
@@ -165,24 +180,6 @@ export function SettingsPage() {
                     </label>
                   </SettingRow>
                 )}
-                <SettingRow
-                  title="Edit mode"
-                  detail={editModeOption(prefs.editMode).detail}
-                >
-                  <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
-                    {EDIT_MODE_OPTIONS.map((option) => (
-                      <SegmentedOption
-                        key={option.value}
-                        value={option.value}
-                        label={option.label}
-                        icon={option.icon}
-                        selected={prefs.editMode === option.value}
-                        onSelect={(editMode) => setUiPrefs({ editMode })}
-                      />
-                    ))}
-                  </div>
-                </SettingRow>
-                <FormatOnSaveSetting />
                 <SettingRow title="Git dock">
                   <label className="flex items-center gap-2">
                     <IconGitFork
@@ -205,9 +202,6 @@ export function SettingsPage() {
               </section>
               <section className="mt-6 border-y">
                 <LanguagesSetting />
-              </section>
-              <section className="mt-6 border-y">
-                <CloudSetting />
               </section>
             </div>
           </ScrollArea>

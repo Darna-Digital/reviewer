@@ -37,7 +37,7 @@ const COMMANDS: ReadonlyArray<Command> = [
   }),
   command({
     id: "go-settings",
-    label: "Open Settings",
+    label: "Open settings",
     group: "Navigation",
     keywords: "theme appearance",
   }),

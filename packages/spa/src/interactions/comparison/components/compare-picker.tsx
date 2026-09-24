@@ -9,9 +9,9 @@
  * that could not be asked was the ordinary one: how does this branch differ
  * from `main`, before there is a pull request to ask it for me.
  *
- * It sits between the branch picker and the diff-layout toggle because it is
- * the sentence between them: which branch you are on, what its changes are read
- * against, how they are laid out.
+ * It stands at the head of the band over the diff, with the layout toggle at
+ * the other end of the same band: what the changes are read against and how
+ * they are laid out, both about the pane they are over.
  */
 import {
   IconChevronDown,

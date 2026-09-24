@@ -6,13 +6,14 @@
  *
  * Visually modelled on the Pierre / diffs.com comment threads: a soft rounded
  * card, round author avatars, name + relative timestamp, replies nested under
- * the opening comment, and a muted "Add reply… / Resolve" action row. Built on
- * the shadcn primitives and theme tokens so it adapts to light & dark.
+ * the opening comment, and a muted "Add reply… / Resolve" action row. The
+ * composer is a Messages-style pill — the writer's monogram, the field, and a
+ * circled send arrow — built on the theme tokens so it adapts to light & dark.
  */
 import {
+  IconArrowUp,
   IconBrandGithub,
   IconCornerDownRight,
-  IconX,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -20,9 +21,9 @@ import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { useListEditing } from "@/hooks/use-list-editing";
+import { useCommentAuthor } from "@/interactions/comments/adapters/comment-author.hook.adapter";
 import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { isOptimisticId } from "@/interactions/comments/functions/optimistic-comments.functions";
@@ -43,44 +44,70 @@ export type { DraftLocation } from "@/interactions/comments/interfaces/comments.
 const REPLY_INDENT = "ml-10";
 
 /**
- * The card a thread and a draft both sit in. Capped at 400px rather than
- * stretched to the pane: a comment anchored to one line reads as a note pinned
- * beside that line, and a card that runs the width of the diff stops looking
- * pinned to anything. It also keeps the prose to a measure you can actually
- * scan — the same cap opencode puts on its line comments.
+ * The card a thread sits in. Capped at 400px rather than stretched to the
+ * pane: a comment anchored to one line reads as a note pinned beside that
+ * line, and a card that runs the width of the diff stops looking pinned to
+ * anything. It also keeps the prose to a measure you can actually scan — the
+ * same cap opencode puts on its line comments.
  *
  * `comment-card` is the hook `styles.css` hangs the caret and selection colours
  * on: the file view slots this card inside the editor's `contenteditable`,
  * which blanks both for the code it is drawing itself.
  *
- * The card starts under the gutter's add-a-comment `+`, so the note lines up
- * with the button that opened it. An annotation begins at the code column, and
- * the diff leaves its `+` straddling that edge, so 0 is where it belongs there;
- * the file view pushes its `+` a character clear of the fold chevron and says
- * so by setting `--comment-card-indent` (see `comment-gutter-css`).
+ * The card is inset from the code on every side — the same gap left and right,
+ * and the vertical one above and below — so the note reads as a thing laid over
+ * the file rather than a block welded to the code column. An annotation begins
+ * at that column, so the indent is the card's own margin.
  */
 const COMMENT_CARD =
-  "comment-card group/thread my-2 mr-3 ml-[var(--comment-card-indent,0px)] w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
+  "comment-card group/thread my-2 mx-3 w-full max-w-100 min-w-0 overflow-hidden rounded-2xl bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
+
+/**
+ * The composer's pill. The radius is half the height of a one-line composer —
+ * monogram, field and send button are all 28px inside 8px of padding — so a
+ * fresh draft is a capsule, and one that has grown a few lines keeps the same
+ * soft corners rather than turning into a stadium. On those lines the monogram
+ * stays with the first, where a comment's avatar sits, and the send button
+ * with the last, where the draft ends — the way Messages lays its field out.
+ */
+const COMPOSER_PILL =
+  "comment-composer flex min-w-0 items-end gap-2.5 rounded-[22px] p-2 pl-2.5 font-sans";
+
+/**
+ * A draft's own pill and a pill nested in a thread have different backdrops:
+ * the draft *is* the card, so it takes the card's material; a reply or an edit
+ * sits inside that material already, and is drawn a step lighter with a
+ * hairline so it still reads as a field.
+ */
+const COMPOSER_STANDALONE = cn(
+  COMPOSER_PILL,
+  "comment-card mx-3 my-2 w-full max-w-100 bg-surface-2 text-card-foreground shadow-raised"
+);
+const COMPOSER_NESTED = cn(COMPOSER_PILL, "bg-background ring-1 ring-border");
 
 export function CommentComposer({
   onCancel,
   onSubmit,
   autoFocus = true,
-  submitLabel = "Comment",
   placeholder = "Leave a comment…",
   initialBody = "",
+  author,
+  className = COMPOSER_NESTED,
 }: {
   onCancel: () => void;
   onSubmit: (body: string) => Promise<void>;
   autoFocus?: boolean;
-  submitLabel?: string;
   placeholder?: string;
   initialBody?: string;
+  /** Whose monogram the pill wears; the repo's git identity when omitted. */
+  author?: string;
+  className?: string;
 }) {
   const [body, setBody] = useState(initialBody);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const self = useCommentAuthor();
   // A comment is written in the same hand as a prompt to an agent — a list of
   // the things that should change — so it keeps a list going the same way.
   const editList = useListEditing({
@@ -93,8 +120,10 @@ export function CommentComposer({
     if (autoFocus) ref.current?.focus();
   }, [autoFocus]);
 
+  const canSubmit = body.trim().length > 0 && !busy;
+
   const submit = async () => {
-    if (body.trim().length === 0 || busy) return;
+    if (!canSubmit) return;
     setBusy(true);
     setError(null);
     try {
@@ -106,73 +135,58 @@ export function CommentComposer({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <Textarea
-        ref={ref}
-        value={body}
-        placeholder={placeholder}
-        className="min-h-20 resize-none"
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-            e.preventDefault();
-            void submit();
-            return;
-          }
-          if (e.key === "Escape") {
-            onCancel();
-            return;
-          }
-          editList(e);
-        }}
-      />
-      {/* Actions sit under the left edge of the field, submit first: the eye
-          finishes the draft at the start of the last line, not out at the right
-          margin, so that is where the button it wants should already be. */}
-      <div className="flex items-center gap-2">
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            size="sm"
-            disabled={body.trim().length === 0 || busy}
-            onClick={() => void submit()}
-          >
-            {busy ? "Saving…" : submitLabel}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-        <p className="min-w-0 flex-1 truncate type-meta text-destructive">
-          {error}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Take a single comment off the review. Offered per comment rather than on the
- * thread's action row, which acts on the thread as a whole: a thread is several
- * comments stacked together, and "delete" there would not say whose. Kept quiet
- * until the comment is under the cursor — a destructive control on every card,
- * always lit, is louder than every comment it sits on.
- */
-function DeleteCommentButton({ onDelete }: { onDelete: () => Promise<void> }) {
-  const [deleting, setDeleting] = useState(false);
-
-  return (
-    <button
-      type="button"
-      aria-label="Delete comment"
-      disabled={deleting}
-      onClick={() => {
-        setDeleting(true);
-        void onDelete().finally(() => setDeleting(false));
+    <div
+      className={className}
+      // A pill with nothing in it goes away when the focus leaves it — there
+      // is no Cancel to reach for, and nothing typed to lose. One with words
+      // in it stays, and is dismissed with Escape.
+      onBlur={(e) => {
+        const leaving = !e.currentTarget.contains(e.relatedTarget);
+        if (leaving && body.trim().length === 0 && !busy) onCancel();
       }}
-      className="ml-auto rounded-sm p-0.5 text-muted-foreground opacity-0 outline-offset-2 outline-ring transition group-hover/comment:opacity-100 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 disabled:opacity-40"
     >
-      <IconX className="size-3.5" />
-    </button>
+      <AuthorAvatar
+        author={author ?? self}
+        source="local"
+        className="self-start"
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <textarea
+          ref={ref}
+          rows={1}
+          value={body}
+          placeholder={placeholder}
+          className="field-sizing-content max-h-60 w-full resize-none bg-transparent py-1 type-body outline-none placeholder:text-muted-foreground placeholder:select-none"
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter files the comment, as it sends a prompt in the chat beside
+            // it; ⇧Enter opens a line, and inside a list carries the list on.
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void submit();
+              return;
+            }
+            if (e.key === "Escape") {
+              onCancel();
+              return;
+            }
+            editList(e);
+          }}
+        />
+        {error !== null && (
+          <p className="truncate pb-1 type-meta text-destructive">{error}</p>
+        )}
+      </div>
+      <Button
+        size="icon"
+        className="size-7 shrink-0 rounded-full"
+        aria-label="Post comment"
+        disabled={!canSubmit}
+        onClick={() => void submit()}
+      >
+        <IconArrowUp className="size-4" />
+      </Button>
+    </div>
   );
 }
 
@@ -181,31 +195,24 @@ function CommentCard({
   editing,
   onEdit,
   onCancelEdit,
-  onDelete,
 }: {
   comment: ReviewComment;
   editing: boolean;
   onEdit?: (body: string) => Promise<void>;
   onCancelEdit?: () => void;
-  onDelete?: () => Promise<void>;
 }) {
   if (editing && onEdit !== undefined && onCancelEdit !== undefined) {
     return (
-      <div className="flex gap-3">
-        <AuthorAvatar author={comment.author} source={comment.source} />
-        <div className="min-w-0 flex-1">
-          <CommentComposer
-            initialBody={comment.body}
-            submitLabel="Save"
-            placeholder="Edit comment…"
-            onCancel={onCancelEdit}
-            onSubmit={async (body) => {
-              await onEdit(body);
-              onCancelEdit();
-            }}
-          />
-        </div>
-      </div>
+      <CommentComposer
+        author={comment.author}
+        initialBody={comment.body}
+        placeholder="Edit comment…"
+        onCancel={onCancelEdit}
+        onSubmit={async (body) => {
+          await onEdit(body);
+          onCancelEdit();
+        }}
+      />
     );
   }
 
@@ -231,9 +238,6 @@ function CommentCard({
           <span className="type-meta text-muted-foreground/70 tabular-nums">
             {pending ? "Sending…" : timeAgo(comment.createdAt)}
           </span>
-          {onDelete !== undefined && (
-            <DeleteCommentButton onDelete={onDelete} />
-          )}
         </div>
         <div className="markdown mt-0.5 min-w-0 type-body">
           <Markdown
@@ -280,8 +284,7 @@ function ThreadAction({
  * A stack of comments anchored to one line, rendered as a single rounded card.
  * The opening comment sits flush; later comments are nested as replies. The
  * footer offers "Add reply…" (GitHub threads) and "Resolve" (removes the local
- * comments — deletion is how a local thread is resolved). Each comment also
- * carries its own delete on its card, for taking one note off on its own.
+ * comments — deletion is how a local thread is resolved).
  */
 export function CommentThread({
   comments,
@@ -314,10 +317,6 @@ export function CommentThread({
   const canEdit = editableComment !== undefined && onEdit !== undefined;
   const canReply = onReply !== undefined && lastGithub !== undefined;
   const canResolve = localComments.length > 0;
-  // Every comment the store has acknowledged carries its own delete. "Resolve"
-  // in the footer still clears the local ones in one go; this is how a single
-  // note goes without taking the rest of the thread with it.
-  const deletable = (c: ReviewComment) => settled.includes(c);
   const showActions =
     !replying && editingId === null && (canEdit || canReply || canResolve);
 
@@ -345,9 +344,6 @@ export function CommentThread({
                   ? undefined
                   : (body) => onEdit(comment, body)
               }
-              onDelete={
-                deletable(comment) ? () => onDelete(comment) : undefined
-              }
             />
           </div>
         ))}
@@ -356,7 +352,6 @@ export function CommentThread({
       <div className={cn("mt-2", REPLY_INDENT)}>
         {replying && onReply !== undefined && lastGithub !== undefined ? (
           <CommentComposer
-            submitLabel="Reply"
             placeholder="Reply…"
             onCancel={() => setReplying(false)}
             onSubmit={async (body) => {
@@ -398,7 +393,7 @@ export function CommentThread({
   );
 }
 
-/** A standalone draft composer, card-styled to match `CommentThread`. */
+/** A standalone draft composer — the pill on its own, in the card's material. */
 export function DraftCard({
   onCancel,
   onSubmit,
@@ -410,12 +405,11 @@ export function DraftCard({
   initialBody?: string;
 }) {
   return (
-    <div className={COMMENT_CARD}>
-      <CommentComposer
-        onCancel={onCancel}
-        onSubmit={onSubmit}
-        {...(initialBody === undefined ? {} : { initialBody })}
-      />
-    </div>
+    <CommentComposer
+      className={COMPOSER_STANDALONE}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+      {...(initialBody === undefined ? {} : { initialBody })}
+    />
   );
 }

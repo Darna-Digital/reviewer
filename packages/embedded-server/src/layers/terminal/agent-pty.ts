@@ -18,7 +18,7 @@ const userShell = (): string => process.env["SHELL"] ?? "bash";
 /**
  * Launch an agent CLI *through* the user's login + interactive shell rather than
  * spawning the bare binary. A bare `node-pty` spawn searches only
- * `process.env.PATH`, which under a GUI launch (the Electron app from Finder, or
+ * `process.env.PATH`, which under a GUI launch (the mac app from Finder, or
  * an IDE) is launchd's minimal PATH — missing `~/.local/bin`, version managers,
  * Homebrew, etc. — so an agent installed there fails with "posix_spawnp failed".
  * `$SHELL -lic` sources the same startup files a real terminal tab does, giving

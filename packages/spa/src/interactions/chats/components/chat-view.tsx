@@ -5,19 +5,14 @@
  */
 import { IconPlugConnectedX } from "@tabler/icons-react";
 import { toast } from "sonner";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
 import { useMarkChatSeen } from "@/interactions/chats/adapters/chat-seen.hook.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
-import {
-  setChatMode,
-  useChatMode,
-} from "@/interactions/chats/adapters/chat-mode.store";
 import type {
   ChatImage,
   ChatSettings,
 } from "@/interactions/chats/interfaces/chats.interfaces";
-import { modePrompt } from "@/interactions/chats/functions/chat-mode.functions";
 import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
 import { useChatModels } from "@/lib/queries";
 import { rememberSession } from "@/lib/ui-prefs";
@@ -32,7 +27,6 @@ export function ChatView({ chatId }: { chatId: string }) {
   useMarkChatSeen(chat);
   const models = useChatModels();
   const actions = useChatsActions();
-  const mode = useChatMode(chatId);
 
   if (error !== null) {
     return (
@@ -45,7 +39,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   if (chat === null) {
     return (
       <div className="flex h-full items-center justify-center">
-        <LoadingCursor label="Loading thread…" />
+        <Orb size={16} label="Loading thread…" />
       </div>
     );
   }
@@ -60,7 +54,7 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
-      await actions.send(chat.id, modePrompt(mode, text), images);
+      await actions.send(chat.id, text, images);
     } catch (sendError) {
       toast.error(
         sendError instanceof Error ? sendError.message : "failed to send"
@@ -109,19 +103,13 @@ export function ChatView({ chatId }: { chatId: string }) {
             draftKey={chat.id}
             settings={settings}
             onSettingsChange={changeSettings}
-            mode={mode}
-            onModeChange={(next) => setChatMode(chat.id, next)}
             catalog={models.data}
             onSend={send}
             running={running}
             onStop={() => {
               void actions.stop(chat.id);
             }}
-            placeholder={
-              mode === "analysis"
-                ? "What should the analysis cover?"
-                : "Ask for follow-up changes or attach images…"
-            }
+            placeholder="Ask for follow-up changes or attach images…"
           />
         </div>
         <SessionContextBar />

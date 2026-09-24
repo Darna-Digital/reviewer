@@ -18,7 +18,7 @@ import {
   SidebarSearch,
 } from "@/components/layout/sidebar-filters";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -32,8 +32,9 @@ import { cn } from "@/lib/utils";
 import { usePulls, useRepo } from "@/lib/queries";
 import { errorReason } from "@/lib/errors";
 import { timeAgo } from "@/lib/relative-time";
+import { island } from "@/lib/shell";
 import { reviewHref } from "@/lib/shell-route";
-import { NoReviewRemote, NoReviews } from "./reviews-empty";
+import { NoReviewRemote, NoReviews, PickReview } from "./reviews-empty";
 import {
   groupReviewsByBase,
   reviewAuthor,
@@ -101,6 +102,13 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
 }
 
 export function ReviewsPage() {
+  // Inside the macOS shell the list is the sidebar's, native, reading the
+  // same endpoint itself; the page is the room a picked one's diff takes.
+  if (island !== undefined) return <PickReview />;
+  return <ReviewsList />;
+}
+
+function ReviewsList() {
   const navigate = useNavigate();
   const repo = useRepo();
   const hasGitHub = repo.data?.github != null;
@@ -157,7 +165,7 @@ export function ReviewsPage() {
           </p>
         ) : loading && items.length === 0 ? (
           <div className="px-3 py-3">
-            <LoadingCursor label="Loading merge requests…" />
+            <Orb size={16} label="Loading merge requests…" />
           </div>
         ) : items.length === 0 ? (
           hasGitHub ? (

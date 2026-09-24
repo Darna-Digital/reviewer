@@ -72,13 +72,12 @@ const CommentCount = ({ count }: { count: number }) => (
 
 /**
  * One comment as the bar lists it: where it was left and what it says. Callers
- * flatten their own comment shape to this — a diff comment names a file and
- * line, a visual one names the element it was drawn on and has no line.
+ * flatten their own comment shape to this.
  */
 export interface AssignBarComment {
   id: string;
   file: string;
-  line: number | null;
+  line: number;
   body: string;
 }
 
@@ -297,9 +296,7 @@ export function ReviewAssignBar({
                         key={comment.id}
                         comment={comment}
                         onOpen={
-                          // A comment on the running UI sits on no line, so
-                          // there is nowhere in the code to send a click.
-                          onOpenComment === undefined || comment.line === null
+                          onOpenComment === undefined
                             ? undefined
                             : () => {
                                 setListOpen(false);
@@ -492,11 +489,9 @@ function CommentRow({
   const [deleting, setDeleting] = useState(false);
   const content = (
     <>
-      {comment.line !== null && (
-        <span className="min-w-7 shrink-0 text-right text-muted-foreground tabular-nums">
-          {comment.line}
-        </span>
-      )}
+      <span className="min-w-7 shrink-0 text-right text-muted-foreground tabular-nums">
+        {comment.line}
+      </span>
       <span className="line-clamp-2 min-w-0 flex-1">{comment.body}</span>
     </>
   );

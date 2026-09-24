@@ -2,14 +2,27 @@ import {
   getFiletypeFromFileName,
   getHighlighterOptions,
   preloadHighlighter,
+  registerCustomTheme,
   type FileContents,
 } from "@pierre/diffs";
 import { useWorkerPool } from "@pierre/diffs/react";
 import { useEffect, useState } from "react";
+import { reviewerThemes } from "@reviewer/core/themes";
 import { contentCacheKey } from "@/lib/highlight-cache-key";
+import { codeThemesOf, useUiPrefs, type CodeThemes } from "@/lib/ui-prefs";
 
-/** Shiki theme pair shared by every `@pierre/diffs` view in the app. */
-export const THEMES = { light: "github-light", dark: "github-dark" } as const;
+// The library knows Pierre's and Shiki's themes by name; the app's own pair
+// is taught to it here, once, before any view asks for either — the worker
+// pool resolves themes on this thread and hands the result to its workers,
+// so one registration covers every surface.
+for (const theme of reviewerThemes.getThemes()) {
+  registerCustomTheme(theme.name, theme.load);
+}
+
+/** The theme pair every `@pierre/diffs` view in the app is drawn with. */
+export function useCodeThemes(): CodeThemes {
+  return codeThemesOf(useUiPrefs());
+}
 
 // Languages whose Shiki grammar has finished loading into the main-thread
 // highlighter, shared across views so one load benefits the others.
@@ -27,6 +40,7 @@ const readyLangs = new Set<string>();
  */
 export function useLangReady(path: string, enabled: boolean): boolean {
   const lang = filetypeOf(path);
+  const themes = useCodeThemes();
   const [ready, setReady] = useState(() => readyLangs.has(lang));
   useEffect(() => {
     if (!enabled || readyLangs.has(lang)) {
@@ -40,12 +54,12 @@ export function useLangReady(path: string, enabled: boolean): boolean {
       if (!cancelled) setReady(true);
     };
     void preloadHighlighter(
-      getHighlighterOptions(lang, { theme: THEMES })
+      getHighlighterOptions(lang, { theme: themes })
     ).then(done, done);
     return () => {
       cancelled = true;
     };
-  }, [lang, enabled]);
+  }, [lang, enabled, themes]);
   return !enabled || ready;
 }
 
@@ -71,6 +85,26 @@ export function filetypeOf(path: string): string {
  */
 export const fileCacheKey = (path: string, contents: string): string =>
   `${path}:${contentCacheKey(contents)}`;
+
+/**
+ * Past this many lines a `File` paints plain whatever the pool holds for it —
+ * the library's own `tokenizeMaxLength` — so highlighting one in a worker only
+ * heats the worker, and gating a mount on it only delays the plain paint.
+ */
+const TOKENIZE_MAX_LINES = 100_000;
+
+/** Whether the pool's highlight of this file would ever reach the screen. */
+export function isHighlightable(file: FileContents): boolean {
+  let lines = 1;
+  for (
+    let at = file.contents.indexOf("\n");
+    at !== -1;
+    at = file.contents.indexOf("\n", at + 1)
+  ) {
+    if (++lines > TOKENIZE_MAX_LINES) return false;
+  }
+  return true;
+}
 
 /** The file as the pool wants it: named, and keyed so its highlight is cached. */
 export function fileForHighlighting(
@@ -141,7 +175,7 @@ export function useHighlightPrimed(
 
   useEffect(() => {
     if (!enabled || file === null || pool === undefined) return;
-    if (pool.getFileResultCache(file) !== undefined) {
+    if (pool.getFileResultCache(file) !== undefined || !isHighlightable(file)) {
       setPrimed(true);
       return;
     }

@@ -2,15 +2,10 @@ import { vi } from "vitest";
 import type { WorkspaceInfo } from "@reviewer/core/workspace";
 import type { WorkspaceDependencies } from "../interfaces/workspace.interfaces";
 
-/** A project holding a backend and a frontend, opened on the backend. */
-export const multiRepoWorkspace: WorkspaceInfo = {
-  project: "/work",
-  repos: [
-    { name: "backend", path: "/work/backend", branch: "main" },
-    { name: "frontend", path: "/work/frontend", branch: "main" },
-  ],
-  current: "/work/backend",
-  recents: ["/work"],
+export const openWorkspace: WorkspaceInfo = {
+  project: "/work/backend",
+  branch: "main",
+  recents: ["/work/backend"],
   home: "/home/ada",
 };
 
@@ -19,11 +14,7 @@ export const createWorkspaceDependenciesMock = (
 ): WorkspaceDependencies => ({
   data: {},
   sideEffects: {
-    setProject: vi.fn(async () => multiRepoWorkspace),
-    setRepo: vi.fn(async () => ({
-      ...multiRepoWorkspace,
-      current: "/work/frontend",
-    })),
+    setProject: vi.fn(async () => openWorkspace),
     cacheWorkspace: vi.fn(),
     refreshRepo: vi.fn(async () => {}),
     settle: vi.fn(async () => {}),

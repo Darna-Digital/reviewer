@@ -1,8 +1,8 @@
 /**
  * The chat composer — prompt textarea over a selector row: model picker,
- * effort, mode, access level ("Full access"), and send/stop.
- * Owns only the draft text; settings and mode live with the caller (local state
- * on the new-thread page, the chat itself once it exists).
+ * effort, access level ("Full access"), and send/stop.
+ * Owns only the draft text; settings live with the caller (local state on the
+ * new-thread page, the chat itself once it exists).
  *
  * The row is not fixed: effort and access are what the chosen agent can be
  * asked for while running the chosen model (`chatCapabilities`), so cursor —
@@ -23,10 +23,8 @@ import {
   IconSend,
   IconCheck,
   IconChevronDown,
-  IconHammer,
   IconPhotoPlus,
   IconPlayerStopFilled,
-  IconSitemap,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -54,7 +52,6 @@ import {
 } from "@/interactions/chats/adapters/composer-attachments.store";
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
-import type { ChatMode } from "@/interactions/chats/functions/chat-mode.functions";
 import { useListEditing } from "@/hooks/use-list-editing";
 import {
   accessOptions,
@@ -71,23 +68,8 @@ import {
 import { attachImageFiles } from "./image-drop-zone";
 import { ModelPicker } from "./model-picker";
 
-const MODES: ReadonlyArray<SelectorOption<ChatMode>> = [
-  {
-    value: "build",
-    label: "Build",
-    hint: "Read, change and run the code",
-    icon: IconHammer,
-  },
-  {
-    value: "analysis",
-    label: "Analysis",
-    hint: "Draw the flow in the pane",
-    icon: IconSitemap,
-  },
-];
-
 /**
- * One selector — effort, mode, access — as a picker rather than a word list:
+ * One selector — effort, access — as a picker rather than a word list:
  * each option wears its own icon, its label, and the line saying what choosing
  * it does, because these are settings whose consequences are not guessable from
  * a single word ("Supervised" of what?). The trigger borrows the chosen
@@ -165,8 +147,6 @@ function SelectorMenu<T extends string>({
 export function ChatComposer({
   settings,
   onSettingsChange,
-  mode,
-  onModeChange,
   catalog,
   onSend,
   running,
@@ -177,8 +157,6 @@ export function ChatComposer({
 }: {
   settings: ChatSettings;
   onSettingsChange: (patch: Partial<ChatSettings>) => void;
-  mode: ChatMode;
-  onModeChange: (mode: ChatMode) => void;
   catalog: ChatModelCatalog | undefined;
   /** Resolves once the send is accepted; the draft clears only on success. */
   onSend: (
@@ -262,7 +240,7 @@ export function ChatComposer({
         onResizeEnd={(height) => setUiPrefs({ composerHeight: height })}
         label="Resize the message box"
       />
-      <div className="relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60">
+      <div className="composer-sheet relative border bg-background shadow-sm focus-within:border-ring/60">
         {attachments.length > 0 && (
           <AttachmentGrid className="px-3 pt-3">
             {attachments.map((attachment) => (
@@ -338,16 +316,6 @@ export function ChatComposer({
               />
             </>
           )}
-          <SelectorMenu
-            options={MODES}
-            value={mode}
-            onSelect={onModeChange}
-            ariaLabel="Session mode"
-          />
-          <Separator
-            orientation="vertical"
-            className="mx-0.5 h-4 self-center data-vertical:self-center"
-          />
           <SelectorMenu
             options={accessOptions(capabilities.access)}
             value={settings.access}

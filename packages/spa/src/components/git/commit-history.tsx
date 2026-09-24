@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter";
 import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces";
-import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
 import type { LogQuery } from "@/lib/api/types";
 import type { BranchInfo, CommitInfo } from "@reviewer/core/repo";
-import type { RepoEntry } from "@reviewer/core/workspace";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -28,18 +26,6 @@ interface CommitHistoryProps {
   /** Whether the log may hold commits past the ones loaded so far. */
   hasMore: boolean;
   selectedCommitSha: string | null;
-  /**
-   * Which root each commit came from, when the history covers a project of
-   * several. Absent for a single-root project, where saying so on every row
-   * would be noise.
-   */
-  commitRepos?: ReadonlyMap<string, RepoEntry>;
-  /** The project's roots, when it holds several — drives the repo filter. */
-  repos?: ReadonlyArray<RepoEntry>;
-  repoFilter?: string | null;
-  /** The project's own name, for the "all repositories" avatar. */
-  projectName?: string;
-  onRepoFilterChange?: (repoPath: string | null) => void;
   /** File open from the selected commit, highlighted in its changed-file tree. */
   selectedFile: string | null;
   onLoadMore: () => void;
@@ -65,11 +51,6 @@ export function CommitHistory({
   hasMore,
   selectedCommitSha,
   selectedFile,
-  commitRepos,
-  repos,
-  repoFilter,
-  projectName,
-  onRepoFilterChange,
   onLoadMore,
   onRefChange,
   onQueryChange,
@@ -167,10 +148,6 @@ export function CommitHistory({
         query={query}
         onRefChange={onRefChange}
         onQueryChange={onQueryChange}
-        repos={repos}
-        repoFilter={repoFilter}
-        projectName={projectName}
-        onRepoFilterChange={onRepoFilterChange}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -213,18 +190,6 @@ export function CommitHistory({
                       functions={functions}
                       config={DEFAULT_GRAPH_CONFIG}
                     />
-                    {commitRepos !== undefined &&
-                      commitRepos.get(commit.sha) !== undefined && (
-                        <span
-                          className="flex shrink-0 items-center gap-1.5"
-                          title={commitRepos.get(commit.sha)?.name}
-                        >
-                          <ProjectAvatar
-                            name={commitRepos.get(commit.sha)?.name ?? ""}
-                            className="size-4"
-                          />
-                        </span>
-                      )}
                     {commit.refs.length > 0 && (
                       <span className="flex shrink-0 gap-1">
                         {commit.refs.slice(0, 3).map((ref) => (
@@ -252,7 +217,7 @@ export function CommitHistory({
             {commits.length === 0 && (
               <li className="p-3 text-sm text-muted-foreground">
                 {loading ? (
-                  <LoadingCursor label="Loading commits…" />
+                  <Orb size={16} label="Loading commits…" />
                 ) : (
                   "No commits match the current filters."
                 )}
@@ -262,7 +227,7 @@ export function CommitHistory({
               // Scrolling this row into view is what pulls the next page, so it
               // is the wait itself — no button to press.
               <li ref={endRef} className="flex items-center p-3">
-                <LoadingCursor label="Loading older commits…" />
+                <Orb size={16} label="Loading older commits…" />
               </li>
             )}
           </ul>

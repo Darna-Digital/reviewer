@@ -17,6 +17,17 @@
  * The style object is stable across renders too, so a panel that does re-render
  * for its own reasons is not handed a new `style` prop for a size that did not
  * change.
+ *
+ * Where the property is written matters as much as that it is one. A custom
+ * property inherits, so changing it on the document element invalidates the
+ * computed style of every element in the document, and the recalc it costs is
+ * the size of the page rather than of the panel — several milliseconds a frame
+ * on a window holding a diff, two trees and a dock, which is most of a frame
+ * budget spent before the panel has laid out at all. So a panel nothing else
+ * measures by keeps the property on its own element (`scope`), where the recalc
+ * stops at its own subtree; only a size other elements are laid out by — the
+ * sidebar, whose width places the header and the seam — is written on the
+ * document, where they can all read it.
  */
 import {
   useCallback,
@@ -25,6 +36,7 @@ import {
   useMemo,
   useRef,
   type CSSProperties,
+  type RefObject,
 } from "react";
 
 /** Layout effects only exist in the browser; the prerender pass uses the other. */
@@ -50,11 +62,16 @@ export interface PanelSize {
  * flashing at its default width on load, and re-applying when it changes is
  * what lets something other than the drag (a reset, another window) move the
  * panel.
+ *
+ * `scope` is the element to write the property on instead of the document —
+ * the panel itself, or an ancestor of everything sized by it. It must be
+ * mounted for as long as the panel is: the size is lost with the element.
  */
 export function usePanelSize(
   name: string,
   stored: number,
-  axis: "width" | "height"
+  axis: "width" | "height",
+  scope?: RefObject<HTMLElement | null>
 ): PanelSize {
   const property = `--panel-${name}`;
   const live = useRef(stored);
@@ -62,9 +79,10 @@ export function usePanelSize(
   const apply = useCallback(
     (next: number) => {
       if (typeof document === "undefined") return;
-      document.documentElement.style.setProperty(property, `${next}px`);
+      const target = scope?.current ?? document.documentElement;
+      target.style.setProperty(property, `${next}px`);
     },
-    [property]
+    [property, scope]
   );
 
   // Before paint, so the panel's first frame is already the remembered size.

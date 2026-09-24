@@ -1,7 +1,7 @@
 /**
  * The provider list for a repository: whatever `.reviewer/languages.json`
- * configures, then the built-in ones — TypeScript, and Ruby when a server for
- * it is installed.
+ * configures, then the built-in ones — TypeScript, and Ruby and Swift when a
+ * server for them is installed.
  *
  * Configured servers come first deliberately — `selectProvider` takes the first
  * match, so a project that would rather use its own TypeScript language server
@@ -16,6 +16,7 @@ import {
 } from "./lsp/lsp-config.ts";
 import { makeLspProvider } from "./lsp/lsp-provider.ts";
 import { rubyProviderFor } from "./ruby/ruby-server.ts";
+import { swiftProviderFor } from "./swift/swift-server.ts";
 import { typescriptProvider } from "./typescript/ts-provider.ts";
 
 export interface RepositoryProviders {
@@ -75,9 +76,10 @@ const readConfig = (
 
 const build = (root: string, config: LanguageConfig): RepositoryProviders => ({
   providers: [
-    ...config.servers.map(makeLspProvider),
+    ...config.servers.map((server) => makeLspProvider(server)),
     typescriptProvider,
     rubyProviderFor(root),
+    swiftProviderFor(),
   ],
   problems: config.problems,
 });

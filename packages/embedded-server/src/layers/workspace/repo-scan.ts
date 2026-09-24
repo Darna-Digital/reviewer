@@ -1,141 +1,132 @@
 /**
- * Finding the git roots a project folder holds, and what each is checked out
- * on. The IDE equivalent is VCS root detection: you open a folder, and the tool
- * registers every repository under it rather than insisting the folder itself
- * be one.
+ * Finding the git repositories a machine holds, and what each is checked out
+ * on — the walk behind the opener's list.
  *
- * The branch is read out of `.git/HEAD` instead of spawned from `git`: the
- * workspace is read on nearly every interaction, and a folder holding a dozen
- * roots would otherwise pay a dozen processes each time. Parsing lives in core
- * (`parseHeadRef` / `parseGitDir`); this module only does the IO.
+ * The walk starts at the home folder and steps down through ordinary folders,
+ * stopping at each repository it finds (what lies under one — submodules,
+ * vendored checkouts — is git's), and never entering the folders that hold
+ * no projects of the user's own: the system's `Library`, dependency and build
+ * output, anything hidden. Node's own `readdir` with file types is used
+ * rather than Effect's FileSystem because it answers "is this a directory, a
+ * symlink" from the directory entry itself, which on a home folder of tens
+ * of thousands of entries is the difference between one call and two per
+ * entry — symlinks are never followed, so a loop cannot be walked into.
+ *
+ * The branch is read out of `.git/HEAD` instead of spawned from `git`, since
+ * a scan visits every repository and would otherwise pay a process for each.
+ * Parsing lives in core (`parseHeadRef` / `parseGitDir`); this module only
+ * does the IO.
  */
 import * as Effect from "effect/Effect";
-import type * as FileSystem from "effect/FileSystem";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { resolve as pathResolve } from "node:path";
 import {
+  folderName,
   parseGitDir,
   parseHeadRef,
-  repoName,
   type RepoEntry,
 } from "@reviewer/core/workspace";
 
-/** How deep under a project folder a git root is still considered part of it. */
-export const SCAN_DEPTH = 2;
+/** How deep under the start folder a repository is still looked for. */
+export const SCAN_DEPTH = 8;
 
-const IGNORED = new Set(["node_modules", "target", "dist", "build", "vendor"]);
+/** Folders never stepped into: no repository of the user's own is under them. */
+const SKIPPED_NAMES = new Set([
+  "node_modules",
+  "target",
+  "dist",
+  "build",
+  "out",
+  "vendor",
+  "Pods",
+  "DerivedData",
+  "Library",
+  "Applications",
+  "Music",
+  "Movies",
+  "Pictures",
+  "Public",
+  "go",
+  "bower_components",
+  "__pycache__",
+  "venv",
+]);
 
 const skipped = (name: string): boolean =>
-  name.startsWith(".") || IGNORED.has(name);
+  name.startsWith(".") || SKIPPED_NAMES.has(name);
 
-const orElse = <A>(effect: Effect.Effect<A, unknown>, fallback: A) =>
-  effect.pipe(Effect.catch(() => Effect.succeed(fallback)));
+const orElse = <A>(promise: Promise<A>, fallback: A): Promise<A> =>
+  promise.catch(() => fallback);
 
 /** Whether `dir` is a git root — `.git` as a directory, or a submodule's file. */
-export const isGitRoot = (
-  fs: FileSystem.FileSystem,
-  dir: string
-): Effect.Effect<boolean> => orElse(fs.exists(`${dir}/.git`), false);
+export const isGitRoot = (dir: string): Effect.Effect<boolean> =>
+  Effect.promise(() =>
+    orElse(
+      stat(`${dir}/.git`).then(() => true),
+      false
+    )
+  );
 
 /**
  * The branch `repoPath` is on, or null when HEAD is detached or unreadable.
- * A submodule keeps its `.git` as a file pointing at the real git directory,
- * so follow that before reading HEAD.
+ * A submodule or worktree keeps its `.git` as a file pointing at the real git
+ * directory, so follow that before reading HEAD.
  */
-export const readBranch = (
-  fs: FileSystem.FileSystem,
-  repoPath: string
-): Effect.Effect<string | null> =>
-  Effect.gen(function* () {
+export const readBranch = (repoPath: string): Effect.Effect<string | null> =>
+  Effect.promise(async () => {
     const dotGit = `${repoPath}/.git`;
-    const stat = yield* orElse(fs.stat(dotGit), null);
-    if (stat === null) return null;
-    const gitDir =
-      stat.type === "Directory"
-        ? dotGit
-        : parseGitDir(yield* orElse(fs.readFileString(dotGit), ""));
+    const info = await orElse(stat(dotGit), null);
+    if (info === null) return null;
+    const gitDir = info.isDirectory()
+      ? dotGit
+      : parseGitDir(await orElse(readFile(dotGit, "utf8"), ""));
     if (gitDir === null) return null;
-    const head = yield* orElse(
-      fs.readFileString(pathResolve(repoPath, gitDir, "HEAD")),
+    const head = await orElse(
+      readFile(pathResolve(repoPath, gitDir, "HEAD"), "utf8"),
       ""
     );
     return parseHeadRef(head);
   });
 
-/**
- * How many directory entries are examined at once. The scan is two filesystem
- * calls per entry (is it a directory, does it hold a `.git`) and it runs on
- * every project-scoped read — the file tree, the diff, the branches, the log,
- * each of which asks for the roots afresh. Walked one entry at a time, a
- * project folder's worth of round-trips is latency every one of those requests
- * pays before it starts. Bounded rather than unbounded so a wide folder cannot
- * exhaust the process's file descriptors.
- */
+/** The repository at `path`, its branch read alongside. */
+export const readRepo = (path: string): Effect.Effect<RepoEntry> =>
+  Effect.map(readBranch(path), (branch) => ({
+    name: folderName(path),
+    path,
+    branch,
+    lastOpened: null,
+  }));
+
+/** How many folders are walked at once; bounded so a wide tree cannot exhaust file descriptors. */
 const SCAN_CONCURRENCY = 16;
 
 /**
- * The git roots inside `dir`, searched up to `depth` levels deep.
- *
- * Entries are examined concurrently but reported in name order: `Effect.forEach`
- * keeps results in input order, so the roots a project holds stay in the same
- * order between reads and the views above do not shuffle.
- */
-const rootsUnder = (
-  fs: FileSystem.FileSystem,
-  dir: string,
-  depth: number
-): Effect.Effect<ReadonlyArray<string>> =>
-  Effect.gen(function* () {
-    const names = yield* orElse(fs.readDirectory(dir), [] as Array<string>);
-    const candidates = [...names]
-      .sort((a, b) => a.localeCompare(b))
-      .filter((name) => !skipped(name));
-    const found = yield* Effect.forEach(
-      candidates,
-      (name): Effect.Effect<ReadonlyArray<string>> =>
-        Effect.gen(function* () {
-          const childPath = `${dir}/${name}`;
-          const stat = yield* orElse(fs.stat(childPath), null);
-          if (stat === null || stat.type !== "Directory") return [];
-          if (yield* isGitRoot(fs, childPath)) return [childPath];
-          return depth > 1 ? yield* rootsUnder(fs, childPath, depth - 1) : [];
-        }),
-      { concurrency: SCAN_CONCURRENCY }
-    );
-    return found.flat();
-  });
-
-/**
- * Every git root the project holds, named relative to it. A project that is
- * itself a repository holds exactly itself — nested roots below a repository
- * are its submodules, which git already owns.
+ * Walk `start` for repositories, handing each one to `found` as it turns up
+ * so a listing can fill in while the walk is still under way. Folders are
+ * visited in name order and reported as they are reached, so the same
+ * machine yields the same order twice.
  */
 export const scanRepos = (
-  fs: FileSystem.FileSystem,
-  project: string,
+  start: string,
+  found: (repo: RepoEntry) => Effect.Effect<void>,
   depth = SCAN_DEPTH
-): Effect.Effect<ReadonlyArray<RepoEntry>> =>
+): Effect.Effect<void> =>
   Effect.gen(function* () {
-    const paths = (yield* isGitRoot(fs, project))
-      ? [project]
-      : yield* rootsUnder(fs, project, depth);
-    // Each root's branch is two more reads (`.git`, then `HEAD`) and they are
-    // wholly independent, so they go out together rather than one root at a time.
-    return yield* Effect.forEach(
-      paths,
-      (path) =>
-        Effect.map(readBranch(fs, path), (branch) => ({
-          name: repoName(project, path),
-          path,
-          branch,
-        })),
-      { concurrency: SCAN_CONCURRENCY }
+    if (yield* isGitRoot(start)) {
+      yield* found(yield* readRepo(start));
+      return;
+    }
+    if (depth === 0) return;
+    const entries = yield* Effect.promise(() =>
+      orElse(readdir(start, { withFileTypes: true }), [])
+    );
+    const folders = entries
+      .filter((entry) => entry.isDirectory() && !skipped(entry.name))
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+    yield* Effect.forEach(
+      folders,
+      (name) => scanRepos(`${start}/${name}`, found, depth - 1),
+      { concurrency: SCAN_CONCURRENCY, discard: true }
     );
   });
-
-/** How many git roots a folder holds — what makes it openable as a project. */
-export const countRepos = (
-  fs: FileSystem.FileSystem,
-  dir: string,
-  depth = SCAN_DEPTH
-): Effect.Effect<number> =>
-  Effect.map(rootsUnder(fs, dir, depth), (roots) => roots.length);

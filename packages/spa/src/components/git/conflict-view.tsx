@@ -1,9 +1,12 @@
 import { UnresolvedFile } from "@pierre/diffs/react";
 import { IconPencil, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { THEMES, fileForHighlighting } from "@/components/editor/highlighter";
+import {
+  fileForHighlighting,
+  useCodeThemes,
+} from "@/components/editor/highlighter";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useFile } from "@/lib/queries";
 import type { Theme } from "@/lib/ui-prefs";
@@ -97,6 +100,7 @@ export function ConflictView({
   onEdit,
   onClose,
 }: ConflictViewProps) {
+  const codeThemes = useCodeThemes();
   const file = useFile(path);
   const [result, setResult] = useState<string | null>(null);
 
@@ -116,7 +120,7 @@ export function ConflictView({
   if (file.isPending || result === null) {
     return (
       <div className="p-8">
-        <LoadingCursor label={`Loading ${path}…`} />
+        <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );
   }
@@ -184,9 +188,9 @@ export function ConflictView({
           key={remaining}
           file={fileForHighlighting(path, result)}
           options={{
-            theme: THEMES,
+            theme: codeThemes,
             themeType: theme,
-            overflow: "wrap",
+            overflow: "scroll",
             stickyHeader: false,
           }}
           renderMergeConflictUtility={(action) => (

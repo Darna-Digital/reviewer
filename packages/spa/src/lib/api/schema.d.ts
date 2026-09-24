@@ -20,7 +20,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspace/repo": {
+    "/api/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["workspace.repos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/scan": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,7 +45,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["workspace.selectRepo"];
+        post: operations["workspace.rescanRepos"];
         delete?: never;
         options?: never;
         head?: never;
@@ -62,7 +78,7 @@ export interface paths {
         get: operations["workspace.readFile"];
         put: operations["workspace.writeFile"];
         post?: never;
-        delete: operations["workspace.deleteFile"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -78,86 +94,6 @@ export interface paths {
         get: operations["workspace.readFileBytes"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/create": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["workspace.createPath"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/rename": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["workspace.renameFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/copy": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["workspace.copyFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["workspace.uploadFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/file/trash": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["workspace.trashFile"];
         delete?: never;
         options?: never;
         head?: never;
@@ -188,6 +124,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["repo.info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repo.identity"];
         put?: never;
         post?: never;
         delete?: never;
@@ -644,150 +596,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/project/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.changes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.files"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/diff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.diff"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/branches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.branches"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.commit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/discard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.discard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/discard-hunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.discardHunk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.log"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.search"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/comments": {
         parameters: {
             query?: never;
@@ -818,6 +626,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["comments.update"];
+        trace?: never;
+    };
+    "/api/github/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["github.auth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/github/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["github.loginStatus"];
+        put?: never;
+        post: operations["github.startLogin"];
+        delete: operations["github.cancelLogin"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/github/pulls": {
@@ -1268,38 +1108,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/formatting/formatter": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["formatting.formatter"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/formatting/format": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["formatting.format"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/local-dev/commands": {
         parameters: {
             query?: never;
@@ -1396,14 +1204,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/browser/state": {
+    "/api/themes": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["browser.state"];
+        get: operations["themes.list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1412,30 +1220,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/browser/navigate": {
+    "/api/themes/{name}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        post: operations["browser.navigate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/browser/snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["browser.snapshot"];
+        get: operations["themes.chrome"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1444,7 +1236,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/browser/eval": {
+    "/api/themes/{name}/highlight": {
         parameters: {
             query?: never;
             header?: never;
@@ -1453,311 +1245,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["browser.evaluate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/browser/console": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["browser.console"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/browser/screenshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["browser.screenshot"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["plans.list"];
-        put?: never;
-        post: operations["plans.create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/plans/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["plans.get"];
-        put?: never;
-        post?: never;
-        delete: operations["plans.remove"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/plans/{id}/save": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["plans.save"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/plans/{id}/annotations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["plans.annotate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/plans/{id}/annotations/{annotationId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["plans.removeAnnotation"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/visual-comments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["visualComments.list"];
-        put?: never;
-        post: operations["visualComments.add"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/visual-comments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["visualComments.remove"];
-        options?: never;
-        head?: never;
-        patch: operations["visualComments.update"];
-        trace?: never;
-    };
-    "/api/cloud/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["cloud.status"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/connect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.connect"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/poll": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.poll"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/disconnect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.disconnect"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/agents/{provider}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.connectAgent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/repos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["cloud.repos"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["cloud.runs"];
-        put?: never;
-        post: operations["cloud.createRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/runs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["cloud.run"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/runs/{id}/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.send"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cloud/runs/{id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cloud.cancel"];
+        post: operations["themes.highlight"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1782,11 +1270,6 @@ export interface components {
         NoRepoSelected: {
             /** @enum {string} */
             _tag: "NoRepoSelected";
-        };
-        PathExists: {
-            /** @enum {string} */
-            _tag: "PathExists";
-            path: string;
         };
         GitError: {
             /** @enum {string} */
@@ -1822,32 +1305,10 @@ export interface components {
             providerId: string;
             reason: string;
         };
-        FormatError: {
+        ThemeNotFound: {
             /** @enum {string} */
-            _tag: "FormatError";
-            formatterId: string;
-            reason: string;
-        };
-        BrowserUnavailable: {
-            /** @enum {string} */
-            _tag: "BrowserUnavailable";
-            reason: string;
-        };
-        CloudApiError: {
-            /** @enum {string} */
-            _tag: "CloudApiError";
-            reason: string;
-            status?: number;
-        };
-        AgentAuthError: {
-            /** @enum {string} */
-            _tag: "AgentAuthError";
-            reason: string;
-        };
-        CloudNotConnected: {
-            /** @enum {string} */
-            _tag: "CloudNotConnected";
-            reason: string;
+            _tag: "ThemeNotFound";
+            name: string;
         };
     };
     responses: never;
@@ -1875,12 +1336,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         project: string | null;
-                        repos: {
-                            name: string;
-                            path: string;
-                            branch: string | null;
-                        }[];
-                        current: string | null;
+                        branch: string | null;
                         recents: string[];
                         home: string;
                     };
@@ -1920,12 +1376,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         project: string | null;
-                        repos: {
-                            name: string;
-                            path: string;
-                            branch: string | null;
-                        }[];
-                        current: string | null;
+                        branch: string | null;
                         recents: string[];
                         home: string;
                     };
@@ -1951,20 +1402,14 @@ export interface operations {
             };
         };
     };
-    "workspace.selectRepo": {
+    "workspace.repos": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {
@@ -1973,25 +1418,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        project: string | null;
                         repos: {
                             name: string;
                             path: string;
                             branch: string | null;
+                            lastOpened: string | null;
                         }[];
-                        current: string | null;
-                        recents: string[];
-                        home: string;
+                        scanning: boolean;
+                        scannedAt: string | null;
                     };
                 };
             };
-            /** @description InvalidRepo */
-            400: {
+            /** @description StorageError */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvalidRepo"];
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "workspace.rescanRepos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        repos: {
+                            name: string;
+                            path: string;
+                            branch: string | null;
+                            lastOpened: string | null;
+                        }[];
+                        scanning: boolean;
+                        scannedAt: string | null;
+                    };
                 };
             };
             /** @description StorageError */
@@ -2026,12 +1499,10 @@ export interface operations {
                         path: string;
                         parent: string | null;
                         isGitRepo: boolean;
-                        repoCount: number;
                         entries: {
                             name: string;
                             path: string;
                             isGitRepo: boolean;
-                            repoCount: number;
                         }[];
                     };
                 };
@@ -2139,48 +1610,6 @@ export interface operations {
             };
         };
     };
-    "workspace.deleteFile": {
-        parameters: {
-            query: {
-                path: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
     "workspace.readFileBytes": {
         parameters: {
             query: {
@@ -2202,241 +1631,6 @@ export interface operations {
                         name: string;
                         mediaType: string;
                         base64: string;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "workspace.createPath": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    /** @enum {string} */
-                    kind: "file" | "directory";
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected | PathExists */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["PathExists"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "workspace.renameFile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    from: string;
-                    to: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "workspace.copyFile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    from: string;
-                    to: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected | PathExists */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["PathExists"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "workspace.uploadFile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    base64: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected | PathExists */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["PathExists"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "workspace.trashFile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        path: string;
                     };
                 };
             };
@@ -2530,6 +1724,48 @@ export interface operations {
                             owner: string;
                             repo: string;
                         } | null;
+                        user: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
+    "repo.identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string | null;
+                        email: string | null;
                     };
                 };
             };
@@ -2569,6 +1805,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        root: string;
                         paths: string[];
                         gitStatus: {
                             path: string;
@@ -3919,460 +3156,6 @@ export interface operations {
             };
         };
     };
-    "project.changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        repos: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            status: {
-                                branch: string;
-                                upstream: string | null;
-                                ahead: number;
-                                behind: number;
-                                headSha: string;
-                                changed: number;
-                                staged: number;
-                                unstaged: number;
-                                untracked: number;
-                                conflicted: number;
-                            };
-                            files: {
-                                path: string;
-                                /** @enum {string} */
-                                status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
-                            }[];
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        paths: string[];
-                        gitStatus: {
-                            path: string;
-                            /** @enum {string} */
-                            status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.diff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.branches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        repos: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            branches: {
-                                name: string;
-                                sha: string;
-                                isCurrent: boolean;
-                                upstream: string | null;
-                                ahead: number;
-                                behind: number;
-                                committedAt: string;
-                                subject: string;
-                            }[];
-                            remoteBranches: {
-                                name: string;
-                                remote: string;
-                                shortName: string;
-                                sha: string;
-                                committedAt: string;
-                                subject: string;
-                            }[];
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    message: string;
-                    paths: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        results: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            sha: string | null;
-                            reason: string | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.discard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    paths: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "project.discardHunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    hunkIndex: number;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "project.log": {
-        parameters: {
-            query?: {
-                ref?: string;
-                limit?: string;
-                skip?: string;
-                author?: string;
-                grep?: string;
-                regex?: string;
-                case?: string;
-                after?: string;
-                before?: string;
-                path?: string;
-                follow?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        commits: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            commit: {
-                                sha: string;
-                                shortSha: string;
-                                author: string;
-                                authoredAt: string;
-                                subject: string;
-                                refs: string[];
-                                parents: string[];
-                            };
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.search": {
-        parameters: {
-            query: {
-                q: string;
-                case?: string;
-                word?: string;
-                regex?: string;
-                limit?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        matches: {
-                            path: string;
-                            line: number;
-                            column: number;
-                            text: string;
-                        }[];
-                        truncated: boolean;
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
     "comments.list": {
         parameters: {
             query?: never;
@@ -4617,6 +3400,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "github.auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        login: string | null;
+                        name: string | null;
+                        avatarUrl: string | null;
+                        source: ("env" | "gh") | null;
+                    };
+                };
+            };
+            /** @description GitProviderError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitProviderError"];
+                };
+            };
+        };
+    };
+    "github.loginStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
+                };
+            };
+        };
+    };
+    "github.startLogin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
+                };
+            };
+            /** @description GitProviderError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitProviderError"];
+                };
+            };
+        };
+    };
+    "github.cancelLogin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
                 };
             };
         };
@@ -6808,101 +5712,6 @@ export interface operations {
             };
         };
     };
-    "formatting.formatter": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        name: string;
-                        available: boolean;
-                        version: string | null;
-                        configPath: string | null;
-                        detail: string;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description FormatError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FormatError"];
-                };
-            };
-        };
-    };
-    "formatting.format": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    contents: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        path: string;
-                        formatterId: string | null;
-                        changed: boolean;
-                        contents: string;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description FormatError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FormatError"];
-                };
-            };
-        };
-    };
     "localDev.list": {
         parameters: {
             query?: never;
@@ -6922,10 +5731,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -6973,7 +5781,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     command: string;
-                    repoPath: string;
+                    cwd?: string;
                 };
             };
         };
@@ -6988,10 +5796,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -7045,10 +5852,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -7146,7 +5952,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     command?: string;
-                    repoPath?: string;
+                    cwd?: string;
                 };
             };
         };
@@ -7161,10 +5967,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -7218,10 +6023,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -7315,13 +6119,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    repoPath?: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {
@@ -7333,10 +6131,9 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -7379,567 +6176,6 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    repoPath?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "browser.state": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        connected: boolean;
-                        url: string;
-                        title: string;
-                        loading: boolean;
-                    };
-                };
-            };
-        };
-    };
-    "browser.navigate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    url: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        connected: boolean;
-                        url: string;
-                        title: string;
-                        loading: boolean;
-                    };
-                };
-            };
-            /** @description BrowserUnavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowserUnavailable"];
-                };
-            };
-        };
-    };
-    "browser.snapshot": {
-        parameters: {
-            query?: {
-                selector?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        url: string;
-                        title: string;
-                        selector: string;
-                        html: string;
-                        text: string;
-                    };
-                };
-            };
-            /** @description BrowserUnavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowserUnavailable"];
-                };
-            };
-        };
-    };
-    "browser.evaluate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    script: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        json: string;
-                    };
-                };
-            };
-            /** @description BrowserUnavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowserUnavailable"];
-                };
-            };
-        };
-    };
-    "browser.console": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        level: string;
-                        message: string;
-                        source: string;
-                        line: number;
-                    }[];
-                };
-            };
-            /** @description BrowserUnavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowserUnavailable"];
-                };
-            };
-        };
-    };
-    "browser.screenshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        dataUrl: string;
-                    };
-                };
-            };
-            /** @description BrowserUnavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BrowserUnavailable"];
-                };
-            };
-        };
-    };
-    "plans.list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        title: string;
-                        question: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        savedAt: string | null;
-                        nodeCount: number;
-                        annotationCount: number;
-                    }[];
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "plans.create": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    title: string;
-                    question?: string;
-                    nodes: {
-                        id: string;
-                        label: string;
-                        /** @enum {string} */
-                        layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                        /** @enum {string} */
-                        kind?: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                        summary?: string;
-                        anchor?: {
-                            filePath: string;
-                            line?: (number) | null;
-                        } | null;
-                        order?: number;
-                    }[];
-                    edges: {
-                        from: string;
-                        to: string;
-                        label?: string;
-                        /** @enum {string} */
-                        kind?: "call" | "data" | "event";
-                    }[];
-                    annotations?: {
-                        nodeId?: string | null;
-                        body: string;
-                        anchor?: {
-                            filePath: string;
-                            line?: (number) | null;
-                        } | null;
-                    }[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        title: string;
-                        question: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        savedAt: string | null;
-                        nodes: {
-                            id: string;
-                            label: string;
-                            /** @enum {string} */
-                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                            /** @enum {string} */
-                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                            summary: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                            order: number;
-                        }[];
-                        edges: {
-                            id: string;
-                            from: string;
-                            to: string;
-                            label: string;
-                            /** @enum {string} */
-                            kind: "call" | "data" | "event";
-                        }[];
-                        annotations: {
-                            id: string;
-                            /** @enum {string} */
-                            origin: "analysis" | "review";
-                            nodeId: string | null;
-                            body: string;
-                            author: string;
-                            createdAt: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "plans.get": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        plan: {
-                            id: string;
-                            title: string;
-                            question: string;
-                            createdAt: string;
-                            updatedAt: string;
-                            savedAt: string | null;
-                            nodes: {
-                                id: string;
-                                label: string;
-                                /** @enum {string} */
-                                layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                                /** @enum {string} */
-                                kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                                summary: string;
-                                anchor: {
-                                    filePath: string;
-                                    line: (number) | null;
-                                    snippet: string;
-                                    fileHash: string;
-                                } | null;
-                                order: number;
-                            }[];
-                            edges: {
-                                id: string;
-                                from: string;
-                                to: string;
-                                label: string;
-                                /** @enum {string} */
-                                kind: "call" | "data" | "event";
-                            }[];
-                            annotations: {
-                                id: string;
-                                /** @enum {string} */
-                                origin: "analysis" | "review";
-                                nodeId: string | null;
-                                body: string;
-                                author: string;
-                                createdAt: string;
-                                anchor: {
-                                    filePath: string;
-                                    line: (number) | null;
-                                    snippet: string;
-                                    fileHash: string;
-                                } | null;
-                            }[];
-                        };
-                        staleness: {
-                            checkedAt: string;
-                            anchors: {
-                                /** @enum {string} */
-                                target: "node" | "annotation";
-                                targetId: string;
-                                filePath: string;
-                                /** @enum {string} */
-                                status: "fresh" | "relocated" | "lost" | "missing";
-                                line: (number) | null;
-                                recordedLine: (number) | null;
-                            }[];
-                            fresh: number;
-                            relocated: number;
-                            lost: number;
-                            missing: number;
-                            needsRerun: boolean;
-                        };
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "plans.remove": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
         requestBody?: never;
         responses: {
             /** @description Success */
@@ -7982,305 +6218,7 @@ export interface operations {
             };
         };
     };
-    "plans.save": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        title: string;
-                        question: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        savedAt: string | null;
-                        nodes: {
-                            id: string;
-                            label: string;
-                            /** @enum {string} */
-                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                            /** @enum {string} */
-                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                            summary: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                            order: number;
-                        }[];
-                        edges: {
-                            id: string;
-                            from: string;
-                            to: string;
-                            label: string;
-                            /** @enum {string} */
-                            kind: "call" | "data" | "event";
-                        }[];
-                        annotations: {
-                            id: string;
-                            /** @enum {string} */
-                            origin: "analysis" | "review";
-                            nodeId: string | null;
-                            body: string;
-                            author: string;
-                            createdAt: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "plans.annotate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    nodeId?: string | null;
-                    body: string;
-                    author?: string;
-                    anchor?: {
-                        filePath: string;
-                        line?: (number) | null;
-                    } | null;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        title: string;
-                        question: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        savedAt: string | null;
-                        nodes: {
-                            id: string;
-                            label: string;
-                            /** @enum {string} */
-                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                            /** @enum {string} */
-                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                            summary: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                            order: number;
-                        }[];
-                        edges: {
-                            id: string;
-                            from: string;
-                            to: string;
-                            label: string;
-                            /** @enum {string} */
-                            kind: "call" | "data" | "event";
-                        }[];
-                        annotations: {
-                            id: string;
-                            /** @enum {string} */
-                            origin: "analysis" | "review";
-                            nodeId: string | null;
-                            body: string;
-                            author: string;
-                            createdAt: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "plans.removeAnnotation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                annotationId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        title: string;
-                        question: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        savedAt: string | null;
-                        nodes: {
-                            id: string;
-                            label: string;
-                            /** @enum {string} */
-                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
-                            /** @enum {string} */
-                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
-                            summary: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                            order: number;
-                        }[];
-                        edges: {
-                            id: string;
-                            from: string;
-                            to: string;
-                            label: string;
-                            /** @enum {string} */
-                            kind: "call" | "data" | "event";
-                        }[];
-                        annotations: {
-                            id: string;
-                            /** @enum {string} */
-                            origin: "analysis" | "review";
-                            nodeId: string | null;
-                            body: string;
-                            author: string;
-                            createdAt: string;
-                            anchor: {
-                                filePath: string;
-                                line: (number) | null;
-                                snippet: string;
-                                fileHash: string;
-                            } | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "visualComments.list": {
+    "themes.list": {
         parameters: {
             query?: never;
             header?: never;
@@ -8296,812 +6234,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        id: string;
-                        url: string;
-                        selector: string;
-                        elementLabel: string;
-                        body: string;
-                        author: string;
-                        createdAt: string;
-                        screenshot: string | null;
-                        viewport: {
-                            width: number;
-                            height: number;
-                        };
-                        styleChanges?: {
-                            property: string;
-                            from: string;
-                            to: string;
-                        }[];
-                        anchor?: {
-                            x: number;
-                            y: number;
-                        };
-                    }[];
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "visualComments.add": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    url: string;
-                    selector: string;
-                    elementLabel: string;
-                    body: string;
-                    author?: string;
-                    screenshot?: string | null;
-                    viewport: {
-                        width: number;
-                        height: number;
-                    };
-                    styleChanges?: {
-                        property: string;
-                        from: string;
-                        to: string;
-                    }[];
-                    anchor?: {
-                        x: number;
-                        y: number;
-                    };
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        url: string;
-                        selector: string;
-                        elementLabel: string;
-                        body: string;
-                        author: string;
-                        createdAt: string;
-                        screenshot: string | null;
-                        viewport: {
-                            width: number;
-                            height: number;
-                        };
-                        styleChanges?: {
-                            property: string;
-                            from: string;
-                            to: string;
-                        }[];
-                        anchor?: {
-                            x: number;
-                            y: number;
-                        };
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "visualComments.remove": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "visualComments.update": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    body: string;
-                    styleChanges?: {
-                        property: string;
-                        from: string;
-                        to: string;
-                    }[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        url: string;
-                        selector: string;
-                        elementLabel: string;
-                        body: string;
-                        author: string;
-                        createdAt: string;
-                        screenshot: string | null;
-                        viewport: {
-                            width: number;
-                            height: number;
-                        };
-                        styleChanges?: {
-                            property: string;
-                            from: string;
-                            to: string;
-                        }[];
-                        anchor?: {
-                            x: number;
-                            y: number;
-                        };
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "cloud.status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        serverUrl: string;
-                        /** @enum {string} */
-                        status: "disconnected" | "pending" | "connected";
-                        user: {
-                            id: string;
-                            name: string;
-                            email: string;
-                            image: string | null;
-                            /** @enum {string} */
-                            plan: "free" | "pro" | "team";
-                        } | null;
-                        connectedAt: string | null;
-                        pending: {
-                            userCode: string;
-                            verificationUri: string;
-                            verificationUriComplete: string;
-                            expiresAt: string;
-                            intervalMs: number;
-                        } | null;
-                    };
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "cloud.connect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    serverUrl: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        serverUrl: string;
-                        /** @enum {string} */
-                        status: "disconnected" | "pending" | "connected";
-                        user: {
-                            id: string;
-                            name: string;
-                            email: string;
-                            image: string | null;
-                            /** @enum {string} */
-                            plan: "free" | "pro" | "team";
-                        } | null;
-                        connectedAt: string | null;
-                        pending: {
-                            userCode: string;
-                            verificationUri: string;
-                            verificationUriComplete: string;
-                            expiresAt: string;
-                            intervalMs: number;
-                        } | null;
-                    };
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.poll": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        serverUrl: string;
-                        /** @enum {string} */
-                        status: "disconnected" | "pending" | "connected";
-                        user: {
-                            id: string;
-                            name: string;
-                            email: string;
-                            image: string | null;
-                            /** @enum {string} */
-                            plan: "free" | "pro" | "team";
-                        } | null;
-                        connectedAt: string | null;
-                        pending: {
-                            userCode: string;
-                            verificationUri: string;
-                            verificationUriComplete: string;
-                            expiresAt: string;
-                            intervalMs: number;
-                        } | null;
-                    };
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.disconnect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        serverUrl: string;
-                        /** @enum {string} */
-                        status: "disconnected" | "pending" | "connected";
-                        user: {
-                            id: string;
-                            name: string;
-                            email: string;
-                            image: string | null;
-                            /** @enum {string} */
-                            plan: "free" | "pro" | "team";
-                        } | null;
-                        connectedAt: string | null;
-                        pending: {
-                            userCode: string;
-                            verificationUri: string;
-                            verificationUriComplete: string;
-                            expiresAt: string;
-                            intervalMs: number;
-                        } | null;
-                    };
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "cloud.connectAgent": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: "codex";
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        provider: "codex";
-                        /** @enum {string} */
-                        kind: "reused" | "signed-in";
-                    };
-                };
-            };
-            /** @description CloudNotConnected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError | AgentAuthError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["AgentAuthError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.repos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        hostId: string;
-                        owner: string;
                         name: string;
-                        fullName: string;
-                        defaultBranch: string;
-                        private: boolean;
-                        cloneUrl: string;
-                        htmlUrl: string;
-                        linkedAt: string;
+                        displayName: string;
+                        /** @enum {string} */
+                        colorScheme: "light" | "dark";
+                        collection: string;
                     }[];
                 };
             };
-            /** @description CloudNotConnected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
         };
     };
-    "cloud.runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        id: string;
-                        repoFullName: string;
-                        title: string;
-                        /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode" | "cursor";
-                        model: string;
-                        branch: string;
-                        /** @enum {string} */
-                        status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
-                        pullRequestUrl: string | null;
-                        createdAt: string;
-                        updatedAt: string;
-                        turnCount: number;
-                        lastMessage: string | null;
-                    }[];
-                };
-            };
-            /** @description CloudNotConnected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.createRun": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    repoId: string;
-                    prompt: string;
-                    /** @enum {string} */
-                    provider?: "claude" | "codex" | "opencode" | "cursor";
-                    model?: string;
-                    /** @enum {string} */
-                    effort?: "low" | "medium" | "high";
-                    /** @enum {string} */
-                    access?: "supervised" | "acceptEdits" | "fullAccess";
-                    baseBranch?: string;
-                    branch?: string;
-                    openPullRequest?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        run: {
-                            id: string;
-                            repoId: string;
-                            repoFullName: string;
-                            title: string;
-                            /** @enum {string} */
-                            provider: "claude" | "codex" | "opencode" | "cursor";
-                            model: string;
-                            /** @enum {string} */
-                            effort: "low" | "medium" | "high";
-                            /** @enum {string} */
-                            access: "supervised" | "acceptEdits" | "fullAccess";
-                            baseBranch: string;
-                            branch: string;
-                            sessionId: string | null;
-                            /** @enum {string} */
-                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
-                            openPullRequest: boolean;
-                            pullRequestUrl: string | null;
-                            headSha: string | null;
-                            createdAt: string;
-                            updatedAt: string;
-                        };
-                        turns: {
-                            id: string;
-                            runId: string;
-                            seq: number;
-                            prompt: string;
-                            /** @enum {string} */
-                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
-                            attempts: number;
-                            runnerId: string | null;
-                            leaseUntil: string | null;
-                            cancelRequested: boolean;
-                            resultText: string | null;
-                            errorMessage: string | null;
-                            totalCostUsd: (number) | null;
-                            createdAt: string;
-                            startedAt: string | null;
-                            endedAt: string | null;
-                        }[];
-                        messages: {
-                            id: string;
-                            turnId: string;
-                            /** @enum {string} */
-                            role: "user" | "assistant";
-                            text: string;
-                            streaming: boolean;
-                            createdAt: string;
-                        }[];
-                        activities: {
-                            id: string;
-                            turnId: string;
-                            kind: string;
-                            /** @enum {string} */
-                            tone: "info" | "tool" | "error";
-                            summary: string;
-                            detail: string | null;
-                            createdAt: string;
-                            callId?: string;
-                            label?: string;
-                        }[];
-                        lastSeq: number;
-                    };
-                };
-            };
-            /** @description CloudNotConnected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.run": {
+    "themes.chrome": {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                name: string;
             };
             cookie?: never;
         };
@@ -9114,114 +6262,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        run: {
-                            id: string;
-                            repoId: string;
-                            repoFullName: string;
-                            title: string;
+                        theme: {
+                            name: string;
+                            displayName: string;
                             /** @enum {string} */
-                            provider: "claude" | "codex" | "opencode" | "cursor";
-                            model: string;
-                            /** @enum {string} */
-                            effort: "low" | "medium" | "high";
-                            /** @enum {string} */
-                            access: "supervised" | "acceptEdits" | "fullAccess";
-                            baseBranch: string;
-                            branch: string;
-                            sessionId: string | null;
-                            /** @enum {string} */
-                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
-                            openPullRequest: boolean;
-                            pullRequestUrl: string | null;
-                            headSha: string | null;
-                            createdAt: string;
-                            updatedAt: string;
+                            colorScheme: "light" | "dark";
+                            collection: string;
                         };
-                        turns: {
-                            id: string;
-                            runId: string;
-                            seq: number;
-                            prompt: string;
+                        chrome: {
                             /** @enum {string} */
-                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
-                            attempts: number;
-                            runnerId: string | null;
-                            leaseUntil: string | null;
-                            cancelRequested: boolean;
-                            resultText: string | null;
-                            errorMessage: string | null;
-                            totalCostUsd: (number) | null;
-                            createdAt: string;
-                            startedAt: string | null;
-                            endedAt: string | null;
-                        }[];
-                        messages: {
-                            id: string;
-                            turnId: string;
-                            /** @enum {string} */
-                            role: "user" | "assistant";
+                            colorScheme: "light" | "dark";
+                            frame: string;
+                            island: string;
+                            control: string;
+                            popover: string;
                             text: string;
-                            streaming: boolean;
-                            createdAt: string;
-                        }[];
-                        activities: {
-                            id: string;
-                            turnId: string;
-                            kind: string;
-                            /** @enum {string} */
-                            tone: "info" | "tool" | "error";
-                            summary: string;
-                            detail: string | null;
-                            createdAt: string;
-                            callId?: string;
-                            label?: string;
-                        }[];
-                        lastSeq: number;
+                            textSecondary: string;
+                            textTertiary: string;
+                            separator: string;
+                            hairline: string;
+                            accent: string;
+                            link: string;
+                            selection: string;
+                            hover: string;
+                            added: string;
+                            modified: string;
+                            deleted: string;
+                        };
                     };
                 };
             };
-            /** @description CloudNotConnected */
-            409: {
+            /** @description ThemeNotFound */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
+                    "application/json": components["schemas"]["ThemeNotFound"];
                 };
             };
         };
     };
-    "cloud.send": {
+    "themes.highlight": {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                name: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
-                    prompt: string;
+                    code: string;
+                    lang: string;
                 };
             };
         };
@@ -9233,210 +6328,24 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        run: {
-                            id: string;
-                            repoId: string;
-                            repoFullName: string;
-                            title: string;
-                            /** @enum {string} */
-                            provider: "claude" | "codex" | "opencode" | "cursor";
-                            model: string;
-                            /** @enum {string} */
-                            effort: "low" | "medium" | "high";
-                            /** @enum {string} */
-                            access: "supervised" | "acceptEdits" | "fullAccess";
-                            baseBranch: string;
-                            branch: string;
-                            sessionId: string | null;
-                            /** @enum {string} */
-                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
-                            openPullRequest: boolean;
-                            pullRequestUrl: string | null;
-                            headSha: string | null;
-                            createdAt: string;
-                            updatedAt: string;
-                        };
-                        turns: {
-                            id: string;
-                            runId: string;
-                            seq: number;
-                            prompt: string;
-                            /** @enum {string} */
-                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
-                            attempts: number;
-                            runnerId: string | null;
-                            leaseUntil: string | null;
-                            cancelRequested: boolean;
-                            resultText: string | null;
-                            errorMessage: string | null;
-                            totalCostUsd: (number) | null;
-                            createdAt: string;
-                            startedAt: string | null;
-                            endedAt: string | null;
-                        }[];
-                        messages: {
-                            id: string;
-                            turnId: string;
-                            /** @enum {string} */
-                            role: "user" | "assistant";
+                        lang: string;
+                        foreground?: string;
+                        lines: {
                             text: string;
-                            streaming: boolean;
-                            createdAt: string;
-                        }[];
-                        activities: {
-                            id: string;
-                            turnId: string;
-                            kind: string;
-                            /** @enum {string} */
-                            tone: "info" | "tool" | "error";
-                            summary: string;
-                            detail: string | null;
-                            createdAt: string;
-                            callId?: string;
-                            label?: string;
-                        }[];
-                        lastSeq: number;
+                            color?: string;
+                            italic?: boolean;
+                            bold?: boolean;
+                        }[][];
                     };
                 };
             };
-            /** @description CloudNotConnected */
-            409: {
+            /** @description ThemeNotFound */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
-                };
-            };
-        };
-    };
-    "cloud.cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        run: {
-                            id: string;
-                            repoId: string;
-                            repoFullName: string;
-                            title: string;
-                            /** @enum {string} */
-                            provider: "claude" | "codex" | "opencode" | "cursor";
-                            model: string;
-                            /** @enum {string} */
-                            effort: "low" | "medium" | "high";
-                            /** @enum {string} */
-                            access: "supervised" | "acceptEdits" | "fullAccess";
-                            baseBranch: string;
-                            branch: string;
-                            sessionId: string | null;
-                            /** @enum {string} */
-                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
-                            openPullRequest: boolean;
-                            pullRequestUrl: string | null;
-                            headSha: string | null;
-                            createdAt: string;
-                            updatedAt: string;
-                        };
-                        turns: {
-                            id: string;
-                            runId: string;
-                            seq: number;
-                            prompt: string;
-                            /** @enum {string} */
-                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
-                            attempts: number;
-                            runnerId: string | null;
-                            leaseUntil: string | null;
-                            cancelRequested: boolean;
-                            resultText: string | null;
-                            errorMessage: string | null;
-                            totalCostUsd: (number) | null;
-                            createdAt: string;
-                            startedAt: string | null;
-                            endedAt: string | null;
-                        }[];
-                        messages: {
-                            id: string;
-                            turnId: string;
-                            /** @enum {string} */
-                            role: "user" | "assistant";
-                            text: string;
-                            streaming: boolean;
-                            createdAt: string;
-                        }[];
-                        activities: {
-                            id: string;
-                            turnId: string;
-                            kind: string;
-                            /** @enum {string} */
-                            tone: "info" | "tool" | "error";
-                            summary: string;
-                            detail: string | null;
-                            createdAt: string;
-                            callId?: string;
-                            label?: string;
-                        }[];
-                        lastSeq: number;
-                    };
-                };
-            };
-            /** @description CloudNotConnected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudNotConnected"];
-                };
-            };
-            /** @description StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StorageError"];
-                };
-            };
-            /** @description CloudApiError */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloudApiError"];
+                    "application/json": components["schemas"]["ThemeNotFound"];
                 };
             };
         };

@@ -1,6 +1,6 @@
 /**
- * Code mode's inbox button — the repo's real agent threads, newest first, with
- * the same panel the collaboration prototype wears. The dot stands for threads
+ * Code mode's inbox button — the repo's real agent threads, newest first. The
+ * dot stands for threads
  * that have moved since they were last opened, so it is opening a thread that
  * puts it out — glancing at the panel is not reading them. See
  * `chats.attention.ts`.

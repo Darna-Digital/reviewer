@@ -10,8 +10,7 @@
  *
  * One unreadable row is not a reason for a list to fail — a document written by
  * an older schema drops out of the list rather than taking the rest with it,
- * which is the behaviour the file-backed plans store already had and the one
- * every feature wants.
+ * which is what every feature wants.
  */
 import { allRows, execute, oneRow } from "./database.ts";
 

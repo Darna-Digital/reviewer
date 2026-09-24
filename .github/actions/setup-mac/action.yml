@@ -1,0 +1,24 @@
+name: setup-mac
+description: Node, pnpm, the workspace's dependencies and Xcode's Metal toolchain — everything `pnpm build:mac` needs on a macOS runner.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    # SwiftTerm compiles Metal shaders, and Xcode 26 ships the Metal compiler
+    # as a separate download that a runner image may or may not carry.
+    - name: Install the Metal toolchain
+      shell: bash
+      run: |
+        xcodebuild -version
+        xcrun metal --version >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain

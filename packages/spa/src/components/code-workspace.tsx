@@ -18,7 +18,6 @@
  */
 import {
   IconColumns2,
-  IconFolder,
   IconGitBranch,
   IconGitCompare,
   IconGitFork,
@@ -33,7 +32,14 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
@@ -44,14 +50,17 @@ import {
   type AssignTarget,
 } from "@/components/review-assign-bar";
 import {
+  shellDrawsAssignBar,
+  useShellReview,
+} from "@/components/review-assign-bar.shell";
+import {
   DiffPane,
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane";
 import { CodeView } from "@/components/editor/code-view";
+import { usePrerenderFile } from "@/components/editor/prerender";
 import type { RevealTarget } from "@/interactions/language/components/use-reveal-line";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
-import { MarkdownFileView } from "@/interactions/markdown/components/markdown-file-view";
-import { isMarkdownPath } from "@/interactions/markdown/functions/markdown-view.functions";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
@@ -63,37 +72,36 @@ import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
 import { reviewSourceOf } from "@/lib/shell-route";
+import { island, shell } from "@/lib/shell";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useHeaderLead } from "@/components/layout/header-lead";
-import { useHeaderTabsSlot } from "@/components/layout/header-tabs";
-import { usePublishPageTrail } from "@/components/layout/page-trail";
+import {
+  setHeaderTabsFilled,
+  useHeaderTabsSlot,
+} from "@/components/layout/header-tabs";
 import { seamAfter, useSeamSlot } from "@/components/layout/seam-slot";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { FileSidebar } from "@/components/tree/file-sidebar";
+import {
+  shellDrawsTree,
+  useShellTree,
+} from "@/components/tree/file-sidebar.shell";
 import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
 import {
-  buildHandoffPrompt,
-  buildHandoffTitle,
+  buildReviewAssignmentPrompt,
+  buildReviewAssignmentTitle,
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
-import {
-  useVisualCommentActions,
-  useVisualComments,
-} from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
-import { visualCommentSummary } from "@/interactions/visual-comments/functions/visual-style.functions";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
-import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { isMultiRepo } from "@reviewer/core/workspace";
 import {
-  useRepoCommands,
-  useWorkspaceActions,
-} from "@/interactions/workspace/adapters/workspace.hook.adapter";
-import { TabStrip } from "@/interactions/tabs/components/tab-strip";
+  TabStrip,
+  type TabStripProps,
+} from "@/interactions/tabs/components/tab-strip";
 import {
   readTabs,
   scopeTabsTo,
@@ -108,15 +116,10 @@ import {
   moveTab,
   openTab,
   pruneTabs,
-  syncActive,
-  tabToRestore,
+  reconcileTabs,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
-import { useFileActions } from "@/interactions/file-actions/adapters/file-actions.hook.adapter";
-import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
-import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { fetchClient } from "@/lib/api/client";
 import {
   ALL_REFS,
   diffTargetKey,
@@ -126,6 +129,7 @@ import {
   type DiffTarget,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@reviewer/core/comments";
+import type { CommitDraft } from "@reviewer/core/git-message";
 import { unenrichedPull } from "@reviewer/core/ports/git-provider";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
@@ -138,8 +142,6 @@ import {
   useDiffText,
   useFiles,
   useMergeState,
-  useProjectDiff,
-  useProjectFiles,
   usePullComments,
   usePulls,
   useBranchTargets,
@@ -147,12 +149,16 @@ import {
   useWorkspace,
 } from "@/lib/queries";
 import {
-  resetHistoryFilters,
   setHistoryQuery,
   useHistoryFilters,
 } from "@/interactions/history/history-filters.store";
 import { useCodeReveal } from "@/lib/code-reveal";
-import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import {
+  type CommitAgent,
+  openBottomTab,
+  setUiPrefs,
+  useUiPrefs,
+} from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 type Search = {
@@ -175,7 +181,31 @@ export function CodeWorkspace() {
   const comments = useCommentsActions();
   const chatActions = useChatsActions();
 
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  /**
+   * The page on screen, not the one being navigated to. `location` moves the
+   * moment a navigation starts, while the params and search below come from
+   * the matches, which stay on the old page until the new one has resolved.
+   * Read from `location`, a hop from the diff straight to a file — the shell
+   * around the island does exactly that — rendered one frame as "browsing,
+   * nothing open", and the strip's restore replaced the file being opened with
+   * the last one it remembered. Same distinction `AppLayout` draws.
+   */
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
+  /**
+   * Whether the page on screen is the one the URL names. While a navigation
+   * is in flight the two disagree for a frame: `mode` above still reads the
+   * old page, while the search below is already the new one. Anything that
+   * writes to the URL on the strength of both has to wait the frame out —
+   * leaving the browser for the diff with a file open, the strip saw
+   * "browsing, nothing open" and restored its tab into the diff's URL.
+   */
+  const pageSettled = useRouterState({
+    select: (s) =>
+      s.resolvedLocation === undefined ||
+      s.resolvedLocation.pathname === s.location.pathname,
+  });
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
 
@@ -193,17 +223,11 @@ export function CodeWorkspace() {
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
-  const workspaceActions = useWorkspaceActions();
   const repo = useRepo();
   const chatModels = useChatModels();
   const chats = useRecentChats();
   const files = useFiles();
   const localComments = useComments();
-  // Notes left on the running UI in the browser pane. They are read here too so
-  // that a review spread over the code and the app it renders is one review:
-  // one list, one hand-off, one session that sees both halves of it.
-  const uiComments = useVisualComments();
-  const visualComments = useVisualCommentActions();
   // Files carrying a local working-tree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
   const commentedPaths = useMemo(
@@ -232,16 +256,10 @@ export function CodeWorkspace() {
     [mergeState.data]
   );
   // The history dock lives in the layout above this page and owns its own
-  // paging; what is read here is the filter it is on, which the trail and the
-  // per-file diff filter both reflect. See `history-filters.store`.
-  const { ref: logRef, query: logFilters } = useHistoryFilters();
-  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
+  // paging; what is read here is the ref it is on, which the trail names. See
+  // `history-filters.store`.
+  const { ref: logRef } = useHistoryFilters();
 
-  // Callback-ref state, not a ref object: the file view renders into this node,
-  // so it has to re-render once the node exists.
-  const [fileActionsSlot, setFileActionsSlot] = useState<HTMLElement | null>(
-    null
-  );
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
   // Panel sizes live in the DOM, not in this component's state: a drag reports
@@ -263,11 +281,6 @@ export function CodeWorkspace() {
     prefs.reviewTreeWidth,
     "width"
   );
-
-  // A project with no git root at all: there is nothing repo-scoped to show,
-  // so the centre pane says so instead of rendering an empty tree.
-  const noRepo =
-    workspace.data?.project != null && workspace.data.current === null;
 
   // --- selection / diff target ----------------------------------------------
   const selectedPull = useMemo(() => {
@@ -341,16 +354,7 @@ export function CodeWorkspace() {
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
   const diff = useDiffText(target);
-  // The uncommitted diff of every root at once, its paths named from the
-  // project so they line up with the tree. Only the worktree target: a commit
-  // or a range belongs to one root, and is read from that root as before.
-  const projectDiff = useProjectDiff(multiRepo && target?.kind === "worktree");
-  const diffText =
-    multiRepo && target?.kind === "worktree"
-      ? (projectDiff.data ?? null)
-      : typeof diff.data === "string"
-        ? diff.data
-        : null;
+  const diffText = typeof diff.data === "string" ? diff.data : null;
   const parsedFiles = useMemo(
     () => diffFns.parseFiles(diffText),
     [diffText, diffFns]
@@ -360,25 +364,39 @@ export function CodeWorkspace() {
   );
 
   // Opening a commit out of a file's history shows just that file's side of it,
-  // like the log's filter reads. Commits from before a rename don't carry the
-  // path, so those fall back to the whole commit.
+  // like the log's filter reads. The file rides in the URL rather than being
+  // read off the dock's filter, since inside the macOS shell the history is
+  // native and the dock's filter never hears of it. Commits from before a
+  // rename don't carry the path, so those fall back to the whole commit.
+  const historyPath = search.history ?? null;
   const diffFiles = useMemo(() => {
-    if (logFilters.path === null || target?.kind !== "commit")
-      return parsedFiles;
-    const forPath = parsedFiles.filter((f) => f.name === logFilters.path);
+    if (historyPath === null || target?.kind !== "commit") return parsedFiles;
+    const forPath = parsedFiles.filter((f) => f.name === historyPath);
     return forPath.length > 0 ? forPath : parsedFiles;
-  }, [parsedFiles, logFilters.path, target?.kind]);
+  }, [parsedFiles, historyPath, target?.kind]);
 
   // Reset the comment draft when the diff target or the open file changes.
   useEffect(() => setDraft(null), [targetKey, search.file]);
 
+  // The local changes arrive with nothing chosen — coming over from browsing,
+  // or on a fresh load — so the review starts on the first file the pane is
+  // showing rather than with the tree pointing nowhere. Replaces, so Back
+  // does not stop on the unselected page. Only once the page has settled:
+  // leaving the diff, the frame that still reads as commit mode over the next
+  // page's empty search would write the selection into that page's URL.
+  const firstDiffFile = diffFiles[0]?.name ?? null;
+  useEffect(() => {
+    if (mode !== "commit" || firstDiffFile === null || !pageSettled) return;
+    if (search.path !== undefined || search.file !== undefined) return;
+    void navigate({
+      to: ".",
+      search: (prev: Search) => ({ ...prev, path: firstDiffFile }),
+      replace: true,
+    });
+  }, [mode, firstDiffFile, search.path, search.file, pageSettled, navigate]);
+
   // --- derived tree / comments (memoised: these run over the whole repo) -----
-  // Paths are named from the project root once it holds more than one
-  // repository, so the tree nests the roots as folders without being told to
-  // and a file opens without anything being switched first. A single-root
-  // project reads the repository's own listing, where the two are the same.
-  const projectFiles = useProjectFiles(multiRepo);
-  const listing = multiRepo ? projectFiles.data : files.data;
+  const listing = files.data;
   const gitStatus = useMemo(
     () => listing?.gitStatus ?? [],
     [listing?.gitStatus]
@@ -437,32 +455,20 @@ export function CodeWorkspace() {
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
-  /**
-   * Everything the hand-off would carry, as the bar reads it: the comments on
-   * the diff in front of you, then the ones left on the running app, which name
-   * the element they were drawn on and sit on no line.
-   */
+  /** The hand-off as the bar reads it: the comments on the diff in front of you. */
   const handoffComments = useMemo(
-    () => [
-      ...visibleComments.map((comment) => ({
+    () =>
+      visibleComments.map((comment) => ({
         id: comment.id,
         file: comment.filePath,
         line: comment.lineNumber,
         body: comment.body,
       })),
-      ...(uiComments.data ?? []).map((comment) => ({
-        id: comment.id,
-        file: comment.elementLabel,
-        line: null,
-        body: visualCommentSummary(comment),
-      })),
-    ],
-    [visibleComments, uiComments.data]
+    [visibleComments]
   );
 
   const assignReview = async (dest: AssignTarget) => {
-    const onUi = uiComments.data ?? [];
-    const count = visibleComments.length + onUi.length;
+    const count = visibleComments.length;
     if (count === 0) return;
     const plural = count === 1 ? "" : "s";
     try {
@@ -470,18 +476,17 @@ export function CodeWorkspace() {
         target: dest,
         catalog: chatModels.data,
         place: assignPlace,
-        title: buildHandoffTitle(visibleComments.length, onUi.length),
-        prompt: buildHandoffPrompt(visibleComments, onUi),
+        title: buildReviewAssignmentTitle(visibleComments),
+        prompt: buildReviewAssignmentPrompt(visibleComments),
       });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones instead of leaving them lingering in the diff.
       // No pull request is passed, which is how the GitHub ones are spared —
       // they belong to the pull request rather than to this hand-off.
-      await Promise.all([
-        ...visibleComments.map((comment) => comments.remove(null, comment)),
-        ...onUi.map((comment) => visualComments.remove(comment.id)),
-      ]);
+      await Promise.all(
+        visibleComments.map((comment) => comments.remove(null, comment))
+      );
       toast.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
@@ -554,31 +559,16 @@ export function CodeWorkspace() {
   const closeFile = () => {
     whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
   };
-
   /**
-   * A file the tree has just made, opened with the caret in it.
-   *
-   * Naming a new file is the start of writing it, so the keyboard has to end
-   * up in the empty buffer rather than back on the row that made it — the
-   * counter re-asks for the caret each time, since the same path can be made,
-   * deleted and made again.
+   * A file picked out of a diff's header: opened on the browse page the way
+   * a click in its tree opens one, rather than laid over the diff — the
+   * header asks for the file itself, not one more look at the change.
    */
-  const [caretRequest, setCaretRequest] = useState<{
-    readonly path: string;
-    readonly key: number;
-  } | null>(null);
-  const openNewFile = (path: string) => {
-    openFile(path);
-    setCaretRequest((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
+  const openInBrowse = (path: string) => {
+    whenMayLeaveFile(path, () =>
+      navigate({ to: "/modes/code/browse", search: { file: path } })
+    );
   };
-
-  const fileActions = useFileActions(openNewFile);
-  // A folder created here holds nothing for git to list, so the tree is told
-  // about it separately until it does.
-  const sidebarPaths = useMemo(
-    () => fileActions.withPendingFolders(treePaths),
-    [fileActions, treePaths]
-  );
 
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
@@ -604,9 +594,9 @@ export function CodeWorkspace() {
    * comment is deliberate, and the line revealed outright so following the same
    * comment twice scrolls both times.
    *
-   * It stays in the mode it was left in, unlike the analysis pane's jump — a
-   * comment belongs to the changes on screen, so pulling the window out to the
-   * browser would leave the review the comment came from.
+   * It stays in the mode it was left in — a comment belongs to the changes on
+   * screen, so pulling the window out to the browser would leave the review
+   * the comment came from.
    */
   const openComment = (id: string) => {
     const comment = visibleComments.find((c) => c.id === id);
@@ -622,20 +612,27 @@ export function CodeWorkspace() {
   };
 
   /**
-   * Take one comment off the review from the bar's list. The list mixes the two
-   * kinds, so the id decides which store answers for it: a note on the diff goes
-   * back through the comments store (GitHub's own, when that is where it lives),
-   * a note on the running app through the visual-comment store.
+   * Take one comment off the review from the bar's list, through the comments
+   * store (GitHub's own, when that is where it lives).
    */
   const deleteListedComment = async (id: string) => {
     const onDiff = visibleComments.find((c) => c.id === id);
-    if (onDiff !== undefined) {
-      await deleteComment(onDiff);
-      return;
-    }
-    if ((uiComments.data ?? []).some((c) => c.id === id))
-      await visualComments.remove(id);
+    if (onDiff !== undefined) await deleteComment(onDiff);
   };
+
+  // Inside the macOS shell the bar is the window's own, floated natively over
+  // this island from the same comments — see `review-assign-bar.shell`.
+  useShellReview(
+    shellDrawsAssignBar
+      ? {
+          comments: handoffComments,
+          branch: assignPlace.branch,
+          onAssign: assignReview,
+          onOpenComment: openComment,
+          onDeleteComment: deleteListedComment,
+        }
+      : null
+  );
 
   // A `line` in the URL is how another surface points at code — the comments
   // page linking a comment back to the line it was left on.
@@ -664,8 +661,13 @@ export function CodeWorkspace() {
   }, [revealRequest, search.file]);
 
   // Show one file's past: the log filters down to it (following renames) and
-  // the dock swings open on History.
+  // the dock swings open on History — the shell's own History, when this is
+  // an island, since the drawer under it holds no history there.
   const showFileHistory = (path: string) => {
+    if (island !== undefined) {
+      void shell.post({ type: "history", path });
+      return;
+    }
     setHistoryQuery(fileHistoryQuery(path));
     openBottomTab("history");
   };
@@ -708,70 +710,92 @@ export function CodeWorkspace() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
-  /**
-   * Drop the view state that belongs to the root being left behind: the URL is
-   * repo-relative (the open file, the commit, the pull request) and so is the
-   * branch the history follows, and the root arriving has never heard of any
-   * of it. Called before the switch so nothing refetches against the old ref.
-   */
-  const leaveRepo = useCallback(() => {
-    resetHistoryFilters();
-    // Browse, not commit: moving between a project's roots is navigation, and
-    // it lands you in the arriving root's tree rather than in a review of
-    // whatever happens to be uncommitted there.
-    void navigate({ to: "/modes/code/browse", search: {} });
-  }, [navigate]);
-  // The safety net for a move this shell did not start — the command palette,
-  // say. Only a move between roots of the same project resets: the first
-  // resolve on load has nothing to leave, and opening a whole project is the
-  // picker's move to land wherever it means to.
-  const openProject = workspace.data?.project ?? null;
-  const previous = useRef({ root: repoRoot, project: openProject });
-  useEffect(() => {
-    const was = previous.current;
-    if (was.root === repoRoot) return;
-    previous.current = { root: repoRoot, project: openProject };
-    const movedWithinProject =
-      was.root !== null && repoRoot !== null && was.project === openProject;
-    if (movedWithinProject) leaveRepo();
-  }, [repoRoot, openProject, leaveRepo]);
+  // Which repository is open is being re-asked, so the answer on hand is not
+  // to be acted on: it may still be the one being left. Until it lands, the
+  // strip in the store is the departing repository's, and restoring from it
+  // would put that repository's file on screen inside this one.
+  const repoInDoubt = repo.isFetching;
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
-  const canRestore = mode === "browse" && target === null && !noRepo;
-  // Re-syncs when the repository resolves as well as when the file changes:
-  // pointing the store at a repository swaps in that repository's strip, which
-  // would otherwise drop the file already on screen.
+  const canRestore = mode === "browse" && target === null;
+  /** The repository the strip was last settled against. */
+  const settledFor = useRef<string | null>(null);
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
-    if (!tabbed) return;
-    if (viewing === null && canRestore) {
-      const restored = tabToRestore(readTabs());
-      // Replaces rather than pushes, so Back leaves the strip behind instead of
-      // returning to a URL that reopens the same file.
-      if (restored !== null) {
-        void navigate({
-          to: ".",
-          search: (prev: Search) => ({ ...prev, file: restored }),
-          replace: true,
-        });
-        return;
-      }
+    if (!tabbed || !pageSettled || repoInDoubt) return;
+    const switched =
+      settledFor.current !== null && settledFor.current !== repoRoot;
+    settledFor.current = repoRoot;
+    const { open, tabs: settled } = reconcileTabs(readTabs(), {
+      viewing,
+      switched,
+      canRestore,
+    });
+    updateTabs(() => settled);
+    // Replaces rather than pushes, so Back leaves the strip behind instead of
+    // returning to a URL that reopens the same file. Done off the repository
+    // alone rather than waiting on its file list: the viewer is already asking
+    // for whatever the URL names, and a file the last repository had open is a
+    // request this one can only answer with an error.
+    if (open !== viewing) {
+      void navigate({
+        to: ".",
+        search: (prev: Search) => ({ ...prev, file: open ?? undefined }),
+        replace: true,
+      });
     }
-    updateTabs((state) => syncActive(state, viewing));
-  }, [repoRoot, viewing, canRestore, tabbed, navigate]);
-  // A strip restored from a previous session can name files that have since
-  // been deleted or renamed.
+  }, [
+    repoRoot,
+    repoInDoubt,
+    viewing,
+    canRestore,
+    tabbed,
+    pageSettled,
+    navigate,
+  ]);
+  /**
+   * A strip restored from a previous session can name files that have since
+   * been deleted or renamed, so it is pruned to what the repository holds —
+   * but only against the listing that names this repository.
+   *
+   * What repository is open and what it holds are two separate readings, and a
+   * project switch replaces them a moment apart, so in between one of them
+   * still answers for the project just left. Pruned against the wrong one, a
+   * strip is not merely stale: every tab in it names a file that listing has
+   * never heard of, and the whole strip goes. So the listing names the
+   * repository it lists (see `FilesPayload`), and the pruning waits for the
+   * two to agree. The file on screen is spared whatever the listing says — it
+   * is open, so it is there, and an ignored file reached from the tree is in
+   * no listing at all.
+   */
   useEffect(() => {
-    if (allPaths.length === 0) return;
-    const known = new Set(allPaths);
-    updateTabs((state) => pruneTabs(state, (path) => known.has(path)));
-  }, [allPaths]);
+    if (listing === undefined || listing.root !== repoRoot) return;
+    const known = new Set(listing.paths);
+    updateTabs((state) =>
+      pruneTabs(state, (path) => known.has(path) || path === state.active)
+    );
+  }, [listing, repoRoot]);
 
   const selectTab = (path: string) => {
     whenMayLeaveFile(path, () => setSearch({ file: path }));
   };
+
+  // Every file in the strip, read and highlighted while the window has nothing
+  // else to do. A tab is already open as far as you are concerned — clicking it
+  // should show the file, not start rendering it — and waiting for the pointer
+  // to reach the tab is too late for a click that follows straight after.
+  const prerenderFile = usePrerenderFile();
+  const openTabs = tabs.tabs;
+  useEffect(() => {
+    if (openTabs.length === 0) return;
+    const warm = () => {
+      for (const tab of openTabs) prerenderFile(tab.path);
+    };
+    const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
+    return () => window.cancelIdleCallback(idle);
+  }, [openTabs, prerenderFile]);
   const closeTabAt = (path: string) => {
     // Closing another tab leaves the edited file where it is; only closing the
     // one holding the buffer throws it away.
@@ -808,15 +832,6 @@ export function CodeWorkspace() {
   );
 
   const buildCrumbs = (): ReadonlyArray<Crumb> => {
-    if (noRepo) {
-      return [
-        {
-          id: "project",
-          label: pathName(workspace.data?.project ?? ""),
-          icon: IconFolder,
-        },
-      ];
-    }
     const openPath = viewing;
     const list: Crumb[] = [];
     if (mode === "commit" || mode === "review") {
@@ -843,7 +858,14 @@ export function CodeWorkspace() {
         label: "History",
         icon: IconHistory,
       });
-      const historyRef = logRef ?? repo.data?.currentBranch ?? null;
+      // The ref is read off the page's own history dock. An island has none —
+      // its log is the shell's, native beside it — so that crumb would name a
+      // ref nothing on screen is on. The filtered file came in the URL, so it
+      // names what the diff shows on either surface.
+      const historyRef =
+        island === undefined
+          ? (logRef ?? repo.data?.currentBranch ?? null)
+          : null;
       if (browse.kind === "commit") {
         if (historyRef !== null) {
           list.push({
@@ -854,12 +876,12 @@ export function CodeWorkspace() {
         }
         // The filtered file names what the diff below shows — unless a file is
         // open in the viewer, which ends the trail with a path of its own.
-        if (logFilters.path !== null && openPath === null) {
+        if (historyPath !== null && openPath === null) {
           list.push({
             id: "history-path",
-            label: pathName(logFilters.path),
+            label: pathName(historyPath),
             icon: (props: { className?: string }) => (
-              <FileTypeIcon path={logFilters.path ?? ""} {...props} />
+              <FileTypeIcon path={historyPath} {...props} />
             ),
           });
         }
@@ -889,35 +911,6 @@ export function CodeWorkspace() {
   };
 
   // --- handlers --------------------------------------------------------------
-  const deletePaths = async (items: ReadonlyArray<TreeItem>) => {
-    const only = items.length === 1 ? items[0] : null;
-    const what =
-      only === null
-        ? `${items.length} items`
-        : `this ${only.kind === "directory" ? "folder" : "file"}`;
-    const ok = await confirm({
-      title: `Delete ${what}?`,
-      subject: only?.path,
-      description:
-        "Deleted files go to the project's trash, so ⌘Z can put them back.",
-      confirmLabel: "Delete",
-      destructive: true,
-    });
-    if (!ok) return;
-    await fileActions.trash(items);
-    for (const item of items) {
-      if (search.file === withoutTrailingSlash(item.path)) closeFile();
-    }
-    git.refresh();
-  };
-  const renamePath = async (from: string, to: string) => {
-    const { error } = await fetchClient.POST("/api/file/rename", {
-      body: { from, to },
-    });
-    if (error) throw new Error("rename failed");
-    git.refresh();
-  };
-
   /**
    * Send a comment and close the composer behind it.
    *
@@ -979,7 +972,7 @@ export function CodeWorkspace() {
     () => [
       {
         id: "view-diff-style",
-        label: "Toggle Diff Style",
+        label: "Toggle diff style",
         group: "View",
         icon: IconColumns2,
         keywords: "split unified side by side inline",
@@ -991,7 +984,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-bottom-panel",
-        label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
+        label: prefs.bottomVisible ? "Hide bottom panel" : "Show bottom panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
         keywords: "history services sessions terminal toggle",
@@ -999,7 +992,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-services",
-        label: "Open Services",
+        label: "Open services",
         group: "View",
         icon: IconPlayerPlay,
         keywords: "local dev commands run configurations",
@@ -1007,7 +1000,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-threads",
-        label: "Open Terminal Sessions",
+        label: "Open terminal sessions",
         group: "View",
         icon: IconTerminal2,
         keywords: "terminal shell session cli",
@@ -1017,41 +1010,19 @@ export function CodeWorkspace() {
     [prefs.diffStyle, prefs.bottomVisible]
   );
   useRegisterCommands("code-shell", shellCommands);
-  useRepoCommands(workspace.data, leaveRepo);
-
-  /** Follow another of the open project's roots, staying where we are. */
-  const chooseRepo = async (path: string) => {
-    leaveRepo();
-    await workspaceActions.openRepo(path);
-  };
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
-    if (noRepo) {
-      return (
-        <ProjectRepos
-          project={workspace.data!.project!}
-          repos={workspace.data!.repos}
-          onOpen={(path) => void chooseRepo(path)}
-        />
-      );
-    }
     if (viewing !== null && isImagePath(viewing)) {
       return <ImageView path={viewing} theme={prefs.resolvedTheme} />;
     }
     if (viewing !== null) {
-      // A markdown file is the one filetype with more than one honest reading,
-      // so it gets the view switch and the document editor wrapped around the
-      // same code view every other file gets on its own.
-      const Viewer = isMarkdownPath(viewing) ? MarkdownFileView : CodeView;
       return (
-        <Viewer
+        <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          caretKey={caretRequest?.path === viewing ? caretRequest.key : null}
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
-          actionsSlot={fileActionsSlot}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -1064,18 +1035,19 @@ export function CodeWorkspace() {
         />
       );
     }
+    const conflicted = search.path;
     if (
       mode === "commit" &&
-      search.path != null &&
-      conflictedPaths.includes(search.path)
+      conflicted != null &&
+      conflictedPaths.includes(conflicted)
     ) {
       return (
         <ConflictView
-          path={search.path}
+          path={conflicted}
           theme={prefs.resolvedTheme}
-          onUseSide={(side) => void resolveConflictSide(search.path!, side)}
+          onUseSide={(side) => void resolveConflictSide(conflicted, side)}
           onResolve={(merged) =>
-            void resolveConflictContent(search.path!, merged)
+            void resolveConflictContent(conflicted, merged)
           }
           onEdit={openFile}
           onClose={() => setSearch({ path: undefined })}
@@ -1104,7 +1076,7 @@ export function CodeWorkspace() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={openFile}
+        onEditFile={openInBrowse}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           // Discarding restores a file from HEAD, and a hunk is found by its
@@ -1132,48 +1104,85 @@ export function CodeWorkspace() {
    * The tree of changed files. Review mode puts it in the middle column, under
    * the pull request's metadata; the other modes have it as the whole sidebar.
    */
+  const treeSource = {
+    mode,
+    paths: treePaths,
+    gitStatus: treeGitStatus,
+    loading: mode === "review" ? diff.isPending : files.isPending,
+    selectedFile: mode === "browse" ? viewing : (search.path ?? null),
+    onFileSelect,
+    onFileIntent: prerenderFile,
+    onShowHistory: showFileHistory,
+    // A working-tree action, offered while the working tree is what is being
+    // read: against a branch, the tree's badges are the comparison's and a
+    // discard would answer for HEAD instead — see the pane's own discard
+    // above.
+    onDiscardPaths:
+      target?.kind === "worktree"
+        ? (paths: ReadonlyArray<string>) => void git.discard(paths)
+        : undefined,
+    projectPath: workspace.data?.project ?? null,
+  };
+  const commitSource =
+    mode === "commit" && changedFiles.length > 0
+      ? {
+          changes: changedFiles,
+          draft: commitDraft.data,
+          onCommit: (m: string, p: ReadonlyArray<string>, push: boolean) =>
+            git.commitChanges(m, p, push),
+          onGenerate: (p: ReadonlyArray<string>, agent: CommitAgent) =>
+            git.startCommitMessage(p, agent),
+          onDraftSettled: (settled: CommitDraft) => {
+            if (settled.status === "error" && settled.error !== null)
+              toast.error(settled.error);
+            void git.clearCommitDraft();
+          },
+        }
+      : undefined;
   const fileTree = (
     <FileSidebar
       key={mode}
-      mode={mode}
-      paths={sidebarPaths}
-      gitStatus={treeGitStatus}
-      loading={mode === "review" ? diff.isPending : files.isPending}
-      selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
-      onFileSelect={onFileSelect}
-      onDeletePaths={mode === "review" ? undefined : deletePaths}
-      onRenamePath={mode === "review" ? undefined : renamePath}
-      actions={mode === "review" ? undefined : fileActions}
-      onError={(message) => toast.error(message)}
-      onShowHistory={showFileHistory}
-      onDiscardPaths={
-        // A working-tree action, offered while the working tree is what is
-        // being read: against a branch, the tree's badges are the comparison's
-        // and a discard would answer for HEAD instead — see the pane's own
-        // discard above.
-        target?.kind === "worktree"
-          ? (paths) => void git.discard(paths)
-          : undefined
-      }
-      projectPath={workspace.data?.project ?? null}
+      {...treeSource}
       footer={
-        mode === "commit" && changedFiles.length > 0 ? (
+        commitSource === undefined ? undefined : (
           <CommitPanel
-            changes={changedFiles}
+            changes={commitSource.changes}
             busy={false}
             project={workspace.data?.project ?? ""}
-            onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-            onGenerate={(p, agent) => git.startCommitMessage(p, agent)}
-            draft={commitDraft.data}
-            onDraftSettled={(settled) => {
-              if (settled.status === "error" && settled.error !== null)
-                toast.error(settled.error);
-              void git.clearCommitDraft();
-            }}
+            onCommit={commitSource.onCommit}
+            onGenerate={commitSource.onGenerate}
+            draft={commitSource.draft}
+            onDraftSettled={commitSource.onDraftSettled}
           />
-        ) : undefined
+        )
       }
     />
+  );
+  // Inside the macOS shell the tree is the window's own, a native sidebar
+  // beside this island drawn from the same source — see `file-sidebar.shell`.
+  useShellTree(
+    shellDrawsTree
+      ? {
+          ...treeSource,
+          // The header's compare picker is the shell's to draw too — it stands
+          // in the shell's sidebar, over the changed files — and it reads the
+          // same answer, resolved here once for the diff and the picker both.
+          comparison:
+            mode === "commit"
+              ? { against: comparisonTarget(comparison), aim }
+              : undefined,
+          commit:
+            commitSource === undefined
+              ? undefined
+              : {
+                  ...commitSource,
+                  onDraftSettled: () => {
+                    if (commitDraft.data !== undefined)
+                      commitSource.onDraftSettled(commitDraft.data);
+                  },
+                },
+        }
+      : null
   );
 
   /**
@@ -1183,16 +1192,29 @@ export function CodeWorkspace() {
    */
   const reviewing = mode === "review" && selectedPull !== null;
   const firstColumn = reviewing ? reviewInfo : sidebar;
+  /**
+   * Inside the macOS shell a pull request's overview and its files are the
+   * window's own — a native column beside the sidebar's list of pull requests
+   * (see `PullRequestColumn` there) — so the island shows only the diff.
+   */
+  const reviewingInPage = reviewing && island === undefined;
 
   /**
    * The header is cut to these columns, so every seam beside them runs from the
    * window bar down without a band of header lying across it. Nothing to cut to
    * while the columns are away, or on the list below, which has none.
    */
+  /**
+   * The first column — the tree, or a pull request's overview. Inside the
+   * macOS shell both are the window's own, native beside this island, so the
+   * column stays away there.
+   */
+  const firstColumnShown = prefs.sidebarVisible && island === undefined;
+
   useHeaderLead(
-    !prefs.sidebarVisible || (mode === "review" && selectedPull === null)
+    !firstColumnShown || (mode === "review" && selectedPull === null)
       ? []
-      : reviewing
+      : reviewingInPage
         ? prefs.reviewTreeVisible
           ? ["var(--panel-review-info-w)", "var(--panel-review-tree-w)"]
           : ["var(--panel-review-info-w)"]
@@ -1200,37 +1222,54 @@ export function CodeWorkspace() {
   );
 
   const crumbs = buildCrumbs();
-  /**
-   * Whether the page wears a trail — it does once it says more than which mode
-   * you are in. Read this high because it is the page's own foot rather than
-   * the centre pane's: the columns end on it, and the seams between them stop
-   * where it starts.
-   */
-  const trailed =
-    (crumbs.length > 1 || viewing !== null) &&
-    // Review mode before a pull request is picked is the list and nothing else
-    // — see the early return below.
-    !(mode === "review" && selectedPull === null);
-  /**
-   * And whether the drawer is open under it. The dock is the page's sibling
-   * with a run of frame between them, and that run belongs *above* the trail:
-   * the bar is the page's last line and the drawer opens against it, so the two
-   * read as one stack and the gap you pull to size the drawer is over the bar
-   * rather than through it. The dock is told the same thing from the other side
-   * — see `page-trail`.
-   */
-  const onDock =
-    trailed && prefs.bottomVisible && workspace.data?.current != null;
-  usePublishPageTrail(trailed);
-  // Where the column seams stop: the trail's band, and the seam over it once
-  // the drawer has pushed one in.
-  const seamFoot = !trailed
-    ? 0
-    : onDock
-      ? "calc(var(--trail-band) + var(--frame-seam))"
-      : "var(--trail-band)";
   const headerTabsSlot = useHeaderTabsSlot();
   const seamSlot = useSeamSlot();
+  // The band the strip lands in folds away while there is nothing in it, and
+  // is told so here rather than reading it off the DOM — see `header-tabs`.
+  // A layout effect, so the band unfolds in the same frame the strip goes in.
+  const stripShown = tabbed && tabs.tabs.length > 0;
+  useLayoutEffect(() => {
+    setHeaderTabsFilled(stripShown);
+    return () => setHeaderTabsFilled(false);
+  }, [stripShown]);
+
+  /** The strip, portalled into the header band over this pane. */
+  const stripProps: TabStripProps | null = tabbed
+    ? {
+        tabs: tabs.tabs,
+        active: tabs.active,
+        dirty: dirtyPaths,
+        onSelect: selectTab,
+        onIntent: prerenderFile,
+        onKeep: (path) => updateTabs((state) => keepTab(state, path)),
+        onClose: closeTabAt,
+        onTogglePin: (path) => updateTabs((state) => togglePin(state, path)),
+        onCloseOthers: (path) => {
+          whenMayLeaveFile(path, () =>
+            updateTabs((state) => {
+              const next = closeOthers(state, path);
+              setSearch({ file: next.active ?? undefined });
+              return next;
+            })
+          );
+        },
+        onCloseAll: () => {
+          whenMayLeaveFile(undefined, () =>
+            updateTabs((state) => {
+              const next = closeAll(state);
+              setSearch({ file: next.active ?? undefined });
+              return next;
+            })
+          );
+        },
+        onMove: (path, toIndex) =>
+          updateTabs((state) => moveTab(state, path, toIndex)),
+        // A file's past is asked for from the tab naming it, which is the one
+        // thing that goes on naming it once the trail under the pane is the
+        // window's own — see the path bar at the foot of this file.
+        onShowHistory: showFileHistory,
+      }
+    : null;
 
   /**
    * Review mode before a pull request is picked: the list, and nothing else.
@@ -1272,234 +1311,180 @@ export function CodeWorkspace() {
     );
   }
 
-  const columnSheet = cn(
-    "app-sheet flex flex-col overflow-hidden",
-    // The columns end on the trail, so their feet go square and the bar under
-    // them reads as the foot of the same page — until the drawer opens and the
-    // seam moves up between them, when they turn their own corners again.
-    trailed && !onDock && "app-sheet-joined-below"
-  );
+  const columnSheet = "app-sheet flex flex-col overflow-hidden";
 
   return (
-    /* The page is its columns with the trail along the foot of all of them.
-       The trail used to be the last row inside the centre pane, which left its
-       rule starting where that pane did — the tree beside it running on past
-       the bottom of the window, and the line reading as an edge of the diff
-       rather than as the foot of the page. It is a sheet of its own now, the
-       width of the page, with the tree, the pane and the seam between them
-       ending on it. */
-    <div
-      className={cn(
-        "app-split flex min-h-0 flex-1 flex-col",
-        onDock && "gap-1.5"
-      )}
-    >
-      <div className="app-columns flex min-h-0 flex-1 gap-1.5">
-        {/* A pull request under review is three columns: what it is, what files
-          it touches, and the diff. The other modes are the tree beside the
-          diff, as they were.
+    <div className="app-split flex min-h-0 flex-1 gap-1.5">
+      {/* A pull request under review is three columns: what it is, what files
+        it touches, and the diff. The other modes are the tree beside the
+        diff, as they were.
 
-          Each is its own sheet on the frame, so what separates them is the
-          window showing through rather than a rule — see `app-sheet`.
+        Each is its own sheet on the frame, so what separates them is the
+        window showing through rather than a rule — see `app-sheet`.
 
-          Both auxiliary columns answer to the same "hide sidebar" toggle. Two
-          of the three going away is what makes it a way to look at the code
-          alone; hiding one of them and leaving the other is neither thing. */}
-        <div
-          className={cn(
-            columnSheet,
-            "shrink-0",
-            !prefs.sidebarVisible && "hidden"
-          )}
-          style={firstColumn.style}
-        >
-          {reviewing ? (
-            <PullRequestOverview
-              pull={selectedPull}
-              currentBranch={repo.data?.currentBranch ?? null}
-              onCheckout={async (p, branch) => {
-                await git.checkoutPull(p.number, branch);
-              }}
-              onMerge={(p, method) => git.mergePull(p.number, method)}
-              onClose={(p) => git.closePull(p.number)}
-              onBack={() => void navigate({ to: "/modes/code/review" })}
-              treeVisible={prefs.reviewTreeVisible}
-              onToggleTree={() =>
-                setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
-              }
-              className="min-h-0 flex-1"
-            />
-          ) : (
-            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
-          )}
-        </div>
-        {/* The seams are drawn over the header as well as over the page, so
-            they are hung in the box spanning both rather than laid out between
-            the columns here — the flex gap alone is already the run of frame
-            they lie on. They stop where the trail starts: the columns end on
-            it, so past that there is no seam left to pull. See `seam-slot`. */}
-        {prefs.sidebarVisible &&
-          seamSlot !== null &&
-          createPortal(
-            <SidebarResizeHandle
-              width={firstColumn.current}
-              stored={reviewing ? prefs.reviewInfoWidth : prefs.sidebarWidth}
-              // Review mode has a third column between this one and the diff, so
-              // the room this may take is what is left after that one has had its.
-              max={() =>
-                Math.max(
-                  240,
-                  window.innerWidth -
-                    400 -
-                    (reviewing && prefs.reviewTreeVisible
-                      ? reviewTree.current()
-                      : 0)
-                )
-              }
-              onResize={firstColumn.onResize}
-              onResizeEnd={(w) =>
-                setUiPrefs(
-                  reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w }
-                )
-              }
-              className="resize-handle-crossing"
-              style={{
-                left: seamAfter(
-                  reviewing
-                    ? "var(--panel-review-info-w)"
-                    : "var(--panel-sidebar-w)"
-                ),
-                bottom: seamFoot,
-              }}
-            />,
-            seamSlot
-          )}
-        {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
-          <>
-            <div
-              className={cn(columnSheet, "shrink-0")}
-              style={reviewTree.style}
-            >
-              <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
-            </div>
-            {seamSlot !== null &&
-              createPortal(
-                <ResizeHandle
-                  orientation="col"
-                  value={reviewTree.current}
-                  min={180}
-                  max={() => Math.max(240, window.innerWidth - 520)}
-                  onResize={reviewTree.onResize}
-                  onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
-                  label="Resize file tree"
-                  className="resize-handle-crossing"
-                  style={{
-                    left: seamAfter(
-                      "var(--panel-review-info-w)",
-                      "var(--panel-review-tree-w)"
-                    ),
-                    bottom: seamFoot,
-                  }}
-                />,
-                seamSlot
-              )}
-          </>
+        Both auxiliary columns answer to the same "hide sidebar" toggle. Two
+        of the three going away is what makes it a way to look at the code
+        alone; hiding one of them and leaving the other is neither thing. */}
+      <div
+        className={cn(columnSheet, "shrink-0", !firstColumnShown && "hidden")}
+        style={firstColumn.style}
+      >
+        {reviewingInPage ? (
+          <PullRequestOverview
+            pull={selectedPull}
+            currentBranch={repo.data?.currentBranch ?? null}
+            onCheckout={async (p, branch) => {
+              await git.checkoutPull(p.number, branch);
+            }}
+            onMerge={(p, method) => git.mergePull(p.number, method)}
+            onClose={(p) => git.closePull(p.number)}
+            onBack={() => void navigate({ to: "/modes/code/review" })}
+            treeVisible={prefs.reviewTreeVisible}
+            onToggleTree={() =>
+              setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
+            }
+            className="min-h-0 flex-1"
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
         )}
-        {/* The diff fills this pane from its very first pixel and paints its own
-            tone there, so the rule under the header is drawn over it rather than
-            behind it — see `app-sheet-ruled`. */}
-        <main className={cn(columnSheet, "app-sheet-ruled min-w-0 flex-1")}>
-          {mode === "commit" &&
-            mergeState.data != null &&
-            mergeState.data.operation !== "none" && (
-              <ConflictBanner
-                state={mergeState.data}
-                selectedPath={search.path ?? null}
-                onSelectFile={openConflict}
-                onAbort={() => void git.abortMerge()}
-                onContinue={() => void git.continueMerge()}
+      </div>
+      {/* The seams are drawn over the header as well as over the page, so
+          they are hung in the box spanning both rather than laid out between
+          the columns here — the flex gap alone is already the run of frame
+          they lie on. They stop where the trail starts: the columns end on
+          it, so past that there is no seam left to pull. See `seam-slot`. */}
+      {firstColumnShown &&
+        seamSlot !== null &&
+        createPortal(
+          <SidebarResizeHandle
+            width={firstColumn.current}
+            stored={reviewing ? prefs.reviewInfoWidth : prefs.sidebarWidth}
+            // Review mode has a third column between this one and the diff, so
+            // the room this may take is what is left after that one has had its.
+            max={() =>
+              Math.max(
+                240,
+                window.innerWidth -
+                  400 -
+                  (reviewing && prefs.reviewTreeVisible
+                    ? reviewTree.current()
+                    : 0)
+              )
+            }
+            onResize={firstColumn.onResize}
+            onResizeEnd={(w) =>
+              setUiPrefs(
+                reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w }
+              )
+            }
+            className="resize-handle-crossing"
+            style={{
+              left: seamAfter(
+                reviewing
+                  ? "var(--panel-review-info-w)"
+                  : "var(--panel-sidebar-w)"
+              ),
+            }}
+          />,
+          seamSlot
+        )}
+      {reviewingInPage && prefs.sidebarVisible && prefs.reviewTreeVisible && (
+        <>
+          <div className={cn(columnSheet, "shrink-0")} style={reviewTree.style}>
+            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
+          </div>
+          {seamSlot !== null &&
+            createPortal(
+              <ResizeHandle
+                orientation="col"
+                value={reviewTree.current}
+                min={180}
+                max={() => Math.max(240, window.innerWidth - 520)}
+                onResize={reviewTree.onResize}
+                onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
+                label="Resize file tree"
+                className="resize-handle-crossing"
+                style={{
+                  left: seamAfter(
+                    "var(--panel-review-info-w)",
+                    "var(--panel-review-tree-w)"
+                  ),
+                }}
+              />,
+              seamSlot
+            )}
+        </>
+      )}
+      {/* The diff fills this pane from its very first pixel and paints its own
+          tone there, so the rule under the header is drawn over it rather than
+          behind it — see `app-sheet-ruled`. */}
+      <main className={cn(columnSheet, "app-sheet-ruled min-w-0 flex-1")}>
+        {mode === "commit" &&
+          mergeState.data != null &&
+          mergeState.data.operation !== "none" && (
+            <ConflictBanner
+              state={mergeState.data}
+              selectedPath={search.path ?? null}
+              onSelectFile={openConflict}
+              onAbort={() => void git.abortMerge()}
+              onContinue={() => void git.continueMerge()}
+            />
+          )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* The strip is drawn into the header band over this pane rather than
+            inside it — see `header-tabs`. It is rendered from here because
+            the tabs are this page's state; only the row it lands on is the
+            layout's. */}
+          {stripProps !== null &&
+            headerTabsSlot !== null &&
+            createPortal(<TabStrip {...stripProps} />, headerTabsSlot)}
+          {/* The assign bar floats at the foot of the whole window, centred
+            on it rather than on this pane: with the browser open beside the
+            code, a bar centred on the code alone sits off to one side. */}
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {renderCenter()}
+            {handoffComments.length > 0 && !shellDrawsAssignBar && (
+              <ReviewAssignBar
+                comments={handoffComments}
+                chats={chats.data?.items ?? []}
+                catalog={chatModels.data}
+                branch={assignPlace.branch}
+                onAssign={assignReview}
+                onOpenComment={openComment}
+                onDeleteComment={deleteListedComment}
               />
             )}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {/* The strip is drawn into the header band over this pane rather than
-              inside it — see `header-tabs`. It is rendered from here because
-              the tabs are this page's state; only the row it lands on is the
-              layout's. */}
-            {tabbed &&
-              headerTabsSlot !== null &&
-              createPortal(
-                <TabStrip
-                  tabs={tabs.tabs}
-                  active={tabs.active}
-                  dirty={dirtyPaths}
-                  onSelect={selectTab}
-                  onKeep={(path) => updateTabs((state) => keepTab(state, path))}
-                  onClose={closeTabAt}
-                  onTogglePin={(path) =>
-                    updateTabs((state) => togglePin(state, path))
-                  }
-                  onCloseOthers={(path) => {
-                    whenMayLeaveFile(path, () =>
-                      updateTabs((state) => {
-                        const next = closeOthers(state, path);
-                        setSearch({ file: next.active ?? undefined });
-                        return next;
-                      })
-                    );
-                  }}
-                  onCloseAll={() => {
-                    whenMayLeaveFile(undefined, () =>
-                      updateTabs((state) => {
-                        const next = closeAll(state);
-                        setSearch({ file: next.active ?? undefined });
-                        return next;
-                      })
-                    );
-                  }}
-                  onMove={(path, toIndex) =>
-                    updateTabs((state) => moveTab(state, path, toIndex))
-                  }
-                />,
-                headerTabsSlot
-              )}
-            {/* The assign bar floats at the foot of the whole window, centred
-              on it rather than on this pane: with the browser open beside the
-              code, a bar centred on the code alone sits off to one side. */}
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              {renderCenter()}
-              {handoffComments.length > 0 && (
-                <ReviewAssignBar
-                  comments={handoffComments}
-                  chats={chats.data?.items ?? []}
-                  catalog={chatModels.data}
-                  branch={assignPlace.branch}
-                  onAssign={assignReview}
-                  onOpenComment={openComment}
-                  onDeleteComment={deleteListedComment}
-                />
-              )}
-            </div>
           </div>
-        </main>
-      </div>
-      {trailed && (
-        <PathBar
-          crumbs={crumbs}
-          path={viewing}
-          paths={allPaths}
-          onOpenFile={openFile}
-          onShowHistory={
-            viewing === null ? undefined : () => showFileHistory(viewing)
-          }
-          // Over a diff the trail is the only thing naming the open file, now
-          // that no strip does, so it is also what puts it down again.
-          onClose={!tabbed && viewing !== null ? closeFile : undefined}
-          onDock={onDock}
-          actions={
-            <div ref={setFileActionsSlot} className="flex items-center gap-1" />
-          }
-        />
-      )}
+        </div>
+        {/* The trail closes the pane, and only once it says more than which
+            mode you are in.
+
+            Inside the macOS shell the window says most of it already — the
+            mode is the window's own rail, the folders are its native tree, and
+            the open file is the tab above this pane — so over plain browsing
+            the trail was the window repeating itself along the foot of the
+            page, and what only it carried, a file's history, moved to the
+            tab's own menu (see `TabStrip`). A commit or a range out of the
+            shell's History is the exception: nothing native names the commit
+            the pane is on, and the Browse crumb is the way back out of it. */}
+        {(island === undefined
+          ? crumbs.length > 1 || viewing !== null
+          : browse !== null) && (
+          <PathBar
+            crumbs={crumbs}
+            path={viewing}
+            paths={allPaths}
+            onOpenFile={openFile}
+            onShowHistory={
+              viewing === null ? undefined : () => showFileHistory(viewing)
+            }
+            // Over a diff the trail is the only thing naming the open file, now
+            // that no strip does, so it is also what puts it down again.
+            onClose={!tabbed && viewing !== null ? closeFile : undefined}
+          />
+        )}
+      </main>
     </div>
   );
 }

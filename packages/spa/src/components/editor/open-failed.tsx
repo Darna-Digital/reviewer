@@ -7,9 +7,11 @@
  * unopenable until you clicked away and back. It says what went wrong and
  * offers to ask again, which is what anyone would want to do next.
  */
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconFileAlert } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { errorReason } from "@/lib/errors";
+import { cn } from "@/lib/utils";
 
 interface OpenFailedProps {
   path: string;
@@ -23,6 +25,17 @@ interface OpenFailedProps {
 
 const fileNameOf = (path: string) => path.split("/").at(-1) ?? path;
 
+/* The path stays on one line and scrolls sideways rather than wrapping: a deep
+   path broke into a ragged block that pulled the eye away from the sentence
+   above it, and a path is read segment by segment anyway. No scrollbar — it
+   would draw a second line under a line of text — so the edges fade to say
+   there is more, and only the edge that still has path behind it. */
+const PATH_LINE = cn(
+  "min-w-0 overflow-x-auto font-mono text-xs whitespace-nowrap",
+  "scrollbar-none",
+  "scroll-fade-when-scrollable scroll-fade-x [--scroll-fade-size:1rem]"
+);
+
 export function OpenFailed({
   path,
   error,
@@ -31,16 +44,21 @@ export function OpenFailed({
 }: OpenFailedProps) {
   const reason = errorReason(error, "The file could not be read.");
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <IconAlertTriangle
-        className="size-10 text-muted-foreground/30"
-        stroke={1.25}
-      />
-      <div className="flex flex-col gap-1">
-        <div className="text-sm font-medium">
+    <div className="flex h-full flex-col items-center justify-center gap-5 px-8 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <IconFileAlert className="size-6" stroke={1.5} />
+      </div>
+      <div className="flex max-w-md flex-col items-center gap-1.5">
+        <h2 className="font-heading text-base leading-snug font-medium tracking-tight text-balance">
           Could not open {fileNameOf(path)}
-        </div>
-        <p className="max-w-sm text-sm text-muted-foreground">{reason}</p>
+        </h2>
+        <p className="max-w-[44ch] text-sm/6 text-pretty text-muted-foreground">
+          {reason}
+        </p>
+        <span className="mt-1 flex max-w-full items-center gap-1.5 text-left text-muted-foreground/60">
+          <FileTypeIcon path={path} className="size-3.5 shrink-0" />
+          <code className={PATH_LINE}>{path}</code>
+        </span>
       </div>
       {onRetry !== undefined && (
         <Button

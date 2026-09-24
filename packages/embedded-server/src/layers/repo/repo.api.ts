@@ -19,6 +19,7 @@ import {
   ConflictBlobs,
   ContentMatches,
   FilesPayload,
+  GitIdentity,
   MergeState,
   RemoteBranchInfo,
   RepoInfo,
@@ -52,6 +53,12 @@ const targetError = [GitError, NoRepoSelected, NotFound, StorageError] as const;
 export class RepoApi extends HttpApiGroup.make("repo")
   .add(
     HttpApiEndpoint.get("info", "/repo", { success: RepoInfo, error: gitError })
+  )
+  .add(
+    HttpApiEndpoint.get("identity", "/identity", {
+      success: GitIdentity,
+      error: gitError,
+    })
   )
   .add(
     HttpApiEndpoint.get("files", "/files", {

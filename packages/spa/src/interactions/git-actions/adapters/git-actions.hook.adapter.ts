@@ -2,8 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { api, fetchClient } from "@/lib/api/client";
-import { useWorkspace } from "@/lib/queries";
-import { isMultiRepo } from "@reviewer/core/workspace";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import { createGitActionsFunctions } from "../functions/git-actions.functions";
@@ -39,11 +37,6 @@ const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
  */
 export function useGitActions() {
   const queryClient = useQueryClient();
-  // Committing spans the roots only when there is more than one to span; a
-  // single-root project keeps the plain commit, which says the same thing
-  // without a per-root breakdown.
-  const workspace = useWorkspace();
-  const acrossRoots = isMultiRepo({ repos: workspace.data?.repos ?? [] });
 
   const notify = useCallback(
     (kind: NoticeKind, text: string) =>
@@ -59,16 +52,6 @@ export function useGitActions() {
       createGitActionsFunctions({
         data: {},
         sideEffects: {
-          commitAcrossRepos: acrossRoots
-            ? async (message, paths) => {
-                const result = await unwrap(
-                  fetchClient.POST("/api/project/commit", {
-                    body: { message, paths: [...paths] },
-                  })
-                );
-                return result.results;
-              }
-            : null,
           commit: (message, paths) =>
             unwrap(
               fetchClient.POST("/api/commit", {
@@ -80,7 +63,7 @@ export function useGitActions() {
           refresh,
         },
       }),
-    [notify, refresh, acrossRoots]
+    [notify, refresh]
   );
 
   const post =
@@ -132,10 +115,6 @@ export function useGitActions() {
      * Discard the working-tree changes for the given paths, reverting them to HEAD
      * (modifications and deletions are restored; new files are removed). This is
      * irreversible — callers should confirm before invoking.
-     *
-     * Paths spanning several roots are named from the project, so they revert
-     * through the project's endpoint, which splits them back into the roots
-     * that own them — the same way committing them does.
      */
     discard: (paths: ReadonlyArray<string>) =>
       fns.runOp(
@@ -143,17 +122,9 @@ export function useGitActions() {
           ? `Discarded changes in ${paths[0]}`
           : `Discarded changes in ${paths.length} files`,
         () =>
-          acrossRoots
-            ? unwrap(
-                fetchClient.POST("/api/project/discard", {
-                  body: { paths: [...paths] },
-                })
-              )
-            : unwrap(
-                fetchClient.POST("/api/discard", {
-                  body: { paths: [...paths] },
-                })
-              )
+          unwrap(
+            fetchClient.POST("/api/discard", { body: { paths: [...paths] } })
+          )
       ),
 
     /**
@@ -163,17 +134,9 @@ export function useGitActions() {
      */
     discardHunk: (path: string, hunkIndex: number) =>
       fns.runOp(`Discarded a change in ${path}`, () =>
-        acrossRoots
-          ? unwrap(
-              fetchClient.POST("/api/project/discard-hunk", {
-                body: { path, hunkIndex },
-              })
-            )
-          : unwrap(
-              fetchClient.POST("/api/discard-hunk", {
-                body: { path, hunkIndex },
-              })
-            )
+        unwrap(
+          fetchClient.POST("/api/discard-hunk", { body: { path, hunkIndex } })
+        )
       ),
 
     checkout: (branch: string) =>

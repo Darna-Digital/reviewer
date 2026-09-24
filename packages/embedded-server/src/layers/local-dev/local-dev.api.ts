@@ -9,7 +9,6 @@ import {
   DevCommand,
   DevCommandView,
   DevCommandIdParam,
-  DevRepoScope,
   NewDevCommand,
   UpdateDevCommand,
 } from "@reviewer/core/local-dev";
@@ -69,14 +68,12 @@ export class LocalDevApi extends HttpApiGroup.make("localDev")
   )
   .add(
     HttpApiEndpoint.post("startAll", "/local-dev/start-all", {
-      payload: DevRepoScope,
       success: Schema.Array(DevCommandView),
       error: errors,
     })
   )
   .add(
     HttpApiEndpoint.post("stopAll", "/local-dev/stop-all", {
-      payload: DevRepoScope,
       success: Ok,
       error: errors,
     })
