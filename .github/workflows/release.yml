@@ -3,9 +3,10 @@ name: release
 # A push to `main` whose root package.json carries a version that has not been
 # released yet builds Reviewer.app, signs it with the Developer ID certificate,
 # notarizes and staples it, and publishes the disk image as GitHub release
-# vX.Y.Z of this repository. Bumping the version is the "ship it" signal: every
-# other push to `main` stops at the first, seconds-long job. Nothing else — no
-# other branch, no pull request — releases anything. See RELEASING.md.
+# vX.Y.Z of this repository. Bumping the version is the "ship it" signal: a
+# push that leaves package.json alone starts no run at all, and one that edits
+# it without a new version stops at the first, seconds-long job. Nothing else —
+# no other branch, no pull request — releases anything. See RELEASING.md.
 #
 # Secrets (GITHUB_TOKEN is built in — the release lives in this repository):
 #   APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD      Developer ID Application .p12 (base64) + its password
@@ -13,6 +14,7 @@ name: release
 on:
   push:
     branches: [main]
+    paths: [package.json]
   workflow_dispatch:
 
 concurrency:

@@ -21,12 +21,14 @@ Work lands on `staging` through pull requests. Promote it with a
 | ---------------- | -------------------------- | -------------------------------------------------------------------- |
 | `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
 | `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
-| `release.yml`    | push to `main`             | if the version is unreleased: check, build, sign, notarize, publish  |
+| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish  |
 | `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
 
-`release.yml` first reads the root `package.json` version and looks for a
-published release `vX.Y.Z` carrying a disk image. If there is one, the run
-ends there in seconds — so merges that don't bump the version ship nothing.
+`release.yml` only starts for a push to `main` that changes the root
+`package.json`, so merges that don't touch it start no run at all. It then
+reads the version and looks for a published release `vX.Y.Z` carrying a
+disk image; if there is one (the file changed but the version didn't), the
+run ends there in seconds.
 If there isn't:
 
 1. `check.yml` runs; a red check stops the release.
