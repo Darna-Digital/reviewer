@@ -21,7 +21,7 @@ Work lands on `staging` through pull requests. Promote it with a
 | ---------------- | -------------------------- | -------------------------------------------------------------------- |
 | `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
 | `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
-| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish  |
+| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish, then redeploy reviewer.sh |
 | `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
 
 `release.yml` only starts for a push to `main` that changes the root
@@ -79,8 +79,16 @@ steps.
 - macOS 26 or later.
 - `node` on the login shell's `PATH`: the app starts its bundled server with
   it (see `ServerLauncher`).
-- No auto-update yet — a new version is a new download. The repository is
+- No auto-update — a new version is a new download. The repository is
   private, so downloading needs access to it.
+- An update prompt. The app reads `https://reviewer.sh/latest.json` shortly
+  after launch and every six hours. That file is built from `package.json`'s
+  version, and `release.yml` redeploys the site after publishing. When the
+  file names a newer version, the app opens a "Software update" window whose
+  Download button opens the release page. "Check for updates…" in the app
+  menu asks on demand. To try the window without releasing, point the app at
+  a local manifest:
+  `defaults write com.byconvo.reviewer.macos update.feedURL file:///tmp/latest.json`.
 
 ## Secrets
 

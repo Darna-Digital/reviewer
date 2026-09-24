@@ -2,6 +2,10 @@ name: deploy-www
 
 # reviewer.sh. Only the marketing site is deployed from here —
 # the cloud's Workers are the Alchemy stack in the reviewer-cloud repository.
+#
+# release.yml calls this too, once a release is published: the site's
+# /latest.json carries the released version for the app's update check, and
+# is only redeployed after the disk image it points at exists.
 on:
   push:
     branches: [main]
@@ -9,6 +13,7 @@ on:
       - "packages/www/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/deploy-www.yml"
+  workflow_call:
   workflow_dispatch:
 
 concurrency:

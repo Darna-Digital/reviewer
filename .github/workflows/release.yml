@@ -141,3 +141,11 @@ jobs:
             --notes "Signed and notarized. For Apple silicon Macs on macOS 26 or later; Reviewer runs its server with the \`node\` on your login shell's PATH." \
             --generate-notes ${notes_range[@]+"${notes_range[@]}"} \
             --latest
+
+  # Tells installed apps about the release: reviewer.sh/latest.json is built
+  # from package.json's version, and the app offers the download once it
+  # reads a newer one there (see the app's `UpdateCheck`).
+  announce:
+    needs: release
+    uses: ./.github/workflows/deploy-www.yml
+    secrets: inherit

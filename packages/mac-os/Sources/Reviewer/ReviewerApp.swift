@@ -93,6 +93,10 @@ struct ReviewerCommands: Commands {
     let model: AppModel
 
     var body: some Commands {
+        // Under "About Reviewer", where Mac apps keep it (see `UpdateCheck`).
+        CommandGroup(after: .appInfo) {
+            Button("Check for updates…") { UpdateCheck.shared.checkByHand() }
+        }
         CommandGroup(replacing: .newItem) {
             Button("New agent session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
@@ -197,6 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial, .new]) { app, _ in
             MainActor.assumeIsolated { DockIcon.follow(app.effectiveAppearance) }
         }
+        UpdateCheck.shared.start()
     }
 
     /// `reviewer://open` links — the widget's clicks (see `ProjectLinks`).
