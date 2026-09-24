@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Reviewer — Understand AI-generated code",
+        title: "Reviewer: Understand AI-generated code",
       },
       {
         name: "description",
@@ -32,6 +32,20 @@ export const Route = createRootRoute({
         rel: "icon",
         href: "/favicon.ico",
         sizes: "48x48",
+      },
+      {
+        rel: "icon",
+        href: "/favicon-light.png",
+        type: "image/png",
+        sizes: "96x96",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        rel: "icon",
+        href: "/favicon-dark.png",
+        type: "image/png",
+        sizes: "96x96",
+        media: "(prefers-color-scheme: dark)",
       },
       {
         rel: "icon",

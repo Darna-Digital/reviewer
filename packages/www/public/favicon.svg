@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 648.298 648.298" fill="none">
   <style>
-    /* Inverted against the browser chrome, so the plate never sinks into the
-       tab bar: the dark icon on a light one, the light icon on a dark one. */
-    .plate { fill: #000000; }
-    .mark { fill: #ffffff; }
+    .plate { fill: #ffffff; }
+    .mark { fill: #000000; }
     @media (prefers-color-scheme: dark) {
-      .plate { fill: #ffffff; }
-      .mark { fill: #000000; }
+      .plate { fill: #000000; }
+      .mark { fill: #ffffff; }
     }
   </style>
   <rect class="plate" x="0" y="0" width="648.298" height="648.298"/>

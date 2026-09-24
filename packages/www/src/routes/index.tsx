@@ -16,7 +16,6 @@ import {
   SplitDiff,
   Terminal,
 } from "#/components/icons";
-import { AppIcon } from "#/components/logo";
 import { Screenshot } from "#/components/screenshot";
 import type { ScreenshotTone } from "#/components/screenshot";
 import { SiteFooter } from "#/components/site-footer";
@@ -24,7 +23,7 @@ import { SiteHeader } from "#/components/site-header";
 import { DOWNLOAD_URL } from "#/lib/links";
 
 /** Every screenshot is a full Retina display capture, downscaled to one size. */
-const SCREENSHOT_FRAME = { width: 1920, height: 1089 };
+const SCREENSHOT_FRAME = { width: 2560, height: 1625 };
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -53,15 +52,9 @@ function SectionScreenshot({
 function Hero() {
   return (
     <section className="flex flex-col items-center gap-6 pt-28 pb-16 text-center sm:pt-36">
-      <AppIcon className="size-[84px] rounded-[22.37%] shadow-[0_14px_30px_rgba(0,0,0,0.14),0_3px_8px_rgba(0,0,0,0.10)] dark:shadow-[0_14px_30px_rgba(0,0,0,0.5)]" />
-
-      <h1 className="bg-gradient-to-b from-neutral-900 to-neutral-500 bg-clip-text text-[64px] leading-none font-semibold tracking-[-0.03em] text-transparent sm:text-[88px] dark:from-white dark:to-neutral-400">
-        Reviewer
-      </h1>
-
-      <p className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
+      <h1 className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
         Understand AI-generated code.
-      </p>
+      </h1>
 
       <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] dark:text-neutral-400">
         In a world where we no longer write code, we spend a lot more time
@@ -70,7 +63,7 @@ function Hero() {
       </p>
 
       <a
-        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-blue-500 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-blue-600"
+        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-neutral-900 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
         href={DOWNLOAD_URL}
       >
         <Apple className="size-5" />
@@ -79,8 +72,6 @@ function Hero() {
 
       <p className="text-[13px] leading-relaxed text-neutral-400 dark:text-neutral-500">
         For Apple silicon Macs, on macOS 26 or later.
-        <br />
-        Runs on your own Mac, against your own repository.
       </p>
     </section>
   );
@@ -96,12 +87,12 @@ function Home() {
           <Hero />
         </Container>
 
-        <Container>
+        <Container className="max-w-[1280px]">
           <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
             <Screenshot
-              alt="Reviewer showing a split diff of package.json, with the project history filtered by branch, author and date beneath it"
+              alt="Reviewer showing a split diff of uncommitted changes, with the changed files and commit box beside it"
               height={SCREENSHOT_FRAME.height}
-              src="/screenshots/diff-and-history.webp"
+              src="/screenshots/split-diff.webp"
               tone="dawn"
               width={SCREENSHOT_FRAME.width}
             />
@@ -152,6 +143,7 @@ function Home() {
           >
             <SectionScreenshot
               label="The local services widget, with a service running and its logs"
+              src="/screenshots/run-services.webp"
               tone="meadow"
             />
           </ShowcaseCard>
@@ -162,7 +154,8 @@ function Home() {
             title="Powerful git integration"
           >
             <SectionScreenshot
-              label="Creating a branch and a generated commit message"
+              label="The branch picker, with recent and local branches"
+              src="/screenshots/branch-picker.webp"
               tone="ember"
             />
           </ShowcaseCard>
@@ -173,7 +166,8 @@ function Home() {
             title="Know what changed, and when"
           >
             <SectionScreenshot
-              label="The version control history, filtered, with one commit open"
+              label="The version control history, with its branch graph and filters"
+              src="/screenshots/history.webp"
               tone="glacier"
             />
           </ShowcaseCard>
@@ -184,14 +178,14 @@ function Home() {
             title="Follow a symbol anywhere"
           >
             <SectionScreenshot
-              label="A language server hover card showing a component's signature and documentation"
-              src="/screenshots/lsp-hover.webp"
+              label="Find symbol listing every usage of a class across the codebase"
+              src="/screenshots/find-symbol.webp"
               tone="orchid"
             />
           </ShowcaseCard>
         </Container>
 
-        <Container className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Container className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <NoteCard icon={<Terminal className="size-7" />} title="Terminal">
             A built-in terminal for ad hoc work, right next to the code.
           </NoteCard>
