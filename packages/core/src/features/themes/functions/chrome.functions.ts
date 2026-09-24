@@ -50,8 +50,13 @@ const FALLBACK = {
   },
 } as const;
 
-/** How far the frame steps off the sheet when the theme gives it no tone. */
-const FRAME_STEP = { light: 0.06, dark: 0.4 } as const;
+/**
+ * How far the frame steps off the sheet when the theme gives it no tone. In
+ * the dark a step of 0.4 sank the frame to a near-black that read as a hole
+ * around the panels; 0.2 still parts them — Dark+'s editor grey lands on
+ * #181818, the sidebar tone of VS Code's own Dark Modern.
+ */
+const FRAME_STEP = { light: 0.06, dark: 0.2 } as const;
 /** How far a control steps off the sheet when the theme's own is unusable. */
 const CONTROL_STEP = { light: 0.04, dark: 0.06 } as const;
 /** How far a popover lifts off a control in the dark; in the light it sits on it. */

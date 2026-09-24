@@ -6,16 +6,23 @@
 // the one system colour, but a theme draws its separator at the weight of a
 // control's edge, and a panel ringed in that stood out against the rules
 // inside it and the web islands beside it, whose own edges are hairlines. The sidebar is
-// not one: it is the system's own column of glass, standing full height
-// beside the frame the islands are on (see `ContentView`). The toolbar and
+// not one: it is the system's glass, cut to a floating pane on the same
+// frame (see `FloatingSidebarPane`), and its corners are the islands'. The toolbar and
 // the rail are not islands either: they are the window itself, bare, which
 // is what the panels stand on.
 import SwiftUI
 
 enum IslandMetrics {
-    /// The system sidebar's own corner, so the islands beside it read as
-    /// the same family of panel.
+    /// A fixed corner for what is drawn inside a panel rather than as one —
+    /// a drop zone over the composer. Panels themselves take `shape`.
     static let radius: CGFloat = 16
+    /// The panels' own corner: the window's, which macOS 27 turns at 16pt,
+    /// less the margin a panel stands off it — the corner that runs parallel
+    /// to the window's where a panel sits in one. Fixed rather than worked
+    /// out from the window by a concentric shape: that answers only for the
+    /// corners that stand near the window's, and turned a panel with none
+    /// of its own there — the page over an open bottom pane — square.
+    static let panelRadius: CGFloat = 8
     /// The run of frame between two panels.
     static let gap: CGFloat = 6
     /// The run of frame between a panel and the window's edge: the inset
@@ -24,7 +31,7 @@ enum IslandMetrics {
     static let margin: CGFloat = 8
 
     static var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
+        RoundedRectangle(cornerRadius: panelRadius, style: .continuous)
     }
 }
 

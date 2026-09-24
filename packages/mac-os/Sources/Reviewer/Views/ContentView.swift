@@ -48,6 +48,7 @@ struct ContentView: View {
             .navigationTitle("")
             .toolbar { ToolbarItems() }
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            .background { BorderlessSidebarToggle() }
             .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
             // The notices over the islands, under the palette: a push's
             // outcome is worth seeing, but not over a search in progress.
@@ -135,6 +136,7 @@ private struct SidebarColumn: View {
         // The theme's ink over the column's content, and not over the bar
         // above it (see `ThemeInk`).
         .themeInk()
+        .floatingSidebarPane()
     }
 }
 

@@ -17,7 +17,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FindUsagesPanel } from "@/interactions/find-usages/components/find-usages-panel";
+import {
+  FindUsagesPanel,
+  FindUsagesTitle,
+} from "@/interactions/find-usages/components/find-usages-panel";
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
 import { ThreadsPage } from "@/interactions/threads/components/threads-page";
 import { island } from "@/lib/shell";
@@ -106,18 +109,19 @@ interface BottomPanelProps {
 }
 
 /**
- * What makes a surface's box one of the strip's panels. On a page there is no
- * strip, so it is nothing of the sort — a tabpanel named after a tab that is not
- * on screen is a promise to the screen reader the page cannot keep.
+ * What makes a surface's box one of the strip's panels. On a page, or under a
+ * lone title, there is no strip, so it is nothing of the sort — a tabpanel
+ * named after a tab that is not on screen is a promise to the screen reader the
+ * page cannot keep.
  */
-const paneProps = (index: number, expanded: boolean): ComponentProps<"div"> =>
-  expanded
-    ? {}
-    : {
+const paneProps = (index: number, inStrip: boolean): ComponentProps<"div"> =>
+  inStrip
+    ? {
         id: `bottom-dock-panel-${index}`,
         role: "tabpanel",
         "aria-labelledby": `bottom-dock-tab-${index}`,
-      };
+      }
+    : {};
 
 export function BottomPanel(props: BottomPanelProps) {
   const tabs = shownTabs();
@@ -126,6 +130,11 @@ export function BottomPanel(props: BottomPanelProps) {
     tabs.findIndex((t) => t.id === props.tab)
   );
   const at = (tab: BottomTab) => tabs.findIndex((t) => t.id === tab);
+  // Inside the shell the drawer holds find usages alone, and a strip of one tab
+  // is a chip with nothing to pick between — so the strip names the search
+  // instead, and the panel under it drops the header that named it.
+  const findAlone = tabs.length === 1 && tabs[0]?.id === "find";
+  const inStrip = !props.expanded && !findAlone;
 
   // Services and Threads own live terminals, so once opened they stay mounted
   // while hidden. Until first opened they cost nothing.
@@ -146,24 +155,28 @@ export function BottomPanel(props: BottomPanelProps) {
         // of icons — the Find rail's — so the strip reads as the top of that
         // column rather than as a row that happens to sit above it.
         <div className="flex h-9 shrink-0 items-center border-b border-hairline pr-1 pl-0">
-          <TabsSubtle
-            idPrefix="bottom-dock"
-            className="min-w-0"
-            selectedIndex={selectedIndex}
-            onSelect={(index) => {
-              const next = tabs[index];
-              if (next) props.onTabChange(next.id);
-            }}
-          >
-            {tabs.map((t, index) => (
-              <TabsSubtleItem
-                key={t.id}
-                index={index}
-                label={t.label}
-                icon={t.icon}
-              />
-            ))}
-          </TabsSubtle>
+          {findAlone ? (
+            <FindUsagesTitle />
+          ) : (
+            <TabsSubtle
+              idPrefix="bottom-dock"
+              className="min-w-0"
+              selectedIndex={selectedIndex}
+              onSelect={(index) => {
+                const next = tabs[index];
+                if (next) props.onTabChange(next.id);
+              }}
+            >
+              {tabs.map((t, index) => (
+                <TabsSubtleItem
+                  key={t.id}
+                  index={index}
+                  label={t.label}
+                  icon={t.icon}
+                />
+              ))}
+            </TabsSubtle>
+          )}
           <div className="ml-auto flex items-center">
             {/* Find is a three-column reading surface that already has the
                 width it wants in the drawer; a page of it is only the same
@@ -192,7 +205,7 @@ export function BottomPanel(props: BottomPanelProps) {
       )}
 
       <div
-        {...paneProps(at("branches"), props.expanded)}
+        {...paneProps(at("branches"), inStrip)}
         hidden={props.tab !== "branches"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -203,7 +216,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(at("history"), props.expanded)}
+        {...paneProps(at("history"), inStrip)}
         hidden={props.tab !== "history"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -230,19 +243,21 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(at("find"), props.expanded)}
+        {...paneProps(at("find"), inStrip)}
         hidden={props.tab !== "find"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
           props.tab !== "find" && "hidden"
         )}
       >
-        {props.active && props.tab === "find" && <FindUsagesPanel />}
+        {props.active && props.tab === "find" && (
+          <FindUsagesPanel titledAbove={findAlone} />
+        )}
       </div>
 
       {at("services") >= 0 && (
         <div
-          {...paneProps(at("services"), props.expanded)}
+          {...paneProps(at("services"), inStrip)}
           hidden={props.tab !== "services"}
           className={cn(
             "min-h-0 flex-1 overflow-hidden outline-none",
@@ -255,7 +270,7 @@ export function BottomPanel(props: BottomPanelProps) {
 
       {at("threads") >= 0 && (
         <div
-          {...paneProps(at("threads"), props.expanded)}
+          {...paneProps(at("threads"), inStrip)}
           hidden={props.tab !== "threads"}
           className={cn(
             "min-h-0 flex-1 overflow-hidden outline-none",

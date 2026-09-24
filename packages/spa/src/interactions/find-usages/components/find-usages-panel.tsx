@@ -66,7 +66,12 @@ const MIN_RESULTS_WIDTH = 220;
  */
 const IDLE_PRERENDERED_FILES = 24;
 
-export function FindUsagesPanel() {
+export function FindUsagesPanel({
+  titledAbove = false,
+}: {
+  /** Whether the strip over the panel already names the search. */
+  readonly titledAbove?: boolean;
+}) {
   const prefs = useUiPrefs();
   const { query, collapsed, selected } = useFindUsagesState();
   const search = useUsages(query);
@@ -184,7 +189,7 @@ export function FindUsagesPanel() {
         className="flex min-w-0 shrink-0 flex-col border-r"
         style={resultsPane.style}
       >
-        <ResultsHeader symbol={symbol} results={results} />
+        {!titledAbove && <ResultsHeader symbol={symbol} results={results} />}
         {query === null ? (
           <Empty
             title="No search yet"
@@ -344,6 +349,37 @@ function RailButton({
 }
 
 /**
+ * What was searched for, named in the drawer's own strip when the strip has
+ * nothing else to hold — inside the shell, where Find is the drawer's only
+ * surface. The glyph is centred in a column as wide as the rail under it, so
+ * it stands in line with the rail's icons.
+ */
+export function FindUsagesTitle() {
+  const { query, collapsed } = useFindUsagesState();
+  const search = useUsages(query);
+  const results = useMemo(
+    () =>
+      createFindUsagesFunctions({
+        data: {
+          references: search.data?.references ?? [],
+          collapsed,
+          declarationKind: search.data?.declaration?.kind ?? "",
+        },
+      }).usages().length,
+    [search.data, collapsed]
+  );
+
+  return (
+    <div className="flex min-w-0 items-center text-xs">
+      <span className="flex w-9 shrink-0 justify-center text-muted-foreground">
+        <IconSearch className="size-4" />
+      </span>
+      <UsageSummary symbol={query?.symbol ?? ""} results={results} />
+    </div>
+  );
+}
+
+/**
  * What was searched for.
  *
  * One row of the 36px band, like the strip above it and the trail under the
@@ -365,20 +401,32 @@ function ResultsHeader({
     // list rather than as something indented past it.
     <div className="flex h-9 shrink-0 items-center gap-1.5 border-b pr-2 pl-1 text-xs">
       <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 truncate">
-        {symbol === "" ? (
-          <span className="text-muted-foreground">Find usages</span>
-        ) : (
-          <>
-            <span className="font-mono font-medium">{symbol}</span>
-            <span className="text-muted-foreground">
-              {" "}
-              — {results} {results === 1 ? "usage" : "usages"}
-            </span>
-          </>
-        )}
-      </span>
+      <UsageSummary symbol={symbol} results={results} />
     </div>
+  );
+}
+
+function UsageSummary({
+  symbol,
+  results,
+}: {
+  readonly symbol: string;
+  readonly results: number;
+}) {
+  return (
+    <span className="min-w-0 truncate">
+      {symbol === "" ? (
+        <span className="text-muted-foreground">Find usages</span>
+      ) : (
+        <>
+          <span className="font-mono font-medium">{symbol}</span>
+          <span className="text-muted-foreground">
+            {" "}
+            — {results} {results === 1 ? "usage" : "usages"}
+          </span>
+        </>
+      )}
+    </span>
   );
 }
 

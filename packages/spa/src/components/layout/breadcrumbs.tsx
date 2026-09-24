@@ -72,9 +72,9 @@ const METRICS: Readonly<
   },
 };
 
-/** A capsule in the macOS shell, the shape the tabs above it turn there. */
+/** The tabs' own corner, so a crumb reads as the same furniture as the strip. */
 const interactiveCrumb =
-  "flex min-w-0 shrink items-center rounded-md outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full";
+  "flex min-w-0 shrink items-center rounded-md outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
 
 export function Breadcrumbs({
   crumbs,

@@ -353,10 +353,29 @@ final class AppModel {
 
     // MARK: sidebar
 
-    /// ⌃⌘S — the system's own chord for it — from the View menu and the
-    /// palette: the column put away, or brought back.
+    /// ⌃⌘S — the system's own chord for it — from the View menu, the
+    /// palette and the bar's toggle: the column put away, or brought back.
+    /// Asked of the window's split view controller, as the split's own
+    /// toggle asks it, so the column slides at AppKit's pace and on its
+    /// curve — flipping the switch alone moved it with none of that — and
+    /// the split hands the result back through the column binding. Aimed at
+    /// the controller rather than sent up the responder chain, which only
+    /// reaches it from a view inside the split: not from the palette's
+    /// field, nor with nothing focused. The switch is flipped here only
+    /// when there is no split to ask.
     func toggleSidebar() {
-        sidebarShown.toggle()
+        if let split = (NSApp.keyWindow ?? NSApp.mainWindow)?.contentView.flatMap(Self.splitController(in:)) {
+            split.toggleSidebar(nil)
+        } else {
+            sidebarShown.toggle()
+        }
+    }
+
+    private static func splitController(in view: NSView) -> NSSplitViewController? {
+        if let split = view as? NSSplitView, let controller = split.delegate as? NSSplitViewController {
+            return controller
+        }
+        return view.subviews.lazy.compactMap(splitController(in:)).first
     }
 
     /// The sidebar's rail: which of the code surfaces the page is on, as

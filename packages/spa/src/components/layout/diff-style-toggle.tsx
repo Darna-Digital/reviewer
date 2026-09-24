@@ -118,10 +118,10 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
   const activeIndex = OPTIONS.findIndex((option) => option.value === active);
 
   return (
-    <div className="relative flex items-center rounded-lg border p-0.5 island:rounded-full">
+    <div className="relative flex items-center rounded-lg border p-0.5">
       <div
         aria-hidden
-        className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none island:rounded-full"
+        className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
       {OPTIONS.map((option) => {
@@ -145,7 +145,7 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
                     }
                   }}
                   className={cn(
-                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full",
+                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                     active === option.value
                       ? "text-secondary-foreground"
                       : "text-muted-foreground hover:text-foreground",
