@@ -1,6 +1,6 @@
 # www
 
-reviewer.darnadigital.com — the marketing site, a TanStack Start app on
+reviewer.sh — the marketing site, a TanStack Start app on
 Cloudflare Workers.
 
 ```bash
@@ -22,14 +22,15 @@ pnpm deploy   # vite build, then wrangler deploy
 ```
 
 `wrangler.jsonc` is the whole deployment: the Worker `reviewer-www`, its
-compatibility date, and `reviewer.darnadigital.com` as a custom domain. The
+compatibility date, and `reviewer.sh` as a custom domain. The
 build runs `@cloudflare/vite-plugin`, which reads that file and writes
 `dist/server/wrangler.json` beside the bundle with the built entry and
 `assets.directory` filled in — that generated file is what `wrangler deploy`
 is handed, so the dev server and the deploy read one configuration.
 
-`reviewer.darnadigital.com` must be an active zone on the same Cloudflare
-account. The custom domain creates its own DNS record, so remove any existing
+`reviewer.sh` must be an active zone on the same Cloudflare
+account as `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_API_TOKEN` needs Workers
+Routes and DNS edit rights on it. The custom domain creates its own DNS record, so remove any existing
 A/AAAA/CNAME on the apex first or the deploy will fail.
 
 `.github/workflows/deploy-www.yml` runs the same two commands on every push to

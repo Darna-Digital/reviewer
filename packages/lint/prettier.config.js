@@ -1,5 +1,5 @@
 /**
- * Shared Prettier config for reviewer.darnadigital.com packages.
+ * Shared Prettier config for reviewer.sh packages.
  *
  * Import and spread into a package's `prettier.config.js` to extend with
  * package-specific options (e.g. plugins):

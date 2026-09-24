@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "Brand asset studio for reviewer.darnadigital.com — generates the logo lockups, icon sizes and format exports",
+  "description": "Brand asset studio for reviewer.sh — generates the logo lockups, icon sizes and format exports",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

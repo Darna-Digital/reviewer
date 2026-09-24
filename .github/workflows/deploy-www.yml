@@ -1,6 +1,6 @@
 name: deploy-www
 
-# reviewer.darnadigital.com. Only the marketing site is deployed from here —
+# reviewer.sh. Only the marketing site is deployed from here —
 # the cloud's Workers are the Alchemy stack in the reviewer-cloud repository.
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://reviewer.darnadigital.com
+      url: https://reviewer.sh
     steps:
       - uses: actions/checkout@v4
 

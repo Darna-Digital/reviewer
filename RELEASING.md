@@ -22,7 +22,7 @@ Work lands on `staging` through pull requests. Promote it with a
 | `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
 | `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
 | `release.yml`    | push to `main`             | if the version is unreleased: check, build, sign, notarize, publish  |
-| `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.darnadigital.com                        |
+| `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
 
 `release.yml` first reads the root `package.json` version and looks for a
 published release `vX.Y.Z` carrying a disk image. If there is one, the run

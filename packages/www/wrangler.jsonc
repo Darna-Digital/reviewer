@@ -1,4 +1,4 @@
-// The Worker behind reviewer.darnadigital.com, for `pnpm dev` and for the deploy alike.
+// The Worker behind reviewer.sh, for `pnpm dev` and for the deploy alike.
 // `vite build` runs @cloudflare/vite-plugin from vite.config.ts, which reads this
 // file and writes dist/server/wrangler.json beside the bundle with the built
 // entry and the client assets filled in; `pnpm deploy` hands wrangler that one.
@@ -10,7 +10,7 @@
   "main": "@tanstack/react-start/server-entry",
   "routes": [
     {
-      "pattern": "reviewer.darnadigital.com",
+      "pattern": "reviewer.sh",
       "custom_domain": true
     }
   ],

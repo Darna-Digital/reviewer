@@ -1,6 +1,6 @@
 # @reviewer/lint
 
-Shared ESLint and Prettier rules for the reviewer.darnadigital.com monorepo. Packages extend
+Shared ESLint and Prettier rules for the reviewer.sh monorepo. Packages extend
 these so linting and formatting stay consistent across the workspace.
 
 ## Usage

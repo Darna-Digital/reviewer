@@ -3,7 +3,7 @@
 import { tanstackConfig } from "@tanstack/eslint-config";
 
 /**
- * Shared ESLint flat config for reviewer.darnadigital.com packages.
+ * Shared ESLint flat config for reviewer.sh packages.
  *
  * Spread this into a package's `eslint.config.js` and append any
  * package-specific overrides or `ignores` after it:

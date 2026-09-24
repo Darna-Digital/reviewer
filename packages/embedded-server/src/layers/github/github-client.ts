@@ -173,7 +173,7 @@ export const make = Effect.gen(function* () {
   const headers = (accept: string, token: string | null) => ({
     accept,
     "x-github-api-version": "2022-11-28",
-    "user-agent": "reviewer.darnadigital.com",
+    "user-agent": "reviewer.sh",
     ...(token === null ? {} : { authorization: `Bearer ${token}` }),
   });
 
