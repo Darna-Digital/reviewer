@@ -1,4 +1,5 @@
 import { Container } from "#/components/container";
+import { REPO_URL } from "#/lib/links";
 
 export function SiteFooter() {
   return (
@@ -14,6 +15,15 @@ export function SiteFooter() {
               target="_blank"
             >
               Darna Digital
+            </a>
+            .{" "}
+            <a
+              className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
+              href={REPO_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Source on GitHub
             </a>
             . © {new Date().getFullYear()}
           </p>

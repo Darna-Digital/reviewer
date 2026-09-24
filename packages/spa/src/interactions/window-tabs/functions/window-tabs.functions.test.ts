@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
   WindowTab,
   WindowTabsState,
@@ -22,10 +22,6 @@ import {
   trackLocation,
   withPinnedTabs,
 } from "./window-tabs.functions";
-
-// The transitions below are about the strip's shape, not about which features
-// are switched on, so they are stated against the full set of pinned tabs.
-vi.mock("@reviewer/feature-flags", () => ({ isFeatureEnabled: () => true }));
 
 const session = (
   id: string,
@@ -81,6 +77,21 @@ describe("withPinnedTabs", () => {
     ]);
     expect(tabs[1].href).toBe("/modes/agent-session");
     expect(tabs[2].href).toBe("/modes/agent-session/abc");
+  });
+
+  it("hands Code back its own location when the saved one has gone", () => {
+    const [code] = withPinnedTabs([
+      {
+        id: PROJECT_TAB_ID,
+        href: "/modes/collaboration/projects/p1",
+        title: "Collaboration",
+        kind: "project",
+      },
+    ]);
+    expect(code).toMatchObject({
+      href: "/modes/code/review",
+      title: "Review",
+    });
   });
 
   it("puts the pinned tabs back when the saved strip has none", () => {

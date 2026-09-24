@@ -2,7 +2,6 @@
  * Transitions over the window-tab strip. All of it is decidable from the state
  * and a tab id, so none of it needs a rendered strip — or a router — to test.
  */
-import { isFeatureEnabled } from "@reviewer/feature-flags";
 import { dockPages } from "@/lib/shell-route";
 import type {
   WindowTab,
@@ -58,21 +57,6 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
 ];
 
 export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
-
-/**
- * The tabs the strip shows. With its button switched off Sessions stays in the
- * strip — a conversation still has somewhere to be handed back to — but is left
- * out of the bar, leaving ⌘G nowhere to cross to. It comes back for as long as
- * the window is on it: a bar showing a page while highlighting none of its tabs
- * reads as having lost its place.
- */
-export function stripTabs({
-  tabs,
-  activeId,
-}: WindowTabsState): ReadonlyArray<WindowTab> {
-  if (isFeatureEnabled("sessions-button")) return tabs;
-  return tabs.filter((tab) => tab.kind !== "sessions" || tab.id === activeId);
-}
 
 /** Pinned tabs always lead the strip, so their count is also the first slot a
  * session tab may take. */

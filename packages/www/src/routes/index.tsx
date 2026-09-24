@@ -20,7 +20,7 @@ import { Screenshot } from "#/components/screenshot";
 import type { ScreenshotTone } from "#/components/screenshot";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
-import { DOWNLOAD_URL } from "#/lib/links";
+import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 
 /** Every screenshot is a full Retina display capture, downscaled to one size. */
 const SCREENSHOT_FRAME = { width: 2560, height: 1625 };
@@ -71,7 +71,16 @@ function Hero() {
       </a>
 
       <p className="text-[13px] leading-relaxed text-neutral-500">
-        For Apple silicon Macs, on macOS 26 or later.
+        For Apple silicon Macs, on macOS 26 or later. Free and{" "}
+        <a
+          className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
+          href={REPO_URL}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          open source
+        </a>
+        .
       </p>
     </section>
   );

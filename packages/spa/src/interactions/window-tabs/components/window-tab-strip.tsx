@@ -14,7 +14,6 @@
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { TooltipTrigger } from "@/components/ui/tooltip";
 import { useRouterState } from "@tanstack/react-router";
-import { isFeatureEnabled } from "@reviewer/feature-flags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarButton,
@@ -35,13 +34,10 @@ import {
   moveTab,
   NEW_SESSION_HREF,
   renameTab,
-  stripTabs,
   trackLocation,
 } from "../functions/window-tabs.functions";
 import type { WindowTab } from "../interfaces/window-tabs.interfaces";
 import { WindowTabIcon } from "./window-tab-icon";
-
-const sessionsEnabled = isFeatureEnabled("sessions-button");
 
 /** The strip as a bar draws it, and what pressing each of its tabs does. */
 export interface WindowTabStripHandle {
@@ -59,9 +55,7 @@ export interface WindowTabStripHandle {
 
 export function useWindowTabStrip(): WindowTabStripHandle {
   const location = useRouterState({ select: (s) => s.location });
-  const windowTabs = useWindowTabs();
-  const { tabs, activeId } = windowTabs;
-  const strip = useMemo(() => stripTabs(windowTabs), [windowTabs]);
+  const { tabs, activeId } = useWindowTabs();
   const { select, close, openSession, prime } = useWindowTabActions();
   /** Take the window to a tab from the strip. */
   const show = (tab: WindowTab) => {
@@ -132,14 +126,14 @@ export function useWindowTabStrip(): WindowTabStripHandle {
   useEffect(() => {
     const warm = () => {
       for (const tab of tabs) prime(tab.href);
-      if (sessionsEnabled) prime(NEW_SESSION_HREF);
+      prime(NEW_SESSION_HREF);
     };
     const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
     return () => window.cancelIdleCallback(idle);
   }, [tabs, prime]);
 
   return {
-    strip,
+    strip: tabs,
     activeId,
     show,
     mint,
@@ -322,11 +316,9 @@ export function WindowTabStrip() {
           );
         })}
       </div>
-      {sessionsEnabled && (
-        <BarButton label="New session" onClick={mint}>
-          <IconPlus className="size-4" />
-        </BarButton>
-      )}
+      <BarButton label="New session" onClick={mint}>
+        <IconPlus className="size-4" />
+      </BarButton>
     </>
   );
 }
