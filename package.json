@@ -1,7 +1,7 @@
 {
   "name": "reviewer",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "reviewer.sh — local git review tool",
   "scripts": {
     "dev": "pnpm --parallel --filter @reviewer/embedded-server --filter spa dev",
