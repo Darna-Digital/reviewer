@@ -2,7 +2,17 @@
   "name": "reviewer",
   "private": true,
   "version": "0.0.5",
-  "description": "reviewer.sh — local git review tool",
+  "description": "Reviewer — a macOS app for understanding, editing and reviewing AI-generated code",
+  "license": "MIT",
+  "homepage": "https://reviewer.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Darna-Digital/reviewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Darna-Digital/reviewer/issues"
+  },
+  "author": "Darna Digital (https://darnadigital.com)",
   "scripts": {
     "dev": "pnpm --parallel --filter @reviewer/embedded-server --filter spa dev",
     "dev:www": "pnpm --filter www dev",

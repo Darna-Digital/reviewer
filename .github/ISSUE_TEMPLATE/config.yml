@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Darna-Digital/reviewer/security/advisories/new
+    about: Please report security issues privately, not as public issues.
+  - name: Website
+    url: https://reviewer.sh
+    about: Downloads and an overview of what Reviewer does.

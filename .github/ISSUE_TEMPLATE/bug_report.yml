@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in Reviewer isn't working as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report this. Please search existing issues first.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a repository with uncommitted changes
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: reviewer-version
+    attributes:
+      label: Reviewer version
+      description: Reviewer → About Reviewer
+      placeholder: 0.0.5
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: macOS 26.0
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, logs or anything else
+      description: Drag images or a screen recording in here.
