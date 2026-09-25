@@ -236,7 +236,7 @@ function Home() {
           </div>
         </Container>
 
-        <Container className="mt-10 flex flex-col gap-4">
+        <Container className="mt-10 flex flex-col gap-16">
           <DiffLayoutCard />
 
           <ShowcaseCard
@@ -275,7 +275,7 @@ function Home() {
           <ShowcaseCard
             description="Create new branches, and let Reviewer write the commit message from what actually changed."
             icon={<Branch className="size-7" />}
-            title="Powerful git integration"
+            title="Intuitive Git integration"
           >
             <SectionScreenshot
               label="The branch picker, with recent and local branches"
@@ -306,7 +306,7 @@ function Home() {
           </ShowcaseCard>
         </Container>
 
-        <Container className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Container className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2">
           <NoteCard icon={<Terminal className="size-7" />} title="Terminal">
             A built-in terminal for ad hoc work, right next to the code.
           </NoteCard>
@@ -323,11 +323,11 @@ function Home() {
             icon={<Laptop className="size-7" />}
             title="Native to the Mac"
           >
-            Built for Apple silicon and macOS 26, signed and notarized.
+            Built for Apple silicon macOS 26 and later.
           </NoteCard>
         </Container>
 
-        <div className="mt-16">
+        <div className="mt-10">
           <SiteFooter />
         </div>
       </main>

@@ -1,13 +1,21 @@
 import { Apple, GitHub } from "#/components/icons";
 import { Logo } from "#/components/logo";
+import { useScrolled } from "#/hooks/use-scrolled";
 import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 
 const NAV_LINK =
   "inline-flex items-center gap-1.5 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white";
 
 export function SiteHeader() {
+  const scrolled = useScrolled();
+  const backdrop = scrolled
+    ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
+    : "border-transparent bg-transparent";
+
   return (
-    <header className="relative z-40 -mb-header h-header">
+    <header
+      className={`sticky top-0 z-40 -mb-header h-header border-b transition-colors duration-200 ${backdrop}`}
+    >
       <div className="mx-auto flex h-full max-w-[1008px] items-center gap-5 px-6">
         <a href="/">
           <Logo className="h-5 w-auto" />
