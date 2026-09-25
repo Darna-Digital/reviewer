@@ -1,6 +1,8 @@
 ---
 name: composable-functions-skill
 description: Generate boilerplate for composable, testable TypeScript features using dependency injection. Use when the user wants to scaffold a new feature with clean code patterns, create testable functions with DI, generate RSC or React Hook adapters, or set up a feature structure with interfaces/functions/mocks/tests in src/features.
+metadata:
+  internal: true
 ---
 
 ## Pattern

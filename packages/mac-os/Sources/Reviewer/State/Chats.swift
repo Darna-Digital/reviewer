@@ -59,6 +59,11 @@ struct LastSession: Codable, Equatable {
 /// for a session not yet started — so leaving and coming back finds it as
 /// it was left.
 struct ComposerDraft: Equatable {
+    /// The most text one message may carry. Past this a paste of generated
+    /// markup — an SVG, a minified bundle — stalls the editor and the
+    /// conversation that has to lay it out once it is sent.
+    static let maxTextLength = 20_000
+
     var text = ""
     var attachments: [ComposerAttachment] = []
 

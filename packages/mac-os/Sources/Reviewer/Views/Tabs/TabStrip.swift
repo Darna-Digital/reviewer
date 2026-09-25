@@ -106,9 +106,6 @@ private struct PinnedTab: View {
 private struct SessionTabRow: View {
     let model: AppModel
     @State private var order: [WindowTab] = []
-    /// What each tab measures, for the arithmetic below: a tab is as wide
-    /// as its title up to a limit, so there is no one width to work from.
-    @State private var widths: [String: CGFloat] = [:]
     @State private var drag: TabDrag?
     /// The run of the bar the row has to stay inside, the mark that mints
     /// a session included (see `BarRunWidth`) — nothing until the bar has
@@ -121,10 +118,6 @@ private struct SessionTabRow: View {
     /// The air between chips, which counts as part of the distance a tab
     /// has to travel to pass its neighbour.
     private static let gap: CGFloat = 4
-    /// What a tab is reckoned to be before it has been measured, which is
-    /// only ever for the frame between a tab appearing and its first
-    /// layout.
-    private static let unmeasured: CGFloat = 120
     /// The one spring the row moves on: the tabs standing aside mid-drag,
     /// and the whole row settling into its new order once the tab is let
     /// go. One spring for both because they meet at that moment — a tab
@@ -144,16 +137,18 @@ private struct SessionTabRow: View {
         // than the bar's own gap — the one the pinned pair stand off the
         // sidebar's glass by. So the empty row spaces nothing, and the mark
         // stands where the bar puts it.
-        HStack(spacing: order.isEmpty ? 0 : Self.gap) {
-            strip
-            Button { model.newSession() } label: {
-                Label("New session", systemImage: "plus")
-                    .barGlyph()
+        LeadingPinned {
+            HStack(spacing: order.isEmpty ? 0 : Self.gap) {
+                strip
+                Button { model.newSession() } label: {
+                    Label("New session", systemImage: "plus")
+                        .barGlyph()
+                }
+                .buttonStyle(BarChipStyle())
+                .help("New session (⌘T)")
             }
-            .buttonStyle(BarChipStyle())
-            .help("New session (⌘T)")
         }
-        .background { BarRunWidth { run = $0 } }
+        .background { BarRunWidth(run: run) { run = $0 } }
         // The row hands its run back before anything ahead of it on the
         // bar comes to take the room: the sidebar's column, which slides
         // out over the next fifth of a second, and the pinned pair, which
@@ -186,7 +181,9 @@ private struct SessionTabRow: View {
                     }
                 }
             }
-            .scrollIndicators(.hidden)
+            // `.hidden` is only a hint on macOS: with a mouse attached, or
+            // scroll bars set to always show, the scroller is drawn anyway.
+            .scrollIndicators(.never)
             // The strip's own clip is put away for a mask cut to the same
             // width but taller: what scrolls past the ends is still taken
             // off, and the tab in hand — a shade bigger, with a shadow
@@ -204,9 +201,6 @@ private struct SessionTabRow: View {
 
     private func tabView(_ tab: WindowTab, at slot: Int) -> some View {
         SessionTab(tab: tab, model: model, lifted: drag?.id == tab.id) { press(tab) }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
-                widths[tab.id] = $0
-            }
             // Standing aside is sprung; being carried is not — the tab in
             // hand is under the pointer, not chasing it. The spring is
             // inside the second offset, so it is the only one of the two
@@ -291,7 +285,7 @@ private struct SessionTabRow: View {
     }
 
     private func width(of tab: WindowTab) -> CGFloat {
-        widths[tab.id] ?? Self.unmeasured
+        SessionTab.width(for: tab.title)
     }
 
     /// The distance from one slot to the next along the row.
@@ -396,6 +390,31 @@ private struct TabDrag {
     var translation: CGFloat = 0
 }
 
+/// Holds the row to where it begins on the bar while the bar catches up
+/// with a new width for it.
+///
+/// The bar sizes the item a pass after the row changes width, and for
+/// that pass the row is laid out in the item's old frame — centred in it,
+/// which is where SwiftUI sets a view that does not fit what it was
+/// given. So a tab opened or closed had every tab lurch by half its width
+/// and back. Taking whatever width it is offered and standing its content
+/// against the leading edge of it, the row overhangs the old frame at its
+/// end instead, and nothing already on the row moves. Asked for the width
+/// it would like, it answers with its content's own.
+private struct LeadingPinned: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let own = content.sizeThatFits(ProposedViewSize(width: nil, height: proposal.height))
+        return CGSize(width: proposal.width ?? own.width, height: own.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let content = subviews.first else { return }
+        let own = content.sizeThatFits(ProposedViewSize(width: nil, height: bounds.height))
+        content.place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(own))
+    }
+}
+
 /// How much of the bar is the row's: from where the row begins to the
 /// window's trailing edge, less the air the bar keeps there.
 ///
@@ -412,11 +431,17 @@ private struct TabDrag {
 /// coordinates; the row is last on the bar, so what follows it to the
 /// window's edge is the row's.
 private struct BarRunWidth: NSViewRepresentable {
+    /// The run the row has, which is not always the last one measured:
+    /// the row hands some back of its own accord.
+    let run: CGFloat
     let measured: (CGFloat) -> Void
 
     func makeNSView(context: Context) -> BarRunProbe { BarRunProbe(measured: measured) }
 
-    func updateNSView(_ probe: BarRunProbe, context: Context) { probe.measured = measured }
+    func updateNSView(_ probe: BarRunProbe, context: Context) {
+        probe.measured = measured
+        probe.adopt(run)
+    }
 }
 
 private final class BarRunProbe: NSView {
@@ -510,6 +535,18 @@ private final class BarRunProbe: NSView {
         }
     }
 
+    /// Counts from the run the row has rather than the one last measured.
+    /// A row that handed some back — as the sidebar comes in — has to be
+    /// given it again once the bar has settled; a probe still counting
+    /// from the longer run would read the bar coming back to it as no
+    /// change at all, and leave the row short, or with nothing.
+    func adopt(_ run: CGFloat) {
+        guard let given, abs(run - given) >= 1 else { return }
+        stopGrowing()
+        self.given = run
+        DispatchQueue.main.async { [weak self] in self?.measure() }
+    }
+
     /// Taken off the bar all the same — a window edge dragged in faster
     /// than the row could follow it. The row cannot see from the ›› menu
     /// how much shorter it would have to be, so it gives up a step of its
@@ -573,13 +610,25 @@ private struct SessionTab: View {
     /// that mints a session on (see `SessionTabRow`).
     fileprivate static let leadingInset: CGFloat = 14
     private static let trailingInset: CGFloat = 8
+    private static let titleSpacing: CGFloat = 6
+    private static let titleFont = NSFont.systemFont(ofSize: 13)
+
+    /// A tab is as wide as its title up to a limit — worked out from the
+    /// title rather than measured once laid out, so the row knows a new
+    /// tab's width in the frame it arrives in. A width measured a frame
+    /// late had the strip laid out a few points short of it first, and
+    /// every tab moved as the strip caught up.
+    fileprivate static func width(for title: String) -> CGFloat {
+        let text = (title as NSString).size(withAttributes: [.font: titleFont]).width.rounded(.up)
+        return min(maxWidth, leadingInset + text + titleSpacing + closeSlot + trailingInset)
+    }
 
     var body: some View {
         let isActive = model.windowTabs.activeId == tab.id
         let showsClose = isActive || isHovering
-        HStack(spacing: 6) {
+        HStack(spacing: Self.titleSpacing) {
             Text(tab.title)
-                .font(.system(size: 13))
+                .font(Font(Self.titleFont))
                 .lineLimit(1)
                 .truncationMode(.tail)
             ZStack {
@@ -590,7 +639,7 @@ private struct SessionTab: View {
         }
         .padding(.leading, Self.leadingInset)
         .padding(.trailing, Self.trailingInset)
-        .frame(maxWidth: Self.maxWidth)
+        .frame(width: Self.width(for: tab.title))
         .barChip(isOn: isActive, isPressed: lifted)
         .overlay(alignment: .trailing) {
             if showsClose {

@@ -1,6 +1,8 @@
 ---
 name: release
 description: Invoke when user asks to relase a new version.
+metadata:
+  internal: true
 ---
 
 # Release

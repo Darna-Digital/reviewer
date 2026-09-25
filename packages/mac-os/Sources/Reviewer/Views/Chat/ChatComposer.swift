@@ -31,6 +31,9 @@ struct ChatComposer: View {
     @Environment(AppModel.self) private var model
     @State private var sending = false
     @State private var selection: TextSelection?
+    /// The length of the last paste turned away for not fitting, shown
+    /// for a moment in place of the count.
+    @State private var refusedPaste: Int?
     @FocusState private var focused: Bool
 
     private static let minHeight: CGFloat = 56
@@ -38,6 +41,9 @@ struct ChatComposer: View {
     /// composer's ceiling, so a long draft can take most of the pane.
     private static let maxWindowShare: CGFloat = 0.6
     private static let backtab = KeyEquivalent("\u{19}")
+    private static let maxLength = ComposerDraft.maxTextLength
+    /// How full the draft gets before the count shows beside send.
+    private static let countShownFrom = maxLength * 4 / 5
 
     private var chats: Chats { model.chats }
     private var draft: ComposerDraft { chats.draft(for: draftKey) }
@@ -47,7 +53,7 @@ struct ChatComposer: View {
             get: { chats.draft(for: draftKey).text },
             set: { value in
                 var draft = chats.draft(for: draftKey)
-                draft.text = value
+                draft.text = value.count > Self.maxLength ? String(value.prefix(Self.maxLength)) : value
                 chats.setDraft(draft, for: draftKey)
             })
     }
@@ -93,6 +99,14 @@ struct ChatComposer: View {
                 .buttonStyle(ComposerChipStyle())
                 .help("Attach images")
                 Spacer(minLength: 4)
+                if let notice = lengthNotice {
+                    Text(notice.text)
+                        .font(.system(size: 11))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .foregroundStyle(notice.atLimit ? Color.red : Color.secondary)
+                        .padding(.trailing, 4)
+                }
                 if running, let onStop {
                     Button(action: onStop) {
                         Image(systemName: "stop.fill")
@@ -129,6 +143,11 @@ struct ChatComposer: View {
         }
         .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         .onAppear { focused = true }
+        .task(id: refusedPaste) {
+            guard refusedPaste != nil else { return }
+            try? await Task.sleep(for: .seconds(4))
+            refusedPaste = nil
+        }
     }
 
     private var prompt: some View {
@@ -165,9 +184,11 @@ struct ChatComposer: View {
                 .onKeyPress(KeyEquivalent("v"), phases: .down) { press in
                     guard press.modifiers == .command else { return .ignored }
                     let pasted = ComposerAttachment.read(pasteboard: .general)
-                    guard !pasted.isEmpty else { return .ignored }
-                    chats.attach(pasted, to: draftKey)
-                    return .handled
+                    if !pasted.isEmpty {
+                        chats.attach(pasted, to: draftKey)
+                        return .handled
+                    }
+                    return refuseOversizedPaste() ? .handled : .ignored
                 }
         }
     }
@@ -176,6 +197,30 @@ struct ChatComposer: View {
     /// queues the message for when the turn settles.
     private var canSend: Bool {
         !sending && !draft.isEmpty
+    }
+
+    /// The count once the draft nears the cap, or why the last paste was
+    /// turned away.
+    private var lengthNotice: (text: String, atLimit: Bool)? {
+        if let refusedPaste {
+            return ("Paste of \(refusedPaste.formatted()) characters is over the \(Self.maxLength.formatted()) limit", true)
+        }
+        let count = draft.text.count
+        guard count >= Self.countShownFrom else { return nil }
+        return ("\(count.formatted()) / \(Self.maxLength.formatted())", count >= Self.maxLength)
+    }
+
+    /// A paste that would push the draft past the cap is turned away whole
+    /// rather than cut short — half an SVG is no use to anyone. The clamp
+    /// in the text binding still catches text that arrives any other way.
+    private func refuseOversizedPaste() -> Bool {
+        guard let pasted = NSPasteboard.general.string(forType: .string) else { return false }
+        let current = text.wrappedValue
+        let replaced = current[selectedRange(in: current)].count
+        guard current.count - replaced + pasted.count > Self.maxLength else { return false }
+        NSSound.beep()
+        refusedPaste = pasted.count
+        return true
     }
 
     /// One patch, not two: the model and the settings it drags with it go

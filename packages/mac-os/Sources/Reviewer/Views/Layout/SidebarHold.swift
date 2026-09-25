@@ -107,3 +107,34 @@ final class HeldView: NSView {
         if content.frame != frame { content.frame = frame }
     }
 }
+
+extension View {
+    /// Keeps a page drawn natively out of the sidebar's move, as `HeldView`
+    /// keeps the ones AppKit and WebKit draw (see `SidebarHeldPage`).
+    func sidebarHeld() -> some View {
+        modifier(SidebarHeldPage())
+    }
+}
+
+/// A page SwiftUI draws in the detail — a conversation, its composer and
+/// every reply in it — kept out of the sidebar's move. The move reaches
+/// SwiftUI as one change of layout carried by an animation, and a view
+/// left to it has its frame eased from the old width to the new one, frame
+/// by frame; for a conversation that is its scroll view and the text view
+/// of every reply on screen resized, and their text set again, on every
+/// frame of the slide — more than a frame has time for, so the slide
+/// stutters where the code page, a held web view, glides.
+///
+/// So the page takes its new width at once, without the animation, and is
+/// laid out for it the one time; the island it stands on still eases to
+/// its new edge, clipping the page to it as it goes. Only the page's own
+/// geometry is kept out of the move, and only in the transaction that
+/// moves the sidebar: anything the page animates of its own keeps its
+/// animation.
+private struct SidebarHeldPage: ViewModifier {
+    @Environment(\.sidebarHold) private var sidebarHold
+
+    func body(content: Content) -> some View {
+        content.transaction(value: sidebarHold?.sidebarShown) { $0.animation = nil }
+    }
+}

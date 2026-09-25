@@ -28,6 +28,7 @@ struct ChatPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: IslandPalette.island))
+        .sidebarHeld()
     }
 }
 
