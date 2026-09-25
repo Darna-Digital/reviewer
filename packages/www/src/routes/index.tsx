@@ -36,11 +36,11 @@ const SCREENSHOT_SIZES = {
   "diff-split": { width: 1772, height: 1290 },
   "diff-stacked": { width: 1772, height: 1290 },
   "agent-models": { width: 2492, height: 1564 },
-  "comment-assign": { width: 1958, height: 1130 },
-  "run-services": { width: 1958, height: 1141 },
+  "comment-assign": { width: 2076, height: 1430 },
+  "run-services": { width: 2456, height: 942 },
   "branch-picker": { width: 1470, height: 1326 },
-  history: { width: 2026, height: 1167 },
-  "find-symbol": { width: 2026, height: 1167 },
+  history: { width: 1854, height: 1192 },
+  "find-symbol": { width: 2798, height: 1884 },
 } as const;
 
 type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
@@ -256,7 +256,7 @@ function Home() {
             title="Comment, then hand it off"
           >
             <SectionScreenshot
-              label="A comment on a line of code, being assigned to a new Claude chat"
+              label="A comment on a line of code, being assigned to a new Claude chat with its model picker open"
               name="comment-assign"
             />
           </ShowcaseCard>

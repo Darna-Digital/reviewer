@@ -1163,16 +1163,17 @@
    page, which is what it is: something opened from a symbol in the code and
    dismissed when it has been read.
 
-   It turns `--sheet-radius-foot` rather than the island's own corner, and for
-   the same reason a sheet's foot does: a corner held inside another one stays
-   parallel to it only at the outer radius less the inset it stands off (see
-   `.island`), and on the continuous curve macOS draws. Matched to the panel's
-   own corner instead, the two curves crossed. */
+   It turns the island's own corner, not the concentric `--sheet-radius-foot`
+   a sheet's foot takes: it is a panel of the shell's kind, and reads as one
+   only at the corner the shell's own panels turn — the native bottom pane's
+   among them (see `IslandMetrics.panelRadius`). Held concentric instead, 8px
+   less its 6px inset left it a 2px corner, near enough square that it read as
+   a box cut out of the page rather than a panel over it. */
 .island .island-drawer {
   --sheet-edge-tone: transparent;
   margin-inline: var(--island-drawer-inset);
   margin-block-end: var(--island-drawer-inset);
-  border-radius: var(--sheet-radius-foot);
+  border-radius: var(--island-radius);
   corner-shape: squircle;
   box-shadow: var(--elev-floating);
 }
@@ -1192,9 +1193,9 @@
   --island-drawer-inset: 0.375rem;
   /* The corner the shell turns its islands at: concentric with the window's,
      which macOS 27 draws at 16pt, less the 8pt the islands stand off it (see
-     `IslandMetrics.shape` in the macOS app). A corner held inside it — the
-     drawer's, a sheet's foot — turns that less its own inset, and the one
-     card standing free on the page turns the island's own. */
+     `IslandMetrics.shape` in the macOS app). A sheet's foot held inside it
+     turns that less its own inset; the drawer and the one card standing free
+     on the page turn the island's own. */
   --island-radius: 0.5rem;
   --sheet-radius-foot: calc(var(--island-radius) - var(--island-drawer-inset));
   --composer-radius: var(--island-radius);
