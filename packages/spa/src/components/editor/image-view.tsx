@@ -40,7 +40,7 @@ function Preview({ path }: { path: string }) {
   if (undecodable) return <UnsupportedFile path={path} />;
   if (bytes.isPending) {
     return (
-      <div className="p-8">
+      <div className="grid h-full place-items-center p-8">
         <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );

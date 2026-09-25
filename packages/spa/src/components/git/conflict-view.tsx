@@ -119,7 +119,7 @@ export function ConflictView({
 
   if (file.isPending || result === null) {
     return (
-      <div className="p-8">
+      <div className="grid h-full place-items-center p-8">
         <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );

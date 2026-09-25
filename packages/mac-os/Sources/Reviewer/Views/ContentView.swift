@@ -384,9 +384,7 @@ struct ConnectionView: View {
                 Button("Try again") { Task { await model.bootstrap() } }
                     .keyboardShortcut(.defaultAction)
             default:
-                Orb(size: 20)
-                Text("Starting the API server…")
-                    .foregroundStyle(.secondary)
+                Orb(size: 20, label: "Starting the API server")
             }
         }
         .padding(40)

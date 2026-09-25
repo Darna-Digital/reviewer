@@ -1063,7 +1063,7 @@ export function DiffPane({
 
   if (loading || !codeFontReady) {
     return (
-      <div className="p-8">
+      <div className="grid h-full place-items-center p-8">
         <Orb size={16} label="Loading diff…" />
       </div>
     );
