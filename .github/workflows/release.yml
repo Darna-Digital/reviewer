@@ -3,7 +3,7 @@ name: release
 # A push to `main` whose root package.json carries a version that has not been
 # released yet builds Reviewer.app, signs it with the Developer ID certificate,
 # notarizes and staples it, and publishes the disk image as GitHub release
-# vX.Y.Z of this repository. Bumping the version is the "ship it" signal: a
+# vX.Y.Z of this repository, with the appcast.xml installed apps update from. Bumping the version is the "ship it" signal: a
 # push that leaves package.json alone starts no run at all, and one that edits
 # it without a new version stops at the first, seconds-long job. Nothing else —
 # no other branch, no pull request — releases anything. See RELEASING.md.
@@ -11,6 +11,7 @@ name: release
 # Secrets (GITHUB_TOKEN is built in — the release lives in this repository):
 #   APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD      Developer ID Application .p12 (base64) + its password
 #   APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER App Store Connect API key (.p8, base64) for notarytool
+#   SPARKLE_PRIVATE_KEY                                 EdDSA key the appcast signs the disk image with (generate_keys -x)
 on:
   push:
     branches: [main]
@@ -31,7 +32,7 @@ jobs:
       version: ${{ steps.v.outputs.version }}
       publish: ${{ steps.v.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # A version counts as released once a published release carries its disk
       # image. A draft left by a failed upload does not count and is rebuilt.
@@ -69,10 +70,22 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The previous release's tag bounds the generated release notes.
           fetch-depth: 0
+
+      # Checked before the build rather than after it: without the key the
+      # release could not be signed for Sparkle, and notarizing first would
+      # only spend twenty minutes finding that out.
+      - name: Require the Sparkle signing key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$SPARKLE_PRIVATE_KEY" ]]; then
+            echo "::error::SPARKLE_PRIVATE_KEY is not set — see RELEASING.md."
+            exit 1
+          fi
 
       - uses: ./.github/actions/setup-mac
 
@@ -118,23 +131,50 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: echo "path=$(packages/mac-os/scripts/release.sh packages/mac-os/.build/Reviewer.app "$RUNNER_TEMP/release")" >> "$GITHUB_OUTPUT"
 
-      # Notes are GitHub's generated list of what merged since the release
-      # just below this one — found by version order, not date, since the
-      # Electron-era tags sit above the mac app's first versions.
+      # The release just below this one, found by version order, not date,
+      # since the Electron-era tags sit above the mac app's first versions.
+      # Empty for the first release.
+      - name: Find the previous release
+        run: |
+          previous="$( (git tag -l 'v[0-9]*' | sed 's/^v//'; echo "$VERSION") | sort -uV | grep -B1 -x "$VERSION" | head -1)"
+          if [[ "$previous" == "$VERSION" ]]; then previous=""; fi
+          echo "PREVIOUS=${previous}" >> "$GITHUB_ENV"
+
+      # The update window's notes are the commit subjects since the previous
+      # release: work is pushed rather than merged through pull requests, so
+      # GitHub's generated notes would often be just a compare link.
+      - name: Write the Sparkle feed
+        id: appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          DMG: ${{ steps.dmg.outputs.path }}
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          git log --no-merges --format='- %s' ${PREVIOUS:+"v${PREVIOUS}..HEAD"} | { grep -v '^- Release v' || true; } > "$notes"
+          appcast="$(dirname "$DMG")/appcast.xml"
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/$(basename "$DMG")"
+          packages/mac-os/scripts/appcast.sh "$DMG" "$notes" "$url" > "$appcast"
+          cat "$appcast"
+          echo "path=${appcast}" >> "$GITHUB_OUTPUT"
+
+      # The appcast rides on the same release as the image it names, so the
+      # feed at releases/latest/download/appcast.xml always points at a disk
+      # image that exists. Notes are GitHub's generated list since the
+      # previous release.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DMG: ${{ steps.dmg.outputs.path }}
+          APPCAST: ${{ steps.appcast.outputs.path }}
         run: |
-          previous="$( (git tag -l 'v[0-9]*' | sed 's/^v//'; echo "$VERSION") | sort -uV | grep -B1 -x "$VERSION" | head -1)"
           notes_range=()
-          if [[ "$previous" != "$VERSION" ]]; then
-            notes_range=(--notes-start-tag "v${previous}")
+          if [[ -n "$PREVIOUS" ]]; then
+            notes_range=(--notes-start-tag "v${PREVIOUS}")
           fi
           if [[ "$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
             gh release delete "v${VERSION}" --repo "$GITHUB_REPOSITORY" --yes
           fi
-          gh release create "v${VERSION}" "$DMG" \
+          gh release create "v${VERSION}" "$DMG" "$APPCAST" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Reviewer v${VERSION}" \
@@ -142,9 +182,9 @@ jobs:
             --generate-notes ${notes_range[@]+"${notes_range[@]}"} \
             --latest
 
-  # Tells installed apps about the release: reviewer.sh/latest.json is built
-  # from package.json's version, and the app offers the download once it
-  # reads a newer one there (see the app's `UpdateCheck`).
+  # Moves reviewer.sh onto the release: its Download button, and the
+  # /latest.json that builds from before Sparkle (0.0.4 and older) read to
+  # offer the download by hand. Builds with Sparkle read the appcast above.
   announce:
     needs: release
     uses: ./.github/workflows/deploy-www.yml

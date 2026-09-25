@@ -49,6 +49,20 @@
 	<!-- The API server is plain http on the loopback interface. ATS already
 	     exempts literal IP addresses, which is why the client dials 127.0.0.1
 	     rather than localhost; this keeps `.local`/unqualified hosts open too. -->
+	<!-- Sparkle (see UpdateCheck). The feed is the appcast.xml release.yml
+	     attaches to every GitHub release; /latest/ follows the newest one.
+	     The public key checks the disk image the feed names — its private
+	     half is the SPARKLE_PRIVATE_KEY secret, and the "reviewer" account
+	     in the release manager's login keychain (generate_keys -x exports it).
+	     bundle.sh turns the scheduled checks off for debug builds. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/Darna-Digital/reviewer/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>jdNd/hL5GdeFe51aOmF/5GID01GZkUWjE8c42Ao8EnA=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>21600</integer>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

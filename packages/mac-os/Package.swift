@@ -20,7 +20,12 @@ let package = Package(
         // the server's dev-process sockets. Its Metal renderer needs Xcode's
         // Metal toolchain, a separate download:
         // `xcodebuild -downloadComponent MetalToolchain`.
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.20.0")
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.20.0"),
+        // In-place updates: the "Install Update" window, the download, the
+        // EdDSA check of the disk image against SUPublicEDKey, the swap of
+        // the bundle and the relaunch. A binary framework — `bundle.sh`
+        // copies it into Contents/Frameworks and signs it.
+        .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.10.0"),
     ],
     targets: [
         // What the app and its widget agree on: the project feed the app
@@ -38,10 +43,16 @@ let package = Package(
             dependencies: [
                 "ReviewerShared",
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
+                .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Sources/Reviewer",
             swiftSettings: [
                 .swiftLanguageMode(.v6)
+            ],
+            linkerSettings: [
+                // Where Sparkle.framework sits once `bundle.sh` has put it in
+                // the app; SwiftPM's own rpath only covers the build folder.
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
         // The drag a person would otherwise have to do by hand: a file

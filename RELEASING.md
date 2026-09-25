@@ -21,7 +21,7 @@ Work lands on `staging` through pull requests. Promote it with a
 | ---------------- | -------------------------- | -------------------------------------------------------------------- |
 | `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
 | `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
-| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish, then redeploy reviewer.sh |
+| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish with its Sparkle appcast, then redeploy reviewer.sh |
 | `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
 
 `release.yml` only starts for a push to `main` that changes the root
@@ -41,8 +41,13 @@ If there isn't:
 3. `scripts/release.sh` notarizes and staples the app, wraps it in
    `Reviewer-X.Y.Z-arm64.dmg`, then signs, notarizes and staples that too,
    and checks both with `spctl` the way a downloader's Mac will.
-4. `gh release create vX.Y.Z` publishes the image as the latest release,
-   with notes GitHub generates from what merged since the previous version.
+4. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
+   image, its EdDSA signature (made with `SPARKLE_PRIVATE_KEY`), and the
+   commit subjects since the previous version as the notes the update window
+   shows.
+5. `gh release create vX.Y.Z` publishes the image and the appcast as the
+   latest release, with notes GitHub generates from what merged since the
+   previous version.
 
 A run that fails midway leaves no published release, so re-running it (or
 pushing again) picks up where it should. It can also be started by hand from
@@ -79,16 +84,18 @@ steps.
 - macOS 26 or later.
 - `node` on the login shell's `PATH`: the app starts its bundled server with
   it (see `ServerLauncher`).
-- No auto-update — a new version is a new download. The repository is
-  private, so downloading needs access to it.
-- An update prompt. The app reads `https://reviewer.sh/latest.json` shortly
-  after launch and every six hours. That file is built from `package.json`'s
-  version, and `release.yml` redeploys the site after publishing. When the
-  file names a newer version, the app opens a "Software update" window whose
-  Download button opens the release page. "Check for updates…" in the app
-  menu asks on demand. To try the window without releasing, point the app at
-  a local manifest:
-  `defaults write com.byconvo.reviewer.macos update.feedURL file:///tmp/latest.json`.
+- In-place updates through [Sparkle](https://sparkle-project.org). The app
+  reads `https://github.com/Darna-Digital/reviewer/releases/latest/download/appcast.xml`
+  (Info.plist's `SUFeedURL`) every six hours and on "Check for updates…" in
+  the app menu. When it names a newer version, Sparkle's window offers
+  **Install Update**: it downloads the disk image, checks it against
+  `SUPublicEDKey`, replaces the app and relaunches. Debug builds only check
+  when asked. To try the window without releasing, point the app at a local
+  feed (`scripts/appcast.sh` writes one):
+  `defaults write com.byconvo.reviewer.macos update.feedURL file:///tmp/appcast.xml`.
+- Builds from before Sparkle (0.0.4 and older) instead read
+  `https://reviewer.sh/latest.json` and offer the release page; installing
+  one Sparkle build by hand moves them onto in-place updates.
 
 ## Secrets
 
@@ -101,8 +108,23 @@ Set in **Settings → Secrets and variables → Actions** of `Darna-Digital/revi
 | `APPLE_API_KEY`              | base64 of the App Store Connect API key (`.p8`)            |
 | `APPLE_API_KEY_ID`           | that key's ID                                              |
 | `APPLE_API_ISSUER`           | that key's issuer UUID                                     |
+| `SPARKLE_PRIVATE_KEY`        | the EdDSA key the appcast signs the disk image with        |
 
 `GITHUB_TOKEN` is built in; it publishes the release.
+
+The Sparkle key's public half is `SUPublicEDKey` in
+`packages/mac-os/Resources/Info.plist`. The private half lives in the login
+keychain of whoever made it, under the account `reviewer`; export it for the
+secret with Sparkle's `generate_keys` (in `packages/mac-os/.build/artifacts/sparkle/Sparkle/bin`
+after a `swift build`):
+
+```bash
+generate_keys --account reviewer -x sparkle-key.txt
+gh secret set SPARKLE_PRIVATE_KEY < sparkle-key.txt && rm sparkle-key.txt
+```
+
+Losing it means installed apps refuse every later update, so keep a copy
+somewhere safe.
 
 ## A notarized build on your own Mac
 

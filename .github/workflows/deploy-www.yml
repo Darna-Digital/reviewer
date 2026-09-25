@@ -4,8 +4,8 @@ name: deploy-www
 # the cloud's Workers are the Alchemy stack in the reviewer-cloud repository.
 #
 # release.yml calls this too, once a release is published: the site's
-# /latest.json carries the released version for the app's update check, and
-# is only redeployed after the disk image it points at exists.
+# Download button and /latest.json carry the released version, and are only
+# redeployed after the disk image they point at exists.
 on:
   push:
     branches: [main]
@@ -31,11 +31,11 @@ jobs:
       name: production
       url: https://reviewer.sh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: pnpm

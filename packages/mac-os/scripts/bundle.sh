@@ -33,6 +33,15 @@ for resource_bundle in "${bin_dir}"/SwiftTerm_*.bundle; do
   [[ -d "$resource_bundle" ]] && cp -R "$resource_bundle" "${contents}/Resources/"
 done
 
+# Sparkle, the updater, is a binary framework SwiftPM leaves beside the
+# binary; the app finds it in Contents/Frameworks (the rpath Package.swift
+# adds). The app is not sandboxed, so Sparkle's XPC services — only there to
+# let a sandboxed app install — are dropped rather than signed and shipped.
+mkdir -p "${contents}/Frameworks"
+ditto "${bin_dir}/Sparkle.framework" "${contents}/Frameworks/Sparkle.framework"
+rm -rf "${contents}/Frameworks/Sparkle.framework/Versions/B/XPCServices" \
+  "${contents}/Frameworks/Sparkle.framework/XPCServices"
+
 # A built SPA (`pnpm --filter spa build`) rides along as Contents/Resources/spa
 # and the islands are served from it over `reviewer://app` — see SpaSource.
 # Without one the app falls back to the working-tree build or the Vite dev
@@ -148,6 +157,13 @@ for plist in "${contents}/Info.plist" "${appex}/Contents/Info.plist"; do
     "$plist"
 done
 
+# A debug build is the watcher's, rebuilt from the working tree; Sparkle
+# checking on its own schedule would offer to replace it with the last
+# release. "Check for updates…" still asks when told to.
+if [[ "$config" == "debug" ]]; then
+  /usr/libexec/PlistBuddy -c "Set :SUEnableAutomaticChecks false" "${contents}/Info.plist"
+fi
+
 # Sign so the binaries run under the hardened-runtime defaults of a modern
 # macOS without a "damaged app" dialog on first launch — the extension
 # first, since the app's signature seals what it holds. Both carry their
@@ -203,6 +219,14 @@ if [[ ${#distribution_flags[@]} -gt 0 && -d "${contents}/Resources/server" ]]; t
     fi
   done < <(find "${contents}/Resources/server" -type f -print0)
 fi
+
+# Sparkle comes signed by its own developer; under the hardened runtime the
+# app only loads a framework signed by its own team, so it is signed again
+# from the inside out — the helpers it launches to install, then itself.
+sparkle="${contents}/Frameworks/Sparkle.framework"
+sign "${sparkle}/Versions/B/Autoupdate"
+sign "${sparkle}/Versions/B/Updater.app"
+sign "$sparkle"
 
 sign "$appex" --entitlements "${package_dir}/Resources/Widget/ReviewerWidget.entitlements"
 sign "$app" --entitlements "${package_dir}/Resources/Reviewer.entitlements"
