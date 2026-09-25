@@ -226,7 +226,13 @@ describe("SearchHost", () => {
     expect(screen.getByText("Type to search.")).toBeDefined();
   });
 
-  it("opens a file on the code page when the current one cannot show it", async () => {
+  it.each([
+    "/modes/agent-session",
+    "/modes/code/review/pull/12",
+    "/modes/code/browse/commit/abc123",
+    "/modes/code/browse",
+  ])("opens a file in a new browse tab from %s", async (page) => {
+    pathname = page;
     const user = setup();
 
     openFiles();
@@ -234,24 +240,12 @@ describe("SearchHost", () => {
     await user.click(screen.getByRole("button", { name: /queries\.ts/ }));
 
     expect(navigate).toHaveBeenCalledWith({
-      to: "/modes/code/review",
-      search: { file: "packages/spa/src/lib/queries.ts" },
-    });
-  });
-
-  it("opens a file in place when the page already shows files", async () => {
-    pathname = "/modes/code/review/pull/12";
-    const user = setup();
-
-    openFiles();
-    await user.type(dialog()!, "queries");
-    await user.click(screen.getByRole("button", { name: /queries\.ts/ }));
-
-    const [call] = navigate.mock.calls;
-    expect(call[0].to).toBe(".");
-    expect(call[0].search({ path: "kept" })).toEqual({
-      path: "kept",
-      file: "packages/spa/src/lib/queries.ts",
+      to: "/modes/code/browse",
+      search: {
+        file: "packages/spa/src/lib/queries.ts",
+        line: undefined,
+        tab: "permanent",
+      },
     });
   });
 });

@@ -6,12 +6,12 @@
  * root it holds) or of the one repository it is, and the branches for the
  * checkout list.
  *
- * A result opens where it can be read — in place when the page already shows
- * files, otherwise on the local-changes page.
+ * A file result always opens in its own tab on the browse page, whichever page
+ * the search was opened from — a diff shows the change, not files.
  */
-import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { useOpenBrowseTab } from "@/interactions/tabs/adapters/open-browse-tab.hook.adapter";
 import { useBranches, useFiles, useRemoteBranches } from "@/lib/queries";
 import { useCodeCommands } from "../adapters/code-commands.hook.adapter";
 import {
@@ -20,21 +20,11 @@ import {
   useRegisteredCommands,
   useSearchState,
 } from "../adapters/search.store";
-import {
-  FILE_FALLBACK_ROUTE,
-  opensFileInPlace,
-} from "../functions/navigation.functions";
 import { branchChoices } from "../functions/palette.functions";
 import { SearchDialog } from "./search-dialog";
 
-interface FileLocation {
-  file: string;
-  line?: number;
-}
-
 export function SearchHost() {
-  const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const openBrowseTab = useOpenBrowseTab();
   const { open, mode, seed } = useSearchState();
   const codeCommands = useCodeCommands();
   const pageCommands = useRegisteredCommands();
@@ -53,20 +43,6 @@ export function SearchHost() {
     [local.data, remote.data]
   );
 
-  const show = (location: FileLocation) => {
-    if (opensFileInPlace(pathname)) {
-      void navigate({
-        to: ".",
-        search: (previous: Record<string, unknown>) => ({
-          ...previous,
-          ...location,
-        }),
-      });
-      return;
-    }
-    void navigate({ to: FILE_FALLBACK_ROUTE, search: location });
-  };
-
   return (
     <>
       <SearchDialog
@@ -78,8 +54,8 @@ export function SearchHost() {
         commands={commands}
         files={files.data?.paths ?? []}
         branches={branches}
-        onOpenFile={(file) => show({ file })}
-        onOpenLocation={(file, line) => show({ file, line })}
+        onOpenFile={(file) => openBrowseTab(file)}
+        onOpenLocation={openBrowseTab}
         onCheckout={(ref) => void git.checkout(ref)}
       />
     </>

@@ -177,12 +177,17 @@ export const neighbourTab = (
  */
 export const syncActive = (
   state: TabsState,
-  path: string | null
+  path: string | null,
+  intent: OpenIntent = "preview"
 ): TabsState => {
   if (path === null)
     return state.active === null ? state : { ...state, active: null };
-  if (state.active === path && indexOf(state, path) !== -1) return state;
-  return openTab(state, path);
+  const alreadySettled =
+    state.active === path &&
+    indexOf(state, path) !== -1 &&
+    (intent === "preview" || !state.tabs[indexOf(state, path)].preview);
+  if (alreadySettled) return state;
+  return openTab(state, path, intent);
 };
 
 /**
@@ -219,9 +224,9 @@ export const pruneTabs = (
  */
 export const reconcileTabs = (
   state: TabsState,
-  { viewing, switched, canRestore }: Reconcile
+  { viewing, switched, canRestore, intent }: Reconcile
 ): Reconciled => {
   const carried = switched ? null : viewing;
   const open = carried === null && canRestore ? tabToRestore(state) : carried;
-  return { open, tabs: syncActive(state, open) };
+  return { open, tabs: syncActive(state, open, intent) };
 };

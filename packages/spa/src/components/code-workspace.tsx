@@ -98,6 +98,7 @@ import {
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { useOpenBrowseTab } from "@/interactions/tabs/adapters/open-browse-tab.hook.adapter";
 import {
   TabStrip,
   type TabStripProps,
@@ -167,6 +168,7 @@ type Search = {
   file?: string;
   path?: string;
   line?: number;
+  tab?: "permanent";
 };
 
 // Target key under which working-tree/browse comments are stored, so a comment left
@@ -553,21 +555,17 @@ export function CodeWorkspace() {
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) });
+  const openBrowseTab = useOpenBrowseTab();
+  const readingDiff = mode !== "browse";
+  const openInBrowse = (path: string, lineNumber?: number) => {
+    whenMayLeaveFile(path, () => openBrowseTab(path, lineNumber));
+  };
   const openFile = (path: string) => {
+    if (readingDiff) return openInBrowse(path);
     whenMayLeaveFile(path, () => setSearch({ file: path }));
   };
   const closeFile = () => {
     whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
-  };
-  /**
-   * A file picked out of a diff's header: opened on the browse page the way
-   * a click in its tree opens one, rather than laid over the diff — the
-   * header asks for the file itself, not one more look at the change.
-   */
-  const openInBrowse = (path: string) => {
-    whenMayLeaveFile(path, () =>
-      navigate({ to: "/modes/code/browse", search: { file: path } })
-    );
   };
 
   // Go-to-definition and find-usages land here: open the file (it may already
@@ -584,7 +582,9 @@ export function CodeWorkspace() {
       key: (previous?.key ?? 0) + 1,
     }));
   const openLocation = (path: string, lineNumber: number) => {
+    if (readingDiff) return openInBrowse(path, lineNumber);
     whenMayLeaveFile(path, () => {
+      if (tabbed) updateTabs((state) => openTab(state, path, "permanent"));
       setSearch({ file: path });
       revealLine(path, lineNumber);
     });
@@ -722,6 +722,7 @@ export function CodeWorkspace() {
   const canRestore = mode === "browse" && target === null;
   /** The repository the strip was last settled against. */
   const settledFor = useRef<string | null>(null);
+  const requestedTab = search.tab;
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
     if (!tabbed || !pageSettled || repoInDoubt) return;
@@ -732,6 +733,7 @@ export function CodeWorkspace() {
       viewing,
       switched,
       canRestore,
+      intent: requestedTab,
     });
     updateTabs(() => settled);
     // Replaces rather than pushes, so Back leaves the strip behind instead of
@@ -739,10 +741,14 @@ export function CodeWorkspace() {
     // alone rather than waiting on its file list: the viewer is already asking
     // for whatever the URL names, and a file the last repository had open is a
     // request this one can only answer with an error.
-    if (open !== viewing) {
+    if (open !== viewing || requestedTab !== undefined) {
       void navigate({
         to: ".",
-        search: (prev: Search) => ({ ...prev, file: open ?? undefined }),
+        search: (prev: Search) => ({
+          ...prev,
+          file: open ?? undefined,
+          tab: undefined,
+        }),
         replace: true,
       });
     }
@@ -750,6 +756,7 @@ export function CodeWorkspace() {
     repoRoot,
     repoInDoubt,
     viewing,
+    requestedTab,
     canRestore,
     tabbed,
     pageSettled,

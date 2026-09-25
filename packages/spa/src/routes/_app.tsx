@@ -35,6 +35,8 @@ export interface AppSearch {
    * whatever is uncommitted. Absent means today's working-tree diff.
    */
   target?: string;
+  /** Set when the file named in `file` should get a tab of its own rather than the preview slot. */
+  tab?: "permanent";
 }
 
 export const Route = createFileRoute("/_app")({
@@ -49,6 +51,7 @@ export const Route = createFileRoute("/_app")({
     base: typeof search["base"] === "string" ? search["base"] : undefined,
     head: typeof search["head"] === "string" ? search["head"] : undefined,
     target: typeof search["target"] === "string" ? search["target"] : undefined,
+    tab: search["tab"] === "permanent" ? "permanent" : undefined,
   }),
   component: Layout,
 });

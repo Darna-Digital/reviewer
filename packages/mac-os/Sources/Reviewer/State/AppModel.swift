@@ -110,7 +110,7 @@ final class AppModel {
         palette = CommandPalette(client: client)
         catalog = RepoCatalog(client: client)
         settings = AppSettings(client: client)
-        palette.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
+        palette.onOpen = { [weak self] path, line in self?.browse(file: path, line: line) }
         palette.onIntent = { [weak self] path in self?.page.send(TreeAction.intent(path)) }
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
@@ -292,19 +292,8 @@ final class AppModel {
         page.navigate(to: href)
     }
 
-    /// A file, at a line: where a search result opens. In place when the
-    /// page already shows files — reading a pull request stays a review —
-    /// and otherwise on the diff, which can show any file.
-    func show(file: String, line: Int?) {
-        let base = CodeSurface.opensFiles(page.href) ? page.href : Href.review
-        showOnCodeTab(Href.file(file, line: line, on: base))
-    }
-
-    /// A file a reply links to: on the browse page, at the line, whatever
-    /// the Code tab was showing — the agent names files as they are in the
-    /// working tree, which is what the browse page reads.
     func browse(file: String, line: Int?) {
-        showOnCodeTab(Href.file(file, line: line, on: Href.browsePath))
+        showOnCodeTab(Href.browseTab(file, line: line))
     }
 
     // MARK: palette

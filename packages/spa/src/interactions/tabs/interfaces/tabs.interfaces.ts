@@ -48,6 +48,7 @@ export interface Reconcile {
   readonly switched: boolean;
   /** The page is browsing, so a strip with nothing on screen is a hole. */
   readonly canRestore: boolean;
+  readonly intent?: OpenIntent;
 }
 
 export interface Reconciled {

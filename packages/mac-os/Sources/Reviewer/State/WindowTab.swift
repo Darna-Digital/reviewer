@@ -175,6 +175,10 @@ enum Href {
         components.queryItems = items
         return components.string ?? href
     }
+
+    static func browseTab(_ path: String, line: Int?) -> String {
+        file(path, line: line, on: "\(browsePath)?tab=permanent")
+    }
 }
 
 /// The code surfaces the sidebar's rail moves between — the web app's mode
@@ -216,19 +220,6 @@ enum CodeSurface: CaseIterable, Identifiable {
         case .browse: return Href.browsePath
         case .review: return Href.review
         case .reviews: return Href.reviews
-        }
-    }
-
-    /// Whether `href`, on this surface, shows files, so one can be opened on
-    /// it in place: the browse page and the diff always do; the merge
-    /// requests only once one of them is open, its diff being the page —
-    /// with none picked the page is a list, and a file found while it is
-    /// up opens on the diff instead.
-    static func opensFiles(_ href: String) -> Bool {
-        switch forHref(href) {
-        case .browse, .review: return true
-        case .reviews: return Href.pullNumber(of: href) != nil
-        case nil: return false
         }
     }
 

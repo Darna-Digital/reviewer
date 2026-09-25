@@ -344,6 +344,28 @@ describe("reconcileTabs", () => {
     expect(show(tabs)).toBe("a b ~c");
   });
 
+  it("gives a file asked for as a tab of its own a slot rather than the preview", () => {
+    const previewing = openTab(strip(), "c");
+    const { tabs } = reconcileTabs(previewing, {
+      viewing: "d",
+      switched: false,
+      canRestore: true,
+      intent: "permanent",
+    });
+    expect(show(tabs)).toBe("a b ~c d");
+  });
+
+  it("promotes the previewed file on screen when it is asked for as a tab of its own", () => {
+    const previewing = openTab(strip(), "c");
+    const { tabs } = reconcileTabs(previewing, {
+      viewing: "c",
+      switched: false,
+      canRestore: true,
+      intent: "permanent",
+    });
+    expect(show(tabs)).toBe("a b c");
+  });
+
   it("leaves the file the last repository had open behind, restoring this one's", () => {
     const { open, tabs } = reconcileTabs(strip(), {
       viewing: "elsewhere/gone.ts",
