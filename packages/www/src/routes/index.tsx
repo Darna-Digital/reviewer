@@ -19,7 +19,7 @@ import {
   LayoutRows,
   Terminal,
 } from "#/components/icons";
-import { Screenshot } from "#/components/screenshot";
+import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
 import { cn } from "#/lib/cn";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
@@ -28,8 +28,8 @@ import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 /**
  * Display captures are encoded at half their Retina resolution, still more
  * pixels than the widest layout draws. The hero is scaled to nearly 2× its
- * widest container, and the close crops (diff layouts, branch picker) keep
- * their native size.
+ * widest container, and the close crops (diff layouts, branch picker, the
+ * hero's phone crop) keep their native size.
  */
 const SCREENSHOT_SIZES = {
   "split-diff": { width: 2560, height: 1477 },
@@ -45,6 +45,12 @@ const SCREENSHOT_SIZES = {
 
 type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
 
+const HERO_PHONE_CROP: ScreenshotCrop = {
+  name: "split-diff-mobile",
+  width: 1060,
+  height: 1232,
+};
+
 export const Route = createFileRoute("/")({
   component: Home,
 });
@@ -53,16 +59,19 @@ function AppScreenshot({
   label,
   lazy = false,
   name,
+  phone,
 }: {
   label: string;
   lazy?: boolean;
   name: ScreenshotName;
+  phone?: ScreenshotCrop;
 }) {
   return (
     <Screenshot
       alt={label}
       lazy={lazy}
       name={name}
+      phone={phone}
       {...SCREENSHOT_SIZES[name]}
     />
   );
@@ -155,9 +164,9 @@ function DiffLayoutCard() {
   return (
     <ShowcaseCard
       controls={<DiffLayoutSwitcher onChange={setLayout} value={layout} />}
-      description="Lay the diff out side by side or top to bottom, whichever reads better for the change in front of you. Click any file to open it on its own and read it whole."
+      description="Toggle between split and unified views. When a hunk isn't enough context, open the whole file."
       icon={<PlusMinus className="size-7" />}
-      title="A diff viewer that reads the way you do"
+      title="Review diffs your way"
     >
       <div className="grid">
         {DIFF_LAYOUTS.map(({ name, alt }) => {
@@ -232,11 +241,23 @@ function Home() {
             <AppScreenshot
               label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
               name="split-diff"
+              phone={HERO_PHONE_CROP}
             />
           </div>
         </Container>
 
         <Container className="mt-6 flex flex-col gap-4 sm:mt-10 sm:gap-16">
+          <ShowcaseCard
+            description="Leave a comment on any line, then assign it to an agent to pick up and fix."
+            icon={<Bubble className="size-7" />}
+            title="Comment, then hand it off"
+          >
+            <SectionScreenshot
+              label="A comment on a line of code, being assigned to a new Claude chat with its model picker open"
+              name="comment-assign"
+            />
+          </ShowcaseCard>
+
           <DiffLayoutCard />
 
           <ShowcaseCard
@@ -251,18 +272,7 @@ function Home() {
           </ShowcaseCard>
 
           <ShowcaseCard
-            description="Leave a comment on any line, then assign it to an agent to pick up and fix."
-            icon={<Bubble className="size-7" />}
-            title="Comment, then hand it off"
-          >
-            <SectionScreenshot
-              label="A comment on a line of code, being assigned to a new Claude chat with its model picker open"
-              name="comment-assign"
-            />
-          </ShowcaseCard>
-
-          <ShowcaseCard
-            description="Set up your local services once from a macOS widget and start them with a single click. If it runs in a terminal, it runs here."
+            description="Set up your local services once from a macOS widget and start them with a single click. Ruby, NPM, Docker or any other development service you use."
             icon={<Play className="size-7" />}
             title="Run your services in one click"
           >

@@ -96,6 +96,10 @@ final class AppModel {
     /// they are through — while any is running, the watcher's word that
     /// HEAD moved is already answered for.
     @ObservationIgnored var headMovesInFlight = 0
+    /// The compare picker's answer as the review page's address last held
+    /// it, and the checkout it was picked on — what the rail's Review goes
+    /// back to, so a trip to Browse does not hand the diff back to the aim.
+    @ObservationIgnored private var reviewComparison: (checkout: String, target: String)?
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
@@ -125,7 +129,10 @@ final class AppModel {
         headWatcher = HeadWatcher { [weak self] in
             Task { await self?.followHead() }
         }
-        page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
+        page.onNavigated = { [weak self] href in
+            self?.chats.follow(href: href)
+            self?.rememberComparison(on: href)
+        }
         chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in
@@ -276,6 +283,7 @@ final class AppModel {
             return
         }
         status = try? await client.repoStatus()
+        resetComparisonIfCheckoutMoved()
         history.projectChanged(project: workspace?.project, head: status?.branch)
         await loadBranches()
         await services.load()
@@ -376,7 +384,37 @@ final class AppModel {
     /// A rail button: the Code tab, on that surface — and the tree with it,
     /// since the page reports the tree of whatever surface it is on.
     func show(surface: CodeSurface) {
-        showOnCodeTab(surface.href)
+        showOnCodeTab(surface == .review ? reviewHref : surface.href)
+    }
+
+    private var reviewHref: String {
+        guard let reviewComparison else { return Href.review }
+        var components = URLComponents()
+        components.path = Href.review
+        components.queryItems = [URLQueryItem(name: "target", value: reviewComparison.target)]
+        return components.string ?? Href.review
+    }
+
+    /// The project and branch a comparison is picked for.
+    private var checkout: String { "\(workspace?.project ?? ""):\(currentBranch ?? "")" }
+
+    /// Only the review page's own address says what the diff is read
+    /// against; one without a target leaves it to the aim again.
+    private func rememberComparison(on href: String) {
+        guard let components = URLComponents(string: href), components.path == Href.review else { return }
+        reviewComparison = components.queryItems?
+            .first { $0.name == "target" }?.value
+            .map { (checkout: checkout, target: $0) }
+    }
+
+    /// A branch picked to compare against was picked for the branch you were
+    /// on; once checkout moves, the review drops back to what is uncommitted.
+    /// The web header does this itself, but the island draws no header.
+    private func resetComparisonIfCheckoutMoved() {
+        guard let reviewComparison, reviewComparison.checkout != checkout, !reviewComparison.target.isEmpty
+        else { return }
+        self.reviewComparison = (checkout: checkout, target: "")
+        if URLComponents(string: page.href)?.path == Href.review { readChanges(against: nil) }
     }
 
     /// Whether the page is anywhere inside Sessions — the composer, a
