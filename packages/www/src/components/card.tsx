@@ -39,11 +39,14 @@ export function ShowcaseCard({
   icon,
   title,
   description,
+  controls,
   children,
 }: {
   icon: ReactNode;
   title: string;
   description: string;
+  /** Sits under the paragraph, for switching what the screenshot shows. */
+  controls?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -56,6 +59,7 @@ export function ShowcaseCard({
         <p className="max-w-2xl text-pretty text-neutral-600 dark:text-neutral-400">
           {description}
         </p>
+        {controls && <div className="mt-2">{controls}</div>}
       </div>
       <div className="px-8 pb-8 sm:px-10 sm:pb-10">
         <div className="overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">

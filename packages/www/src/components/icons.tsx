@@ -16,13 +16,15 @@ const SYMBOL = {
 function Symbol({
   className,
   children,
-}: IconProps & { children: React.ReactNode }) {
+  strokeWidth = SYMBOL.strokeWidth,
+}: IconProps & { children: React.ReactNode; strokeWidth?: number }) {
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
       aria-hidden="true"
       {...SYMBOL}
+      strokeWidth={strokeWidth}
     >
       {children}
     </svg>
@@ -46,11 +48,11 @@ export function Bubbles({ className }: IconProps) {
   );
 }
 
-export function Sparkles({ className }: IconProps) {
+export function PaperPlane({ className }: IconProps) {
   return (
     <Symbol className={className}>
-      <path d="M9.5 3.5 11 8l4.5 1.5L11 11l-1.5 4.5L8 11l-4.5-1.5L8 8l1.5-4.5Z" />
-      <path d="M17.5 13.5 18.4 16l2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6Z" />
+      <path d="M20.4 3.5 3.6 10.1l7.7 2 2.3 8.4 6.8-17Z" />
+      <path d="m11.3 12.1 9.1-8.6" />
     </Symbol>
   );
 }
@@ -150,12 +152,37 @@ export function Document({ className }: IconProps) {
   );
 }
 
-export function SplitDiff({ className }: IconProps) {
+export function PlusMinus({ className }: IconProps) {
   return (
     <Symbol className={className}>
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
-      <path d="M12 4.5v15" />
-      <path d="M6.3 9h3M6.3 12.5h2.2M14.7 9h3M14.7 12.5h3M14.7 16h2" />
+      <path d="M12 3.8v11.9M5.6 9.7h12.8M5.6 20.2h12.8" />
+    </Symbol>
+  );
+}
+
+/**
+ * Tabler's layout-columns and layout-rows, the icons on the app's own diff
+ * layout toggle, kept at Tabler's stroke so the two read as the same control.
+ */
+const TABLER_STROKE = 2;
+
+const TABLER_FRAME =
+  "M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12";
+
+export function LayoutColumns({ className }: IconProps) {
+  return (
+    <Symbol className={className} strokeWidth={TABLER_STROKE}>
+      <path d={TABLER_FRAME} />
+      <path d="M12 4l0 16" />
+    </Symbol>
+  );
+}
+
+export function LayoutRows({ className }: IconProps) {
+  return (
+    <Symbol className={className} strokeWidth={TABLER_STROKE}>
+      <path d={TABLER_FRAME} />
+      <path d="M4 12l16 0" />
     </Symbol>
   );
 }

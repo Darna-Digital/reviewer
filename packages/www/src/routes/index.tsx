@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { NoteCard, ShowcaseCard } from "#/components/card";
 import { Container } from "#/components/container";
@@ -11,31 +12,35 @@ import {
   History,
   Laptop,
   Palette,
+  PaperPlane,
   Play,
-  Sparkles,
-  SplitDiff,
+  PlusMinus,
+  LayoutColumns,
+  LayoutRows,
   Terminal,
 } from "#/components/icons";
 import { Screenshot } from "#/components/screenshot";
+import { cn } from "#/lib/cn";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
 import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 
 /**
  * Display captures are encoded at half their Retina resolution, still more
- * pixels than the widest layout draws. The hero is a window crop scaled to
- * exactly that width, and the branch picker, a close crop, keeps its native
- * size.
+ * pixels than the widest layout draws. The hero is scaled to nearly 2× its
+ * widest container, and the close crops (diff layouts, branch picker) keep
+ * their native size.
  */
 const SCREENSHOT_SIZES = {
-  "split-diff": { width: 2560, height: 1524 },
-  "stacked-diff": { width: 2880, height: 1503 },
-  "agent-chat": { width: 2880, height: 1503 },
-  "comment-assign": { width: 2880, height: 1503 },
-  "run-services": { width: 2880, height: 1503 },
-  "branch-picker": { width: 1740, height: 1286 },
-  history: { width: 2880, height: 1496 },
-  "find-symbol": { width: 2880, height: 1496 },
+  "split-diff": { width: 2560, height: 1477 },
+  "diff-split": { width: 1772, height: 1290 },
+  "diff-stacked": { width: 1772, height: 1290 },
+  "agent-models": { width: 2492, height: 1564 },
+  "comment-assign": { width: 1958, height: 1130 },
+  "run-services": { width: 1958, height: 1141 },
+  "branch-picker": { width: 1470, height: 1326 },
+  history: { width: 2026, height: 1167 },
+  "find-symbol": { width: 2026, height: 1167 },
 } as const;
 
 type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
@@ -65,6 +70,114 @@ function AppScreenshot({
 
 function SectionScreenshot(props: { label: string; name: ScreenshotName }) {
   return <AppScreenshot lazy {...props} />;
+}
+
+const DIFF_LAYOUTS = [
+  {
+    name: "diff-split",
+    label: "Horizontal",
+    icon: LayoutColumns,
+    alt: "A diff laid out side by side, with the old and new lines joined across the gutter",
+  },
+  {
+    name: "diff-stacked",
+    label: "Vertical",
+    icon: LayoutRows,
+    alt: "The same diff laid out top to bottom, removed lines above the lines that replaced them",
+  },
+] as const satisfies ReadonlyArray<{
+  name: ScreenshotName;
+  label: string;
+  icon: typeof LayoutColumns;
+  alt: string;
+}>;
+
+type DiffLayout = (typeof DIFF_LAYOUTS)[number]["name"];
+
+/**
+ * A segmented control in the style of the app's own: a recessed track with a
+ * raised pill that slides under the chosen option. Both options share one
+ * width so the pill only ever has to translate, never resize.
+ */
+function DiffLayoutSwitcher({
+  value,
+  onChange,
+}: {
+  value: DiffLayout;
+  onChange: (layout: DiffLayout) => void;
+}) {
+  const selectedIndex = DIFF_LAYOUTS.findIndex(
+    (layout) => layout.name === value
+  );
+
+  return (
+    <div
+      aria-label="Diff layout"
+      className="relative grid w-full grid-cols-2 rounded-full bg-black/[0.05] p-1 ring-1 ring-black/[0.04] ring-inset sm:inline-grid sm:w-auto dark:bg-white/[0.06] dark:ring-white/[0.06]"
+      role="group"
+    >
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_0_0_0.5px_rgba(0,0,0,0.06)] transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none dark:bg-white/[0.14] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_0.5px_0_rgba(255,255,255,0.08)]"
+        style={{ transform: `translateX(${selectedIndex * 100}%)` }}
+      />
+      {DIFF_LAYOUTS.map(({ name, label, icon: Icon }) => {
+        const selected = name === value;
+        return (
+          <button
+            aria-pressed={selected}
+            className={cn(
+              "relative inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:px-4",
+              selected
+                ? "text-neutral-900 dark:text-white"
+                : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+            )}
+            key={name}
+            onClick={() => onChange(name)}
+            type="button"
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Both layouts stay mounted in one grid cell and crossfade, so switching never
+ * waits on a download or shifts the page.
+ */
+function DiffLayoutCard() {
+  const [layout, setLayout] = useState<DiffLayout>("diff-split");
+
+  return (
+    <ShowcaseCard
+      controls={<DiffLayoutSwitcher onChange={setLayout} value={layout} />}
+      description="Lay the diff out side by side or top to bottom, whichever reads better for the change in front of you. Click any file to open it on its own and read it whole."
+      icon={<PlusMinus className="size-7" />}
+      title="A diff viewer that reads the way you do"
+    >
+      <div className="grid">
+        {DIFF_LAYOUTS.map(({ name, alt }) => {
+          const shown = name === layout;
+          return (
+            <div
+              aria-hidden={!shown}
+              className={cn(
+                "transition-opacity duration-300 ease-out [grid-area:1/1] motion-reduce:transition-none",
+                !shown && "opacity-0"
+              )}
+              key={name}
+            >
+              <SectionScreenshot label={alt} name={name} />
+            </div>
+          );
+        })}
+      </div>
+    </ShowcaseCard>
+  );
 }
 
 function Hero() {
@@ -114,7 +227,7 @@ function Home() {
           <Hero />
         </Container>
 
-        <Container className="max-w-[1280px]">
+        <Container className="max-w-[1440px]">
           <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
             <AppScreenshot
               label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
@@ -124,25 +237,16 @@ function Home() {
         </Container>
 
         <Container className="mt-10 flex flex-col gap-4">
-          <ShowcaseCard
-            description="Lay the diff out side by side or top to bottom, whichever reads better for the change in front of you. Click any file to open it on its own and read it whole."
-            icon={<SplitDiff className="size-7" />}
-            title="A diff viewer that reads the way you do"
-          >
-            <SectionScreenshot
-              label="A single file's changes laid out top to bottom in a stacked diff"
-              name="stacked-diff"
-            />
-          </ShowcaseCard>
+          <DiffLayoutCard />
 
           <ShowcaseCard
             description="Chat with Claude Code, Codex and the other harnesses you already use, right beside the code they wrote."
-            icon={<Sparkles className="size-7" />}
+            icon={<PaperPlane className="size-7" />}
             title="Talk to the agent that wrote it"
           >
             <SectionScreenshot
-              label="An agent chat session, with the list of past sessions beside it"
-              name="agent-chat"
+              label="Picking the model for an agent chat, with Claude and Codex models side by side"
+              name="agent-models"
             />
           </ShowcaseCard>
 

@@ -2,7 +2,10 @@
 
 Mac app for understanding, editing and reviewing code manually or with agents.
 
-![Reviewer — the editor, with a symbol search across the workspace](docs/screenshot.webp)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.webp">
+  <img alt="Reviewer — the editor, with a symbol search across the workspace" src="docs/screenshot-light.webp">
+</picture>
 
 The native shell lives in `packages/mac-os`; `pnpm dev` runs the API server
 and the SPA it hosts, `pnpm dev:mac` builds and opens the app.
