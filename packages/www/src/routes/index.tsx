@@ -17,36 +17,53 @@ import {
   Terminal,
 } from "#/components/icons";
 import { Screenshot } from "#/components/screenshot";
-import type { ScreenshotTone } from "#/components/screenshot";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
 import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 
-/** Every screenshot is a full Retina display capture, downscaled to one size. */
-const SCREENSHOT_FRAME = { width: 2560, height: 1625 };
+/**
+ * Display captures are encoded at half their Retina resolution, still more
+ * pixels than the widest layout draws. The branch picker is a close crop, so
+ * it keeps its native size.
+ */
+const SCREENSHOT_SIZES = {
+  "split-diff": { width: 2880, height: 1503 },
+  "stacked-diff": { width: 2880, height: 1503 },
+  "agent-chat": { width: 2880, height: 1503 },
+  "comment-assign": { width: 2880, height: 1503 },
+  "run-services": { width: 2880, height: 1503 },
+  "branch-picker": { width: 1740, height: 1286 },
+  history: { width: 2880, height: 1496 },
+  "find-symbol": { width: 2880, height: 1496 },
+} as const;
+
+type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
-function SectionScreenshot({
+function AppScreenshot({
   label,
-  src,
-  tone,
+  lazy = false,
+  name,
 }: {
   label: string;
-  src?: string;
-  tone: ScreenshotTone;
+  lazy?: boolean;
+  name: ScreenshotName;
 }) {
   return (
     <Screenshot
       alt={label}
-      height={SCREENSHOT_FRAME.height}
-      src={src}
-      tone={tone}
-      width={SCREENSHOT_FRAME.width}
+      lazy={lazy}
+      name={name}
+      {...SCREENSHOT_SIZES[name]}
     />
   );
+}
+
+function SectionScreenshot(props: { label: string; name: ScreenshotName }) {
+  return <AppScreenshot lazy {...props} />;
 }
 
 function Hero() {
@@ -98,12 +115,9 @@ function Home() {
 
         <Container className="max-w-[1280px]">
           <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
-            <Screenshot
-              alt="Reviewer showing a split diff of uncommitted changes, with the changed files and commit box beside it"
-              height={SCREENSHOT_FRAME.height}
-              src="/screenshots/split-diff.webp"
-              tone="dawn"
-              width={SCREENSHOT_FRAME.width}
+            <AppScreenshot
+              label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
+              name="split-diff"
             />
           </div>
         </Container>
@@ -115,9 +129,8 @@ function Home() {
             title="A diff viewer that reads the way you do"
           >
             <SectionScreenshot
-              label="A file opened on its own from the file tree, in its own tab"
-              src="/screenshots/file-view.webp"
-              tone="lagoon"
+              label="A single file's changes laid out top to bottom in a stacked diff"
+              name="stacked-diff"
             />
           </ShowcaseCard>
 
@@ -128,8 +141,7 @@ function Home() {
           >
             <SectionScreenshot
               label="An agent chat session, with the list of past sessions beside it"
-              src="/screenshots/agent-chat.webp"
-              tone="dusk"
+              name="agent-chat"
             />
           </ShowcaseCard>
 
@@ -140,8 +152,7 @@ function Home() {
           >
             <SectionScreenshot
               label="A comment on a line of code, being assigned to a new Claude chat"
-              src="/screenshots/comment-assign.webp"
-              tone="citrus"
+              name="comment-assign"
             />
           </ShowcaseCard>
 
@@ -151,9 +162,8 @@ function Home() {
             title="Run your services in one click"
           >
             <SectionScreenshot
-              label="The local services widget, with a service running and its logs"
-              src="/screenshots/run-services.webp"
-              tone="meadow"
+              label="The Run panel, with local services running and the dev server's logs"
+              name="run-services"
             />
           </ShowcaseCard>
 
@@ -164,8 +174,7 @@ function Home() {
           >
             <SectionScreenshot
               label="The branch picker, with recent and local branches"
-              src="/screenshots/branch-picker.webp"
-              tone="ember"
+              name="branch-picker"
             />
           </ShowcaseCard>
 
@@ -176,8 +185,7 @@ function Home() {
           >
             <SectionScreenshot
               label="The version control history, with its branch graph and filters"
-              src="/screenshots/history.webp"
-              tone="glacier"
+              name="history"
             />
           </ShowcaseCard>
 
@@ -188,8 +196,7 @@ function Home() {
           >
             <SectionScreenshot
               label="Find symbol listing every usage of a class across the codebase"
-              src="/screenshots/find-symbol.webp"
-              tone="orchid"
+              name="find-symbol"
             />
           </ShowcaseCard>
         </Container>
