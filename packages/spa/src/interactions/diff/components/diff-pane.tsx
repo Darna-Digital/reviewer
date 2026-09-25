@@ -744,8 +744,8 @@ export function DiffPane({
   const itemIdByFileRef = useRef(itemIdByFile);
   itemIdByFileRef.current = itemIdByFile;
 
-  // The selected file to the top of the pane, on the viewer's own spring:
-  // it resolves the item against its live layout, so the scroll stays
+  // The selected file to the top of the pane, jumped to instantly: the
+  // viewer resolves the item against its live layout, so the scroll stays
   // accurate while the files around it are still being measured. Once, per
   // selection: the files re-arrive on every refresh of the diff, and a
   // selection that has already been scrolled to — the first file, chosen for
@@ -761,7 +761,7 @@ export function DiffPane({
       type: "item",
       id,
       align: "start",
-      behavior: "smooth",
+      behavior: "instant",
     });
   }, [selectedFile, files]);
 
