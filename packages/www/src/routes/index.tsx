@@ -127,7 +127,7 @@ function DiffLayoutSwitcher({
           <button
             aria-pressed={selected}
             className={cn(
-              "relative inline-flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:px-4",
+              "relative inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-8 sm:px-4 sm:text-[13px]",
               selected
                 ? "text-neutral-900 dark:text-white"
                 : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
@@ -182,9 +182,9 @@ function DiffLayoutCard() {
 
 function Hero() {
   return (
-    <section className="flex flex-col items-center gap-6 pt-28 pb-16 text-center sm:pt-36">
+    <section className="flex flex-col items-center gap-6 pt-24 pb-10 text-center sm:pt-36 sm:pb-16">
       <h1 className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
-        Understand AI-generated code.
+        Understand <span className="whitespace-nowrap">AI-generated</span> code.
       </h1>
 
       <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] dark:text-neutral-400">
@@ -201,7 +201,7 @@ function Hero() {
         Download for macOS
       </a>
 
-      <p className="text-[13px] leading-relaxed text-neutral-500">
+      <p className="text-sm leading-relaxed text-pretty text-neutral-500 sm:text-[13px]">
         For Apple silicon Macs, on macOS 26 or later. Free and{" "}
         <a
           className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
@@ -228,7 +228,7 @@ function Home() {
         </Container>
 
         <Container className="max-w-[1440px]">
-          <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
+          <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)] ring-1 ring-black/10 dark:ring-white/10">
             <AppScreenshot
               label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
               name="split-diff"
@@ -236,13 +236,13 @@ function Home() {
           </div>
         </Container>
 
-        <Container className="mt-10 flex flex-col gap-16">
+        <Container className="mt-6 flex flex-col gap-4 sm:mt-10 sm:gap-16">
           <DiffLayoutCard />
 
           <ShowcaseCard
-            description="Chat with Claude Code, Codex and the other harnesses you already use, right beside the code they wrote."
+            description="Use popular harnesses directly in Reviewer, or use skills to connect to any harness you have on your machine."
             icon={<PaperPlane className="size-7" />}
-            title="Talk to the agent that wrote it"
+            title="Work with Claude Code and Codex from the same interface"
           >
             <SectionScreenshot
               label="Picking the model for an agent chat, with Claude and Codex models side by side"
@@ -297,7 +297,7 @@ function Home() {
           <ShowcaseCard
             description="Language server protocol integration for TypeScript, Swift and Ruby. Hover a symbol for its signature and docs, or find every usage of it across the codebase."
             icon={<Braces className="size-7" />}
-            title="Follow a symbol anywhere"
+            title="Follow a code symbol to its source"
           >
             <SectionScreenshot
               label="Find symbol listing every usage of a class across the codebase"
@@ -306,7 +306,7 @@ function Home() {
           </ShowcaseCard>
         </Container>
 
-        <Container className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2">
+        <Container className="grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-8">
           <NoteCard icon={<Terminal className="size-7" />} title="Terminal">
             A built-in terminal for ad hoc work, right next to the code.
           </NoteCard>
@@ -327,7 +327,7 @@ function Home() {
           </NoteCard>
         </Container>
 
-        <div className="mt-10">
+        <div className="mt-4 sm:mt-10">
           <SiteFooter />
         </div>
       </main>

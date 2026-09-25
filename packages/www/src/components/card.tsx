@@ -18,11 +18,11 @@ export function NoteCard({
   children: ReactNode;
 }) {
   return (
-    <div className={cn(SURFACE, "flex flex-col gap-5 p-6")}>
+    <div className={cn(SURFACE, "flex flex-col gap-4 p-5 sm:gap-5 sm:p-6")}>
       <span className={SYMBOL_TINT}>{icon}</span>
       <div className="flex flex-col gap-2">
         <p className="font-semibold tracking-[-0.01em]">{title}</p>
-        <p className="text-[15px] leading-normal text-pretty text-neutral-600 dark:text-neutral-400">
+        <p className="text-base leading-normal text-pretty text-neutral-600 sm:text-[15px] dark:text-neutral-400">
           {children}
         </p>
       </div>
@@ -51,9 +51,9 @@ export function ShowcaseCard({
 }) {
   return (
     <div className={cn(SURFACE, "overflow-hidden")}>
-      <div className="flex flex-col gap-4 p-8 sm:p-10">
+      <div className="flex flex-col gap-3 p-5 sm:gap-4 sm:p-10">
         <span className={SYMBOL_TINT}>{icon}</span>
-        <h2 className="max-w-xl text-[26px] leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[30px]">
+        <h2 className="max-w-xl text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[30px]">
           {title}
         </h2>
         <p className="max-w-2xl text-pretty text-neutral-600 dark:text-neutral-400">
@@ -61,7 +61,7 @@ export function ShowcaseCard({
         </p>
         {controls && <div className="mt-2">{controls}</div>}
       </div>
-      <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+      <div className="px-2 pb-2 sm:px-10 sm:pb-10">
         <div className="overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
           {children}
         </div>
