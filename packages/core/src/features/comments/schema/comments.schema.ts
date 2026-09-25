@@ -30,3 +30,13 @@ export const UpdateComment = Schema.Struct({
 });
 export type UpdateComment = typeof UpdateComment.Type;
 export const CommentIdParam = Schema.Struct({ id: Schema.String });
+/**
+ * Which repository's comments a request reads or resolves: any path inside
+ * it, or absent for the one the window has open. It lets a coding agent reach
+ * its own repository's comments through whichever Reviewer server answers on
+ * the default port, whatever project that window has open.
+ */
+export const CommentsRepoQuery = Schema.Struct({
+  repo: Schema.optionalKey(Schema.String),
+});
+export type CommentsRepoQuery = typeof CommentsRepoQuery.Type;

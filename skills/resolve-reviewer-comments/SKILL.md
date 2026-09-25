@@ -11,34 +11,30 @@ of a commit range or of the diff against another branch. Those comments are the
 instructions for this task: implement each one, then resolve it so Reviewer
 shows it as handled.
 
-The comments live behind the API server Reviewer embeds. Talk to it only
-through the bundled helper — it finds the right server (every Reviewer window
-runs its own, on its own port) and never switches the project a window has
-open.
+## The API
 
-## The helper
+Reviewer runs a local API server at `http://127.0.0.1:41811` (or the port in
+`$REVIEWER_PORT`, if set). Always pass `repo` — the root of the repository you
+are working in — so you get that repository's comments no matter which project
+the Reviewer window has open. Any path inside the repository works.
 
-`scripts/reviewer.mjs` sits next to this file. Run it with Node 18+ from inside
-the repository you are working in; resolve its path relative to this
-`SKILL.md`.
+List the comments:
 
 ```bash
-node <skill-dir>/scripts/reviewer.mjs server               # which server holds this repo
-node <skill-dir>/scripts/reviewer.mjs list                 # the local comments to implement
-node <skill-dir>/scripts/reviewer.mjs resolve <id> [<id>…] # resolve comments once implemented
+curl -sfG http://127.0.0.1:41811/api/comments \
+  --data-urlencode "repo=$(git rev-parse --show-toplevel)"
 ```
 
-Pass `--repo <path>` to target a repository other than the working directory.
-Output is JSON on stdout. On failure the helper exits non-zero with a message on
-stderr saying what the user needs to do — relay it and stop; do not guess
-ports, call the API by hand, or read Reviewer's database.
+Resolve one comment:
 
-The common failures:
+```bash
+curl -sfG -X DELETE "http://127.0.0.1:41811/api/comments/<id>" \
+  --data-urlencode "repo=$(git rev-parse --show-toplevel)"
+```
 
-- **No Reviewer server is running** — ask the user to open Reviewer.
-- **No Reviewer window has this repository open** — ask the user to open it in
-  Reviewer. The message lists the windows' projects. Never change a window's
-  project yourself.
+Resolving returns `{"ok":true}`. If curl can't connect, Reviewer isn't
+running — ask the user to open it, and stop. Don't guess other ports or read
+Reviewer's database.
 
 ## A comment
 
@@ -70,22 +66,19 @@ The common failures:
   For anything but `worktree`, the code may have moved since. Read the file at
   that version (`git show <sha>:<filePath>`) to see exactly what was pointed at,
   then find the same code in the working tree and change it there.
-- `source` — `list` only returns `"local"` comments. `"github"` ones (shown with
-  `list --all`) are read live from a pull request and cannot be resolved here;
-  leave them alone.
 
 ## Workflow
 
-1. **Fetch** — `list`. If it is empty, say so and stop.
+1. **Fetch** the comments. If there are none, say so and stop.
 2. **Plan** — group the comments by `filePath`, read each file around
    `lineNumber`, and understand what every `body` asks for before editing.
    If a comment is ambiguous or contradicts another, ask the user rather than
    guessing — and don't silently skip it.
 3. **Implement** each comment as a concrete instruction, matching the style of
    the surrounding code.
-4. **Resolve** each comment right after its change is in place — one
-   `resolve <id>` per comment, not a batch at the end. A run that stops halfway
-   then still reflects real progress, and nothing gets applied twice.
+4. **Resolve** each comment right after its change is in place — one request
+   per comment, not a batch at the end. A run that stops halfway then still
+   reflects real progress, and nothing gets applied twice.
 5. **Verify** — run the project's usual checks (typecheck, lint, tests) and
    report what changed, file by file, quoting each comment's `body`.
 

@@ -3,7 +3,12 @@ import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 import { CommentsRepository } from "@reviewer/core/comments";
 import { closeDatabase, openDatabase } from "../db/database.ts";
-import { memoryLayer } from "../workspace/workspace-context.ts";
+import {
+  makeMemory,
+  memoryLayer,
+  pinnedTo,
+  WorkspaceContext,
+} from "../workspace/workspace-context.ts";
 import { makeSqliteCommentsRepository } from "./comments.repository.sqlite.ts";
 
 const API = "/home/dev/api";
@@ -14,6 +19,16 @@ const WEB = "/home/dev/web";
 const repoFor = (repoPath: string) =>
   Layer.effect(CommentsRepository)(makeSqliteCommentsRepository).pipe(
     Layer.provide(memoryLayer(repoPath))
+  );
+
+// A request naming its repository (`?repo=`) while the window has `open` open.
+const pinnedRepoFor = (open: string, named: string) =>
+  Layer.effect(CommentsRepository)(makeSqliteCommentsRepository).pipe(
+    Layer.provide(
+      Layer.effect(WorkspaceContext)(
+        Effect.map(makeMemory(open), (context) => pinnedTo(context, named))
+      )
+    )
   );
 
 beforeEach(() => openDatabase(":memory:"));
@@ -112,5 +127,31 @@ describe("SqliteCommentsRepository", () => {
       expect(webComments.map((c) => c.body)).toEqual(["web note"]);
       expect(webComments.map((c) => c.id)).not.toContain(inApi.id);
     })
+  );
+
+  it.effect(
+    "a request naming another repository reads and resolves that one's comments",
+    () =>
+      Effect.gen(function* () {
+        const inWeb = yield* Effect.gen(function* () {
+          const repo = yield* CommentsRepository;
+          return yield* repo.add({ ...input, body: "web note" });
+        }).pipe(Effect.provide(repoFor(WEB)));
+
+        const listed = yield* Effect.gen(function* () {
+          const repo = yield* CommentsRepository;
+          const named = yield* repo.list;
+          yield* repo.remove(inWeb.id);
+          return named;
+        }).pipe(Effect.provide(pinnedRepoFor(API, WEB)));
+
+        const remaining = yield* Effect.gen(function* () {
+          const repo = yield* CommentsRepository;
+          return yield* repo.list;
+        }).pipe(Effect.provide(repoFor(WEB)));
+
+        expect(listed.map((c) => c.body)).toEqual(["web note"]);
+        expect(remaining).toHaveLength(0);
+      })
   );
 });

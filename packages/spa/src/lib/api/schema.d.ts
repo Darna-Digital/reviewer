@@ -3158,7 +3158,9 @@ export interface operations {
     };
     "comments.list": {
         parameters: {
-            query?: never;
+            query?: {
+                repo?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3184,6 +3186,15 @@ export interface operations {
                         /** @enum {string} */
                         source: "local" | "github";
                     }[];
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepo"];
                 };
             };
             /** @description NotFound */
@@ -3288,7 +3299,9 @@ export interface operations {
     };
     "comments.remove": {
         parameters: {
-            query?: never;
+            query?: {
+                repo?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -3306,6 +3319,15 @@ export interface operations {
                     "application/json": {
                         ok: boolean;
                     };
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepo"];
                 };
             };
             /** @description NotFound */

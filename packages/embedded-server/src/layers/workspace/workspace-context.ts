@@ -307,6 +307,22 @@ export const layer = (
   FileSystem.FileSystem | ChildProcessSpawner.ChildProcessSpawner
 > => Layer.effect(WorkspaceContext)(make(initial));
 
+/**
+ * The workspace as seen from one repository: `root` reads as the open one,
+ * while everything else — the recents, opening another — stays the real
+ * context's. For a request that names the repository it is about instead of
+ * following whatever the window has open, without touching the window.
+ */
+export const pinnedTo = (
+  context: WorkspaceContextShape,
+  root: string
+): WorkspaceContextShape =>
+  WorkspaceContext.of({
+    ...context,
+    current: Effect.succeed(root),
+    requireCurrent: Effect.succeed(root),
+  });
+
 /** Test seam: an in-memory context with no filesystem/git/persistence. */
 export const makeMemory = (initial: string | null = null) =>
   Effect.gen(function* () {
