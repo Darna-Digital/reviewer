@@ -21,9 +21,8 @@ final class PtyStream: NSObject {
 
     init(url: @escaping (_ cols: Int, _ rows: Int) -> URL) {
         self.url = url
-        view = TerminalView(frame: .zero)
+        view = ThemedTerminalView(frame: .zero)
         super.init()
-        TerminalStyle.apply(to: view)
         view.terminalDelegate = self
     }
 
@@ -104,7 +103,58 @@ enum TerminalStyle {
     @MainActor
     static func apply(to view: TerminalView) {
         view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        applyColors(to: view)
+    }
+
+    /// The text colour settled into plain sRGB for the view's appearance
+    /// before it is handed over. The caret fills with the colour as given,
+    /// resolved while its layer draws — where the current appearance is not
+    /// the window's, so a dynamic colour came out in its light variant and
+    /// the caret read dark in either scheme.
+    @MainActor
+    static func applyColors(to view: TerminalView) {
+        var text = IslandPalette.text
+        view.effectiveAppearance.performAsCurrentDrawingAppearance {
+            text = IslandPalette.text.usingColorSpace(.sRGB) ?? IslandPalette.text
+        }
         view.nativeBackgroundColor = .clear
-        view.nativeForegroundColor = IslandPalette.text
+        view.nativeForegroundColor = text
+        view.caretColor = text
+    }
+}
+
+/// A terminal that keeps to the window's appearance and theme. SwiftTerm
+/// turns the colour it is handed into fixed RGB on the spot, so the dynamic
+/// palette colour is resolved once, for the appearance of that moment; this
+/// hands it over again whenever the appearance or the theme moves, rather
+/// than leaving the text in the old scheme's colour until the stream is
+/// made anew.
+final class ThemedTerminalView: TerminalView {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        TerminalStyle.apply(to: self)
+        NotificationCenter.default.addObserver(self, selector: #selector(applyColors),
+                                               name: ChromePalette.didChange, object: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not used")
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyColors()
+    }
+
+    /// A stream kept while its pane is away misses the appearance changes
+    /// made meanwhile, so it catches up on the way back into a window.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        applyColors()
+    }
+
+    @objc private func applyColors() {
+        TerminalStyle.applyColors(to: self)
+        needsDisplay = true
     }
 }

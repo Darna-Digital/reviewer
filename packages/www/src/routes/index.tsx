@@ -23,11 +23,12 @@ import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
 
 /**
  * Display captures are encoded at half their Retina resolution, still more
- * pixels than the widest layout draws. The branch picker is a close crop, so
- * it keeps its native size.
+ * pixels than the widest layout draws. The hero is a window crop scaled to
+ * exactly that width, and the branch picker, a close crop, keeps its native
+ * size.
  */
 const SCREENSHOT_SIZES = {
-  "split-diff": { width: 2880, height: 1503 },
+  "split-diff": { width: 2560, height: 1524 },
   "stacked-diff": { width: 2880, height: 1503 },
   "agent-chat": { width: 2880, height: 1503 },
   "comment-assign": { width: 2880, height: 1503 },
