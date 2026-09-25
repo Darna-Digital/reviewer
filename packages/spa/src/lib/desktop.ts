@@ -9,6 +9,7 @@
  *
  * SPA-only (no SSR), so reading `window` at module load is safe.
  */
+import type { ConfirmOptions } from "@/components/ui/alerts";
 import type { ShellChannel } from "@/lib/shell";
 
 interface ReviewerBridge {
@@ -16,6 +17,11 @@ interface ReviewerBridge {
   openDirectory: () => Promise<string | null>;
   /** Present only where the shell has a Quick Look panel to show — macOS. */
   previewFile?: (path: string) => Promise<void>;
+  /**
+   * Present where the shell asks the app's yes/no questions itself — as a
+   * sheet on its own window — so they read like the rest of the Mac.
+   */
+  confirm?: (options: ConfirmOptions) => Promise<boolean>;
   /**
    * Set by the macOS shell, which hosts the app one island at a time: this
    * document is that island and nothing else. Which one is checked and typed
@@ -51,6 +57,9 @@ export const desktopApiBaseUrl = bridge?.apiBaseUrl;
 export async function openDesktopDirectory(): Promise<string | null> {
   return bridge?.openDirectory() ?? null;
 }
+
+/** The shell's own yes/no sheet, where it has one — see `confirm` in `alerts`. */
+export const nativeConfirm = bridge?.confirm;
 
 export const canQuickLook = bridge?.previewFile !== undefined;
 

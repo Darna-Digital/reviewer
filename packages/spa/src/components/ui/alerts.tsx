@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type ReactNode,
 } from "react";
 
 import {
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { nativeConfirm } from "@/lib/desktop";
 
 /**
  * The app's questions, asked in our own dialog rather than the browser's.
@@ -49,8 +49,11 @@ export interface ConfirmOptions {
    * which is what keeps `title` a short sentence at any width.
    */
   readonly subject?: string;
-  /** What is about to happen, and whether it can be taken back. */
-  readonly description?: ReactNode;
+  /**
+   * What is about to happen, and whether it can be taken back. Plain text, so
+   * the desktop shell can ask the same question in a native sheet.
+   */
+  readonly description?: string;
   /** Names the answer that goes ahead. Defaults to "Continue". */
   readonly confirmLabel?: string;
   /** Names the answer that changes nothing. Defaults to "Cancel". */
@@ -115,8 +118,12 @@ const drop = (id: number) => {
   emit();
 };
 
-/** Ask a yes/no question. Resolves `true` only if it was answered yes. */
+/**
+ * Ask a yes/no question. Resolves `true` only if it was answered yes. Inside
+ * the desktop shell the shell asks it, as a sheet on its window.
+ */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
+  if (nativeConfirm !== undefined) return nativeConfirm(options);
   return new Promise<boolean>((resolve) => {
     enqueue({ kind: "confirm", id: nextId++, options, settle: resolve });
   });

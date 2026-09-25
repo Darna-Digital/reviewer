@@ -23,7 +23,9 @@
 // style — asked for from the palette (`view`). And one the island alone
 // sends: its empty pane's ways in — the palette's lists, the settings
 // window — which are the shell's own here, so a click on one crosses over
-// (`open`).
+// (`open`). And one the island asks and waits on: a yes/no question —
+// discard this file? — which the shell asks as a sheet on its window and
+// answers as the promise the page is holding (`confirm`).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -233,6 +235,7 @@ final class IslandHost: NSObject {
             appearance: "\(NativePalette.appearanceName())",
             apiBaseUrl: "\(apiBaseURL.absoluteString)",
             openDirectory: () => handler.postMessage({ type: "openDirectory" }),
+            confirm: (options) => handler.postMessage({ type: "confirm", options }),
             shell: {
               post: (intent) => handler.postMessage(intent),
               subscribe(listener) {
@@ -278,6 +281,11 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "openDirectory":
             return (onOpenDirectory?() as Any?, nil)
+        case "confirm":
+            guard let question = ConfirmQuestion.decode(body["options"]) else {
+                return (nil, "malformed confirm")
+            }
+            return (await question.ask(over: view.window), nil)
         case "windowTabs":
             if let strip = WindowTabStrip.decode(body["strip"]) { onWindowTabsReported?(strip) }
             return (nil, nil)
