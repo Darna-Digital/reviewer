@@ -495,7 +495,7 @@ function PreviewFileLink({
             onPointerEnter={() => onIntent(path)}
           />
         }
-        className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full"
+        className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <FileTypeIcon path={path} className="mr-1.5 size-3.5" />
         <span className="min-w-0 truncate text-muted-foreground">

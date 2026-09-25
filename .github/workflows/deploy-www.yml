@@ -14,6 +14,11 @@ on:
       - "pnpm-lock.yaml"
       - ".github/workflows/deploy-www.yml"
   workflow_call:
+    inputs:
+      # Set by a caller that already ran check.yml on this commit.
+      checked:
+        type: boolean
+        default: false
   workflow_dispatch:
 
 concurrency:
@@ -22,10 +27,13 @@ concurrency:
 
 jobs:
   check:
+    if: ${{ !inputs.checked }}
     uses: ./.github/workflows/check.yml
 
+  # A skipped check would skip this job too, so only a failed one stops it.
   deploy:
     needs: check
+    if: ${{ !cancelled() && needs.check.result != 'failure' }}
     runs-on: ubuntu-latest
     environment:
       name: production

@@ -185,7 +185,10 @@ jobs:
   # Moves reviewer.sh onto the release: its Download button, and the
   # /latest.json that builds from before Sparkle (0.0.4 and older) read to
   # offer the download by hand. Builds with Sparkle read the appcast above.
+  # The check job above already passed on this commit, so it is not rerun.
   announce:
     needs: release
     uses: ./.github/workflows/deploy-www.yml
+    with:
+      checked: true
     secrets: inherit
