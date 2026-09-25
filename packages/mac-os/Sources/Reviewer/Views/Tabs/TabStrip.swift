@@ -56,9 +56,19 @@ private struct PinnedTab: View {
     let tab: WindowTab
     let model: AppModel
 
+    private static let glyphWell: CGFloat = 20
+
     var body: some View {
         Toggle(isOn: isInFront) {
-            Label(tab.title, systemImage: tab.kind.symbol)
+            Label {
+                Text(tab.title)
+            } icon: {
+                // A square well for every glyph: the lit capsule hugs the
+                // icon, and Code's `</>` is wide enough to stretch it into a
+                // pill beside Sessions' circle.
+                Image(systemName: tab.kind.symbol)
+                    .frame(width: Self.glyphWell, height: Self.glyphWell)
+            }
         }
         .toggleStyle(.button)
         // Lit in the theme's accent, as the pane's tabs and the diff's
