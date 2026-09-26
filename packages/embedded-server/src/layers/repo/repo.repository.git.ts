@@ -577,34 +577,96 @@ export const makeGitRepoRepository = Effect.gen(function* () {
    * for an added file, so the pane reads them as one diff — and tolerantly,
    * since `--no-index` exits 1 to say the two sides differ.
    */
-  const untrackedDiff = Effect.gen(function* () {
-    const listing = yield* run(
-      "ls-files",
-      "--others",
-      "--exclude-standard",
-      "-z"
-    );
-    const untracked = listing.split("\0").filter((path) => path.length > 0);
-    const patches = yield* Effect.all(
-      untracked.map((path) =>
-        runTolerant("diff", "--no-index", "--", "/dev/null", path)
-      ),
-      { concurrency: 8 }
-    );
-    return patches.join("");
-  });
+  const newFilePatch = (path: string) =>
+    runTolerant("diff", "--no-index", "--", "/dev/null", path);
 
-  /** A working-tree diff with its untracked files appended as new files. */
-  const withUntracked = (diff: Effect.Effect<string, GitFailure>) =>
+  const untrackedPaths = Effect.suspend(() =>
     Effect.map(
-      Effect.all([diff, untrackedDiff], { concurrency: "unbounded" }),
-      ([tracked, untracked]) => `${tracked}${untracked}`
+      run("ls-files", "--others", "--exclude-standard", "-z"),
+      (listing) => listing.split("\0").filter((path) => path.length > 0)
+    )
+  );
+
+  /**
+   * Which of `paths` the tree at `ref` has. An untracked path the base also
+   * has is one whose deletion was staged and whose file was then written
+   * again (`D ` and `??` at once): `git diff` reports it deleted, and as a
+   * new file it would be the same path a second time — which the viewer,
+   * keying its items by path, refuses outright.
+   */
+  const pathsAt = (ref: string, paths: ReadonlyArray<string>) =>
+    paths.length === 0
+      ? Effect.succeed(new Set<string>())
+      : run("ls-tree", "-z", "--name-only", ref, "--", ...paths).pipe(
+          Effect.map(
+            (listing) =>
+              new Set(listing.split("\0").filter((path) => path.length > 0))
+          ),
+          Effect.catchTag("GitError", () => Effect.succeed(new Set<string>()))
+        );
+
+  /**
+   * A recreated file as the change it is: the base's version against the one
+   * on disk. `--no-index` needs two files, so the base side goes through a
+   * scoped temp file, and the header is written for the real path — git
+   * would name the temp file.
+   */
+  const recreatedFilePatch = (ref: string, path: string) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const toGitError = fsToGitError(["diff", "--no-index", "--", path]);
+        const base = yield* run("show", `${ref}:${path}`);
+        const tmp = yield* fs
+          .makeTempFileScoped({ prefix: "reviewer-base-" })
+          .pipe(Effect.mapError(toGitError));
+        yield* fs.writeFileString(tmp, base).pipe(Effect.mapError(toGitError));
+        const { hunks } = splitDiffIntoHunks(
+          yield* runTolerant("diff", "--no-index", "--", tmp, path)
+        );
+        if (hunks.length === 0) return "";
+        return `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n${hunks.join("\n")}\n`;
+      })
     );
+
+  const excluding = (paths: ReadonlySet<string>): ReadonlyArray<string> =>
+    paths.size === 0
+      ? []
+      : ["--", ...[...paths].map((path) => `:(exclude,literal)${path}`)];
+
+  /**
+   * A working-tree diff against `ref` with its untracked files appended as
+   * new files — or, for one `ref` already has, as the change from it.
+   */
+  const withUntracked = (
+    ref: string,
+    diff: (pathspec: ReadonlyArray<string>) => Effect.Effect<string, GitFailure>
+  ) =>
+    Effect.gen(function* () {
+      const untracked = yield* untrackedPaths;
+      const recreated = yield* pathsAt(ref, untracked);
+      const [tracked, patches] = yield* Effect.all(
+        [
+          diff(excluding(recreated)),
+          Effect.all(
+            untracked.map((path) =>
+              recreated.has(path)
+                ? recreatedFilePatch(ref, path)
+                : newFilePatch(path)
+            ),
+            { concurrency: 8 }
+          ),
+        ],
+        { concurrency: "unbounded" }
+      );
+      return `${tracked}${patches.join("")}`;
+    });
 
   const worktreeDiff: RepoRepo["worktreeDiff"] = withUntracked(
-    run("diff", "HEAD").pipe(
-      Effect.catchTag("GitError", () => Effect.succeed(""))
-    )
+    "HEAD",
+    (pathspec) =>
+      run("diff", "HEAD", ...pathspec).pipe(
+        Effect.catchTag("GitError", () => Effect.succeed(""))
+      )
   );
 
   const mergeBaseWith = (target: string) =>
@@ -621,8 +683,8 @@ export const makeGitRepoRepository = Effect.gen(function* () {
    * committed in, which is what a task still being worked on consists of.
    */
   const targetDiff: RepoRepo["targetDiff"] = (target) =>
-    withUntracked(
-      Effect.flatMap(mergeBaseWith(target), (base) => run("diff", base))
+    Effect.flatMap(mergeBaseWith(target), (base) =>
+      withUntracked(base, (pathspec) => run("diff", base, ...pathspec))
     );
 
   const commitDiff: RepoRepo["commitDiff"] = (sha) =>
@@ -798,7 +860,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     Effect.gen(function* () {
       const patch = yield* run("diff", "HEAD", "--", path);
       // An untracked file has no HEAD diff: its one hunk is the whole file, so
-      // discarding it is discarding the file — see `untrackedDiff`.
+      // discarding it is discarding the file — see `newFilePatch`.
       if (patch.length === 0 && hunkIndex === 0) {
         yield* discardOne(path);
         return;
