@@ -68,6 +68,68 @@ if [[ -f "$server_build" ]]; then
   done
 fi
 
+# The server runs on a Node.js of the app's own, Contents/MacOS/node, so an
+# installed app needs none on the machine — nor finds whichever one a
+# version manager hides from a login shell. The official release binary is
+# fetched once per version and architecture into .build/node, checked
+# against the release's SHASUMS256.txt, and cloned into the bundle from
+# there on every later call: the watcher rebuilds on every save. One
+# architecture per slice of the app's binary, glued back together with
+# lipo when it is universal.
+#
+# A debug bundle that cannot fetch it (offline, first run) goes on without
+# one — inside the repository the server runs on the developer's Node
+# through pnpm anyway. A release bundle without it would ship broken, so
+# there it stops the build.
+node_version="24.21.0"
+node_cache="${package_dir}/.build/node"
+
+fetch_node() {
+  local arch="$1"
+  local dist_arch="$arch"
+  [[ "$arch" == "x86_64" ]] && dist_arch="x64"
+  local name="node-v${node_version}-darwin-${dist_arch}"
+  local cached="${node_cache}/${name}/node"
+  if [[ ! -x "$cached" ]]; then
+    local base="https://nodejs.org/dist/v${node_version}"
+    local download
+    download="$(mktemp -d)"
+    curl -fsSL "${base}/${name}.tar.gz" -o "${download}/${name}.tar.gz" &&
+      curl -fsSL "${base}/SHASUMS256.txt" | grep " ${name}.tar.gz\$" |
+      (cd "$download" && shasum -a 256 -c --status) &&
+      tar -xzf "${download}/${name}.tar.gz" -C "$download" "${name}/bin/node" &&
+      mkdir -p "$(dirname "$cached")" &&
+      mv "${download}/${name}/bin/node" "$cached"
+    local fetched=$?
+    rm -rf "$download"
+    [[ $fetched -eq 0 ]] || return 1
+  fi
+  echo "$cached"
+}
+
+bundle_node() {
+  local slices=()
+  local arch
+  local slice
+  for arch in $(lipo -archs "${contents}/MacOS/Reviewer"); do
+    slice="$(fetch_node "$arch")" || return 1
+    slices+=("$slice")
+  done
+  if [[ ${#slices[@]} -eq 1 ]]; then
+    cp -c "${slices[0]}" "${contents}/MacOS/node" 2>/dev/null || cp "${slices[0]}" "${contents}/MacOS/node"
+  else
+    lipo -create "${slices[@]}" -output "${contents}/MacOS/node"
+  fi
+}
+
+if [[ -d "${contents}/Resources/server" ]] && ! bundle_node; then
+  if [[ "$config" == "release" ]]; then
+    echo "✗ could not fetch Node.js v${node_version}; a release bundle cannot run its server without it" >&2
+    exit 1
+  fi
+  echo "⚠ could not fetch Node.js v${node_version}; this bundle's server runs only inside the repository" >&2
+fi
+
 # The dock icon is the Icon Composer bundle under Resources/Reviewer.icon,
 # compiled with actool into Assets.car (light, dark, clear and tinted
 # renderings, masked to the macOS 26 squircle by the system) plus a flat
@@ -218,6 +280,14 @@ if [[ ${#distribution_flags[@]} -gt 0 && -d "${contents}/Resources/server" ]]; t
       sign "$file"
     fi
   done < <(find "${contents}/Resources/server" -type f -print0)
+fi
+
+# Node.js comes signed by its own developer, which is enough to run it from
+# a development bundle. A notarized one needs our signature on it too, and
+# Node's entitlements with it — V8 cannot JIT under the hardened runtime
+# without them (see Resources/Node.entitlements).
+if [[ ${#distribution_flags[@]} -gt 0 && -f "${contents}/MacOS/node" ]]; then
+  sign "${contents}/MacOS/node" --entitlements "${package_dir}/Resources/Node.entitlements"
 fi
 
 # Sparkle comes signed by its own developer; under the hardened runtime the

@@ -178,7 +178,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Reviewer v${VERSION}" \
-            --notes "Signed and notarized. For Apple silicon Macs on macOS 26 or later; Reviewer runs its server with the \`node\` on your login shell's PATH." \
+            --notes "Signed and notarized. For Apple silicon Macs on macOS 26 or later." \
             --generate-notes ${notes_range[@]+"${notes_range[@]}"} \
             --latest
 

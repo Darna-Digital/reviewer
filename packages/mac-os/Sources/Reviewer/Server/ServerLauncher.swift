@@ -3,8 +3,11 @@
 // pnpm from the repository root when the app runs from inside one, so the
 // server is the working tree's own source; otherwise — an app installed in
 // /Applications — the server bundled into the app (`Resources/server`, see
-// scripts/bundle.sh). Either runs on whatever Node the developer's shell
-// resolves (a login shell, so version-manager shims are found).
+// scripts/bundle.sh), on the Node.js bundled beside it (`MacOS/node`), so
+// the machine needs none of its own. Either is started through a login
+// shell all the same: the server shells out to git, gh and the agents'
+// CLIs, and finds them on the PATH the user's profile sets up, not the bare
+// one launchd hands a Finder-launched app.
 //
 // The port is the server's default, so an already running server (a `pnpm
 // dev` one, or another Reviewer window's) is simply reused. Override with
@@ -26,7 +29,7 @@ enum ServerLauncherError: LocalizedError {
         case .serverNotFound:
             return "this build carries no API server and is not inside the reviewer repository — rebuild it with `pnpm build:mac`, or start the server yourself with `pnpm --filter @reviewer/embedded-server start`"
         case .exited(let status):
-            return "the API server exited with status \(status) — is `node` on your login shell's PATH?"
+            return "the API server exited with status \(status)"
         case .timedOut(let url):
             return "the API server did not answer at \(url.absoluteString)"
         case .noFreePort:
@@ -132,7 +135,8 @@ final class ServerLauncher {
             process.arguments = ["-lc", "exec pnpm --filter @reviewer/embedded-server start"]
             process.currentDirectoryURL = root
         } else if let bundled = Self.bundledServer() {
-            process.arguments = ["-lc", "exec node \"$0\"", bundled.path]
+            let runtime = Self.bundledNode()?.path ?? "node"
+            process.arguments = ["-lc", "exec \"$0\" \"$1\"", runtime, bundled.path]
             process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         } else {
             throw ServerLauncherError.serverNotFound
@@ -170,6 +174,13 @@ final class ServerLauncher {
         guard let entry = Bundle.main.resourceURL?.appending(path: "server/main.cjs"),
               FileManager.default.fileExists(atPath: entry.path) else { return nil }
         return entry
+    }
+
+    /// The Node.js runtime bundled beside the app's own binary by
+    /// scripts/bundle.sh, which the bundled server runs on. Only a debug
+    /// bundle built offline goes without one, and falls back to the shell's.
+    nonisolated static func bundledNode() -> URL? {
+        Bundle.main.url(forAuxiliaryExecutable: "node")
     }
 
     /// Whether anything accepts connections on the port, answering HTTP yet

@@ -37,7 +37,9 @@ If there isn't:
    and `scripts/bundle.sh` assembles `Reviewer.app` and stamps it with the
    version. Handed a `Developer ID Application: …` identity, `bundle.sh`
    signs every Mach-O with the hardened runtime and a secure timestamp —
-   node-pty's `pty.node` and `spawn-helper` included.
+   node-pty's `pty.node` and `spawn-helper` included, and the bundled
+   Node.js runtime (`Contents/MacOS/node`) with the entitlements V8 needs to
+   JIT (`Resources/Node.entitlements`).
 3. `scripts/release.sh` notarizes and staples the app, wraps it in
    `Reviewer-X.Y.Z-arm64.dmg`, then signs, notarizes and staples that too,
    and checks both with `spctl` the way a downloader's Mac will.
@@ -82,8 +84,10 @@ steps.
 
 - Apple silicon only (`arm64`) — the runner builds for its own architecture.
 - macOS 26 or later.
-- `node` on the login shell's `PATH`: the app starts its bundled server with
-  it (see `ServerLauncher`).
+- No Node.js needed: the app carries its own (the version pinned in
+  `packages/mac-os/scripts/bundle.sh`) and starts its bundled server on it
+  (see `ServerLauncher`). Bumping that version is how the server's runtime
+  gets security fixes.
 - In-place updates through [Sparkle](https://sparkle-project.org). The app
   reads `https://github.com/Darna-Digital/reviewer/releases/latest/download/appcast.xml`
   (Info.plist's `SUFeedURL`) every six hours and on "Check for updates…" in

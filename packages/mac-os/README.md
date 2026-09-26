@@ -358,8 +358,11 @@ An app installed outside the repository (copied to `/Applications`) has no
 repository to walk up to, so it runs the server bundled into it instead:
 `pnpm build:mac` builds the server with esbuild (`build:bundle`) and
 `scripts/bundle.sh` copies it, with node-pty beside it, into
-`Contents/Resources/server`, where the app starts it with the `node` from
-your login shell.
+`Contents/Resources/server`, and puts a Node.js of the app's own beside the
+binary as `Contents/MacOS/node` — the official release, version pinned in
+`bundle.sh`, fetched once into `.build/node` and checked against its
+`SHASUMS256.txt`. The app starts the server on that, so the machine needs
+no Node.js installed.
 
 Requires Xcode 16+ (Swift 6 language mode) and macOS 15.
 
