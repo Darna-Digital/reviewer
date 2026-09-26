@@ -2,7 +2,18 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
+import { SITE_URL } from "#/lib/links";
 import appCss from "../styles.css?url";
+
+const TITLE = "Reviewer: Understand AI-generated code";
+const DESCRIPTION =
+  "In a world where we no longer write code, we spend a lot more time reviewing it. Reviewer is a delightful, smooth macOS app built precisely for that.";
+const OG_IMAGE = {
+  url: `${SITE_URL}/og-image.png`,
+  width: "1200",
+  height: "630",
+  alt: "Reviewer: Understand AI-generated code, above a side-by-side diff in the app",
+};
 
 export const Route = createRootRoute({
   head: () => ({
@@ -14,14 +25,22 @@ export const Route = createRootRoute({
         name: "viewport",
         content: "width=device-width, initial-scale=1",
       },
-      {
-        title: "Reviewer: Understand AI-generated code",
-      },
-      {
-        name: "description",
-        content:
-          "In a world where we no longer write code, we spend a lot more time reviewing it. Reviewer is a delightful, smooth macOS app built precisely for that.",
-      },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Reviewer" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:image", content: OG_IMAGE.url },
+      { property: "og:image:width", content: OG_IMAGE.width },
+      { property: "og:image:height", content: OG_IMAGE.height },
+      { property: "og:image:alt", content: OG_IMAGE.alt },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: TITLE },
+      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE.url },
+      { name: "twitter:image:alt", content: OG_IMAGE.alt },
     ],
     links: [
       {

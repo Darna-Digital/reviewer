@@ -13,6 +13,7 @@
     "deploy": "vite build && wrangler deploy --config dist/server/wrangler.json",
     "capture:spa": "node scripts/capture-spa/cli.ts",
     "capture:home": "node scripts/capture-spa/cli.ts --manifest scripts/capture-spa/home.json",
+    "generate:og": "node scripts/og-image/render.ts",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,css}\"",
