@@ -16,6 +16,9 @@ export class NoRepoSelected extends Schema.TaggedErrorClass<NoRepoSelected>()(
   }
 }
 
+// Catch-all for platform/filesystem failures (disk IO, git, etc.) that
+// repositories map errors into; `reason` carries the underlying message
+// since these come from many unrelated sources with no fixed wording.
 export class StorageError extends Schema.TaggedErrorClass<StorageError>()(
   "StorageError",
   { reason: Schema.String },

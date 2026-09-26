@@ -45,6 +45,9 @@ const SCREENSHOT_SIZES = {
 
 type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
 
+const SECTION_ICON = "size-7 lg:size-10";
+const NOTE_ICON = "size-7 lg:size-8";
+
 const HERO_PHONE_CROP: ScreenshotCrop = {
   name: "split-diff-mobile",
   width: 1060,
@@ -136,7 +139,7 @@ function DiffLayoutSwitcher({
           <button
             aria-pressed={selected}
             className={cn(
-              "relative inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-8 sm:px-4 sm:text-[13px]",
+              "relative inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-8 sm:px-4 sm:text-[13px] lg:h-10 lg:px-5 lg:text-[15px]",
               selected
                 ? "text-neutral-900 dark:text-white"
                 : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
@@ -145,7 +148,7 @@ function DiffLayoutSwitcher({
             onClick={() => onChange(name)}
             type="button"
           >
-            <Icon className="size-4" />
+            <Icon className="size-4 lg:size-4.5" />
             {label}
           </button>
         );
@@ -165,7 +168,7 @@ function DiffLayoutCard() {
     <ShowcaseCard
       controls={<DiffLayoutSwitcher onChange={setLayout} value={layout} />}
       description="Toggle between split and unified views. When a hunk isn't enough context, open the whole file."
-      icon={<PlusMinus className="size-7" />}
+      icon={<PlusMinus className={SECTION_ICON} />}
       title="Review diffs your way"
     >
       <div className="grid">
@@ -191,26 +194,26 @@ function DiffLayoutCard() {
 
 function Hero() {
   return (
-    <section className="flex flex-col items-center gap-6 pt-24 pb-10 text-center sm:pt-36 sm:pb-16">
-      <h1 className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
+    <section className="flex flex-col items-center gap-6 pt-24 pb-10 text-center sm:pt-36 sm:pb-16 lg:pt-44 lg:pb-20">
+      <h1 className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px] lg:max-w-4xl lg:text-[62px]">
         Understand <span className="whitespace-nowrap">AI-generated</span> code.
       </h1>
 
-      <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] dark:text-neutral-400">
+      <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:max-w-3xl lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">
         In a world where we no longer write code, we spend a lot more time
         reviewing it. Reviewer is a delightful, smooth macOS app built precisely
         for that.
       </p>
 
       <a
-        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-neutral-900 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-neutral-900 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-neutral-700 lg:h-14 lg:px-8 lg:text-lg dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
         href={DOWNLOAD_URL}
       >
-        <Apple className="size-5" />
+        <Apple className="size-5 lg:size-6" />
         Download for macOS
       </a>
 
-      <p className="text-sm leading-relaxed text-pretty text-neutral-500 sm:text-[13px]">
+      <p className="text-sm leading-relaxed text-pretty text-neutral-500 sm:text-[13px] lg:text-[15px]">
         For Apple silicon Macs, on macOS 26 or later. Free and{" "}
         <a
           className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
@@ -236,7 +239,7 @@ function Home() {
           <Hero />
         </Container>
 
-        <Container className="max-w-[1440px]">
+        <Container className="max-w-[1440px] lg:max-w-[1440px]">
           <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)] ring-1 ring-black/10 dark:ring-white/10">
             <AppScreenshot
               label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
@@ -249,7 +252,7 @@ function Home() {
         <Container className="mt-6 flex flex-col gap-4 sm:mt-10 sm:gap-16">
           <ShowcaseCard
             description="Leave a comment on any line, then assign it to an agent to pick up and fix."
-            icon={<Bubble className="size-7" />}
+            icon={<Bubble className={SECTION_ICON} />}
             title="Comment, then hand it off"
           >
             <SectionScreenshot
@@ -262,7 +265,7 @@ function Home() {
 
           <ShowcaseCard
             description="Use popular harnesses directly in Reviewer, or use skills to connect to any harness you have on your machine."
-            icon={<PaperPlane className="size-7" />}
+            icon={<PaperPlane className={SECTION_ICON} />}
             title="Work with Claude Code and Codex from the same interface"
           >
             <SectionScreenshot
@@ -273,7 +276,7 @@ function Home() {
 
           <ShowcaseCard
             description="Set up your local services once from a macOS widget and start them with a single click. Ruby, NPM, Docker or any other development service you use."
-            icon={<Play className="size-7" />}
+            icon={<Play className={SECTION_ICON} />}
             title="Run your services in one click"
           >
             <SectionScreenshot
@@ -284,7 +287,7 @@ function Home() {
 
           <ShowcaseCard
             description="Create new branches, and let Reviewer write the commit message from what actually changed."
-            icon={<Branch className="size-7" />}
+            icon={<Branch className={SECTION_ICON} />}
             title="Intuitive Git integration"
           >
             <SectionScreenshot
@@ -295,7 +298,7 @@ function Home() {
 
           <ShowcaseCard
             description="Filter the history by author, date or branch. Click any entry to see what changed and when, or open a single file's history to follow how it got to where it is."
-            icon={<History className="size-7" />}
+            icon={<History className={SECTION_ICON} />}
             title="Know what changed, and when"
           >
             <SectionScreenshot
@@ -306,7 +309,7 @@ function Home() {
 
           <ShowcaseCard
             description="Language server protocol integration for TypeScript, Swift and Ruby. Hover a symbol for its signature and docs, or find every usage of it across the codebase."
-            icon={<Braces className="size-7" />}
+            icon={<Braces className={SECTION_ICON} />}
             title="Follow a code symbol to its source"
           >
             <SectionScreenshot
@@ -317,20 +320,20 @@ function Home() {
         </Container>
 
         <Container className="grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-8">
-          <NoteCard icon={<Terminal className="size-7" />} title="Terminal">
+          <NoteCard icon={<Terminal className={NOTE_ICON} />} title="Terminal">
             A built-in terminal for ad hoc work, right next to the code.
           </NoteCard>
           <NoteCard
-            icon={<Contrast className="size-7" />}
+            icon={<Contrast className={NOTE_ICON} />}
             title="Light and dark"
           >
             Follows your Mac, or pick the appearance you prefer.
           </NoteCard>
-          <NoteCard icon={<Palette className="size-7" />} title="Themes">
+          <NoteCard icon={<Palette className={NOTE_ICON} />} title="Themes">
             Shiki and Pierre themes to make the environment your own.
           </NoteCard>
           <NoteCard
-            icon={<Laptop className="size-7" />}
+            icon={<Laptop className={NOTE_ICON} />}
             title="Native to the Mac"
           >
             Built for Apple silicon macOS 26 and later.

@@ -1,3 +1,4 @@
+import { Container } from "#/components/container";
 import { Apple, GitHub } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
@@ -13,7 +14,7 @@ function TouchTarget() {
 }
 
 const NAV_LINK =
-  "relative inline-flex items-center gap-1.5 text-sm sm:text-[13px] text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white";
+  "relative inline-flex items-center gap-1.5 text-sm sm:text-[13px] lg:text-[15px] text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white";
 
 export function SiteHeader() {
   const scrolled = useScrolled();
@@ -25,9 +26,9 @@ export function SiteHeader() {
     <header
       className={`sticky top-0 z-40 -mb-header h-header border-b transition-colors duration-200 ${backdrop}`}
     >
-      <div className="mx-auto flex h-full max-w-[1008px] items-center gap-5 px-4 sm:px-6">
+      <Container className="flex h-full items-center gap-5 lg:gap-7">
         <a href="/">
-          <Logo className="h-5 w-auto" />
+          <Logo className="h-5 w-auto lg:h-6" />
         </a>
         <a
           className={`ml-auto ${NAV_LINK}`}
@@ -36,15 +37,15 @@ export function SiteHeader() {
           target="_blank"
         >
           <TouchTarget />
-          <GitHub className="size-4" />
+          <GitHub className="size-4 lg:size-4.5" />
           GitHub
         </a>
         <a className={NAV_LINK} href={DOWNLOAD_URL}>
           <TouchTarget />
-          <Apple className="size-4" />
+          <Apple className="size-4 lg:size-4.5" />
           Download
         </a>
-      </div>
+      </Container>
     </header>
   );
 }

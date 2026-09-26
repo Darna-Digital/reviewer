@@ -12,7 +12,10 @@ export function Container({
 }) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-[1008px] px-4 sm:px-6", className)}
+      className={cn(
+        "mx-auto w-full max-w-[1008px] px-4 sm:px-6 lg:max-w-[1248px]",
+        className
+      )}
     >
       {children}
     </div>
