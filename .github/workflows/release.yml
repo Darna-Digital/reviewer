@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # The previous release's tag bounds the generated release notes.
+          # The previous release's tag bounds the fallback notes and the compare link.
           fetch-depth: 0
 
       # Checked before the build rather than after it: without the key the
@@ -140,37 +140,59 @@ jobs:
           if [[ "$previous" == "$VERSION" ]]; then previous=""; fi
           echo "PREVIOUS=${previous}" >> "$GITHUB_ENV"
 
-      # The update window's notes are the commit subjects since the previous
-      # release: work is pushed rather than merged through pull requests, so
-      # GitHub's generated notes would often be just a compare link.
+      # The release's notes are its CHANGELOG.md entry — the section under
+      # "## vX.Y.Z", which the release skill writes into the release commit.
+      # A version bumped without one falls back to the commit subjects since
+      # the previous release rather than failing a build that is already
+      # notarized.
+      - name: Write the release notes
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          heading="## v${VERSION}"
+          awk -v heading="$heading" '
+            index($0, heading) == 1 && (length($0) == length(heading) || substr($0, length(heading) + 1, 1) == " ") { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "$notes" 2>/dev/null || true
+          if ! grep -q '[^[:space:]]' "$notes"; then
+            echo "::warning::CHANGELOG.md has no entry for v${VERSION} — using the commit subjects instead."
+            git log --no-merges --format='- %s' ${PREVIOUS:+"v${PREVIOUS}..HEAD"} | { grep -v '^- Release v' || true; } > "$notes"
+          fi
+          cat "$notes"
+          echo "NOTES=${notes}" >> "$GITHUB_ENV"
+
       - name: Write the Sparkle feed
         id: appcast
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
           DMG: ${{ steps.dmg.outputs.path }}
         run: |
-          notes="$RUNNER_TEMP/notes.md"
-          git log --no-merges --format='- %s' ${PREVIOUS:+"v${PREVIOUS}..HEAD"} | { grep -v '^- Release v' || true; } > "$notes"
           appcast="$(dirname "$DMG")/appcast.xml"
           url="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/$(basename "$DMG")"
-          packages/mac-os/scripts/appcast.sh "$DMG" "$notes" "$url" > "$appcast"
+          packages/mac-os/scripts/appcast.sh "$DMG" "$NOTES" "$url" > "$appcast"
           cat "$appcast"
           echo "path=${appcast}" >> "$GITHUB_OUTPUT"
 
       # The appcast rides on the same release as the image it names, so the
       # feed at releases/latest/download/appcast.xml always points at a disk
-      # image that exists. Notes are GitHub's generated list since the
-      # previous release.
+      # image that exists. The body is the same notes the update window
+      # shows, plus a compare link to the previous release.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DMG: ${{ steps.dmg.outputs.path }}
           APPCAST: ${{ steps.appcast.outputs.path }}
         run: |
-          notes_range=()
-          if [[ -n "$PREVIOUS" ]]; then
-            notes_range=(--notes-start-tag "v${PREVIOUS}")
-          fi
+          body="$RUNNER_TEMP/release-body.md"
+          {
+            cat "$NOTES"
+            echo
+            echo "Signed and notarized. For Apple silicon Macs on macOS 26 or later."
+            if [[ -n "$PREVIOUS" ]]; then
+              echo
+              echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/v${PREVIOUS}...v${VERSION}"
+            fi
+          } > "$body"
           if [[ "$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
             gh release delete "v${VERSION}" --repo "$GITHUB_REPOSITORY" --yes
           fi
@@ -178,8 +200,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Reviewer v${VERSION}" \
-            --notes "Signed and notarized. For Apple silicon Macs on macOS 26 or later." \
-            --generate-notes ${notes_range[@]+"${notes_range[@]}"} \
+            --notes-file "$body" \
             --latest
 
   # Moves reviewer.sh onto the release: its Download button, and the

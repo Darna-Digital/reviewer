@@ -42,11 +42,15 @@ struct BarChipStyle: ButtonStyle {
 
 /// The chip as a modifier, for the controls that cannot be buttons: the
 /// session tabs, which answer a press and a drag both and so keep their
-/// own gestures (see `SessionTab`).
+/// own gestures (see `SessionTab`). A chip that is carried over others
+/// stands on a `base` of the bar's own colour, under its tint: the same
+/// chip at rest, but one that covers the titles it passes over rather
+/// than showing them through its own.
 private struct BarChip: ViewModifier {
     let isOn: Bool
     let isPressed: Bool
     let height: CGFloat
+    let base: Color
     @State private var isHovering = false
 
     func body(content: Content) -> some View {
@@ -54,6 +58,7 @@ private struct BarChip: ViewModifier {
             .foregroundStyle(isOn || isHovering ? .primary : .secondary)
             .frame(height: height)
             .background(fill, in: BarChipMetrics.shape)
+            .background(base, in: BarChipMetrics.shape)
             .contentShape(BarChipMetrics.shape)
             .onHover { isHovering = $0 }
             .frame(maxHeight: .infinity)
@@ -81,9 +86,10 @@ private struct BarGlyph: ViewModifier {
 extension View {
     func barGlyph() -> some View { modifier(BarGlyph()) }
 
-    func barChip(isOn: Bool = false, isPressed: Bool = false, height: CGFloat = BarChipMetrics.height)
-        -> some View
-    {
-        modifier(BarChip(isOn: isOn, isPressed: isPressed, height: height))
+    func barChip(
+        isOn: Bool = false, isPressed: Bool = false, height: CGFloat = BarChipMetrics.height,
+        base: Color = .clear
+    ) -> some View {
+        modifier(BarChip(isOn: isOn, isPressed: isPressed, height: height, base: base))
     }
 }

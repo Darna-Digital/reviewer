@@ -43,13 +43,15 @@ If there isn't:
 3. `scripts/release.sh` notarizes and staples the app, wraps it in
    `Reviewer-X.Y.Z-arm64.dmg`, then signs, notarizes and staples that too,
    and checks both with `spctl` the way a downloader's Mac will.
-4. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
-   image, its EdDSA signature (made with `SPARKLE_PRIVATE_KEY`), and the
-   commit subjects since the previous version as the notes the update window
-   shows.
-5. `gh release create vX.Y.Z` publishes the image and the appcast as the
-   latest release, with notes GitHub generates from what merged since the
-   previous version.
+4. The release notes are the version's entry in `CHANGELOG.md` (the
+   section under `## vX.Y.Z`). Without one, the run warns and falls back to
+   the commit subjects since the previous version.
+5. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
+   image, its EdDSA signature (made with `SPARKLE_PRIVATE_KEY`), and those
+   notes for the update window to show.
+6. `gh release create vX.Y.Z` publishes the image and the appcast as the
+   latest release, with the same notes and a compare link to the previous
+   version as its body.
 
 A run that fails midway leaves no published release, so re-running it (or
 pushing again) picks up where it should. It can also be started by hand from

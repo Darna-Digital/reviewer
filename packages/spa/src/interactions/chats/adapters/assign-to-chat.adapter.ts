@@ -34,7 +34,11 @@ export const assignToChat = async (
 ): Promise<string | null> => {
   if (input.target.kind === "new") {
     const started = await actions.startWithTitle(
-      buildChatAssignmentSettings(input.target.agent, input.catalog),
+      buildChatAssignmentSettings(
+        input.target.agent,
+        input.catalog,
+        input.target.model
+      ),
       input.place,
       input.title,
       input.prompt

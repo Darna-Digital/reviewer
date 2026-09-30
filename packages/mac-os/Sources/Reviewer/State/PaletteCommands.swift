@@ -85,11 +85,15 @@ extension AppModel {
                 keywords: Self.paneKeywords[tab] ?? "", hint: tab.railShortcut.hint
             ) { [weak self] in self?.show(bottomTab: tab) }
         }
+        // Asked a turn later: the palette closes as the row runs, and the
+        // update that takes it away re-applies the column binding — still
+        // `.all` until the split reports back — undoing the collapse the
+        // split had only just begun.
         commands.append(
             PaletteCommand(
                 id: "view-sidebar", label: sidebarShown ? "Hide sidebar" : "Show sidebar", group: "View",
                 symbol: "sidebar.leading", keywords: "tree files toggle", hint: "⌃⌘S"
-            ) { [weak self] in self?.toggleSidebar() })
+            ) { [weak self] in DispatchQueue.main.async { self?.toggleSidebar() } })
         return commands
     }
 

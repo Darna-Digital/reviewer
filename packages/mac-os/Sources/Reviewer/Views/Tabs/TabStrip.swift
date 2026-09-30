@@ -650,7 +650,9 @@ private struct SessionTab: View {
         .padding(.leading, Self.leadingInset)
         .padding(.trailing, Self.trailingInset)
         .frame(width: Self.width(for: tab.title))
-        .barChip(isOn: isActive, isPressed: lifted)
+        // On the bar's own colour, so a tab carried across the row covers
+        // the ones it passes rather than having both titles show at once.
+        .barChip(isOn: isActive, isPressed: lifted, base: Color(nsColor: IslandPalette.frame))
         .overlay(alignment: .trailing) {
             if showsClose {
                 TabCloseButton(title: tab.title) { model.closeTab(id: tab.id) }

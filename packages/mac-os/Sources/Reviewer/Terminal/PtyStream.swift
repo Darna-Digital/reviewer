@@ -106,18 +106,27 @@ enum TerminalStyle {
         applyColors(to: view)
     }
 
-    /// The text colour settled into plain sRGB for the view's appearance
-    /// before it is handed over. The caret fills with the colour as given,
-    /// resolved while its layer draws — where the current appearance is not
-    /// the window's, so a dynamic colour came out in its light variant and
-    /// the caret read dark in either scheme.
+    /// The colours settled into plain sRGB for the view's appearance
+    /// before they are handed over. The caret fills with the colour as
+    /// given, resolved while its layer draws — where the current appearance
+    /// is not the window's, so a dynamic colour came out in its light
+    /// variant and the caret read dark in either scheme.
+    ///
+    /// The background is the island the terminal stands on, made fully
+    /// transparent so the island shows through. It is the island rather
+    /// than `.clear` because reverse video — zsh's highlight on pasted text
+    /// — draws its letters in the background colour made opaque, and
+    /// `.clear` made opaque is black: black on the dark text colour, which
+    /// in the light scheme left a pasted line unreadable.
     @MainActor
     static func applyColors(to view: TerminalView) {
         var text = IslandPalette.text
+        var island = IslandPalette.island
         view.effectiveAppearance.performAsCurrentDrawingAppearance {
             text = IslandPalette.text.usingColorSpace(.sRGB) ?? IslandPalette.text
+            island = IslandPalette.island.usingColorSpace(.sRGB) ?? IslandPalette.island
         }
-        view.nativeBackgroundColor = .clear
+        view.nativeBackgroundColor = island.withAlphaComponent(0)
         view.nativeForegroundColor = text
         view.caretColor = text
     }

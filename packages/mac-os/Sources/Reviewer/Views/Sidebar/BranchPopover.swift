@@ -8,7 +8,8 @@
 // answer — a checkout, a comparison, a log to follow; what else can be
 // done to a branch is the row's menu, at the ellipsis and on a right
 // click. A name too long for its row says the whole of itself in a
-// tooltip, and only then (see `clipHelp`).
+// tooltip at the row's trailing edge, and only then — for the row the
+// pointer is on, or the one the keys walked to (see `RowTooltip`).
 import SwiftUI
 
 /// A row the popover offers: a branch, or one of the answers that needs
@@ -57,18 +58,46 @@ func branchDistance(_ branch: BranchInfo) -> String? {
     return parts.isEmpty ? nil : parts.joined(separator: " ")
 }
 
+/// A row as the search leaves it on screen: under a key of its own even
+/// where a branch stands in two sections, and at its place in the walk.
+private struct Line: Identifiable {
+    let key: String
+    let choice: BranchChoice
+    let index: Int
+    var id: String { key }
+}
+
+private struct ShownSection: Identifiable {
+    let id: String
+    let title: String?
+    let lines: [Line]
+}
+
+/// Which row is being read — the one under the pointer, or the one the
+/// keys walked to since the pointer last moved over the list — kept out of
+/// the popover's own state, so the pointer crossing rows as the list
+/// scrolls redraws the rows it crossed and not the whole popover, its
+/// search and its sections along with them.
+@MainActor @Observable
+private final class RowReading {
+    var hovered: String?
+    var walked: String?
+    var key: String? { hovered ?? walked }
+}
+
 struct BranchPopover<Footer: View>: View {
     let sections: [BranchChoiceSection]
     let placeholder: String
     let pick: (BranchChoice) -> Void
     let dismiss: () -> Void
-    /// The row's menu — what can be done to the branch besides picking it
-    /// — or nil where a pick is all a row is for.
+    /// The row's submenu — what can be done to the branch besides picking
+    /// it — or nil where a pick is all a row is for.
     let actions: ((BranchRef) -> [BranchAction])?
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
     @State private var active = 0
+    @State private var reading = RowReading()
     @FocusState private var fieldFocused: Bool
 
     private static var width: CGFloat { 320 }
@@ -77,26 +106,27 @@ struct BranchPopover<Footer: View>: View {
     private var searching: Bool { !needle.isEmpty }
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
 
-    /// The sections as the search leaves them, empty ones dropped.
-    private var shown: [BranchChoiceSection] {
-        sections.compactMap { section in
+    /// The sections as the search leaves them, empty ones dropped, every
+    /// row numbered in the order the keys walk them.
+    private var shown: [ShownSection] {
+        var index = 0
+        return sections.compactMap { section in
             if searching, section.hiddenWhileSearching { return nil }
             let rows = searching ? section.rows.filter { $0.title.localizedCaseInsensitiveContains(needle) } : section.rows
             guard !rows.isEmpty else { return nil }
-            return BranchChoiceSection(id: section.id, title: section.title, rows: rows)
+            let lines = rows.map { choice in
+                defer { index += 1 }
+                return Line(key: "\(section.id)/\(choice.id)", choice: choice, index: index)
+            }
+            return ShownSection(id: section.id, title: section.title, lines: lines)
         }
     }
 
-    /// Every row on screen, in order, each under a key of its own even
-    /// where a branch stands in two sections.
-    private var lines: [(key: String, choice: BranchChoice)] {
-        shown.flatMap { section in section.rows.map { (key: "\(section.id)/\($0.id)", choice: $0) } }
-    }
-
     var body: some View {
-        let lines = lines
+        let shown = shown
+        let lines = shown.flatMap(\.lines)
         VStack(spacing: 0) {
-            field
+            field(lines)
             ThemedDivider()
             if lines.isEmpty {
                 Text("No branch matches.")
@@ -104,27 +134,30 @@ struct BranchPopover<Footer: View>: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 80)
             } else {
-                list(lines)
+                list(shown, lines)
             }
             footer
         }
         .frame(width: Self.width)
-        .onKeyPress(.upArrow) { step(-1, in: lines.count) }
-        .onKeyPress(.downArrow) { step(1, in: lines.count) }
-        .onKeyPress(.home) { active = 0; return .handled }
-        .onKeyPress(.end) { active = max(0, lines.count - 1); return .handled }
+        .onKeyPress(.upArrow) { step(-1, in: lines) }
+        .onKeyPress(.downArrow) { step(1, in: lines) }
+        .onKeyPress(.home) { walk(to: 0, in: lines) }
+        .onKeyPress(.end) { walk(to: lines.count - 1, in: lines) }
         .onKeyPress(.escape) {
             if searching { query = "" } else { dismiss() }
             return .handled
         }
-        .onChange(of: query) { active = 0 }
+        .onChange(of: query) {
+            active = 0
+            reading.walked = nil
+        }
         .onChange(of: lines.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
         // The field is focused only once it is on screen, a turn of the
         // run loop after the popover comes up.
         .onAppear { Task { @MainActor in fieldFocused = true } }
     }
 
-    private var field: some View {
+    private func field(_ lines: [Line]) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11, weight: .medium))
@@ -134,30 +167,29 @@ struct BranchPopover<Footer: View>: View {
                 .font(.system(size: 12))
                 .focused($fieldFocused)
                 .autocorrectionDisabled()
-                .onSubmit { pick(at: active, in: self.lines) }
+                .onSubmit { pick(at: active, in: lines) }
         }
         .padding(.horizontal, 10)
         .frame(height: 32)
     }
 
-    private func list(_ lines: [(key: String, choice: BranchChoice)]) -> some View {
+    private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
                     ForEach(shown) { section in
                         if let title = section.title {
-                            SectionHeader(title: title, count: section.rows.count)
+                            SectionHeader(title: title, count: section.lines.count)
                         }
-                        ForEach(section.rows) { choice in
-                            let key = "\(section.id)/\(choice.id)"
-                            let index = lines.firstIndex { $0.key == key } ?? 0
+                        ForEach(section.lines) { line in
                             ChoiceRow(
-                                choice: choice, lit: index == active,
-                                actions: actions.map { _ in { BranchActions(branch: $0, ran: dismiss) } }
+                                line: line, lit: line.index == active, reading: reading,
+                                actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
+                                ran: dismiss
                             ) {
-                                pick(at: index, in: lines)
+                                pick(at: line.index, in: lines)
                             }
-                            .id(key)
+                            .id(line.key)
                         }
                     }
                 }
@@ -171,13 +203,19 @@ struct BranchPopover<Footer: View>: View {
         }
     }
 
-    private func step(_ offset: Int, in count: Int) -> KeyPress.Result {
-        guard count > 0 else { return .handled }
-        active = (active + offset + count) % count
+    private func step(_ offset: Int, in lines: [Line]) -> KeyPress.Result {
+        guard !lines.isEmpty else { return .handled }
+        return walk(to: (active + offset + lines.count) % lines.count, in: lines)
+    }
+
+    private func walk(to index: Int, in lines: [Line]) -> KeyPress.Result {
+        guard lines.indices.contains(index) else { return .handled }
+        active = index
+        reading.walked = lines[index].key
         return .handled
     }
 
-    private func pick(at index: Int, in lines: [(key: String, choice: BranchChoice)]) {
+    private func pick(at index: Int, in lines: [Line]) {
         guard lines.indices.contains(index) else { return }
         dismiss()
         pick(lines[index].choice)
@@ -194,8 +232,8 @@ extension BranchPopover where Footer == EmptyView {
     }
 }
 
-/// The rows' type, named once so the tooltip measures the name in the
-/// font the row sets it in.
+/// The rows' type, named once so the clip is measured in the font the
+/// row sets the name in.
 private var rowFont: NSFont { .systemFont(ofSize: 12) }
 
 private struct SectionHeader: View {
@@ -218,18 +256,27 @@ private struct SectionHeader: View {
 }
 
 /// One row: the glyph, the name — cut in the middle, the whole of it in
-/// a tooltip while it is cut — the badge, the tick, and the menu at the
-/// trailing edge once the pointer or the keys are on the row. Lit by the
-/// keys in one wash and by the pointer in a fainter one, kept apart so a
-/// list walked under a still pointer is not fought over.
-private struct ChoiceRow<Actions: View>: View {
-    let choice: BranchChoice
+/// a tooltip at the trailing edge while it is cut and the row is being
+/// read — the badge, the tick, and the ellipsis at the trailing edge once
+/// the pointer or the keys are on the row, opening the row's submenu off
+/// its trailing edge, as a right click does. Lit by the keys in one wash
+/// and by the pointer in a fainter one, kept apart so a list walked under
+/// a still pointer is not fought over.
+private struct ChoiceRow: View {
+    let line: Line
     let lit: Bool
-    let actions: ((BranchRef) -> Actions)?
+    let reading: RowReading
+    /// The branch's submenu, built only once it opens.
+    let actions: (() -> [BranchAction])?
+    let ran: () -> Void
     let pick: () -> Void
-    @State private var isHovering = false
+    @State private var clipped = false
+    @State private var submenuOpen = false
+
+    private var choice: BranchChoice { line.choice }
 
     var body: some View {
+        let hovered = reading.hovered == line.key
         HStack(spacing: 8) {
             Image(systemName: choice.symbol)
                 .foregroundStyle(choice.tint ?? Color.secondary)
@@ -237,7 +284,7 @@ private struct ChoiceRow<Actions: View>: View {
             Text(choice.title)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .clipHelp(choice.title, font: rowFont)
+                .measuringClip(choice.title, font: rowFont, into: $clipped)
             Spacer(minLength: 4)
             if let badge = choice.badge {
                 Text(badge)
@@ -249,16 +296,18 @@ private struct ChoiceRow<Actions: View>: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Color.accentColor)
             }
-            if let actions, let branch = choice.branch {
-                Menu {
-                    actions(branch)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .opacity(isHovering || lit ? 1 : 0)
+            if actions != nil {
+                // The glyph holds the ellipsis's room on every row, so the
+                // name is cut the same whether or not the row is lit; the
+                // button itself is only drawn over the row being used.
+                Image(systemName: "ellipsis.circle")
+                    .hidden()
+                    .overlay {
+                        if hovered || lit || submenuOpen {
+                            Button { submenuOpen.toggle() } label: { Image(systemName: "ellipsis.circle") }
+                                .buttonStyle(.borderless)
+                        }
+                    }
             }
         }
         .font(Font(rowFont))
@@ -266,24 +315,31 @@ private struct ChoiceRow<Actions: View>: View {
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color.primary.opacity(lit ? 0.1 : isHovering ? 0.06 : 0),
+            Color.primary.opacity(lit || submenuOpen ? 0.1 : hovered ? 0.06 : 0),
             in: RoundedRectangle(cornerRadius: 6))
+        // The submenu opens where the tooltip would stand, so the tooltip
+        // gives way to it.
+        .rowTooltip(clipped ? choice.title : nil, active: reading.key == line.key && !submenuOpen)
         .contentShape(Rectangle())
         .onTapGesture(perform: pick)
-        .onHover { isHovering = $0 }
-        .modifier(RowMenu(actions: actions, branch: choice.branch))
-    }
-}
-
-private struct RowMenu<Actions: View>: ViewModifier {
-    let actions: ((BranchRef) -> Actions)?
-    let branch: BranchRef?
-
-    func body(content: Content) -> some View {
-        if let actions, let branch {
-            content.contextMenu { actions(branch) }
-        } else {
-            content
+        .onHover { inside in
+            if inside {
+                reading.hovered = line.key
+                reading.walked = nil
+            } else if reading.hovered == line.key {
+                reading.hovered = nil
+            }
+        }
+        .overlay {
+            if actions != nil { SecondaryClick { submenuOpen = true } }
+        }
+        .popover(isPresented: $submenuOpen, arrowEdge: .trailing) {
+            if let actions {
+                BranchActionMenu(actions: actions()) {
+                    submenuOpen = false
+                    ran()
+                }
+            }
         }
     }
 }

@@ -20,7 +20,7 @@ private struct ClipHelp: ViewModifier {
     // width that may measure the other way, and the swap is animated.
     func body(content: Content) -> some View {
         content
-            .background(ClipMeasure(text: text, font: font, clipped: $clipped))
+            .measuringClip(text, font: font, into: $clipped)
             .help(clipped ? text : "")
     }
 }
@@ -35,14 +35,16 @@ private struct ClipMeasure: NSViewRepresentable {
     }
 
     func updateNSView(_ view: ClipMeasureView, context: Context) {
-        view.text = text
-        view.font = font
+        // The report goes in first: setting the text measures, and a
+        // measure with nowhere to go would still count as reported.
         view.onMeasure = { value in
             // Laid out mid-update: the state is set once the update is over.
             Task { @MainActor in
                 if clipped != value { clipped = value }
             }
         }
+        view.text = text
+        view.font = font
         view.measure()
     }
 }
@@ -51,6 +53,9 @@ private final class ClipMeasureView: NSView {
     var text = "" { didSet { if text != oldValue { measure() } } }
     var font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
     var onMeasure: ((Bool) -> Void)?
+    /// What was last reported, so a list re-laid out as it scrolls sends
+    /// only the rows whose answer changed back through SwiftUI's state.
+    private var reported: Bool?
 
     /// Sub-pixel rounding leaves a snugly fitting line a hair "over".
     private static let slack: CGFloat = 1
@@ -68,11 +73,20 @@ private final class ClipMeasureView: NSView {
     func measure() {
         guard bounds.width > 0 else { return }
         let wanted = (text as NSString).size(withAttributes: [.font: font]).width
-        onMeasure?(wanted > bounds.width + Self.slack)
+        let clipped = wanted > bounds.width + Self.slack
+        guard clipped != reported else { return }
+        reported = clipped
+        onMeasure?(clipped)
     }
 }
 
 extension View {
+    /// Whether this view — the `Text` setting `text` in `font` — is too
+    /// narrow to show it all, kept in `clipped` as the layout changes.
+    func measuringClip(_ text: String, font: NSFont, into clipped: Binding<Bool>) -> some View {
+        background(ClipMeasure(text: text, font: font, clipped: clipped))
+    }
+
     /// The whole of `text` as the system tooltip, but only while this view
     /// — the `Text` setting it, in `font` — is too narrow to show it all.
     func clipHelp(_ text: String, font: NSFont) -> some View {
