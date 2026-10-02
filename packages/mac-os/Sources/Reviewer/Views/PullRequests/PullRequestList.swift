@@ -120,32 +120,20 @@ private struct GroupHeader: View {
     }
 }
 
-/// The search over the list and the filter menu beside it, then how many
-/// pull requests are open — of the ones the filters keep, while any are set.
+/// The search over the list and the filter menu beside it. No count of
+/// the open pull requests under them: the rows are the count, and a line
+/// saying "1 merge request" over the one row said nothing the row did not.
+/// That the filters are narrowing the list is the menu's dot to say.
 private struct PullListHeader: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         @Bindable var pulls = model.pullRequests
-        let shown = pulls.groups.reduce(0) { $0 + $1.pulls.count }
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                PaneSearchField(prompt: "Search merge requests", text: $pulls.query)
-                PullFilterMenu()
-            }
-            if pulls.hasGitHub && !pulls.loading && pulls.error == nil {
-                Text(count(shown, of: pulls.pulls.count, narrowed: pulls.isFiltered))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, 4)
-            }
+        HStack(spacing: 6) {
+            PaneSearchField(prompt: "Search merge requests", text: $pulls.query)
+            PullFilterMenu()
         }
         .sidebarSearchBand()
-    }
-
-    private func count(_ shown: Int, of total: Int, narrowed: Bool) -> String {
-        let noun = total == 1 ? "merge request" : "merge requests"
-        return narrowed ? "\(shown) of \(total) \(noun)" : "\(total) \(noun)"
     }
 }
 
@@ -258,9 +246,11 @@ private struct PullRow: View {
                 BlockedIcon(pull: pull)
                 ChecksIcon(pull: pull)
                 if !pull.updatedAt.isEmpty {
+                    // The byline's secondary ink, not the tertiary: on the
+                    // picked row's wash the tertiary all but vanished.
                     Text(TimeAgo.text(pull.updatedAt))
                         .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
             }

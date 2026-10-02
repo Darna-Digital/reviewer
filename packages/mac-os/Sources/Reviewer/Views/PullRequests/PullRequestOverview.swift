@@ -151,7 +151,11 @@ struct PullRequestOverview: View {
     @ViewBuilder
     private var description: some View {
         if hasDescription {
-            MarkdownText(text: pull.body, size: 13)
+            CollapsedDescription {
+                MarkdownText(text: pull.body, size: 13)
+            }
+            // A pull request of its own opens folded again.
+            .id(pull.number)
         } else {
             Text("No description provided.")
                 .font(.system(size: 13))
@@ -249,5 +253,93 @@ private struct DiffStatBar: View {
         if index < green { return AnyShapeStyle(Color.green) }
         if index < filled { return AnyShapeStyle(Color.red) }
         return AnyShapeStyle(.quaternaryWash(1.2))
+    }
+}
+
+/// A description long enough to push the files and the diff a screen or
+/// more down the page, folded to its opening: cut at a height, faded out
+/// over its last lines so the cut reads as "there is more" rather than as
+/// the end, with the chevron under it to unfold it — and to fold it again.
+/// The page is for the diff, and most descriptions are read in their first
+/// paragraph. One short enough to show whole is left whole, with no
+/// chevron to promise more than there is.
+private struct CollapsedDescription<Content: View>: View {
+    @ViewBuilder let content: Content
+    @State private var expanded = false
+    @State private var fullHeight: CGFloat = 0
+
+    /// How much shows folded: a paragraph or two, a table's head.
+    private static var foldedHeight: CGFloat { 220 }
+    /// The run over which the folded text fades out.
+    private static var fade: CGFloat { 72 }
+    /// Folding a description only a few lines longer than the fold would
+    /// hide less than the chevron costs.
+    private static var slack: CGFloat { 60 }
+
+    private var folds: Bool { fullHeight > Self.foldedHeight + Self.slack }
+    private var folded: Bool { folds && !expanded }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            content
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
+                .frame(maxHeight: folded ? Self.foldedHeight : nil, alignment: .top)
+                .clipped()
+                .mask {
+                    VStack(spacing: 0) {
+                        Rectangle()
+                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                            .frame(height: folded ? Self.fade : 0)
+                    }
+                }
+                // Folded, the chevron stands in the fade itself, the text
+                // running out behind it — on a row of its own under the
+                // fade, the gradient stopped short of it and the cut showed
+                // as a hard edge after all.
+                .overlay(alignment: .bottom) {
+                    if folded { toggle }
+                }
+            if folds && !folded {
+                toggle
+            }
+        }
+    }
+
+    private var toggle: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.3)) { expanded.toggle() }
+        } label: {
+            Label(expanded ? "Show Less" : "Show More", systemImage: "chevron.down")
+                .labelStyle(ChevronAfterTitle(turned: expanded))
+                .font(.system(size: 12, weight: .medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .background(.quaternaryWash(0.5), in: Capsule())
+        // On the sheet's own colour first, so the last of the faded text
+        // does not show through the wash where the pill stands over it.
+        .background(Color(nsColor: IslandPalette.island), in: Capsule())
+        .frame(maxWidth: .infinity)
+        .help(expanded ? "Fold the description" : "Show the whole description")
+    }
+}
+
+/// The words, then the chevron, turned up while the text is unfolded —
+/// the order a "Show More" reads in, the chevron pointing where the text
+/// will go.
+private struct ChevronAfterTitle: LabelStyle {
+    let turned: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.title
+            configuration.icon
+                .font(.system(size: 9, weight: .semibold))
+                .rotationEffect(.degrees(turned ? 180 : 0))
+        }
     }
 }
