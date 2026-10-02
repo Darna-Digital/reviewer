@@ -11,6 +11,7 @@ import {
   withComment,
   withConfirmed,
   withEditedBody,
+  withThreadResolved,
   withoutComment,
 } from "../functions/optimistic-comments.functions";
 import type {
@@ -107,6 +108,22 @@ export function useCommentsActions() {
                 (error as { reason?: string }).reason ?? "failed to reply"
               );
             return data;
+          },
+          setPullThreadResolved: async (pullNumber, threadId, resolved) => {
+            const { error } = await fetchClient.PUT(
+              "/api/github/pulls/{number}/threads/{threadId}",
+              {
+                params: {
+                  path: { number: String(pullNumber), threadId },
+                },
+                body: { resolved },
+              }
+            );
+            if (error)
+              throw new Error(
+                (error as { reason?: string }).reason ??
+                  (resolved ? "failed to resolve" : "failed to unresolve")
+              );
           },
         },
       }),
@@ -312,6 +329,34 @@ export function useCommentsActions() {
             : withConfirmed(list, placeholder.id, created)
         );
         return created;
+      } catch (error) {
+        restore(key, before);
+        void invalidate("/api/github/pulls/{number}/comments");
+        throw error;
+      }
+    },
+
+    /**
+     * Resolving is shown at once too — the thread folds the moment it is
+     * asked to — and put back if GitHub refuses, which it does for a reviewer
+     * without write access to the repository.
+     */
+    setResolved: async (
+      selectedPull: SubmitContext["selectedPull"],
+      comment: ReviewComment,
+      resolved: boolean
+    ) => {
+      const thread = comment.thread;
+      if (selectedPull === null || thread === undefined) {
+        return fns.setResolved(selectedPull, comment, resolved);
+      }
+      const key = pullCommentsKey(selectedPull.number);
+      holdRefetches(key);
+      const before = edit(key, (list) =>
+        withThreadResolved(list, thread, resolved)
+      );
+      try {
+        return await fns.setResolved(selectedPull, comment, resolved);
       } catch (error) {
         restore(key, before);
         void invalidate("/api/github/pulls/{number}/comments");

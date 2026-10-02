@@ -131,6 +131,11 @@ interface DiffPaneProps {
   onCommentDelete: (comment: ReviewComment) => Promise<void>;
   onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>;
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>;
+  /** Resolve the GitHub review thread a comment is in, or open it again. */
+  onCommentResolve: (
+    comment: ReviewComment,
+    resolved: boolean
+  ) => Promise<void>;
   /** Go-to-definition and find-usages land here. */
   onOpenLocation: (path: string, lineNumber: number) => void;
 }
@@ -405,6 +410,7 @@ export function DiffPane({
   onCommentDelete: rawOnCommentDelete,
   onCommentEdit: rawOnCommentEdit,
   onCommentReply: rawOnCommentReply,
+  onCommentResolve: rawOnCommentResolve,
   onOpenLocation: rawOnOpenLocation,
 }: DiffPaneProps) {
   const codeThemes = useCodeThemes();
@@ -427,6 +433,7 @@ export function DiffPane({
   const onCommentDelete = useStableCallback(rawOnCommentDelete);
   const onCommentEdit = useStableCallback(rawOnCommentEdit);
   const onCommentReply = useStableCallback(rawOnCommentReply);
+  const onCommentResolve = useStableCallback(rawOnCommentResolve);
   const onShowFileHistory = useStableOptionalCallback(rawOnShowFileHistory);
   const onDiscardFile = useStableOptionalCallback(rawOnDiscardFile);
   const onDiscardHunk = useStableOptionalCallback(rawOnDiscardHunk);
@@ -1051,6 +1058,7 @@ export function DiffPane({
           onDelete={onCommentDelete}
           onEdit={onCommentEdit}
           onReply={onCommentReply}
+          onResolve={onCommentResolve}
         />
       );
     }

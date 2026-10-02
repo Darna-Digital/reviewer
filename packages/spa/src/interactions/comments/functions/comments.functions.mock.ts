@@ -34,6 +34,7 @@ export const createCommentsDependenciesMock = (): CommentsDependencies => ({
     ),
     deleteComment: vi.fn(async () => undefined),
     deletePullComment: vi.fn(async () => undefined),
+    setPullThreadResolved: vi.fn(async () => undefined),
     replyPullComment: vi.fn(async (pullNumber, _commentId, body) =>
       comment({
         id: "pr-reply",

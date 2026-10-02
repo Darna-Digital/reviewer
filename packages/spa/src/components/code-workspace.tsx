@@ -971,6 +971,22 @@ export function CodeWorkspace() {
     await comments.reply(selectedPull, comment, body);
     void pullComments.refetch();
   };
+  // GitHub refuses a reviewer without write access to the repository, and
+  // the thread has already folded by then — so the refusal has to be said.
+  const resolveThread = async (comment: ReviewComment, resolved: boolean) => {
+    try {
+      await comments.setResolved(selectedPull, comment, resolved);
+    } catch (error) {
+      toast.error(
+        errorReason(
+          error,
+          resolved
+            ? "Could not resolve the conversation"
+            : "Could not reopen the conversation"
+        )
+      );
+    }
+  };
 
   // --- command palette -------------------------------------------------------
   // Only what this shell owns; the code-wide commands live with the dialog, so
@@ -1103,6 +1119,7 @@ export function CodeWorkspace() {
         onCommentDelete={deleteComment}
         onCommentEdit={editComment}
         onCommentReply={replyComment}
+        onCommentResolve={resolveThread}
       />
     );
   };

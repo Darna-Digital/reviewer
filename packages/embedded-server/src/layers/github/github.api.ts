@@ -12,6 +12,8 @@ import {
   PrReply,
   PullNumberParam,
   PullCommentParams,
+  PullThreadParams,
+  ThreadResolution,
 } from "@reviewer/core/ports/git-provider";
 import { DiffText, Ok } from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
@@ -104,6 +106,18 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "/github/pulls/:number/comments/:commentId",
       {
         params: PullCommentParams,
+        success: Ok,
+        error: GitProviderError,
+      }
+    )
+  )
+  .add(
+    HttpApiEndpoint.put(
+      "setPullThreadResolved",
+      "/github/pulls/:number/threads/:threadId",
+      {
+        params: PullThreadParams,
+        payload: ThreadResolution,
         success: Ok,
         error: GitProviderError,
       }

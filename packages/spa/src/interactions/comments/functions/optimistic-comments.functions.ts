@@ -114,3 +114,14 @@ export const withEditedBody = (
   body: string
 ): ReadonlyArray<ReviewComment> =>
   list.map((comment) => (comment.id === id ? { ...comment, body } : comment));
+
+/** `list` with every comment in `thread` marked resolved or not — the
+ * immediate half of resolving a GitHub thread, which GitHub resolves as one. */
+export const withThreadResolved = (
+  list: ReadonlyArray<ReviewComment>,
+  thread: string,
+  resolved: boolean
+): ReadonlyArray<ReviewComment> =>
+  list.map((comment) =>
+    comment.thread === thread ? { ...comment, resolved } : comment
+  );

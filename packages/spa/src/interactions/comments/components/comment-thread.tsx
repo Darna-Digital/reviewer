@@ -6,13 +6,16 @@
  *
  * Visually modelled on the Pierre / diffs.com comment threads: a soft rounded
  * card, round author avatars, name + relative timestamp, replies nested under
- * the opening comment, and a muted "Add reply… / Resolve" action row. The
+ * the opening comment, and a muted "Add reply… / Resolve" action row; a
+ * resolved GitHub conversation folds to one line, as GitHub folds it. The
  * composer is a Messages-style pill — the writer's monogram, the field, and a
  * circled send arrow — built on the theme tokens so it adapts to light & dark.
  */
 import {
   IconArrowUp,
   IconBrandGithub,
+  IconChevronDown,
+  IconCircleCheck,
   IconCornerDownRight,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
@@ -283,23 +286,32 @@ function ThreadAction({
 /**
  * A stack of comments anchored to one line, rendered as a single rounded card.
  * The opening comment sits flush; later comments are nested as replies. The
- * footer offers "Add reply…" (GitHub threads) and "Resolve" (removes the local
- * comments — deletion is how a local thread is resolved).
+ * footer offers "Add reply…" (GitHub threads) and "Resolve": a GitHub thread
+ * is resolved on GitHub, for everybody on the pull request, and local
+ * comments are deleted — deletion is how a local thread is resolved.
+ *
+ * A resolved GitHub conversation folds to one line — who opened it and how it
+ * began — as GitHub folds it: it has been dealt with, and a diff carrying
+ * every settled argument at full height buries the ones still open. The line
+ * unfolds it to read, and "Unresolve" opens it again.
  */
 export function CommentThread({
   comments,
   onDelete,
   onEdit,
   onReply,
+  onResolve,
 }: {
   comments: ReadonlyArray<ReviewComment>;
   onDelete: (c: ReviewComment) => Promise<void>;
   onEdit?: (c: ReviewComment, body: string) => Promise<void>;
   onReply?: (c: ReviewComment, body: string) => Promise<void>;
+  onResolve?: (c: ReviewComment, resolved: boolean) => Promise<void>;
 }) {
   const [replying, setReplying] = useState(false);
   const [resolving, setResolving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [unfolded, setUnfolded] = useState(false);
 
   // Actions target a comment by id, and a comment still in flight does not have
   // its real one yet — replying to a pending GitHub comment would address a
@@ -310,28 +322,68 @@ export function CommentThread({
   const settled = comments.filter((c) => !isOptimisticId(c.id));
   const lastGithub = [...settled].reverse().find((c) => c.source === "github");
   const localComments = settled.filter((c) => c.source === "local");
+  // The GitHub thread on this line, when GitHub could say which it is — the
+  // thing resolving acts on. Every comment in it carries the same answer.
+  const githubThread =
+    onResolve === undefined
+      ? undefined
+      : settled.find((c) => c.source === "github" && c.thread !== undefined);
+  const resolved = githubThread?.resolved === true;
   const editableComment =
     onEdit === undefined
       ? undefined
       : (localComments.find((c) => c.id === editingId) ?? localComments[0]);
   const canEdit = editableComment !== undefined && onEdit !== undefined;
   const canReply = onReply !== undefined && lastGithub !== undefined;
-  const canResolve = localComments.length > 0;
+  const canResolve =
+    localComments.length > 0 || (githubThread !== undefined && !resolved);
   const showActions =
-    !replying && editingId === null && (canEdit || canReply || canResolve);
+    !replying &&
+    editingId === null &&
+    (canEdit || canReply || canResolve || resolved);
 
   const resolve = async () => {
     if (resolving) return;
     setResolving(true);
     try {
-      await Promise.all(localComments.map((c) => onDelete(c)));
+      await Promise.all([
+        ...localComments.map((c) => onDelete(c)),
+        ...(githubThread !== undefined && !resolved && onResolve !== undefined
+          ? [onResolve(githubThread, true)]
+          : []),
+      ]);
+      setUnfolded(false);
     } finally {
       setResolving(false);
     }
   };
 
+  const unresolve = async () => {
+    if (resolving || githubThread === undefined || onResolve === undefined)
+      return;
+    setResolving(true);
+    try {
+      await onResolve(githubThread, false);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  if (resolved && !unfolded) {
+    return (
+      <ResolvedLine
+        opener={comments[0] ?? githubThread}
+        count={comments.length}
+        onUnfold={() => setUnfolded(true)}
+      />
+    );
+  }
+
   return (
     <div className={COMMENT_CARD}>
+      {resolved && (
+        <ResolvedHeader className="mb-3" onFold={() => setUnfolded(false)} />
+      )}
       <div className="flex flex-col gap-3">
         {comments.map((comment, i) => (
           <div key={comment.id} className={cn(i > 0 && REPLY_INDENT)}>
@@ -381,8 +433,16 @@ export function CommentThread({
                 </ThreadAction>
               )}
               {canResolve && (
-                <ThreadAction onClick={() => void resolve()}>
+                <ThreadAction
+                  onClick={() => void resolve()}
+                  icon={<IconCircleCheck className="size-4" />}
+                >
                   {resolving ? "Resolving…" : "Resolve"}
+                </ThreadAction>
+              )}
+              {resolved && (
+                <ThreadAction onClick={() => void unresolve()}>
+                  {resolving ? "Reopening…" : "Unresolve"}
                 </ThreadAction>
               )}
             </div>
@@ -390,6 +450,90 @@ export function CommentThread({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A resolved conversation, folded: the mark that says it is settled, who
+ * opened it, and the first line of what they said — enough to tell which
+ * argument this was without reading it again. The whole line unfolds it.
+ */
+function ResolvedLine({
+  opener,
+  count,
+  onUnfold,
+}: {
+  opener: ReviewComment | undefined;
+  count: number;
+  onUnfold: () => void;
+}) {
+  const firstLine =
+    opener?.body
+      .split("\n")
+      .find((line) => line.trim().length > 0)
+      ?.replace(/[#*_`>]/g, "")
+      .trim() ?? "";
+  const replies = count - 1;
+  return (
+    <button
+      type="button"
+      onClick={onUnfold}
+      aria-label="Show resolved conversation"
+      className={cn(
+        COMMENT_CARD,
+        "flex items-center gap-2 py-2 text-left transition-colors hover:bg-surface-3"
+      )}
+    >
+      <IconCircleCheck
+        className="size-4 shrink-0 text-muted-foreground"
+        aria-hidden
+      />
+      {opener !== undefined && (
+        <AuthorAvatar
+          author={opener.author}
+          source={opener.source}
+          className="size-5"
+        />
+      )}
+      <span className="min-w-0 flex-1 truncate type-body text-muted-foreground">
+        <span className="text-foreground">Resolved</span>
+        {firstLine.length > 0 && <> · {firstLine}</>}
+      </span>
+      {replies > 0 && (
+        <span className="shrink-0 type-meta text-muted-foreground tabular-nums">
+          {replies === 1 ? "1 reply" : `${replies} replies`}
+        </span>
+      )}
+      <IconChevronDown
+        className="size-4 shrink-0 text-muted-foreground"
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+/** The head of a resolved conversation read unfolded, and the way to fold it. */
+function ResolvedHeader({
+  className,
+  onFold,
+}: {
+  className?: string;
+  onFold: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onFold}
+      aria-label="Hide resolved conversation"
+      className={cn(
+        "flex w-full items-center gap-1.5 type-meta text-muted-foreground transition-colors hover:text-foreground",
+        className
+      )}
+    >
+      <IconCircleCheck className="size-4" aria-hidden />
+      <span className="flex-1 text-left">Resolved conversation</span>
+      <IconChevronDown className="size-4 rotate-180" aria-hidden />
+    </button>
   );
 }
 

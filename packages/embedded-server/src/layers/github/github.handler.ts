@@ -95,4 +95,17 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
+    .handle("setPullThreadResolved", ({ params, payload }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap(() =>
+          Effect.flatMap(GitProvider, (s) =>
+            s.setThreadResolved({
+              threadId: params.threadId,
+              resolved: payload.resolved,
+            })
+          )
+        ),
+        Effect.as(ok)
+      )
+    )
 );

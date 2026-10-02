@@ -61,6 +61,11 @@ export interface CommentsDependencies {
       commentId: number,
       body: string
     ) => Promise<ReviewComment>;
+    readonly setPullThreadResolved: (
+      pullNumber: number,
+      threadId: string,
+      resolved: boolean
+    ) => Promise<void>;
   };
 }
 
@@ -85,6 +90,16 @@ export interface CommentsFunctions {
   readonly remove: (
     selectedPull: PullRequestInfo | null,
     comment: ReviewComment
+  ) => Promise<boolean>;
+  /**
+   * Resolve the GitHub review thread a comment is in, or open it again.
+   * Answers false when there is nothing to resolve: a local comment, one
+   * GitHub could not place in a thread, or no pull request in hand.
+   */
+  readonly setResolved: (
+    selectedPull: PullRequestInfo | null,
+    comment: ReviewComment,
+    resolved: boolean
   ) => Promise<boolean>;
   /** Reply to a GitHub PR comment, anchored to its parent's line. */
   readonly reply: (

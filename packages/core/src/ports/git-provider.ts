@@ -205,6 +205,23 @@ export type PrComment = typeof PrComment.Type;
 export const PrReply = Schema.Struct({ body: Schema.String });
 export type PrReply = typeof PrReply.Type;
 
+/**
+ * One review thread on a pull request, by GitHub's node id for it. The
+ * number is what the caller is looking at; GitHub finds a thread by its id
+ * alone.
+ */
+export const PullThreadParams = Schema.Struct({
+  number: Schema.String,
+  threadId: Schema.String,
+});
+export const ThreadResolution = Schema.Struct({ resolved: Schema.Boolean });
+export type ThreadResolution = typeof ThreadResolution.Type;
+
+export interface ThreadResolutionInput {
+  readonly threadId: string;
+  readonly resolved: boolean;
+}
+
 export interface PrCommentInput {
   readonly pullNumber: number;
   readonly filePath: string;
@@ -246,6 +263,10 @@ export interface GitProviderShape {
   ) => Effect.Effect<ReviewComment, GitProviderError>;
   readonly deletePullComment: (
     input: PrCommentRef
+  ) => Effect.Effect<void, GitProviderError>;
+  /** Resolve a review thread, or open a resolved one again. */
+  readonly setThreadResolved: (
+    input: ThreadResolutionInput
   ) => Effect.Effect<void, GitProviderError>;
   readonly mergePull: (
     pullNumber: number,
@@ -299,6 +320,7 @@ export const GitProviderMemory = (
       closePull: (pullNumber) =>
         Effect.succeed({ message: `Closed #${pullNumber}` }),
       deletePullComment: () => Effect.void,
+      setThreadResolved: () => Effect.void,
       replyToPullComment: (input) =>
         Effect.succeed({
           id: "gh-reply",

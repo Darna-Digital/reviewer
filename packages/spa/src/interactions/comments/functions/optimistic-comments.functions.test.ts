@@ -9,6 +9,7 @@ import {
   withComment,
   withConfirmed,
   withEditedBody,
+  withThreadResolved,
   withoutComment,
 } from "./optimistic-comments.functions";
 
@@ -125,5 +126,16 @@ describe("withEditedBody", () => {
 
     expect(next[0]?.body).toBe("actually, rename it");
     expect(next[1]).toBe(untouched);
+  });
+});
+
+describe("withThreadResolved", () => {
+  it("marks the whole thread and nothing outside it", () => {
+    const inThread = { ...comment("gh-1"), thread: "T", resolved: false };
+    const reply = { ...comment("gh-2"), thread: "T", resolved: false };
+    const other = { ...comment("gh-3"), thread: "U", resolved: false };
+    const next = withThreadResolved([inThread, reply, other], "T", true);
+    expect(next.map((c) => c.resolved)).toEqual([true, true, false]);
+    expect(next[2]).toBe(other);
   });
 });

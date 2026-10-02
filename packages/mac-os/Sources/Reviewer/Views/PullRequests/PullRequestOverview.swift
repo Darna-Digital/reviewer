@@ -310,7 +310,7 @@ private struct CollapsedDescription<Content: View>: View {
         Button {
             withAnimation(.snappy(duration: 0.3)) { expanded.toggle() }
         } label: {
-            Label(expanded ? "Show Less" : "Show More", systemImage: "chevron.down")
+            Label(expanded ? "Show less" : "Show more", systemImage: "chevron.down")
                 .labelStyle(ChevronAfterTitle(turned: expanded))
                 .font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, 10)
@@ -329,7 +329,7 @@ private struct CollapsedDescription<Content: View>: View {
 }
 
 /// The words, then the chevron, turned up while the text is unfolded —
-/// the order a "Show More" reads in, the chevron pointing where the text
+/// the order a "Show more" reads in, the chevron pointing where the text
 /// will go.
 private struct ChevronAfterTitle: LabelStyle {
     let turned: Bool

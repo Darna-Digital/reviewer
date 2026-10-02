@@ -169,3 +169,42 @@ describe("reply", () => {
     ).toBeNull();
   });
 });
+
+describe("setResolved", () => {
+  const threaded: ReviewComment = {
+    id: "gh-42",
+    filePath: "src/x.ts",
+    side: "additions",
+    lineNumber: 7,
+    body: "nit",
+    author: "o",
+    createdAt: "",
+    target: "pr-5",
+    source: "github",
+    thread: "PRRT_1",
+    resolved: false,
+  };
+
+  it("resolves the thread the comment is in, on the pull request in hand", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    expect(await fns.setResolved(pull, threaded, true)).toBe(true);
+    expect(deps.sideEffects.setPullThreadResolved).toHaveBeenCalledWith(
+      5,
+      "PRRT_1",
+      true
+    );
+  });
+
+  it("has nothing to resolve without a thread or a pull request", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    const { thread: _thread, ...unthreaded } = threaded;
+    expect(await fns.setResolved(pull, unthreaded, true)).toBe(false);
+    expect(await fns.setResolved(null, threaded, true)).toBe(false);
+    expect(
+      await fns.setResolved(pull, { ...threaded, source: "local" }, true)
+    ).toBe(false);
+    expect(deps.sideEffects.setPullThreadResolved).not.toHaveBeenCalled();
+  });
+});

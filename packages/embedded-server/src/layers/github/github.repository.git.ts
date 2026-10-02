@@ -13,6 +13,13 @@ import {
   pullFromRest,
   pullsFromGraphql,
 } from "./pull-request-mapping.ts";
+import {
+  RESOLVE_THREAD_MUTATION,
+  REVIEW_THREADS_QUERY,
+  UNRESOLVE_THREAD_MUTATION,
+  threadsByComment,
+  type CommentThread,
+} from "./review-threads.ts";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type {
   PullRequestInfo,
@@ -131,12 +138,39 @@ export const makeGitHubProvider = Effect.gen(function* () {
         );
     });
 
+  /**
+   * Which thread each of the pull request's comments is in, and whether it is
+   * resolved — GraphQL's to say, REST knowing nothing of threads. Asked
+   * alongside the comments rather than instead of them, and let go of when
+   * it fails: GraphQL refuses a caller with no token, and the comments are
+   * still worth showing without a way to resolve them.
+   */
+  const pullThreads = (owner: string, repo: string, pullNumber: number) =>
+    gh.graphql(REVIEW_THREADS_QUERY, { owner, repo, number: pullNumber }).pipe(
+      Effect.map(threadsByComment),
+      Effect.catch((error) =>
+        Effect.gen(function* () {
+          yield* Effect.logInfo(
+            `PR #${pullNumber}: review threads are unavailable (${error.reason}); ` +
+              "its comments are shown without a way to resolve them."
+          );
+          return new Map<number, CommentThread>();
+        })
+      )
+    );
+
   const pullComments: GitProviderShape["pullComments"] = (pullNumber) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo;
-      const data = (yield* gh.getJson(
-        `/repos/${owner}/${repo}/pulls/${pullNumber}/comments?per_page=100`
-      )) as any;
+      const [data, threads] = yield* Effect.all(
+        [
+          gh.getJson(
+            `/repos/${owner}/${repo}/pulls/${pullNumber}/comments?per_page=100`
+          ),
+          pullThreads(owner, repo, pullNumber),
+        ],
+        { concurrency: 2 }
+      );
       if (!Array.isArray(data)) return [];
       return data.flatMap((comment: any): Array<ReviewComment> => {
         if (
@@ -144,6 +178,8 @@ export const makeGitHubProvider = Effect.gen(function* () {
           typeof comment.path !== "string"
         )
           return [];
+        const thread =
+          typeof comment.id === "number" ? threads.get(comment.id) : undefined;
         return [
           {
             id: `gh-${comment.id}`,
@@ -155,10 +191,27 @@ export const makeGitHubProvider = Effect.gen(function* () {
             createdAt: comment.created_at ?? "",
             target: `pr-${pullNumber}`,
             source: "github",
+            ...(thread === undefined
+              ? {}
+              : { thread: thread.thread, resolved: thread.resolved }),
           },
         ];
       });
     });
+
+  /**
+   * Resolve a review thread, or open a resolved one again — GraphQL only,
+   * there being no REST call for either. GitHub refuses a caller without
+   * write access to the repository, and its sentence for that reaches the
+   * reviewer as the reason.
+   */
+  const setThreadResolved: GitProviderShape["setThreadResolved"] = (input) =>
+    gh
+      .graphql(
+        input.resolved ? RESOLVE_THREAD_MUTATION : UNRESOLVE_THREAD_MUTATION,
+        { threadId: input.threadId }
+      )
+      .pipe(Effect.asVoid);
 
   const createPullComment: GitProviderShape["createPullComment"] = (input) =>
     Effect.gen(function* () {
@@ -297,5 +350,6 @@ export const makeGitHubProvider = Effect.gen(function* () {
     createPullComment,
     replyToPullComment,
     deletePullComment,
+    setThreadResolved,
   } satisfies GitProviderShape;
 });

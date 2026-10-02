@@ -14,6 +14,15 @@ export const ReviewComment = Schema.Struct({
   createdAt: Schema.String,
   target: Schema.String,
   source: CommentSource,
+  /**
+   * The GitHub review thread the comment belongs to — GitHub's own node id
+   * for it, which is what resolving it is asked by — and whether that thread
+   * is resolved. Only a pull request's comments carry them, and only when
+   * GitHub could be asked about its threads: a local comment has no thread
+   * to resolve (deleting it is how one is put away).
+   */
+  thread: Schema.optionalKey(Schema.String),
+  resolved: Schema.optionalKey(Schema.Boolean),
 });
 export type ReviewComment = typeof ReviewComment.Type;
 export const NewComment = Schema.Struct({

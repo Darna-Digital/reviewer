@@ -70,5 +70,24 @@ export function createCommentsFunctions(
     };
   };
 
-  return { submit, update, remove, reply };
+  const setResolved: CommentsFunctions["setResolved"] = async (
+    selectedPull,
+    comment,
+    resolved
+  ) => {
+    if (
+      selectedPull === null ||
+      comment.source !== "github" ||
+      comment.thread === undefined
+    )
+      return false;
+    await d.sideEffects.setPullThreadResolved(
+      selectedPull.number,
+      comment.thread,
+      resolved
+    );
+    return true;
+  };
+
+  return { submit, update, remove, reply, setResolved };
 }
