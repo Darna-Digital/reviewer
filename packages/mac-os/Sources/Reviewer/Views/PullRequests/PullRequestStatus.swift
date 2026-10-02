@@ -6,6 +6,7 @@
 // tick meaning "passing" in one column and "mergeable" in the other is
 // how a status light stops being trusted. With them, the compact "time
 // ago" the rows and the overview date themselves in, the web app's own.
+import ReviewerShared
 import SwiftUI
 
 extension CheckState {
@@ -139,5 +140,46 @@ struct LabelBadge: View {
     private static func hue(_ color: String) -> Color? {
         guard color.count == 6, color.allSatisfy(\.isHexDigit) else { return nil }
         return Color(hex: "#\(color)")
+    }
+}
+
+/// A GitHub user's own picture, fetched by their login from GitHub's
+/// avatar address — the list the server reads carries the login and no
+/// picture, and GitHub serves any account's at `github.com/<login>.png`. A
+/// circle, as the system draws a person, ringed in a hairline so a picture
+/// as dark as the sheet keeps its edge. The monogram stands in while it
+/// loads, and for good where there is none to load — a bot, the network
+/// down.
+struct GitHubAvatar: View {
+    let login: String
+    var size: CGFloat = 16
+
+    var body: some View {
+        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.15))) { phase in
+            if let image = phase.image {
+                image
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fill)
+                    .transition(.opacity)
+            } else {
+                Text(RepoMonogram.initials(of: login))
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(hex: RepoMonogram.hue(of: login)))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(.quaternaryWash(1), lineWidth: 0.5))
+        .accessibilityLabel(login)
+    }
+
+    /// Asked for at three times the drawn size, so it is sharp on a Retina
+    /// screen and still sharp once the window is zoomed.
+    private var url: URL? {
+        guard let path = login.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return nil }
+        return URL(string: "https://github.com/\(path).png?size=\(Int(size * 3))")
     }
 }

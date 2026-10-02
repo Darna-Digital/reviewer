@@ -410,8 +410,8 @@ private struct People: View {
             None()
         } else {
             HStack(spacing: 5) {
-                HStack(spacing: -4) {
-                    ForEach(people.prefix(3), id: \.self) { RepoAvatar(name: $0, size: 18) }
+                HStack(spacing: -5) {
+                    ForEach(people.prefix(3), id: \.self) { GitHubAvatar(login: $0, size: 20) }
                 }
                 Text(people.joined(separator: ", "))
                     .lineLimit(1)
