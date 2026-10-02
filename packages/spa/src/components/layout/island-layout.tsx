@@ -29,7 +29,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { IslandBar } from "@/components/layout/island-bar";
@@ -146,4 +146,63 @@ function useShellNavigation(island: Island): void {
   useEffect(() => {
     void shell.post({ type: "navigated", href });
   }, [href]);
+
+  useScrollEdgeReport(href);
+}
+
+/**
+ * Tell the shell when the page's scroller reaches its top or leaves it — the
+ * shell holds no opinion of its own, so this is the one word on it. Heard at
+ * the document, in the capture phase, since a scroll does not bubble and the
+ * scroller is whichever the page has up — the diff's, a file's — without any
+ * of them knowing the shell is listening. Only a vertical move answers: a code
+ * line's own sideways run fires a scroll too, and says nothing about the top.
+ *
+ * Said on every change, and again once the page has settled after each
+ * navigation: a file picked in the tree changes the address and jumps the diff
+ * with it, and a new pull request mounts a new diff at its top without a
+ * scroll to say so — so the scroller last heard from is read again (or, gone
+ * from the page, taken to have left it at the top).
+ */
+function useScrollEdgeReport(href: string): void {
+  const state = useRef<{ scroller: Element | null; atTop: boolean }>({
+    scroller: null,
+    atTop: true,
+  });
+
+  useEffect(() => {
+    const tops = new WeakMap<Element, number>();
+    const report = (event: Event) => {
+      const scroller = event.target;
+      if (!(scroller instanceof Element)) return;
+      if (scroller.scrollHeight <= scroller.clientHeight) return;
+      if (tops.get(scroller) === scroller.scrollTop) return;
+      tops.set(scroller, scroller.scrollTop);
+      state.current.scroller = scroller;
+      say(state.current, scroller.scrollTop <= 0);
+    };
+    document.addEventListener("scroll", report, {
+      capture: true,
+      passive: true,
+    });
+    return () =>
+      document.removeEventListener("scroll", report, { capture: true });
+  }, []);
+
+  useEffect(() => {
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const { scroller } = state.current;
+        const atTop = scroller?.isConnected ? scroller.scrollTop <= 0 : true;
+        say(state.current, atTop, true);
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [href]);
+}
+
+function say(state: { atTop: boolean }, atTop: boolean, always = false): void {
+  if (!always && atTop === state.atTop) return;
+  state.atTop = atTop;
+  void shell.post({ type: "scroll", atTop });
 }

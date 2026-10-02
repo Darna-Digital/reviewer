@@ -75,7 +75,12 @@ export type ShellIntent =
   | { readonly type: "review"; readonly review: ShellReview | null }
   /** The empty pane's ways in — the palette's lists, the settings window —
    * which inside the shell are the shell's own, so the click crosses over. */
-  | { readonly type: "open"; readonly target: ShellOpenTarget };
+  | { readonly type: "open"; readonly target: ShellOpenTarget }
+  /** Whether the page's scroller — the diff, the file — stands at its top,
+   * said each time it arrives there or leaves. The shell scrolls a header of
+   * its own away over the page (a pull request's overview) and needs to know,
+   * the moment a wheel turns, whether the page has any further up to go. */
+  | { readonly type: "scroll"; readonly atTop: boolean };
 
 /** What the shell opens for the page: one of its palette's lists, or the
  * settings window — the same four the page's empty pane lists with their

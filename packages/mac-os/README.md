@@ -39,14 +39,19 @@ What it does today:
   author and branch, what CI said and whether anything blocks it at the
   trailing edge, under the web list's search and its branch-and-time
   filter (`PullRequestList`). Picking one sends the page island to its
-  diff and stands the pull request's own column up between the sidebar and
-  the diff — two islands, its overview over its files: everything about it
-  that is not its diff, drawn natively (`PullRequestOverview`) — title,
-  byline, branches, size, the checks and why a merge is blocked, who is on
-  it, its description as markdown — with merge (confirmed, any of GitHub's
-  three ways), check out, close (confirmed) and the link out to GitHub;
-  and under it the files it touches, the same native outline under the
-  changed-files search (`PullRequestColumn`). The row stays picked while
+  diff and makes the page the pull request's, scrolled as one the way
+  GitHub's reads (`PullRequestPage`): across the top its overview —
+  everything about it that is not its diff, drawn natively
+  (`PullRequestOverview`): title, byline, branches, size and its
+  description as markdown, beside a column with merge (confirmed, any of
+  GitHub's three ways), check out, close (confirmed), the link out to
+  GitHub, the checks and why a merge is blocked, and who is on it — and
+  under it the files it touches, the same native outline under the
+  changed-files search, beside the diff, both at the page's own height, so
+  once the overview has scrolled away they fill it, the tree held at the
+  left. The wheel is handed between the page and the tree and the diff
+  as each gesture starts (`ScrollHandoff`), the island saying whether its
+  scroller is at its top (`scroll`). The row stays picked while
   the page is on it, so the list is the way between pull requests, as
   Mail's is between messages. On the sessions surface the
   same pane holds the agent sessions instead — every project's, newest

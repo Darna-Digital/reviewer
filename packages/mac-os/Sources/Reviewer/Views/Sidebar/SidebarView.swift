@@ -7,8 +7,8 @@
 // the branch picker, which stands over the tree the way the web header's
 // does: the branch you are on is what the tree beneath it is a tree of. On
 // the merge-requests surface the column holds the list of them instead
-// (see `PullRequestList`), the one open standing beside the sidebar with
-// its files (see `PullRequestColumn`); on the sessions surface it holds
+// (see `PullRequestList`), the one open taking the page beside it, its
+// overview over its files and its diff (see `PullRequestPage`); on the sessions surface it holds
 // the sessions list (see `SessionsList`) — every project's, so no branch
 // names it, and the picker stands down with the tree. The project picker stands in the sidebar's
 // run of the toolbar, beside its toggle (see `ContentView`); the rail that

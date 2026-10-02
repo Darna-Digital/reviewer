@@ -25,7 +25,10 @@
 // window — which are the shell's own here, so a click on one crosses over
 // (`open`). And one the island asks and waits on: a yes/no question —
 // discard this file? — which the shell asks as a sheet on its window and
-// answers as the promise the page is holding (`confirm`).
+// answers as the promise the page is holding (`confirm`). And one the
+// island keeps saying as it scrolls: whether its scroller stands at its top
+// (`scroll`), for a header the shell scrolls away over the page to know,
+// as a wheel turns, whether the page has any further up to go.
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -40,6 +43,13 @@ final class IslandHost: NSObject {
     let kind: IslandKind
     private(set) var href: String
     private(set) var isReady = false
+    /// Whether the page's scroller stands at its top, as the island last
+    /// said — read as a wheel turns, so it is kept out of observation. The
+    /// island's word alone: it says so again after every navigation, and a
+    /// guess of the shell's own at one — a file picked in the tree changes
+    /// the address too, and jumps the diff away from its top — was wrong
+    /// until the island next changed its mind.
+    @ObservationIgnored private(set) var scrolledToTop = true
 
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
@@ -303,6 +313,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "review":
             onReviewReported?(ShellReview.decode(body["review"]))
+            return (nil, nil)
+        case "scroll":
+            if let atTop = body["atTop"] as? Bool { scrolledToTop = atTop }
             return (nil, nil)
         case "open":
             if let target = (body["target"] as? String).flatMap(OpenTarget.init(rawValue:)) {

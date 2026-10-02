@@ -153,9 +153,9 @@ private struct SidebarToolbarItems: ToolbarContent {
     }
 }
 
-/// The islands on the frame — the page and the bottom pane under it, and
-/// while a pull request is open, its own column ahead of them (see
-/// `PullRequestColumn`) — with the rail beside them while the sidebar is
+/// The islands on the frame — the page and the bottom pane under it; while
+/// a pull request is open, the page is its own, its overview over its files
+/// and the diff (see `PullRequestPage`) — with the rail beside them while the sidebar is
 /// away and the page is on a surface the rail serves; on the sessions
 /// surface it collapses here as it does in the sidebar, and the islands
 /// take the gap it stood in. When the sidebar moves, the web view and the
@@ -185,15 +185,11 @@ private struct DetailColumn: View {
         return model.sidebarShown ? IslandMetrics.gap : IslandMetrics.margin
     }
 
-    private var pullShown: Bool { model.connection == .ready && model.reviewingPull != nil }
-
     /// The run of the detail's width that is not the page island's: the
-    /// rail or the margin ahead of it, the pull request's column and the
-    /// seam beside that, and the margin behind it.
+    /// rail or the margin ahead of it, and the margin behind it.
     private var aroundIsland: CGFloat {
         let ahead = railed ? IslandMetrics.margin + AppRail.width : leading
-        let pull = pullShown ? model.pullColumnWidth + IslandMetrics.gap : 0
-        return ahead + pull + IslandMetrics.margin
+        return ahead + IslandMetrics.margin
     }
 
     /// Where the page island's edge ends up once the column has moved —
@@ -223,13 +219,8 @@ private struct DetailColumn: View {
                 AppRail(inset: IslandMetrics.margin)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            if model.connection == .ready, let pull = model.reviewingPull {
-                PullRequestColumn(pull: pull)
-                    .padding(.leading, leading)
-                IslandSeam(between: .columns, size: $model.pullColumnWidth, range: PullRequestColumn.widths)
-            }
             VStack(spacing: 0) {
-                page
+                pageOrPull
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .island()
                     // The assign bar hangs over the page alone, not the
@@ -254,7 +245,7 @@ private struct DetailColumn: View {
             }
             .animation(PaneMotion.change, value: paneShown)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { measure(islandWidth: $0) }
-            .padding(.leading, model.reviewingPull == nil ? leading : 0)
+            .padding(.leading, leading)
         }
         // No run of our own along the top: the bar keeps as much air under
         // its items as it keeps over them, and that air is the gap — a gap
@@ -265,6 +256,17 @@ private struct DetailColumn: View {
         .clipped()
         .animation(SidebarMotion.change, value: railed)
         .environment(\.sidebarHold, sidebarHold)
+    }
+
+    /// A pull request's page holds the page island beside its files, under
+    /// its overview; every other page is the island alone.
+    @ViewBuilder
+    private var pageOrPull: some View {
+        if model.connection == .ready, let pull = model.reviewingPull {
+            PullRequestPage(pull: pull) { page }
+        } else {
+            page
+        }
     }
 
     @ViewBuilder

@@ -414,6 +414,11 @@ struct MarkdownTable: View {
                 }
             }
         }
+        // Held to the height its rows come to at the width it is given:
+        // a grid of wrapping cells otherwise answers its height for the
+        // width its cells first asked for, and a wide page laid out what
+        // followed the table over the foot of the description.
+        .fixedSize(horizontal: false, vertical: true)
         .overlay(RoundedRectangle(cornerRadius: Self.corner).strokeBorder(.quaternaryWash(1.5)))
         .clipShape(RoundedRectangle(cornerRadius: Self.corner))
     }

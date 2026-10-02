@@ -61,11 +61,10 @@ final class AppModel {
     /// The review the page is holding for a hand-off, and the assign bar
     /// the shell floats over the page for it in the web bar's place.
     let reviewHandoff: ReviewHandoff
-    /// The width of the pull request's own column — its overview over its
-    /// files — between the sidebar and the diff, and the height of the
-    /// files under the overview; both resized by the seams beside them.
-    var pullColumnWidth: CGFloat = 320
-    var pullFilesHeight: CGFloat = 300
+    /// The width of the files a pull request touches, down the left of its
+    /// diff on its page (see `PullRequestPage`); the rule beside them
+    /// resizes it.
+    var pullTreeWidth: CGFloat = 280
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true

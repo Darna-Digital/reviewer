@@ -7,9 +7,8 @@
 // sidebar's two lines. The web list's search and its branch-and-time filter
 // stand at the head, as the sessions list has them.
 //
-// Picking a row sends the page to that pull request's diff, and the
-// overview and its files stand up beside the sidebar (see
-// `PullRequestColumn`); the row stays picked while the page is on it, so
+// Picking a row sends the page to that pull request's diff, under its
+// overview and beside its files (see `PullRequestPage`); the row stays picked while the page is on it, so
 // the list is the way between pull requests, as Mail's is between
 // messages. The picked row wears the tree's own quiet wash rather than the
 // accent blue (see `TreeSelection`), the rows being drawn by hand as the
