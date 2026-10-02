@@ -311,9 +311,12 @@ struct MarkdownText: View {
             ForEach(blocks) { block in
                 switch block {
                 case .heading(let level, let text):
+                    // No air over a heading that opens the text: there is
+                    // nothing above it to stand off from, and the gap would
+                    // only add to whatever the text is set under.
                     Text(text)
                         .font(metrics.heading(level))
-                        .padding(.top, metrics.headingGap)
+                        .padding(.top, block.id == blocks.first?.id ? 0 : metrics.headingGap)
                 case .paragraph(let text):
                     paragraph(text, metrics: metrics)
                 case .list(let items, let ordered):

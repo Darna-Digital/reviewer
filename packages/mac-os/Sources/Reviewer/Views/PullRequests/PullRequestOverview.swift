@@ -48,8 +48,11 @@ struct PullRequestOverview: View {
             Group {
                 if width >= Self.twoColumnWidth {
                     HStack(alignment: .top, spacing: 28) {
-                        VStack(alignment: .leading, spacing: 20) {
+                        // The head ruled off from the body, as Mail rules a
+                        // message's head off from what it says.
+                        VStack(alignment: .leading, spacing: 18) {
                             identity
+                            ThemedDivider()
                             description
                         }
                         .frame(maxWidth: Self.readingWidth, alignment: .leading)
@@ -58,10 +61,11 @@ struct PullRequestOverview: View {
                             .frame(width: Self.inspectorWidth)
                     }
                 } else {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 18) {
                         identity
                         PullRequestInspector(pull: pull)
                             .frame(maxWidth: Self.inspectorWidth)
+                        ThemedDivider()
                         description
                     }
                 }
@@ -73,79 +77,108 @@ struct PullRequestOverview: View {
         }
     }
 
-    /// The header, on the system's type scale rather than sizes picked one
-    /// by one: the title at the Title size, the one thing on the page set
-    /// that large; under it a single sentence saying who wants what merged
-    /// where, at the body size, its author in their GitHub picture and the
-    /// two branches as the tokens the system draws for a value you can
-    /// select and copy; and under that the facts it is dated and sized by,
-    /// each behind its symbol in the secondary ink, as Finder's Get Info
-    /// and Xcode's inspectors set a fact. The state leads the sentence as
-    /// a tinted capsule — the one coloured thing in the header besides the
-    /// diffstat, since it is the one thing about the pull request that can
-    /// change under you.
+    /// The header: the title, and under it two quiet lines — who opened it
+    /// and when, then which branch goes where. Everything under the title is
+    /// plain text in the secondary ink at one size, the author's name alone
+    /// stepped up to the primary, so the eye has the title and one name to
+    /// land on. A first version dressed each fact — a badge for the state, a
+    /// chip and a symbol per branch, an icon per date, a diffstat bar — and
+    /// the header read as a row of controls rather than as a heading; what it
+    /// dropped is said elsewhere already: an open pull request is the only
+    /// kind the list holds, and the bar over the files carries their count
+    /// and the lines changed.
+    ///
+    /// Set as Mail sets a message's head: the person's picture at the height
+    /// of the two lines beside it, their name over what they are proposing,
+    /// so the meta reads as one block hung off the picture rather than as two
+    /// loose lines. The title is a semibold step tightened as the system
+    /// tightens its display sizes, the number in the same run a shade down
+    /// rather than spaced off on its own.
     private var identity: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            (Text(pull.title)
-                .foregroundStyle(.primary)
-                + Text("  #\(pull.number)")
-                .foregroundStyle(.tertiary)
-                .fontWeight(.regular))
-                .font(.system(size: 22, weight: .bold))
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-            byline
-            facts
-        }
-    }
-
-    /// The state, then the sentence: who wants which branch merged into
-    /// which. Wraps as a sentence would when the page is narrow.
-    private var byline: some View {
-        HStack(spacing: 8) {
-            PullStateBadge(pull: pull)
-            if !pull.author.isEmpty {
-                HStack(spacing: 6) {
-                    GitHubAvatar(login: pull.author, size: 20)
-                    Text(pull.author)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                }
-                .help(pull.author)
-            }
-            Text(pull.author.isEmpty ? "Merging" : "wants to merge")
-                .foregroundStyle(.secondary)
-            if !pull.headRef.isEmpty {
-                BranchToken(name: pull.headRef, fork: pull.fromFork)
-                Text("into")
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                (Text(pull.title)
+                    .foregroundStyle(.primary)
+                    + Text(" #\(pull.number)")
                     .foregroundStyle(.secondary)
+                    .fontWeight(.regular))
+                    .font(.system(size: 21, weight: .semibold))
+                    .tracking(-0.3)
+                    .lineSpacing(2)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                if pull.draft {
+                    DraftBadge()
+                }
             }
-            BranchToken(name: pull.baseRef, fork: false)
-        }
-        .font(.system(size: 13))
-        .lineLimit(1)
-    }
-
-    private var facts: some View {
-        HStack(spacing: 16) {
-            if let opened = Wire.date(pull.createdAt) {
-                Fact(symbol: "clock", text: "Opened \(opened.formatted(.relative(presentation: .named)))")
-                    .help(opened.formatted(date: .complete, time: .shortened))
-            }
-            if let updated = Wire.date(pull.updatedAt) {
-                Fact(symbol: "arrow.triangle.2.circlepath", text: "Updated \(updated.formatted(.relative(presentation: .named)))")
-                    .help(updated.formatted(date: .complete, time: .shortened))
-            }
-            if pull.changedFiles > 0 {
-                HStack(spacing: 6) {
-                    Fact(symbol: "doc.on.doc", text: "\(pull.changedFiles) \(pull.changedFiles == 1 ? "file" : "files") changed")
-                    LineCounts(pull: pull)
-                        .font(.system(size: 12, weight: .medium))
-                    DiffStatBar(additions: pull.additions, deletions: pull.deletions)
+            HStack(alignment: .center, spacing: 10) {
+                if !pull.author.isEmpty {
+                    GitHubAvatar(login: pull.author, size: 32)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    byline
+                    branches
                 }
             }
         }
+    }
+
+    /// The author's name, then when it was opened and last touched — the
+    /// exact dates on hover.
+    private var byline: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            if !pull.author.isEmpty {
+                Text(pull.author)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+            Text(dates)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .help(exactDates)
+        }
         .lineLimit(1)
+    }
+
+    /// The branch pair as one line in the code face, head to base, the
+    /// arrow pointing the way the merge goes. Selectable, to be copied.
+    @ViewBuilder
+    private var branches: some View {
+        if !pull.headRef.isEmpty {
+            HStack(spacing: 5) {
+                Text(pull.headRef)
+                    .truncationMode(.middle)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                Text(pull.baseRef)
+                    .layoutPriority(1)
+            }
+            .font(.system(size: 11.5, design: .monospaced))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .textSelection(.enabled)
+            .help(pull.fromFork ? "\(pull.headRef), from a fork, into \(pull.baseRef)" : "\(pull.headRef) into \(pull.baseRef)")
+        }
+    }
+
+    private var dates: String {
+        var parts: [String] = []
+        if let opened = Wire.date(pull.createdAt) {
+            parts.append("opened \(opened.formatted(.relative(presentation: .named)))")
+        }
+        if let updated = Wire.date(pull.updatedAt), pull.updatedAt != pull.createdAt {
+            parts.append("updated \(updated.formatted(.relative(presentation: .named)))")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private var exactDates: String {
+        [("Opened", pull.createdAt), ("Updated", pull.updatedAt)]
+            .compactMap { label, iso in
+                Wire.date(iso).map { "\(label) \($0.formatted(date: .complete, time: .shortened))" }
+            }
+            .joined(separator: "\n")
     }
 
     @ViewBuilder
@@ -165,94 +198,17 @@ struct PullRequestOverview: View {
     }
 }
 
-/// The pull request's state as GitHub badges it — open, or a draft — in
-/// the capsule the system tints a status in: the hue washed behind it, the
-/// hue itself on the type.
-private struct PullStateBadge: View {
-    let pull: PullRequestInfo
-
+/// A draft, said beside the title as GitHub says it: the one state worth a
+/// mark, since a draft is not yet asking for review.
+private struct DraftBadge: View {
     var body: some View {
-        let hue = pull.draft ? Color.secondary : Color.green
-        Label(pull.draft ? "Draft" : "Open", systemImage: pull.draft ? "pencil.circle" : "arrow.triangle.pull")
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(hue)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 3)
-            .background(hue.opacity(0.16), in: Capsule())
-    }
-}
-
-/// A branch, as a token: its symbol and its name in the code face, washed
-/// in a capsule, selectable, cut in the middle where the name runs long —
-/// the start says whose it is and the end what it is for.
-private struct BranchToken: View {
-    let name: String
-    let fork: Bool
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: fork ? "tuningfork" : "arrow.triangle.branch")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-            Text(name)
-                .font(.system(size: 12, design: .monospaced))
-                .truncationMode(.middle)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(.quaternaryWash(0.6), in: Capsule())
-        .textSelection(.enabled)
-        .help(fork ? "\(name), from a fork" : name)
-        .layoutPriority(name.count > 24 ? 0 : 1)
-    }
-}
-
-/// One fact under the byline: its symbol and its words, in the secondary
-/// ink at the caption size.
-private struct Fact: View {
-    let symbol: String
-    let text: String
-
-    var body: some View {
-        Label {
-            Text(text)
-        } icon: {
-            Image(systemName: symbol)
-                .font(.system(size: 11))
-        }
-        .font(.system(size: 12))
-        .foregroundStyle(.secondary)
-        .labelStyle(.titleAndIcon)
-    }
-}
-
-/// GitHub's five-block diffstat: the share of the lines changed that were
-/// added, in green, and taken away, in red, the rest left grey when the
-/// change is small enough not to fill the bar.
-private struct DiffStatBar: View {
-    let additions: Int
-    let deletions: Int
-
-    private static let blocks = 5
-
-    var body: some View {
-        let total = additions + deletions
-        let filled = total == 0 ? 0 : min(Self.blocks, max(1, Int((Double(total) / 20).rounded(.up))))
-        let green = total == 0 ? 0 : Int((Double(additions) / Double(total) * Double(filled)).rounded())
-        HStack(spacing: 2) {
-            ForEach(0..<Self.blocks, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                    .fill(color(at: index, green: green, filled: filled))
-                    .frame(width: 8, height: 8)
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
-    private func color(at index: Int, green: Int, filled: Int) -> AnyShapeStyle {
-        if index < green { return AnyShapeStyle(Color.green) }
-        if index < filled { return AnyShapeStyle(Color.red) }
-        return AnyShapeStyle(.quaternaryWash(1.2))
+        Text("Draft")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(.quaternaryWash(0.8), in: Capsule())
+            .fixedSize()
     }
 }
 
