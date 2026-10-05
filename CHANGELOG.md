@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.0.12 — 2026-10-05
+
+### Added
+
+- You can now resolve and reopen GitHub review conversations right from the comment thread. Resolved conversations fold away so open ones stand out, and you can expand them again at any time.
+- Pull requests now open on a single page that shows the overview, the file tree and the diff together. A side panel next to the overview lists actions, checks, reviewers, assignees and labels.
+- Pull request authors and reviewers now show their GitHub avatars.
+
+### Changed
+
+- The pull request header is simpler: a clear title, who opened it and when, and the branches it merges between. A small "Draft" badge appears only on drafts, and you can select the branch names to copy them.
+- Long pull request descriptions are now collapsed, with "Show more" to read the rest.
+- The pull request list header is less cluttered, and timestamps in the list are easier to read.
+
+### Fixed
+
+- Markdown tables with wrapped text no longer overlap the content below them.
+
 ## v0.0.11 — 2026-09-30
 
 ### Added
