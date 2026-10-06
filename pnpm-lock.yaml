@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@pierre/diffs@1.4.3': 6baeca629be71bfa28c2f9ef914adf761ac685e17c0d2d33cb587ed4902d88c7
+  '@pierre/diffs@1.5.1': bd18ac30134680d43d5be8458c4ed51c3f75dea40545e7fda5e7b6d54a235465
 
 importers:
 
@@ -202,8 +202,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@pierre/diffs':
-        specifier: 1.4.3
-        version: 1.4.3(patch_hash=6baeca629be71bfa28c2f9ef914adf761ac685e17c0d2d33cb587ed4902d88c7)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: 1.5.1
+        version: 1.5.1(patch_hash=bd18ac30134680d43d5be8458c4ed51c3f75dea40545e7fda5e7b6d54a235465)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.5.0)
@@ -1618,8 +1618,8 @@ packages:
   '@oxc-project/types@0.152.0':
     resolution: {integrity: sha512-oM/5rLBm2tPkg0iBgkH/FOeR3PCDpY19GTgAZjMFM8h9WI9VW7cLgzp6nwtarYKmovavIQZ+Fe/RKX/8C8O/Rw==}
 
-  '@pierre/diffs@1.4.3':
-    resolution: {integrity: sha512-zJD10amMxjQis5/SYz9AYMTyqdvg1Rbuu6nCYJm67C0phFGHbescoQcxNnxrV2SVQcNSyxtSRwjjf4ND5IJXnA==}
+  '@pierre/diffs@1.5.1':
+    resolution: {integrity: sha512-+EXNfz4ZXI6FHr7P6ToWEORwyYiPVfAmzhA70xF+0y/oNvj7gbNTLJJ6jNzkBjuMbRlu564TAmgYZLc5OyHURA==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
@@ -6331,7 +6331,7 @@ snapshots:
 
   '@oxc-project/types@0.152.0': {}
 
-  '@pierre/diffs@1.4.3(patch_hash=6baeca629be71bfa28c2f9ef914adf761ac685e17c0d2d33cb587ed4902d88c7)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@pierre/diffs@1.5.1(patch_hash=bd18ac30134680d43d5be8458c4ed51c3f75dea40545e7fda5e7b6d54a235465)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@pierre/theme': 2.0.0
       '@pierre/theming': 1.0.1(@pierre/theme@2.0.0)(@shikijs/themes@4.5.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.5.0)
