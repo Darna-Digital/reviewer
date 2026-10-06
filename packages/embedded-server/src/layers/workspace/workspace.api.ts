@@ -1,5 +1,5 @@
 /** HTTP endpoints for project/repository selection, browsing and file IO. */
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 import { NoRepoSelected, StorageError, Ok } from "@reviewer/core/shared";
 import {
   InvalidRepo,

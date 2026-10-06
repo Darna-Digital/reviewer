@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
-import { ChildProcessSpawner } from "effect/unstable/process";
-import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { ChildProcessSpawner } from "effect/process";
+import { HttpApiBuilder } from "effect/http-api";
 import { Api } from "../../api.ts";
 import {
   CommentsService,

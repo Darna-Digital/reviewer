@@ -16,7 +16,7 @@ import {
   ThreadResolution,
 } from "@reviewer/core/ports/git-provider";
 import { DiffText, Ok } from "@reviewer/core/shared";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 export class GitHubApi extends HttpApiGroup.make("github")
   .add(

@@ -16,8 +16,8 @@
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
 import * as Layer from "effect/Layer";
 import { commitDraftsLayer } from "@reviewer/core/git-message";
-import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
-import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
+import { FetchHttpClient, HttpRouter } from "effect/http";
+import { HttpApiBuilder, HttpApiScalar } from "effect/http-api";
 import { createServer } from "node:http";
 import { Api } from "./api.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";

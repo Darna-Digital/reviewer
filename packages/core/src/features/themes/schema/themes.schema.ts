@@ -67,7 +67,7 @@ export type ThemeChrome = typeof ThemeChrome.Type;
 
 export const ThemeNameParam = Schema.Struct({ name: Schema.String });
 
-export class ThemeNotFound extends Schema.TaggedErrorClass<ThemeNotFound>()(
+export class ThemeNotFound extends Schema.TaggedError<ThemeNotFound>()(
   "ThemeNotFound",
   { name: Schema.String },
   { httpApiStatus: 404 }

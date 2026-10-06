@@ -13,7 +13,7 @@ import {
   Ok,
 } from "@reviewer/core/shared";
 import { InvalidRepo } from "@reviewer/core/workspace";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 // The repository types every operation with the same failure union
 // (CommentsFailure), so each endpoint declares all three.

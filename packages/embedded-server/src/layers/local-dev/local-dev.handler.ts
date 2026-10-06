@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import * as Effect from "effect/Effect";
-import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { HttpApiBuilder } from "effect/http-api";
 import { NotFound } from "@reviewer/core/shared";
 import { Api } from "../../api.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";

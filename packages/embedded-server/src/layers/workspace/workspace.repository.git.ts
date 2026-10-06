@@ -7,7 +7,7 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import type { PlatformError, SystemErrorTag } from "effect/PlatformError";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { homedir, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@reviewer/core/shared";

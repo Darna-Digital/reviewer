@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema";
 
-export class InvalidRepo extends Schema.TaggedErrorClass<InvalidRepo>()(
+export class InvalidRepo extends Schema.TaggedError<InvalidRepo>()(
   "InvalidRepo",
   { path: Schema.String, reason: Schema.String },
   { httpApiStatus: 400 }

@@ -15,7 +15,7 @@ import {
   RunCommand,
   ThreadIdParam,
 } from "@reviewer/core/threads";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 const errors = [NoRepoSelected, NotFound, StorageError, TerminalError] as const;
 

@@ -3,7 +3,7 @@
  * the run rather than the message — the CLI is still going when the response
  * is written — and the message is read off the draft once it lands.
  */
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 import { CommitDraft, GenerateBody } from "@reviewer/core/git-message";
 
 export class GitMessageApi extends HttpApiGroup.make("gitMessage")

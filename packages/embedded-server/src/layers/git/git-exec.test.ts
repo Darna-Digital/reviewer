@@ -6,7 +6,7 @@
 import { it } from "@effect/vitest";
 import { Effect, Layer, Sink, Stream } from "effect";
 import * as Duration from "effect/Duration";
-import { ChildProcessSpawner } from "effect/unstable/process";
+import { ChildProcessSpawner } from "effect/process";
 import {
   existsSync,
   mkdtempSync,
