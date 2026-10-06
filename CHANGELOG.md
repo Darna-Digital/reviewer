@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.0.14 — 2026-10-06
+
+### Added
+
+- PHP support in the code views: go to definition, find usages, hover docs, completions and problems, powered by intelephense. Reviewer uses the intelephense (or phpactor) already on your Mac when there is one.
+- No PHP language server? Settings → Languages can install intelephense for you, without needing Node.js or npm on your Mac.
+- Laravel references are clickable: `view()`, `config()`, `env()`, `__()`, Blade `@include` and `@extends`, `<x-…>` components, Livewire tags and Inertia pages open the file and line they name.
+- In Laravel apps that use PHPStan or Larastan, its findings show next to the language server's, checked against the project's own `phpstan.neon`: the same files, at the same level.
+- Settings has a new Languages section showing which language server each language uses, or why one is missing.
+- PHP and Blade files have their own icons.
+
+### Changed
+
+- The Check Out button on a pull request now lights up in the theme's accent colour on hover instead of turning grey.
+
+### Fixed
+
+- Comments you post on a GitHub pull request can be resolved straight away, without waiting for a refresh.
+- Switching branches no longer leaves the review comparing against a branch chosen for the previous one.
+- Tabs no longer vanish from the tab bar for a while after quickly resizing the window or snapping it to half the screen.
+
 ## v0.0.13 — 2026-10-06
 
 ### Changed
