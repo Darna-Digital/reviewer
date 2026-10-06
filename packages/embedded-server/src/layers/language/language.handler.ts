@@ -96,4 +96,9 @@ export const LanguageHandler = HttpApiBuilder.group(
           )
         )
       )
+      .handle("install", ({ payload }) =>
+        Effect.flatMap(LanguageService, (s) =>
+          Effect.as(s.install(payload.providerId), { ok: true })
+        )
+      )
 );

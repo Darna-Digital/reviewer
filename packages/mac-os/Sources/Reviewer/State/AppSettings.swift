@@ -31,6 +31,12 @@
 // `GitHubLogin`), and the window shows the one-time code, puts it on the
 // pasteboard, opens the page it goes on, and watches for the CLI to come
 // back with the token.
+//
+// The languages are read too: which server each language's code views run
+// on in this project, or why there is none. Where the server can fetch the
+// missing one itself — intelephense, for PHP — the window offers to, says
+// whose software it is first, and watches the install through to the end,
+// since it runs on the server and takes longer than a request.
 import AppKit
 import Foundation
 import Observation
@@ -142,14 +148,19 @@ final class AppSettings {
     private(set) var identity: SettingsRead<GitIdentity> = .loading
     private(set) var githubAuth: SettingsRead<GitHubAuth> = .loading
     private(set) var signIn: GitHubSignIn = .idle
+    private(set) var languages: SettingsRead<[LanguageProviderInfo]> = .loading
 
     @ObservationIgnored private let client: ReviewerClient
     @ObservationIgnored private let defaults = UserDefaults.standard
     /// The watch over a sign-in under way, so a cancel can call it off.
     @ObservationIgnored private var signInWatch: Task<Void, Never>?
+    /// The watch over a language server install under way.
+    @ObservationIgnored private var installWatch: Task<Void, Never>?
 
     /// How often the CLI is asked whether the code has been entered.
     private static let signInPoll: Duration = .seconds(2)
+    /// How often an install under way is asked after.
+    private static let installPoll: Duration = .seconds(2)
 
     private enum Keys {
         static let theme = "appearance.theme"
@@ -229,8 +240,10 @@ final class AppSettings {
     func reload() async {
         async let identity = read { try await client.gitIdentity() }
         async let auth = read { try await client.githubAuth() }
+        async let languages = read { try await client.languageProviders() }
         self.identity = await identity
         self.githubAuth = await auth
+        self.languages = await languages
     }
 
     private func read<Value: Sendable>(_ fetch: () async throws -> Value) async -> SettingsRead<Value> {
@@ -306,6 +319,34 @@ final class AppSettings {
                 signIn = .failed(state.reason ?? "The sign-in stopped without saying why.")
                 return
             }
+        }
+    }
+
+    // MARK: installing a language server
+
+    var isInstallingLanguageServer: Bool {
+        languages.value?.contains { $0.installer?.state == .installing } ?? false
+    }
+
+    /// Ask the server to install `provider`'s missing server, then read the
+    /// languages until the install has finished one way or the other — the
+    /// row turns into the server it installed, or says why it could not.
+    func installLanguageServer(for provider: LanguageProviderInfo) {
+        guard !isInstallingLanguageServer else { return }
+        installWatch?.cancel()
+        installWatch = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await client.installLanguageServer(providerId: provider.id)
+            } catch {
+                languages = .failed(error.localizedDescription)
+                return
+            }
+            repeat {
+                languages = await read { try await client.languageProviders() }
+                if !isInstallingLanguageServer { return }
+                try? await Task.sleep(for: Self.installPoll)
+            } while !Task.isCancelled
         }
     }
 

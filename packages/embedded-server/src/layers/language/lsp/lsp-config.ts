@@ -35,6 +35,13 @@ export interface LspServerConfig {
   readonly env: Readonly<Record<string, string>>;
   /** Passed verbatim as `initializationOptions` in the initialize request. */
   readonly initializationOptions: unknown;
+  /**
+   * The server's settings, keyed by section as an editor's settings file is
+   * (`{ "intelephense": { "files": { … } } }`). Answered section by section
+   * to `workspace/configuration`, and pushed once with
+   * `workspace/didChangeConfiguration` for servers that only read it there.
+   */
+  readonly settings: unknown;
 }
 
 export interface LanguageConfig {
@@ -100,6 +107,7 @@ const parseServer = (
       args: stringList(raw["args"]),
       env: stringMap(raw["env"]),
       initializationOptions: raw["initializationOptions"],
+      settings: raw["settings"] ?? null,
     },
   };
 };

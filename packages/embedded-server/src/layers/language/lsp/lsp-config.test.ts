@@ -24,8 +24,20 @@ describe("parseLanguageConfig", () => {
         args: [],
         env: {},
         initializationOptions: undefined,
+        settings: null,
       },
     ]);
+  });
+
+  it("keeps a server's settings for workspace/configuration", () => {
+    const { servers } = parseLanguageConfig({
+      servers: [
+        { ...rust, settings: { "rust-analyzer": { checkOnSave: false } } },
+      ],
+    });
+    expect(servers[0].settings).toEqual({
+      "rust-analyzer": { checkOnSave: false },
+    });
   });
 
   it("keeps args, env and initializationOptions", () => {

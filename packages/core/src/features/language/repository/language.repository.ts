@@ -65,6 +65,10 @@ export interface LanguageRepo {
     range: Range,
     contents: string | null
   ) => Effect.Effect<CodeActionsResult, LanguageFailure>;
+  /** Start installing the server a provider offered to install. */
+  readonly install: (
+    providerId: string
+  ) => Effect.Effect<void, LanguageFailure>;
 }
 
 export class LanguageRepository extends Context.Service<

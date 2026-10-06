@@ -26,6 +26,7 @@ import type {
   Position,
   Range,
   ReferencesResult,
+  LanguageInstaller,
   ProviderTransport,
 } from "../features/language/schema/language.schema.ts";
 
@@ -56,6 +57,8 @@ export interface ProviderAvailability {
   readonly available: boolean;
   /** Human-readable reason — shown in settings when `available` is false. */
   readonly detail: string;
+  /** Offered when the provider can fetch its own missing server. */
+  readonly installer?: LanguageInstaller;
 }
 
 export interface DocumentRequest {
@@ -129,6 +132,12 @@ export interface LanguageProvider {
   readonly codeActions: (
     request: RangeRequest
   ) => Effect.Effect<ReadonlyArray<CodeActionItem>, LanguageError>;
+  /**
+   * Start installing the server `probe` offered an installer for. Returns as
+   * soon as the work is under way — a download takes longer than a request
+   * should — and the progress shows in the installer's `state` on later probes.
+   */
+  readonly install?: () => Effect.Effect<void, LanguageError>;
 }
 
 /**

@@ -157,6 +157,41 @@ const clientCapabilities = {
   window: { workDoneProgress: true },
 } as const;
 
+/** The `section` of each item a `workspace/configuration` request asks for. */
+const configurationItems = (params: unknown): ReadonlyArray<string | null> => {
+  const items =
+    typeof params === "object" && params !== null
+      ? (params as { items?: unknown }).items
+      : undefined;
+  if (!Array.isArray(items)) return [null];
+  return items.map((item: unknown) => {
+    const section =
+      typeof item === "object" && item !== null
+        ? (item as { section?: unknown }).section
+        : undefined;
+    return typeof section === "string" ? section : null;
+  });
+};
+
+/**
+ * One section of a server's settings, walked by its dotted name. Anything not
+ * configured answers an empty object, which every server reads as "no
+ * overrides" — a null would be read by some as a section deliberately unset.
+ */
+export const settingsSection = (
+  settings: unknown,
+  section: string | null
+): unknown => {
+  let value = settings;
+  for (const key of section === null ? [] : section.split(".")) {
+    value =
+      typeof value === "object" && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)[key]
+        : undefined;
+  }
+  return value ?? {};
+};
+
 export const connect = async (
   config: LspServerConfig,
   root: string
@@ -260,12 +295,12 @@ export const connect = async (
   };
 
   /** Answer the few server-to-client requests a client must not ignore. */
-  const respondToServer = (id: unknown, method: string) => {
-    // `workspace/configuration` expects one entry per requested section; an
-    // empty object means "no overrides", which every server accepts.
+  const respondToServer = (id: unknown, method: string, params: unknown) => {
     const result =
       method === "workspace/configuration"
-        ? [{}]
+        ? configurationItems(params).map((section) =>
+            settingsSection(config.settings, section)
+          )
         : method === "client/registerCapability" ||
             method === "client/unregisterCapability" ||
             method === "window/workDoneProgress/create"
@@ -328,7 +363,7 @@ export const connect = async (
         if (method === "window/workDoneProgress/create") {
           trackProgress(record["params"], true);
         }
-        respondToServer(id, method);
+        respondToServer(id, method, record["params"]);
         return;
       }
       if (method === "$/progress") {
@@ -412,6 +447,9 @@ export const connect = async (
   })) as { capabilities?: unknown } | null;
 
   notify("initialized", {});
+  if (config.settings !== null && config.settings !== undefined) {
+    notify("workspace/didChangeConfiguration", { settings: config.settings });
+  }
   // From here, not from the spawn: a server that spends a second setting itself
   // up before answering `initialize` has not started its real work yet.
   warmUntil = Date.now() + WARMUP_MS;

@@ -117,6 +117,20 @@ struct ReviewerClient: Sendable {
         let _: GitHubLoginState = try await send("DELETE", "/api/github/login", body: EmptyBody())
     }
 
+    // MARK: languages
+
+    /// Each language the code views understand in the open project, and the
+    /// server behind it.
+    func languageProviders() async throws -> [LanguageProviderInfo] {
+        try await get("/api/language/providers")
+    }
+
+    /// Start installing the server a provider offered to install. Answers
+    /// as soon as it is under way; `languageProviders` reports its progress.
+    func installLanguageServer(providerId: String) async throws {
+        let _: Ok = try await send("POST", "/api/language/install", body: InstallLanguageServer(providerId: providerId))
+    }
+
     // MARK: themes
 
     /// Every theme the app offers, in the order a picker lists them.

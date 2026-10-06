@@ -16,12 +16,13 @@ import {
   DiagnosticsPayload,
   DiagnosticsResult,
   HoverResult,
+  InstallPayload,
   LanguageProviderInfo,
   PositionQuery,
   ReferencesResult,
 } from "@reviewer/core/language";
 import { LanguageError } from "@reviewer/core/ports/language-provider";
-import { NoRepoSelected } from "@reviewer/core/shared";
+import { NoRepoSelected, Ok } from "@reviewer/core/shared";
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
@@ -80,6 +81,15 @@ export class LanguageApi extends HttpApiGroup.make("language")
     HttpApiEndpoint.post("codeActions", "/language/code-actions", {
       payload: CodeActionsPayload,
       success: CodeActionsResult,
+      error: errors,
+    })
+  )
+  .add(
+    // Starts the install and answers at once; the providers endpoint reports
+    // how it is going through the provider's `installer.state`.
+    HttpApiEndpoint.post("install", "/language/install", {
+      payload: InstallPayload,
+      success: Ok,
       error: errors,
     })
   ) {}

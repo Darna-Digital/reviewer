@@ -132,5 +132,8 @@ export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
           providerId: providerFor(path),
           actions: seed.codeActions?.[path] ?? [],
         }),
+
+      // Nothing here is ever missing, so there is nothing to fetch.
+      install: () => Effect.void,
     };
   });

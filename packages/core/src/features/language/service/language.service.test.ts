@@ -79,6 +79,7 @@ const inert: LanguageRepo = {
   resolveCompletion: () =>
     Effect.succeed({ detail: "", documentation: "", additionalEdits: [] }),
   codeActions: () => Effect.succeed({ providerId: null, actions: [] }),
+  install: () => Effect.void,
 };
 
 const recorded: Array<string | null> = [];

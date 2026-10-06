@@ -163,6 +163,30 @@ export const ProviderCapabilitiesInfo = Schema.Struct({
 });
 export type ProviderCapabilitiesInfo = typeof ProviderCapabilitiesInfo.Type;
 
+/**
+ * A language server reviewer can fetch for the user, offered where the provider
+ * it would serve is unavailable. Installing is always the user's call — the
+ * server is someone else's software under someone else's licence, which
+ * `detail` says before the button is pressed — so nothing installs by itself.
+ */
+export const LanguageInstallerState = Schema.Literals([
+  "ready",
+  "installing",
+  "failed",
+]);
+export type LanguageInstallerState = typeof LanguageInstallerState.Type;
+
+export const LanguageInstaller = Schema.Struct({
+  /** What the button says: "Install intelephense". */
+  title: Schema.String,
+  /** What it fetches, from where, where it goes, and under what licence. */
+  detail: Schema.String,
+  state: LanguageInstallerState,
+  /** Why the last attempt failed; null unless `state` is `failed`. */
+  failure: Schema.NullOr(Schema.String),
+});
+export type LanguageInstaller = typeof LanguageInstaller.Type;
+
 export const LanguageProviderInfo = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -173,6 +197,8 @@ export const LanguageProviderInfo = Schema.Struct({
   available: Schema.Boolean,
   /** Why it is unavailable — a missing binary, no tsconfig, and so on. */
   detail: Schema.String,
+  /** Present when reviewer can install the missing server itself. */
+  installer: Schema.optionalKey(LanguageInstaller),
 });
 export type LanguageProviderInfo = typeof LanguageProviderInfo.Type;
 
@@ -308,3 +334,7 @@ export const CodeActionsPayload = Schema.Struct({
   contents: Schema.optionalKey(Schema.String),
 });
 export type CodeActionsPayload = typeof CodeActionsPayload.Type;
+
+/** Body for installing a provider's server; see {@link LanguageInstaller}. */
+export const InstallPayload = Schema.Struct({ providerId: Schema.String });
+export type InstallPayload = typeof InstallPayload.Type;

@@ -95,6 +95,8 @@ export const makeLanguageService = Effect.gen(function* () {
       requirePath(path).pipe(
         Effect.flatMap((valid) => repo.codeActions(valid, range, contents))
       ),
+
+    install: repo.install,
   };
 
   return LanguageService.of(service);

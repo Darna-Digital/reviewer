@@ -89,6 +89,7 @@ const configOf = (
   args,
   env: {},
   initializationOptions: null,
+  settings: null,
 });
 
 /**

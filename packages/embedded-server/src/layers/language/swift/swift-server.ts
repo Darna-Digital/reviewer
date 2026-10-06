@@ -119,6 +119,7 @@ const configOf = (command: string): LspServerConfig => ({
   args: [],
   env: {},
   initializationOptions: null,
+  settings: null,
 });
 
 /**

@@ -1,11 +1,14 @@
 // The settings window — ⌘, and the app menu's Settings…: the system's
-// grouped form, one section for each of the three things it holds.
+// grouped form, one section for each of the four things it holds.
 // Appearance is the one the window owns — the scheme, the theme for
 // each scheme, from the server's catalog, and the face the code is set in,
 // from the shell's own list; git is read from the server and said as it stands,
 // since it is not the window's to edit; GitHub is the account the server
 // works as, with a sign-in when there is none — the CLI's device flow, the
-// code shown here and the page it goes on opened (see `AppSettings`).
+// code shown here and the page it goes on opened (see `AppSettings`);
+// languages are the servers behind the code views' definitions, usages and
+// problems, each said as it stands, with an install offered where reviewer
+// can fetch a missing one itself.
 //
 // The form says as little as it can: where a row would want a sentence
 // under it — where the identity comes from, how to change it — the
@@ -59,12 +62,27 @@ struct SettingsView: View {
                     .disabled(model.settings.signIn.isUnderWay)
                 }
             }
+            Section {
+                LanguageRows(settings: model.settings, hasProject: model.hasProject)
+            } header: {
+                SectionHeader(
+                    "Languages",
+                    help: "Definitions, usages, hover and problems in the code views come from a language server. TypeScript is built in; Ruby, PHP and Swift use the server installed on this Mac, and PHP can install one from here. A project adds or overrides servers in .reviewer/languages.json."
+                ) {
+                    Button { Task { await model.settings.reload() } } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Check again")
+                    .disabled(model.settings.isInstallingLanguageServer)
+                }
+            }
         }
         .formStyle(.grouped)
         // A grouped form is a list, and a list reports no ideal height: the
         // window is sized here, tall enough for every section with its
         // rows in, and scrolls should a reason or a name run long.
-        .frame(width: 480, height: 470)
+        .frame(width: 480, height: 620)
         .task { await model.settings.reload() }
         .task { await model.settings.loadThemes() }
         .onChange(of: model.workspace?.project) { Task { await model.settings.reload() } }
@@ -378,6 +396,75 @@ private struct SignInFailedRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Each language and the server behind it, or why there is none: no
+/// project open, the read refused, or the list as the server gives it.
+private struct LanguageRows: View {
+    let settings: AppSettings
+    let hasProject: Bool
+
+    var body: some View {
+        if !hasProject {
+            SettingsNote("Open a project to see the language servers it uses.")
+        } else {
+            switch settings.languages {
+            case .loading:
+                SettingsWait("Looking for language servers…")
+            case .failed(let reason):
+                SettingsNote(reason, tone: .warning)
+            case .loaded(let providers):
+                ForEach(providers) { provider in
+                    LanguageRow(provider: provider, settings: settings)
+                }
+            }
+        }
+    }
+}
+
+/// One language: its name with a mark for whether it works here, the server
+/// it runs on (or what is missing) beneath, and — where reviewer can fetch
+/// the missing server — the offer to, with whose software it is said before
+/// the button rather than after.
+private struct LanguageRow: View {
+    let provider: LanguageProviderInfo
+    let settings: AppSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: provider.available ? "checkmark.circle.fill" : "xmark.circle")
+                    .foregroundStyle(provider.available ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+                Text(provider.name).fontWeight(.medium)
+                Spacer()
+                if let installer = provider.installer, installer.state != .installing {
+                    Button(installer.state == .failed ? "Try Again" : installer.title) {
+                        settings.installLanguageServer(for: provider)
+                    }
+                    .disabled(settings.isInstallingLanguageServer)
+                }
+            }
+            Text(provider.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+            if let installer = provider.installer {
+                switch installer.state {
+                case .ready:
+                    Text(installer.detail)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                case .installing:
+                    SettingsWait("Installing — this takes a minute or so…")
+                case .failed:
+                    SettingsNote(installer.failure ?? "The install stopped without saying why.", tone: .warning)
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 

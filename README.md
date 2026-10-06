@@ -124,9 +124,12 @@ it is.
 
 ### Follow a code symbol to its source
 
-Language server protocol integration for TypeScript, Swift and Ruby. Hover a
-symbol for its signature and docs, or find every usage of it across the
-codebase.
+Language server protocol integration for TypeScript, Swift, Ruby and PHP. Hover
+a symbol for its signature and docs, or find every usage of it across the
+codebase. In a Laravel app, `view()`, `config()`, `env()`, `__()`, Blade
+includes and `<x-…>` components link to the files they name, and PHPStan's
+findings show beside the language server's when the app runs it. No PHP server
+installed? Settings → Languages installs intelephense for you.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/find-symbol-dark.webp">

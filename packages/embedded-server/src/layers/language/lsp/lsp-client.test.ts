@@ -12,7 +12,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { connect, disposeConnections, languageIdOf } from "./lsp-client.ts";
+import {
+  connect,
+  disposeConnections,
+  languageIdOf,
+  settingsSection,
+} from "./lsp-client.ts";
 import type { LspServerConfig } from "./lsp-config.ts";
 import { pathToUri } from "./lsp-mapping.ts";
 import { makeLspProvider } from "./lsp-provider.ts";
@@ -192,6 +197,7 @@ beforeEach(() => {
     args: [join(root, "server.mjs")],
     env: {},
     initializationOptions: null,
+    settings: null,
   };
 });
 
@@ -200,6 +206,23 @@ afterEach(async () => {
   // child process per test.
   await disposeConnections();
   rmSync(root, { recursive: true, force: true });
+});
+
+describe("settingsSection", () => {
+  const settings = { intelephense: { files: { maxSize: 3 } } };
+
+  it("walks a dotted section into the configured settings", () => {
+    expect(settingsSection(settings, "intelephense")).toEqual({
+      files: { maxSize: 3 },
+    });
+    expect(settingsSection(settings, "intelephense.files.maxSize")).toBe(3);
+    expect(settingsSection(settings, null)).toBe(settings);
+  });
+
+  it("answers an empty object for anything not configured", () => {
+    expect(settingsSection(settings, "rust-analyzer")).toEqual({});
+    expect(settingsSection(null, "intelephense")).toEqual({});
+  });
 });
 
 describe("languageIdOf", () => {

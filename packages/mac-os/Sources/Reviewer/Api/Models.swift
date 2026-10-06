@@ -170,6 +170,41 @@ struct GitHubLoginState: Decodable, Hashable, Sendable {
     let reason: String?
 }
 
+// MARK: languages
+
+/// One language the code views understand, and whether the server behind it
+/// can run in this project — `LanguageProviderInfo` in core's language schema.
+/// `detail` names the server that would start, or why none can; `installer`
+/// is there when reviewer can fetch the missing server itself.
+struct LanguageProviderInfo: Decodable, Hashable, Sendable, Identifiable {
+    let id: String
+    let name: String
+    let patterns: [String]
+    let available: Bool
+    let detail: String
+    let installer: LanguageInstaller?
+}
+
+/// A server reviewer can install on the user's say-so: what the button says,
+/// what pressing it fetches and under whose licence, and how the last press
+/// went — the install runs on the server, and is read back by polling.
+struct LanguageInstaller: Decodable, Hashable, Sendable {
+    enum State: String, Decodable, Sendable {
+        case ready
+        case installing
+        case failed
+    }
+
+    let title: String
+    let detail: String
+    let state: State
+    let failure: String?
+}
+
+struct InstallLanguageServer: Encodable {
+    let providerId: String
+}
+
 // MARK: merge requests
 
 /// How one CI check came back — `CheckState` in core's git-provider port:

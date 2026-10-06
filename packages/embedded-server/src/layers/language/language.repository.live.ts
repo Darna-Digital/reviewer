@@ -14,9 +14,10 @@ import {
   type LanguageRepo,
   type Position,
 } from "@reviewer/core/language";
-import type {
-  LanguageFailure,
-  LanguageProvider,
+import {
+  LanguageError,
+  type LanguageFailure,
+  type LanguageProvider,
 } from "@reviewer/core/ports/language-provider";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import {
@@ -72,6 +73,9 @@ export const makeLanguageRepository = (
         detail: [availability.detail, ...problems]
           .filter((part) => part.length > 0)
           .join(" · "),
+        ...(availability.installer === undefined
+          ? {}
+          : { installer: availability.installer }),
       }));
 
     /** Shared plumbing for the position-addressed operations. */
@@ -194,6 +198,21 @@ export const makeLanguageRepository = (
             );
           }
         ),
+
+      install: (providerId) =>
+        Effect.flatMap(workspace.requireCurrent, (root) => {
+          const provider = lookup(root).providers.find(
+            (candidate) => candidate.id === providerId
+          );
+          return provider?.install === undefined
+            ? Effect.fail(
+                new LanguageError({
+                  providerId,
+                  reason: "this provider has nothing to install",
+                })
+              )
+            : provider.install();
+        }),
     };
 
     return repo;
