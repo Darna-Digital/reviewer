@@ -166,8 +166,8 @@ private struct SessionTabRow: View {
         // row that waited to be pushed would be a frame too wide, and a
         // frame is all it takes — the bar takes an item that does not fit
         // off into the ›› menu, and from there the row cannot see where
-        // the row on the bar would stand, so it could never work out how
-        // much shorter to be (see `BarRunWidth`). What it hands back it
+        // the row on the bar would stand, so it can only feel its way back
+        // (see `BarRunWidth`). What it hands back it
         // takes again a moment later, measured afresh.
         .onChange(of: model.sidebarShown) { _, shown in
             if shown { run = max(0, run - SidebarWidths.max) }
@@ -259,9 +259,9 @@ private struct SessionTabRow: View {
     /// first layout: a window opening on a dozen sessions would lay the
     /// row out at its full length for that frame, and the bar, seeing an
     /// item longer than itself, would have taken it off and put it in the
-    /// ›› menu before ever giving it a width to measure against — with no
-    /// way back, since a row in the menu cannot see where the row on the
-    /// bar would stand.
+    /// ›› menu before ever giving it a width to measure against — and a
+    /// row in the menu cannot see where the row on the bar would stand, so
+    /// it can only feel its way back.
     private var width: CGFloat {
         guard run > 0 else { return 0 }
         return min(content, max(0, run - BarChipMetrics.height - Self.gap))
@@ -468,11 +468,24 @@ private final class BarRunProbe: NSView {
     /// the new width before the row hears the window's; this is that frame
     /// paid for in advance, and taken back once the edge is let go.
     private static let resizing: CGFloat = 128
-    /// What a row taken off the bar gives up at a time to get back on.
+    /// What a row taken off the bar gives up at a time to get back on, when
+    /// where it began on the bar is no guide.
     private static let retreat: CGFloat = 64
+    /// How long a row given less is left for the bar to take it back
+    /// before it gives up more.
+    private static let readmission: TimeInterval = 0.25
     private var given: CGFloat?
     private var growing: CGFloat?
     private var growth: Timer?
+    private var retreating: Timer?
+    /// The window the row is on the bar of. Kept when the bar takes the row
+    /// off into the ›› menu, which takes it out of the window altogether:
+    /// the window is still the one whose width the row has to fit back
+    /// into, and the row is no longer in it to say what that width is.
+    private weak var watched: NSWindow?
+    /// Where the row began, from the window's leading edge, the last time
+    /// it stood on the bar — which is where it will stand once it is back.
+    private var lead: CGFloat?
 
     init(measured: @escaping (CGFloat) -> Void) {
         self.measured = measured
@@ -484,11 +497,20 @@ private final class BarRunProbe: NSView {
 
     deinit { NotificationCenter.default.removeObserver(self) }
 
+    /// Leaving the window is not leaving the watch: the bar takes a row
+    /// that does not fit out of the window, and the row only gets back by
+    /// hearing that the window has changed and working out how much
+    /// shorter to be.
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if let window, window !== watched { watch(window) }
+        measure()
+    }
+
+    private func watch(_ window: NSWindow) {
         let centre = NotificationCenter.default
         centre.removeObserver(self)
-        guard let window else { return }
+        watched = window
         // The row moves without moving: as the sidebar's column comes and
         // goes, and as the pinned pair arrive with the project, the bar
         // slides the row along — which puts it somewhere else in the
@@ -500,17 +522,16 @@ private final class BarRunProbe: NSView {
         for name in [NSWindow.didUpdateNotification, NSWindow.didResizeNotification] {
             centre.addObserver(self, selector: #selector(measure), name: name, object: window)
         }
-        measure()
     }
 
     /// A shorter run is the row's at once; a longer one only once it has
     /// held for a moment.
     ///
-    /// Because the row gets one chance. A row too long for the bar is not
-    /// cut short, it is taken off and put in the ›› menu, and from there it
-    /// cannot see where the row on the bar would stand, so it cannot work
-    /// out how much shorter to be and can never come back — a window
-    /// opened on a dozen sessions loses the lot until it is resized. The
+    /// Because a wrong answer shows. A row too long for the bar is not cut
+    /// short, it is taken off and put in the ›› menu, and from there it
+    /// cannot see where the row on the bar would stand, so getting back is
+    /// a matter of shrinking and waiting for the bar to notice (see
+    /// `retreat`) — every tab gone for that while. The
     /// one moment the row is measured wrong is while the bar is still
     /// filling: the pinned pair arrive with the project, after the row
     /// does, and until they land the row stands where they will be and
@@ -518,10 +539,12 @@ private final class BarRunProbe: NSView {
     /// costs anything is a long one, so a long one waits and a short one
     /// does not.
     @objc private func measure() {
-        guard let window, let bar = window.toolbar else { return }
-        guard onTheBar(bar) else { return retreat() }
-        let air = Self.trailing + (window.inLiveResize ? Self.resizing : 0)
-        let run = max(0, window.frame.width - convert(bounds, to: nil).minX - air)
+        guard let window = watched, let bar = window.toolbar else { return }
+        guard window === self.window, onTheBar(bar) else { return retreat(in: window) }
+        stopRetreating()
+        let lead = convert(bounds, to: nil).minX
+        self.lead = lead
+        let run = run(in: window, from: lead)
         // A run within a point of the one the row has is its own layout
         // coming back round, not the bar moving.
         if let given, abs(run - given) < 1 { return stopGrowing() }
@@ -557,17 +580,40 @@ private final class BarRunProbe: NSView {
         DispatchQueue.main.async { [weak self] in self?.measure() }
     }
 
+    private func run(in window: NSWindow, from lead: CGFloat) -> CGFloat {
+        let air = Self.trailing + (window.inLiveResize ? Self.resizing : 0)
+        return max(0, window.frame.width - lead - air)
+    }
+
     /// Taken off the bar all the same — a window edge dragged in faster
-    /// than the row could follow it. The row cannot see from the ›› menu
-    /// how much shorter it would have to be, so it gives up a step of its
-    /// run on every pass of the event loop until the bar has something
-    /// short enough to take back, and measures afresh once it is back.
-    private func retreat() {
-        guard let given, given > 0 else { return }
+    /// than the row could follow it, or the window snapped to half the
+    /// screen in one go. The row cannot see from the ›› menu where it
+    /// would stand, but it can count on standing where it last stood, and
+    /// gives itself the run from there to the window's edge as it is now.
+    /// The bar takes a while to notice an item it holds in the menu has
+    /// got short enough to take back, so the row waits for it; if the bar
+    /// has not taken it back by then, where it last stood is no guide —
+    /// the bar ahead of it has grown — and it gives up a step of its run
+    /// at a time until the bar does, measuring afresh once it is back.
+    private func retreat(in window: NSWindow) {
+        guard retreating == nil, let given, given > 0 else { return }
         stopGrowing()
-        let shorter = max(0, given - Self.retreat)
+        let fits = lead.map { run(in: window, from: $0) } ?? given
+        let shorter = max(0, fits < given ? fits : given - Self.retreat)
         self.given = shorter
         measured(shorter)
+        retreating = Timer.scheduledTimer(withTimeInterval: Self.readmission, repeats: false) {
+            [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.retreating = nil
+                self?.measure()
+            }
+        }
+    }
+
+    private func stopRetreating() {
+        retreating?.invalidate()
+        retreating = nil
     }
 
     /// Whether the row is still on the bar. Taken off it, it is laid out

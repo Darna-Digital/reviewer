@@ -332,6 +332,10 @@ export const useCommitDetail = (sha: string | null) =>
     { ...CATALOG, enabled: sha !== null }
   );
 
+/** Who the server's GitHub token belongs to — the `gh` CLI's login, as a rule. */
+export const useGitHubAuth = () =>
+  api.useQuery("get", "/api/github/auth", {}, REMOTE);
+
 export const usePullComments = (pullNumber: number | null) =>
   api.useQuery(
     "get",

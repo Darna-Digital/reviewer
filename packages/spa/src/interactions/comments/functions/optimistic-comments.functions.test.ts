@@ -57,6 +57,7 @@ describe("optimisticPullComment", () => {
     lineNumber: 12,
     body: "why this way?",
     pullNumber: 42,
+    author: "octocat",
     createdAt: "2026-07-25T12:00:00.000Z",
   });
 
@@ -65,11 +66,11 @@ describe("optimisticPullComment", () => {
     expect(drafted.source).toBe("github");
   });
 
-  it("carries no author — only GitHub can name the commenter", () => {
-    expect(drafted.author).toBe("");
+  it("is signed with the GitHub login it will be filed under", () => {
+    expect(drafted.author).toBe("octocat");
   });
 
-  it("is recognisable as unacknowledged, so the thread can say so", () => {
+  it("is recognisable as unacknowledged, so its actions wait for GitHub", () => {
     expect(isOptimisticId(drafted.id)).toBe(true);
   });
 

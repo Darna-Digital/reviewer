@@ -6,6 +6,7 @@ import {
   IconFolderSearch,
   IconHistory,
 } from "@tabler/icons-react";
+import type { FileTreeIconConfig } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import type {
   ComponentType,
@@ -15,6 +16,13 @@ import type {
 } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { confirm } from "@/components/ui/alerts";
+import {
+  EXTRA_EXTENSION_TOKENS,
+  EXTRA_ICON_SYMBOLS,
+  EXTRA_SYMBOL_PREFIX,
+  extraSpriteSheet,
+} from "@/components/ui/file-type-extra-icons";
+import { hueOf } from "@/components/ui/file-type-hues";
 import { Orb } from "@/components/ui/orb";
 import { revealPath } from "@/interactions/file-actions/adapters/reveal-path.adapter";
 import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
@@ -50,6 +58,30 @@ interface FileSidebarProps {
   footer?: ReactNode;
 }
 
+// The tree's own set, plus the file types it has no icon for (PHP, Blade). A
+// remapped icon carries no token, so the tree cannot colour it; the rule below
+// paints each extra in its hue from the tree's own palette instead.
+const TREE_ICONS: FileTreeIconConfig = {
+  set: "complete",
+  colored: true,
+  spriteSheet: extraSpriteSheet(),
+  byFileExtension: Object.fromEntries(
+    Object.entries(EXTRA_EXTENSION_TOKENS).map(([extension, token]) => [
+      extension,
+      `${EXTRA_SYMBOL_PREFIX}${token}`,
+    ])
+  ),
+};
+
+const EXTRA_ICON_CSS = Object.keys(EXTRA_ICON_SYMBOLS)
+  .map(
+    (token) => `
+  [data-file-tree-colored-icons='true'] svg:has(> use[href='#${EXTRA_SYMBOL_PREFIX}${token}']) {
+    color: var(--trees-file-icon-color, var(--trees-icon-${hueOf(token)}));
+  }`
+  )
+  .join("");
+
 // Inset each row's hover/selection background vertically so a highlighted row
 // reads as a separate rounded pill instead of colliding edge-to-edge with the
 // pill above/below it. The tree is virtualized with a fixed row height, so we
@@ -64,7 +96,7 @@ const TREE_UNSAFE_CSS = `
     border-block: 1px solid transparent;
     background-clip: padding-box;
   }
-`;
+${EXTRA_ICON_CSS}`;
 
 /** A menu row's icon: the component itself, mounted by the row that takes it. */
 type MenuIcon = ComponentType<{ className?: string }>;
@@ -201,6 +233,7 @@ export function FileSidebar({
     initialSelectedPaths: selectedFile !== null ? [selectedFile] : undefined,
     flattenEmptyDirectories: true,
     search: mode !== "browse",
+    icons: TREE_ICONS,
     unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: treeGitStatus,
     composition: {

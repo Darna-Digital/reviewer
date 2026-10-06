@@ -1038,6 +1038,7 @@ export function DiffPane({
         return (
           <DraftCard
             onCancel={onDraftCancel}
+            source={target.kind === "pull" ? "github" : "local"}
             {...(meta.body === undefined ? {} : { initialBody: meta.body })}
             onSubmit={(body) =>
               onCommentSubmit(

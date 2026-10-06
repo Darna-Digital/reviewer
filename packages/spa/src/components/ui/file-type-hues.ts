@@ -27,7 +27,7 @@ export type Hue = keyof typeof HUE;
 
 export const HUE_TOKENS: Record<Hue, ReadonlyArray<string>> = {
   gray: ["default", "text"],
-  red: ["npm", "postcss", "ruby", "svelte", "yml"],
+  red: ["blade", "npm", "postcss", "ruby", "svelte", "yml"],
   vermilion: ["git"],
   orange: ["claude", "html", "json", "rust", "svg", "swift", "zig", "zip"],
   yellow: ["babel", "browserslist", "javascript"],
@@ -44,7 +44,7 @@ export const HUE_TOKENS: Record<Hue, ReadonlyArray<string>> = {
     "vscode",
     "webpack",
   ],
-  indigo: ["bootstrap", "css", "eslint", "terraform", "wasm"],
+  indigo: ["bootstrap", "css", "eslint", "php", "terraform", "wasm"],
   purple: ["astro", "database", "vite"],
   pink: ["graphql", "image", "sass"],
   mauve: ["bun"],

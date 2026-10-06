@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { useGitHubAuth } from "@/lib/queries";
 import type { ReviewComment } from "@reviewer/core/comments";
 import { createCommentsFunctions } from "../functions/comments.functions";
 import { useCommentAuthor } from "./comment-author.hook.adapter";
@@ -24,6 +25,7 @@ import type {
 export function useCommentsActions() {
   const queryClient = useQueryClient();
   const author = useCommentAuthor();
+  const githubLogin = useGitHubAuth().data?.login ?? "";
 
   const fns: CommentsFunctions = useMemo(
     () =>
@@ -214,6 +216,7 @@ export function useCommentsActions() {
               lineNumber: location.lineNumber,
               body,
               pullNumber: pull.number,
+              author: githubLogin,
               createdAt,
             });
 
@@ -315,6 +318,7 @@ export function useCommentsActions() {
         lineNumber: comment.lineNumber,
         body,
         pullNumber: selectedPull.number,
+        author: githubLogin,
         createdAt: new Date().toISOString(),
       });
       holdRefetches(key);

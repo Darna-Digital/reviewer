@@ -19,6 +19,16 @@ describe("FileTypeIcon", () => {
     expect(symbolOf("package.json")).toBe("#file-tree-builtin-json");
   });
 
+  it("wears the extra icons for the types the tree lacks", () => {
+    expect(symbolOf("app/Http/Kernel.php")).toBe("#reviewer-file-icon-php");
+    expect(symbolOf("resources/views/welcome.blade.php")).toBe(
+      "#reviewer-file-icon-blade"
+    );
+    expect(document.getElementById("reviewer-file-icon-blade")?.tagName).toBe(
+      "symbol"
+    );
+  });
+
   it("falls back to the plain file icon for a type it has none for", () => {
     expect(symbolOf("notes.qqq")).toBe("#file-tree-builtin-default");
   });

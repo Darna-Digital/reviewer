@@ -235,6 +235,14 @@ export const makeGitHubProvider = Effect.gen(function* () {
           side: input.side === "deletions" ? "LEFT" : "RIGHT",
         }
       )) as any;
+      // REST answers with the comment alone, and the reviewer confirms its
+      // placeholder with this answer rather than reading the list again — so
+      // without the thread here, a comment written in Reviewer had nothing
+      // to resolve until something happened to refetch.
+      const thread =
+        typeof created.id === "number"
+          ? (yield* pullThreads(owner, repo, input.pullNumber)).get(created.id)
+          : undefined;
       return {
         id: `gh-${created.id}`,
         filePath: input.filePath,
@@ -245,6 +253,9 @@ export const makeGitHubProvider = Effect.gen(function* () {
         createdAt: created.created_at ?? new Date().toISOString(),
         target: `pr-${input.pullNumber}`,
         source: "github",
+        ...(thread === undefined
+          ? {}
+          : { thread: thread.thread, resolved: thread.resolved }),
       } satisfies ReviewComment;
     });
 

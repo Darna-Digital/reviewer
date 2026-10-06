@@ -13,7 +13,6 @@
  */
 import {
   IconArrowUp,
-  IconBrandGithub,
   IconChevronDown,
   IconCircleCheck,
   IconCornerDownRight,
@@ -25,6 +24,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { useListEditing } from "@/hooks/use-list-editing";
 import { useCommentAuthor } from "@/interactions/comments/adapters/comment-author.hook.adapter";
+import { useGitHubAuth } from "@/lib/queries";
 import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/relative-time";
@@ -95,6 +95,7 @@ export function CommentComposer({
   placeholder = "Leave a comment…",
   initialBody = "",
   author,
+  source = "local",
   className = COMPOSER_NESTED,
 }: {
   onCancel: () => void;
@@ -104,6 +105,12 @@ export function CommentComposer({
   initialBody?: string;
   /** Whose monogram the pill wears; the repo's git identity when omitted. */
   author?: string;
+  /**
+   * Where the comment is going. One bound for GitHub is written as the login
+   * the `gh` CLI is signed in as, so the pill wears that avatar rather than
+   * the git identity's monogram, which only local notes are filed under.
+   */
+  source?: ReviewComment["source"];
   className?: string;
 }) {
   const [body, setBody] = useState(initialBody);
@@ -111,6 +118,11 @@ export function CommentComposer({
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
   const self = useCommentAuthor();
+  const githubLogin = useGitHubAuth().data?.login ?? null;
+  const writer =
+    source === "github" && githubLogin !== null
+      ? { author: githubLogin, source }
+      : { author: author ?? self, source: "local" as const };
   // A comment is written in the same hand as a prompt to an agent — a list of
   // the things that should change — so it keeps a list going the same way.
   const editList = useListEditing({
@@ -149,8 +161,8 @@ export function CommentComposer({
       }}
     >
       <AuthorAvatar
-        author={author ?? self}
-        source="local"
+        author={writer.author}
+        source={writer.source}
         className="self-start"
       />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -219,27 +231,14 @@ function CommentCard({
     );
   }
 
-  // Written, shown, and not yet acknowledged by whoever stores it. A local
-  // comment passes through this state too fast to see; a GitHub one is a round
-  // trip to their servers, so the card says so rather than showing a comment
-  // that looks filed when it is still in flight — and rather than inventing the
-  // author, which only GitHub can name. See `optimistic-comments.functions`.
-  const pending = isOptimisticId(comment.id);
-
   return (
-    <div className={cn("group/comment flex gap-3", pending && "opacity-60")}>
+    <div className="group/comment flex gap-3">
       <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="type-ui text-foreground">{comment.author}</span>
-          {comment.source === "github" && (
-            <IconBrandGithub
-              className="size-3.5 text-muted-foreground"
-              aria-label="GitHub"
-            />
-          )}
           <span className="type-meta text-muted-foreground/70 tabular-nums">
-            {pending ? "Sending…" : timeAgo(comment.createdAt)}
+            {timeAgo(comment.createdAt)}
           </span>
         </div>
         <div className="markdown mt-0.5 min-w-0 type-body">
@@ -405,6 +404,7 @@ export function CommentThread({
         {replying && onReply !== undefined && lastGithub !== undefined ? (
           <CommentComposer
             placeholder="Reply…"
+            source="github"
             onCancel={() => setReplying(false)}
             onSubmit={async (body) => {
               await onReply(lastGithub, body);
@@ -542,15 +542,19 @@ export function DraftCard({
   onCancel,
   onSubmit,
   initialBody,
+  source,
 }: {
   onCancel: () => void;
   onSubmit: (body: string) => Promise<void>;
   /** Text to reopen with — a refused write handing the words back. */
   initialBody?: string;
+  /** Where the comment is going — see `CommentComposer`. */
+  source?: ReviewComment["source"];
 }) {
   return (
     <CommentComposer
       className={COMPOSER_STANDALONE}
+      {...(source === undefined ? {} : { source })}
       onCancel={onCancel}
       onSubmit={onSubmit}
       {...(initialBody === undefined ? {} : { initialBody })}

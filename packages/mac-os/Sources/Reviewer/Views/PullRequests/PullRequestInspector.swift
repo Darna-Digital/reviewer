@@ -66,10 +66,7 @@ struct PullRequestInspector: View {
                 )
                 .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glass)
-            // Clear glass: the column's theme tint would fill it, and two
-            // filled controls side by side leave no action the page's own.
-            .tint(nil)
+            .buttonStyle(ClearGlassButtonStyle())
             .disabled(onBranch || checkingOut || pull.headRef.isEmpty)
             .help(checkoutHelp(onBranch: onBranch))
 
@@ -198,6 +195,44 @@ private struct MoreMenu: View {
         .glassEffect(.regular.interactive(), in: Circle())
         .fixedSize()
         .help("More")
+    }
+}
+
+/// Check Out's glass, laid by hand as the ellipsis beside it lays its own.
+/// The system's `.glass` style, untinted so the column's theme tint would
+/// not fill it at rest, washed the whole capsule a flat grey under the
+/// pointer. Interactive glass on the Mac answers a press but not a hover,
+/// so the hover is drawn here: a breath of the theme's accent, the colour
+/// every lit control in the app shares, rather than grey.
+private struct ClearGlassButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        ClearGlassButton(configuration: configuration)
+    }
+}
+
+private struct ClearGlassButton: View {
+    let configuration: ButtonStyleConfiguration
+    /// A large glass button's height, as MoreMenu's.
+    private static let height: CGFloat = 27
+    /// Painted over the glass rather than passed as its tint: a glass tint
+    /// this faint did not show at all.
+    private static let hoverWash = Color(nsColor: IslandPalette.accent).opacity(0.14)
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovered = false
+
+    var body: some View {
+        let lit = hovered && isEnabled
+        configuration.label
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(isEnabled ? .primary : .tertiary)
+            .padding(.horizontal, 12)
+            .frame(height: Self.height)
+            .background(Capsule().fill(lit ? Self.hoverWash : .clear))
+            .contentShape(Capsule())
+            .glassEffect(.regular.interactive(isEnabled), in: .capsule)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .onHover { hovered = $0 }
+            .animation(.easeOut(duration: 0.15), value: lit)
     }
 }
 

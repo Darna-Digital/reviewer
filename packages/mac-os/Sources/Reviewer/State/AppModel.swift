@@ -99,6 +99,9 @@ final class AppModel {
     /// it, and the checkout it was picked on — what the rail's Review goes
     /// back to, so a trip to Browse does not hand the diff back to the aim.
     @ObservationIgnored private var reviewComparison: (checkout: String, target: String)?
+    /// The checkout the project was last read on — what a fresh read is
+    /// measured against to tell that the branch has moved under the review.
+    @ObservationIgnored private var lastCheckout: String?
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
@@ -406,13 +409,16 @@ final class AppModel {
             .map { (checkout: checkout, target: $0) }
     }
 
-    /// A branch picked to compare against was picked for the branch you were
-    /// on; once checkout moves, the review drops back to what is uncommitted.
-    /// The web header does this itself, but the island draws no header.
+    /// A comparison — picked, or the aim answering for want of one — was for
+    /// the branch you were on; once checkout moves, the review drops back to
+    /// what is uncommitted, so the new branch's aim does not answer either.
+    /// The web header does this itself, but the island draws no header. A
+    /// read that could not say which branch is checked out moves nothing.
     private func resetComparisonIfCheckoutMoved() {
-        guard let reviewComparison, reviewComparison.checkout != checkout, !reviewComparison.target.isEmpty
-        else { return }
-        self.reviewComparison = (checkout: checkout, target: "")
+        guard currentBranch != nil else { return }
+        defer { lastCheckout = checkout }
+        guard let lastCheckout, lastCheckout != checkout else { return }
+        reviewComparison = (checkout: checkout, target: "")
         if URLComponents(string: page.href)?.path == Href.review { readChanges(against: nil) }
     }
 
