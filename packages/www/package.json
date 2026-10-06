@@ -32,21 +32,21 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.54.10",
+    "@cloudflare/vite-plugin": "^1.62.5",
     "@reviewer/lint": "workspace:*",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
-    "@tanstack/router-cli": "^1.167.36",
+    "@tanstack/router-cli": "^1.167.40",
     "@types/node": "^22.20.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.1",
-    "eslint": "^10.10.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "prettier": "^3.9.7",
+    "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript": "~6.0.3",
-    "vite": "^8.3.0",
-    "wrangler": "^4.132.0"
+    "vite": "^8.3.2",
+    "wrangler": "^4.147.0"
   }
 }

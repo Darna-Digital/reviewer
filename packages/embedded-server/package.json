@@ -20,18 +20,18 @@
     "@effect/platform-node": "4.0.0-beta.74",
     "@lydell/node-pty": "1.2.0-beta.15",
     "@reviewer/core": "workspace:*",
-    "@types/ws": "^8.18.1",
+    "@types/ws": "^8.18.2",
     "effect": "4.0.0-beta.74",
-    "ws": "^8.21.3"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.0-beta.74",
     "@reviewer/lint": "workspace:*",
     "@types/node": "^22.20.3",
     "esbuild": "^0.28.2",
-    "eslint": "^10.10.0",
-    "prettier": "^3.9.7",
-    "tsx": "^4.23.13",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^4.1.11"
   }
