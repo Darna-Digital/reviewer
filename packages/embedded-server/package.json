@@ -27,7 +27,7 @@
   "devDependencies": {
     "@effect/vitest": "4.0.1",
     "@reviewer/lint": "workspace:*",
-    "@types/node": "^22.20.3",
+    "@types/node": "^22.20.5",
     "esbuild": "^0.28.2",
     "eslint": "^10.12.0",
     "prettier": "^3.9.9",
