@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.13 — 2026-10-06
+
+### Changed
+
+- Updated the app's npm dependencies to their latest versions. The built-in server now runs on the first stable release of Effect 4 instead of a beta, and the diff viewer, syntax highlighting, resizable panels and icons all move to their newest releases.
+
 ## v0.0.12 — 2026-10-05
 
 ### Added
