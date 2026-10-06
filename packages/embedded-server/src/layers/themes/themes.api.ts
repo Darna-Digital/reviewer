@@ -5,7 +5,7 @@
  * sidebar, panes and conversations, and has neither theme JSON nor a
  * grammar of its own to draw them from.
  */
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 import * as Schema from "effect/Schema";
 import {
   HighlightedCode,

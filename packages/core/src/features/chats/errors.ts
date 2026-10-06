@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema";
 
-export class ChatBusy extends Schema.TaggedErrorClass<ChatBusy>()(
+export class ChatBusy extends Schema.TaggedError<ChatBusy>()(
   "ChatBusy",
   { chatId: Schema.String },
   { httpApiStatus: 409 }

@@ -12,7 +12,7 @@ import {
   NewDevCommand,
   UpdateDevCommand,
 } from "@reviewer/core/local-dev";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const;
 

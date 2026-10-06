@@ -1272,59 +1272,59 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        StorageError: {
+        ThemeNotFoundEncoded: {
+            /** @enum {string} */
+            _tag: "ThemeNotFound";
+            name: string;
+        };
+        StorageErrorEncoded: {
             /** @enum {string} */
             _tag: "StorageError";
             reason: string;
         };
-        InvalidRepo: {
-            /** @enum {string} */
-            _tag: "InvalidRepo";
-            path: string;
-            reason: string;
-        };
-        NoRepoSelected: {
-            /** @enum {string} */
-            _tag: "NoRepoSelected";
-        };
-        GitError: {
-            /** @enum {string} */
-            _tag: "GitError";
-            args: string[];
-            exitCode: number;
-            stderr: string;
-        };
-        NotFound: {
+        NotFoundEncoded: {
             /** @enum {string} */
             _tag: "NotFound";
             reason: string;
         };
-        GitProviderError: {
+        NoRepoSelectedEncoded: {
             /** @enum {string} */
-            _tag: "GitProviderError";
-            reason: string;
-            status?: number;
+            _tag: "NoRepoSelected";
         };
-        TerminalError: {
-            /** @enum {string} */
-            _tag: "TerminalError";
-            reason: string;
-        };
-        ChatBusy: {
-            /** @enum {string} */
-            _tag: "ChatBusy";
-            chatId: string;
-        };
-        LanguageError: {
+        LanguageErrorEncoded: {
             /** @enum {string} */
             _tag: "LanguageError";
             providerId: string;
             reason: string;
         };
-        ThemeNotFound: {
+        TerminalErrorEncoded: {
             /** @enum {string} */
-            _tag: "ThemeNotFound";
-            name: string;
+            _tag: "TerminalError";
+            reason: string;
+        };
+        ChatBusyEncoded: {
+            /** @enum {string} */
+            _tag: "ChatBusy";
+            chatId: string;
+        };
+        GitProviderErrorEncoded: {
+            /** @enum {string} */
+            _tag: "GitProviderError";
+            reason: string;
+            status?: number;
+        };
+        InvalidRepoEncoded: {
+            /** @enum {string} */
+            _tag: "InvalidRepo";
+            path: string;
+            reason: string;
+        };
+        GitErrorEncoded: {
+            /** @enum {string} */
+            _tag: "GitError";
+            args: string[];
+            exitCode: number;
+            stderr: string;
         };
     };
     responses: never;
@@ -1364,7 +1364,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1404,7 +1404,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvalidRepo"];
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
                 };
             };
             /** @description StorageError */
@@ -1413,7 +1413,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1451,7 +1451,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1489,7 +1489,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1529,7 +1529,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1565,7 +1565,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -1574,7 +1574,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1612,7 +1612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -1621,7 +1621,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1656,7 +1656,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -1665,7 +1665,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1702,7 +1702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -1711,7 +1711,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -1750,7 +1750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1759,7 +1759,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -1791,7 +1791,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1800,7 +1800,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -1837,7 +1837,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1846,7 +1846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -1886,7 +1886,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1895,7 +1895,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -1933,7 +1933,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1942,7 +1942,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -1978,7 +1978,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -1987,7 +1987,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2019,7 +2019,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -2028,7 +2028,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError | StorageError */
@@ -2037,7 +2037,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"] | components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -2076,7 +2076,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -2085,7 +2085,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError | StorageError */
@@ -2094,7 +2094,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"] | components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -2143,7 +2143,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2152,7 +2152,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2195,7 +2195,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2204,7 +2204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2251,7 +2251,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2260,7 +2260,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2294,7 +2294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2303,7 +2303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2342,7 +2342,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2351,7 +2351,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2388,7 +2388,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2397,7 +2397,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2435,7 +2435,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2444,7 +2444,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2482,7 +2482,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2491,7 +2491,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2528,7 +2528,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2537,7 +2537,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2575,7 +2575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2584,7 +2584,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2615,7 +2615,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2624,7 +2624,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2655,7 +2655,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2664,7 +2664,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2695,7 +2695,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2704,7 +2704,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2741,7 +2741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2750,7 +2750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2787,7 +2787,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2796,7 +2796,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2835,7 +2835,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2844,7 +2844,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2880,7 +2880,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2889,7 +2889,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2928,7 +2928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2937,7 +2937,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -2968,7 +2968,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -2977,7 +2977,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -3008,7 +3008,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -3017,7 +3017,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -3055,7 +3055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -3064,7 +3064,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -3102,7 +3102,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError */
@@ -3111,7 +3111,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"];
                 };
             };
         };
@@ -3149,7 +3149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -3158,7 +3158,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description GitError | StorageError */
@@ -3167,7 +3167,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["GitErrorEncoded"] | components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -3212,7 +3212,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvalidRepo"];
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
                 };
             };
             /** @description NotFound */
@@ -3221,7 +3221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -3230,7 +3230,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -3239,7 +3239,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -3294,7 +3294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -3303,7 +3303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -3312,7 +3312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -3347,7 +3347,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvalidRepo"];
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
                 };
             };
             /** @description NotFound */
@@ -3356,7 +3356,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -3365,7 +3365,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -3374,7 +3374,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -3425,7 +3425,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -3434,7 +3434,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -3443,7 +3443,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -3477,7 +3477,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3538,7 +3538,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3623,7 +3623,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3664,7 +3664,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3697,7 +3697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3728,7 +3728,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3773,7 +3773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3828,7 +3828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3880,7 +3880,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3914,7 +3914,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -3954,7 +3954,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitProviderError"];
+                    "application/json": components["schemas"]["GitProviderErrorEncoded"];
                 };
             };
         };
@@ -4082,7 +4082,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4091,7 +4091,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4100,7 +4100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4157,7 +4157,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4166,7 +4166,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4175,7 +4175,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4224,7 +4224,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4233,7 +4233,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4242,7 +4242,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4275,7 +4275,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4284,7 +4284,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4293,7 +4293,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4349,7 +4349,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4358,7 +4358,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4367,7 +4367,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4411,7 +4411,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -4420,7 +4420,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4429,7 +4429,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4486,7 +4486,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4495,7 +4495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4504,7 +4504,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4601,7 +4601,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4610,7 +4610,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4619,7 +4619,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4668,7 +4668,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4677,7 +4677,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4686,7 +4686,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4719,7 +4719,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4728,7 +4728,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4737,7 +4737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4823,7 +4823,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4832,7 +4832,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4841,7 +4841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4874,7 +4874,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4883,7 +4883,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -4892,7 +4892,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -4990,7 +4990,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -4999,7 +4999,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -5008,7 +5008,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -5105,7 +5105,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -5114,7 +5114,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -5123,7 +5123,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -5156,7 +5156,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -5165,7 +5165,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -5174,7 +5174,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -5207,7 +5207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected | ChatBusy */
@@ -5216,7 +5216,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"] | components["schemas"]["ChatBusyEncoded"];
                 };
             };
             /** @description StorageError | TerminalError */
@@ -5225,7 +5225,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"] | components["schemas"]["TerminalErrorEncoded"];
                 };
             };
         };
@@ -5270,7 +5270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5279,7 +5279,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5352,7 +5352,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5361,7 +5361,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5425,7 +5425,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5434,7 +5434,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5519,7 +5519,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5528,7 +5528,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5574,7 +5574,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5583,7 +5583,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5644,7 +5644,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5653,7 +5653,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5713,7 +5713,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5722,7 +5722,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5788,7 +5788,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description LanguageError */
@@ -5797,7 +5797,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LanguageError"];
+                    "application/json": components["schemas"]["LanguageErrorEncoded"];
                 };
             };
         };
@@ -5836,7 +5836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -5845,7 +5845,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -5854,7 +5854,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -5898,7 +5898,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -5907,7 +5907,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -5916,7 +5916,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -5954,7 +5954,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -5963,7 +5963,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -5972,7 +5972,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6005,7 +6005,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6014,7 +6014,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6023,7 +6023,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6069,7 +6069,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6078,7 +6078,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6087,7 +6087,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6128,7 +6128,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6137,7 +6137,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6146,7 +6146,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6179,7 +6179,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6188,7 +6188,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6197,7 +6197,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6236,7 +6236,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6245,7 +6245,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6254,7 +6254,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6285,7 +6285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotFound"];
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description NoRepoSelected */
@@ -6294,7 +6294,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
+                    "application/json": components["schemas"]["NoRepoSelectedEncoded"];
                 };
             };
             /** @description StorageError */
@@ -6303,7 +6303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StorageError"];
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
                 };
             };
         };
@@ -6388,7 +6388,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ThemeNotFound"];
+                    "application/json": components["schemas"]["ThemeNotFoundEncoded"];
                 };
             };
         };
@@ -6435,7 +6435,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ThemeNotFound"];
+                    "application/json": components["schemas"]["ThemeNotFoundEncoded"];
                 };
             };
         };

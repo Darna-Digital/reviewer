@@ -1,6 +1,6 @@
 /** HTTP endpoints for git: repo info, files, branches, log, diff, commit, sync. */
 import * as Schema from "effect/Schema";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 import { GitError } from "@reviewer/core/ports/git-exec";
 import {
   NoRepoSelected,

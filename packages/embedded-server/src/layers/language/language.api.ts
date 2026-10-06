@@ -23,7 +23,7 @@ import {
 import { LanguageError } from "@reviewer/core/ports/language-provider";
 import { NoRepoSelected } from "@reviewer/core/shared";
 import * as Schema from "effect/Schema";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 const errors = [NoRepoSelected, LanguageError] as const;
 

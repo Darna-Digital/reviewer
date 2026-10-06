@@ -6,7 +6,7 @@ export type Ok = typeof Ok.Type;
 export const DiffText = Schema.String;
 export type DiffText = typeof DiffText.Type;
 
-export class NoRepoSelected extends Schema.TaggedErrorClass<NoRepoSelected>()(
+export class NoRepoSelected extends Schema.TaggedError<NoRepoSelected>()(
   "NoRepoSelected",
   {},
   { httpApiStatus: 409 }
@@ -19,7 +19,7 @@ export class NoRepoSelected extends Schema.TaggedErrorClass<NoRepoSelected>()(
 // Catch-all for platform/filesystem failures (disk IO, git, etc.) that
 // repositories map errors into; `reason` carries the underlying message
 // since these come from many unrelated sources with no fixed wording.
-export class StorageError extends Schema.TaggedErrorClass<StorageError>()(
+export class StorageError extends Schema.TaggedError<StorageError>()(
   "StorageError",
   { reason: Schema.String },
   { httpApiStatus: 500 }
@@ -29,7 +29,7 @@ export class StorageError extends Schema.TaggedErrorClass<StorageError>()(
   }
 }
 
-export class NotFound extends Schema.TaggedErrorClass<NotFound>()(
+export class NotFound extends Schema.TaggedError<NotFound>()(
   "NotFound",
   { reason: Schema.String },
   { httpApiStatus: 404 }

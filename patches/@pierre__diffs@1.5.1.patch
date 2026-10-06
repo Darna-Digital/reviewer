@@ -1,8 +1,8 @@
 diff --git a/dist/components/File.js b/dist/components/File.js
-index a46f84cdf7b98511a2e24a03d143d40fc670af6e..c4065b3505988c8424cdd72ecb5673a0c54422a3 100644
+index 9c9da1b4dac0365f872a53fa26040039fc574fae..a12cef12fbbda878073f2a24c93d6b51b51f4f6d 100644
 --- a/dist/components/File.js
 +++ b/dist/components/File.js
-@@ -664,7 +664,6 @@ var File = class {
+@@ -670,7 +670,6 @@ var File = class {
  		this.headerMetadata?.remove();
  		this.headerCustom?.remove();
  		this.pre?.remove();
@@ -10,7 +10,7 @@ index a46f84cdf7b98511a2e24a03d143d40fc670af6e..c4065b3505988c8424cdd72ecb5673a0
  		this.themeCSSStyle?.remove();
  		this.unsafeCSSStyle?.remove();
  		this.bufferAfter = void 0;
-@@ -677,7 +676,6 @@ var File = class {
+@@ -683,7 +682,6 @@ var File = class {
  		this.headerMetadata = void 0;
  		this.headerCustom = void 0;
  		this.pre = void 0;
@@ -19,10 +19,10 @@ index a46f84cdf7b98511a2e24a03d143d40fc670af6e..c4065b3505988c8424cdd72ecb5673a0
  		this.appliedThemeCSS = void 0;
  		this.hasAdoptedThemeCSS = false;
 diff --git a/dist/components/FileDiff.js b/dist/components/FileDiff.js
-index 6758a7b9d07f2f971f971afbf52b831a7388e999..81ca45d13edbbdfdfe3b38f61cce7b16d68ae669 100644
+index 8d9ba31e097990b3163fd6644906144529561262..a91f7c8d128c2e37861db11f58ef0e0f9e2fd02a 100644
 --- a/dist/components/FileDiff.js
 +++ b/dist/components/FileDiff.js
-@@ -1162,7 +1162,6 @@ var FileDiff = class {
+@@ -1194,7 +1194,6 @@ var FileDiff = class {
  		this.headerMetadata?.remove();
  		this.headerCustom?.remove();
  		this.pre?.remove();
@@ -30,7 +30,7 @@ index 6758a7b9d07f2f971f971afbf52b831a7388e999..81ca45d13edbbdfdfe3b38f61cce7b16
  		this.themeCSSStyle?.remove();
  		this.unsafeCSSStyle?.remove();
  		this.bufferAfter = void 0;
-@@ -1177,7 +1176,6 @@ var FileDiff = class {
+@@ -1209,7 +1208,6 @@ var FileDiff = class {
  		this.headerMetadata = void 0;
  		this.headerCustom = void 0;
  		this.pre = void 0;
@@ -39,7 +39,7 @@ index 6758a7b9d07f2f971f971afbf52b831a7388e999..81ca45d13edbbdfdfe3b38f61cce7b16
  		this.appliedThemeCSS = void 0;
  		this.hasAdoptedThemeCSS = false;
 diff --git a/dist/components/VirtualizedFile.js b/dist/components/VirtualizedFile.js
-index 64d62764b4ce85ec472c81129107012ce19a9800..fd11a35b2d0a6f5a39483870f7c233b2ac65d7d7 100644
+index 90d8a5e57f66cbe38f6b806285ecde5747bf2e16..c5fa29648b38ed447e74e837485f6d8266b241f1 100644
 --- a/dist/components/VirtualizedFile.js
 +++ b/dist/components/VirtualizedFile.js
 @@ -447,7 +447,7 @@ var VirtualizedFile = class extends File {

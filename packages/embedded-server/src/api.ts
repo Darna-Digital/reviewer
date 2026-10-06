@@ -1,4 +1,4 @@
-import { HttpApi } from "effect/unstable/httpapi";
+import { HttpApi } from "effect/http-api";
 import { ChatsApi } from "./layers/chats/chats.api.ts";
 import { CommentsApi } from "./layers/comments/comments.api.ts";
 import { GitMessageApi } from "./layers/git-message/git-message.api.ts";

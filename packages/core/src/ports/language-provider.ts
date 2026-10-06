@@ -29,7 +29,7 @@ import type {
   ProviderTransport,
 } from "../features/language/schema/language.schema.ts";
 
-export class LanguageError extends Schema.TaggedErrorClass<LanguageError>()(
+export class LanguageError extends Schema.TaggedError<LanguageError>()(
   "LanguageError",
   { providerId: Schema.String, reason: Schema.String },
   { httpApiStatus: 500 }

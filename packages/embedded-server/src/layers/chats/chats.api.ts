@@ -18,7 +18,7 @@ import {
   Ok,
   StorageError,
 } from "@reviewer/core/shared";
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 const errors = [
   NoRepoSelected,

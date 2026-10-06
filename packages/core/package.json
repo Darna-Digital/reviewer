@@ -21,16 +21,16 @@
   "dependencies": {
     "@pierre/theme": "2.0.0",
     "@pierre/theming": "1.0.1",
-    "@shikijs/themes": "4.4.3",
-    "effect": "4.0.0-beta.74",
-    "shiki": "4.4.3"
+    "@shikijs/themes": "4.5.0",
+    "effect": "4.0.1",
+    "shiki": "4.5.0"
   },
   "devDependencies": {
-    "@effect/vitest": "4.0.0-beta.74",
+    "@effect/vitest": "4.0.1",
     "@reviewer/lint": "workspace:*",
-    "eslint": "^10.10.0",
-    "prettier": "^3.9.7",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.3"
   }
 }

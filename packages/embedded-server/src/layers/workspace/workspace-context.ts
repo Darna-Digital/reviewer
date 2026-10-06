@@ -24,7 +24,7 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { homedir } from "node:os";
 import { NoRepoSelected } from "@reviewer/core/shared";
 import { folderName, InvalidRepo } from "@reviewer/core/workspace";
