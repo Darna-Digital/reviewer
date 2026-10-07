@@ -1,0 +1,37 @@
+{
+  "name": "@reviewer/tui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "reviewer tui — the review workflow in a terminal: diffs, branches, history and inline comments, drawn with OpenTUI",
+  "bin": {
+    "reviewer-tui": "./src/main.tsx"
+  },
+  "scripts": {
+    "start": "bun src/main.tsx",
+    "build:bin": "bun build --compile --minify src/main.tsx --outfile dist/reviewer-tui",
+    "install:bin": "bun run build:bin && mkdir -p \"${BIN_DIR:-$HOME/.local/bin}\" && install -m 755 dist/reviewer-tui \"${BIN_DIR:-$HOME/.local/bin}/reviewer-tui\" && echo \"installed ${BIN_DIR:-$HOME/.local/bin}/reviewer-tui\"",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,tsx,js}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js}\""
+  },
+  "dependencies": {
+    "@opentui/core": "0.5.14",
+    "@opentui/react": "0.5.14",
+    "@reviewer/core": "workspace:*",
+    "@reviewer/embedded-server": "workspace:*",
+    "effect": "4.0.1",
+    "react": "^19.3.0"
+  },
+  "devDependencies": {
+    "@reviewer/lint": "workspace:*",
+    "@types/bun": "^1.3.14",
+    "@types/react": "^19.3.0",
+    "eslint": "^10.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3"
+  }
+}

@@ -19,6 +19,8 @@
     "dev:brand": "pnpm --filter @reviewer/brand dev",
     "dev:mac": "pnpm --filter @reviewer/mac-os dev",
     "dev:mac:watch": "pnpm --filter @reviewer/mac-os watch",
+    "tui": "bun packages/tui/src/main.tsx",
+    "install:tui": "pnpm --filter @reviewer/tui install:bin",
     "build:mac": "pnpm --filter spa build && pnpm --filter @reviewer/embedded-server build:bundle && pnpm --filter @reviewer/mac-os bundle",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",

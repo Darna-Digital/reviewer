@@ -18,6 +18,10 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
+      # The terminal UI (packages/tui) runs on Bun — OpenTUI's native core is
+      # loaded through Bun's FFI — and so do its tests.
+      - uses: oven-sh/setup-bun@v2
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

@@ -181,6 +181,7 @@ does the git and filesystem work.
 | [`packages/spa`](packages/spa)                         | The React web app whose surfaces the shell hosts                                |
 | [`packages/embedded-server`](packages/embedded-server) | The local API server the app runs beside it (Effect, git/filesystem-backed)     |
 | [`packages/core`](packages/core)                       | Feature schemas and services shared by the server and the SPA                   |
+| [`packages/tui`](packages/tui)                         | Reviewer in a terminal — diffs, branches, history and comments (OpenTUI, Bun)   |
 | [`packages/www`](packages/www)                         | [reviewer.sh](https://reviewer.sh), on Cloudflare Workers                       |
 | [`packages/brand`](packages/brand)                     | The brand studio that draws and exports the logo and icons                      |
 | [`packages/lint`](packages/lint)                       | Shared ESLint and Prettier config                                               |
@@ -190,6 +191,7 @@ does the git and filesystem work.
 - macOS 26 on Apple silicon, with **Xcode 26**
 - Xcode's Metal toolchain: `xcodebuild -downloadComponent MetalToolchain`
 - **Node.js** (current LTS) and **pnpm** 11 (`corepack enable`)
+- **Bun** 1.3+, for the terminal UI only
 
 ### Run it locally
 
@@ -204,6 +206,8 @@ pnpm dev:mac  # build and open the debug app, in another
 | `pnpm dev`          | API server + SPA in watch mode                     |
 | `pnpm dev:mac`      | Build and open the debug `Reviewer.app`            |
 | `pnpm dev:www`      | The reviewer.sh site                               |
+| `pnpm tui`          | The terminal UI, on the repository you are in      |
+| `pnpm install:tui`  | Build the terminal UI and install `reviewer-tui`   |
 | `pnpm build:mac`    | A release build of `Reviewer.app`, as CI builds it |
 | `pnpm lint`         | ESLint across the workspace                        |
 | `pnpm format:check` | Prettier across the workspace                      |
