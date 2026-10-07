@@ -6,13 +6,13 @@ import { join } from 'node:path';
 import * as React from 'react';
 import { stopKey } from '../diff/buildLayout';
 import type { Anchor } from '../diff/buildLayout';
-import type { Theme } from '../diff/highlight';
 import type { DiffLine } from '../diff/parseDiff';
 import { discard, fetchAll, pull, push, summarize } from '../git/actions';
+import type { GrepOptions } from '../git/files';
 import type { Branch } from '../git/refs';
 import { stopAllSessions } from '../process/ptySession';
 import { commitBanner } from '../render/commitBanner';
-import type { Palette } from '../render/palette';
+import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
 import type { TreeNode } from '../tree/fileTree';
 import {
@@ -28,15 +28,18 @@ import { useDiffView } from './useDiffView';
 import { useEditor } from './useEditor';
 import { useHistory } from './useHistory';
 import { useReview } from './useReview';
+import { useServer } from './useServer';
 import { useServices } from './useServices';
 import { useTerminals } from './useTerminals';
+import { useTheme } from './useTheme';
+import type { ThemeStart } from './useTheme';
 import { useTree } from './useTree';
-import { RAIL_WIDTH, useWorkspace } from './useWorkspace';
+import { useWorkspace } from './useWorkspace';
 import type { BottomTab, Surface } from './useWorkspace';
 
 export type Focus = 'sidebar' | 'main' | 'bottom';
-export type Typing =
-  'message' | 'treeFilter' | 'historyFilter' | 'branchFilter' | null;
+export type Typing = 'message' | 'treeFilter' | 'historyFilter' | null;
+export type Cell = { x: number; y: number };
 
 export type MenuEntry =
   | {
@@ -57,10 +60,10 @@ export interface FormField {
 
 export type Overlay =
   | { kind: 'help' }
-  | { kind: 'targets' }
-  | { kind: 'files' }
-  | { kind: 'palette' }
-  | { kind: 'search' }
+  | { kind: 'targets'; at?: Cell }
+  | { kind: 'branches'; at?: Cell }
+  | { kind: 'palette'; mode: PaletteMode }
+  | { kind: 'theme' }
   | { kind: 'comments' }
   | {
       kind: 'compose';
@@ -90,15 +93,15 @@ export type Overlay =
 export interface AppProps {
   root: string;
   store: Store;
-  palette: Palette;
-  theme: Theme;
-  themeName: string;
+  themeStart: ThemeStart;
   initial: Comparison;
+  /** Start the Reviewer server when none answers (off in snapshots). */
+  startServer?: boolean;
 }
 
 export type App = ReturnType<typeof useApp>;
 
-export const COMPOSER_HEIGHT = 8;
+export const COMPOSER_HEIGHT = 6;
 export const NOTICE_MS = 4000;
 export const SIDEBAR_HEADER = 1;
 export const COMMIT_BOX_HEIGHT = 8;
@@ -106,18 +109,27 @@ const CLOCK_MS = 30_000;
 
 /** Composes every part of the screen and owns the actions that span them. */
 export function useApp(props: AppProps) {
-  const { root, store, palette } = props;
+  const { root, store } = props;
   const renderer = useRenderer();
+  const themes = useTheme(renderer, props.themeStart);
+  const { palette, theme, themeName } = themes.look;
   const screen = useTerminalDimensions();
   const review = useReview(root, store, props.initial);
   const workspace = useWorkspace(root, screen);
+  useServer(review, props.startServer ?? false);
   const [now, setNow] = React.useState(Date.now);
-  const [focus, setFocus] = React.useState<Focus>('main');
+  const [focus, setFocusState] = React.useState<Focus>('main');
   const [typing, setTyping] = React.useState<Typing>(null);
   const [captured, setCaptured] = React.useState(false);
-  const [overlay, setOverlay] = React.useState<Overlay | null>(null);
+  const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
   const [previous, setPrevious] = React.useState<Comparison>(WORKTREE);
   const commentBox = React.useRef<TextareaRenderable | null>(null);
+  const [searchMemory, setSearchMemory] = React.useState({
+    files: '',
+    text: '',
+    options: { caseSensitive: false, wholeWord: false, regex: false },
+  });
+  const chords = renderer.capabilities?.kitty_keyboard ?? false;
 
   React.useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), CLOCK_MS);
@@ -136,13 +148,9 @@ export function useApp(props: AppProps) {
     review.files.length > 0;
 
   // geometry
-  const bodyHeight = Math.max(
-    6,
-    screen.height - 2 - (overlay?.kind === 'compose' ? COMPOSER_HEIGHT : 0),
-  );
+  const bodyHeight = Math.max(6, screen.height - 2);
   const sidebarWidth = workspace.sidebarWidth;
-  const mainLeft =
-    RAIL_WIDTH + (workspace.sidebarVisible ? sidebarWidth + 1 : 0);
+  const mainLeft = workspace.sidebarVisible ? sidebarWidth + 1 : 0;
   const mainWidth = Math.max(20, screen.width - mainLeft);
   const bottomHeight = workspace.bottomOpen
     ? Math.min(workspace.bottomHeight, bodyHeight - 4)
@@ -152,7 +160,12 @@ export function useApp(props: AppProps) {
     surface === 'review' && review.comparison.kind === 'commit' && review.commit
       ? commitBanner(palette, review.commit, mainWidth, now)
       : [];
-  const contentHeight = Math.max(1, editorHeight - 1 - banner.length);
+  const crumbs = surface === 'review' && review.comparison.kind === 'commit';
+  const contentTop = 2 + (surface === 'review' ? banner.length : 0);
+  const contentHeight = Math.max(
+    1,
+    editorHeight - 1 - banner.length - (crumbs ? 1 : 0),
+  );
   const treeHeight = Math.max(
     1,
     bodyHeight -
@@ -168,8 +181,8 @@ export function useApp(props: AppProps) {
     width: mainWidth,
     height: contentHeight,
     palette,
-    theme: props.theme,
-    themeName: props.themeName,
+    theme,
+    themeName,
     focused: mainFocused && surface === 'review',
     now,
   });
@@ -178,8 +191,8 @@ export function useApp(props: AppProps) {
     width: mainWidth,
     height: contentHeight,
     palette,
-    theme: props.theme,
-    themeName: props.themeName,
+    theme,
+    themeName,
     focused: mainFocused && surface === 'browse',
     now,
   });
@@ -202,14 +215,23 @@ export function useApp(props: AppProps) {
 
   const notify = review.notify;
 
-  function changeFocus(next: Focus) {
+  /** Moving focus leaves any field being typed in and lets go of a terminal. */
+  function setFocus(next: Focus) {
     if (next === 'sidebar' && surface === 'review' && diffFile)
       tree.select(diffFile);
-    setFocus(next);
+    setFocusState(next);
+    setTyping(null);
+    if (next !== 'bottom') setCaptured(false);
+  }
+
+  /** An overlay takes the keyboard from whatever field had it. */
+  function setOverlay(next: Overlay | null) {
+    if (next) setTyping(null);
+    setOverlayState(next);
   }
 
   const actions = {
-    setFocus: changeFocus,
+    setFocus,
     focusNext(step: 1 | -1) {
       const order: Focus[] = [
         ...(workspace.sidebarVisible ? (['sidebar'] as const) : []),
@@ -217,9 +239,12 @@ export function useApp(props: AppProps) {
         ...(workspace.bottomOpen ? (['bottom'] as const) : []),
       ];
       const index = order.indexOf(focus);
-      changeFocus(order[(index + step + order.length) % order.length]!);
+      setFocus(order[(index + step + order.length) % order.length]!);
     },
+    /** Browse leaves a commit opened from history, as the Mac trail does. */
     setSurface(next: Surface) {
+      if (next === 'browse' && review.comparison.kind === 'commit')
+        showComparison(previous);
       workspace.setSurface(next);
       setFocus('main');
     },
@@ -239,10 +264,24 @@ export function useApp(props: AppProps) {
     },
     setTyping,
     capture(on: boolean) {
+      if (on) setFocusState('bottom');
       setCaptured(on);
-      if (on) setFocus('bottom');
     },
     openOverlay: (next: Overlay) => setOverlay(next),
+    openPalette: (mode: PaletteMode) => setOverlay({ kind: 'palette', mode }),
+    /** The branch popover, hanging from `at` or the sidebar's branch chip. */
+    openBranches: (at?: Cell) =>
+      setOverlay({ kind: 'branches', at: at ?? chipAnchor('branch') }),
+    /** The comparison popover, hanging from `at` or the compare chip. */
+    openTargets: (at?: Cell) =>
+      setOverlay({ kind: 'targets', at: at ?? chipAnchor('target') }),
+    /** Files and text queries are kept between openings, as on the Mac. */
+    rememberSearch(mode: PaletteMode, query: string) {
+      if (mode === 'files' || mode === 'text')
+        setSearchMemory((memory) => ({ ...memory, [mode]: query }));
+    },
+    setSearchOptions: (options: GrepOptions) =>
+      setSearchMemory((memory) => ({ ...memory, options })),
     closeOverlay: () => setOverlay(null),
     openMenu(at: { x: number; y: number }, entries: MenuEntry[]) {
       setOverlay({ kind: 'menu', at, entries });
@@ -378,8 +417,14 @@ export function useApp(props: AppProps) {
         path ? stopKey.file(path) : undefined,
       );
     },
+    /** Leaves a commit for the change it was opened from. */
     back() {
       if (review.comparison.kind === 'commit') showComparison(previous);
+    },
+    /** Moves through history and opens the commit, as the Mac list does. */
+    stepHistory(delta: number) {
+      const sha = history.step(delta);
+      if (sha) actions.showCommit(sha);
     },
     openComment(comment: ReviewComment) {
       if (
@@ -629,6 +674,7 @@ export function useApp(props: AppProps) {
 
   return {
     palette,
+    themes,
     screen,
     now,
     review,
@@ -647,13 +693,18 @@ export function useApp(props: AppProps) {
     captured,
     overlay,
     commentBox,
+    searchMemory,
+    /** The terminal reports ⌘ (kitty keyboard protocol). */
+    chords,
     banner,
+    crumbs,
     isCommitMode,
     layout: {
       bodyHeight,
       mainLeft,
       mainWidth,
       editorHeight,
+      contentTop,
       contentHeight,
       bottomHeight,
       treeHeight,
@@ -661,6 +712,13 @@ export function useApp(props: AppProps) {
     },
     actions,
   };
+
+  /** Under the sidebar's chips, or the editor's header when the sidebar is hidden. */
+  function chipAnchor(chip: 'branch' | 'target'): Cell {
+    if (!workspace.sidebarVisible) return { x: mainLeft, y: 2 };
+    const half = chip === 'target' ? Math.floor(sidebarWidth / 2) : 0;
+    return { x: half, y: 2 };
+  }
 
   function showComparison(next: Comparison, landOn?: string) {
     if (isSameComparison(next, review.comparison)) {

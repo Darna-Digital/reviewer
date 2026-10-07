@@ -1,27 +1,38 @@
-import type { Surface } from '../app/useWorkspace';
+import type { App } from '../app/useApp';
 import { mix } from '../render/palette';
-import { segsWidth } from '../render/styled';
-import type { Seg } from '../render/styled';
 import { useAppContext } from './AppContext';
 import { Button, Line } from './Line';
 
-const SURFACES: Array<{ surface: Surface; label: string }> = [
-  { surface: 'browse', label: ' ≡ Browse ' },
-  { surface: 'review', label: ' ± Review ' },
+interface Tab {
+  label: string;
+  isOn: (app: App) => boolean;
+  run: (app: App) => void;
+}
+
+const TABS: Tab[] = [
+  {
+    label: ' ≡ Browse ',
+    isOn: (app) => app.workspace.surface === 'browse' && !isSearching(app),
+    run: (app) => app.actions.setSurface('browse'),
+  },
+  {
+    label: ' ± Review ',
+    isOn: (app) => app.workspace.surface === 'review' && !isSearching(app),
+    run: (app) => app.actions.setSurface('review'),
+  },
+  {
+    label: ' ⌕ Search ',
+    isOn: isSearching,
+    run: (app) => app.actions.openPalette('text'),
+  },
 ];
 
-/** Project, the Browse/Review switch, and the git round-trip buttons. */
+/** Browse, Review and Search, over the sidebar. */
 export function TopRail() {
-  const { palette, screen, review, workspace, actions } = useAppContext();
+  const app = useAppContext();
+  const { palette, screen } = app;
   const bg = palette.frame;
-  const ahead = review.status?.ahead ?? 0;
-  const behind = review.status?.behind ?? 0;
-  const brand: Seg[] = [
-    { text: ' ◆ ', fg: palette.accent, bg, bold: true },
-    { text: 'reviewer ', fg: palette.text, bg, bold: true },
-    { text: '│ ', fg: palette.rule, bg },
-  ];
-  const chip = mix(bg, palette.text, 0.08);
+  const track = mix(palette.island, palette.text, 0.06);
 
   return (
     <box
@@ -30,31 +41,16 @@ export function TopRail() {
       width={screen.width}
       backgroundColor={bg}
     >
-      <Line segs={brand} width={segsWidth(brand)} fill={bg} />
-      <Button
-        segs={[
-          { text: ' ▣ ', fg: palette.accent, bg: chip },
-          {
-            text: `${review.repo?.name ?? '…'} `,
-            fg: palette.text,
-            bg: chip,
-            bold: true,
-          },
-        ]}
-        bg={chip}
-        hoverTint={palette.text}
-        onPress={() => actions.copy(review.root)}
-      />
-      <Line segs={[{ text: '   ' }]} width={3} fill={bg} />
-      {SURFACES.map(({ surface, label }) => {
-        const on = workspace.surface === surface;
-        const tabBg = on ? palette.selection : bg;
+      <Line segs={[]} width={1} fill={bg} />
+      {TABS.map((tab) => {
+        const on = tab.isOn(app);
+        const tabBg = on ? palette.selection : track;
         return (
           <Button
-            key={surface}
+            key={tab.label}
             segs={[
               {
-                text: label,
+                text: tab.label,
                 fg: on ? palette.text : palette.muted,
                 bg: tabBg,
                 bold: on,
@@ -62,55 +58,15 @@ export function TopRail() {
             ]}
             bg={tabBg}
             hoverTint={palette.text}
-            onPress={() => actions.setSurface(surface)}
+            onPress={() => tab.run(app)}
           />
         );
       })}
       <box flexGrow={1} height={1} backgroundColor={bg} />
-      <Button
-        segs={[{ text: ' ⟳ Fetch ', fg: palette.muted, bg }]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => void actions.fetch()}
-      />
-      <Button
-        segs={[
-          {
-            text: ` ↓ Pull${behind ? ` ${behind}` : ''} `,
-            fg: behind ? palette.warning : palette.muted,
-            bg,
-          },
-        ]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => void actions.pull()}
-      />
-      <Button
-        segs={[
-          {
-            text: ` ↑ Push${ahead ? ` ${ahead}` : ''} `,
-            fg: ahead ? palette.added : palette.muted,
-            bg,
-            bold: ahead > 0,
-          },
-        ]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => void actions.push()}
-      />
-      <Line segs={[{ text: ' │ ', fg: palette.rule }]} width={3} fill={bg} />
-      <Button
-        segs={[{ text: ' ⌘ Commands ', fg: palette.muted, bg }]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => actions.openOverlay({ kind: 'palette' })}
-      />
-      <Button
-        segs={[{ text: ' ? ', fg: palette.faint, bg }]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => actions.openOverlay({ kind: 'help' })}
-      />
     </box>
   );
+}
+
+function isSearching(app: App): boolean {
+  return app.overlay?.kind === 'palette' && app.overlay.mode === 'text';
 }

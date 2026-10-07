@@ -1,7 +1,6 @@
 import type { BoxRenderable } from '@opentui/core';
 import { useRenderer } from '@opentui/react';
 import * as React from 'react';
-import { RAIL_WIDTH } from '../app/useWorkspace';
 import { useAppContext } from './AppContext';
 import { captureMouse } from './captureMouse';
 
@@ -21,7 +20,7 @@ export function Divider() {
       borderColor={active ? palette.accent : palette.rule}
       backgroundColor={palette.frame}
       onMouseDown={() => captureMouse(renderer, ref.current)}
-      onMouseDrag={(event) => workspace.resizeSidebar(event.x - RAIL_WIDTH)}
+      onMouseDrag={(event) => workspace.resizeSidebar(event.x)}
       onMouseOver={() => setActive(true)}
       onMouseOut={() => setActive(false)}
       onMouseDragEnd={() => setActive(false)}

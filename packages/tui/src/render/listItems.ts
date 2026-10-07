@@ -1,11 +1,11 @@
 import type { DevCommand } from '@reviewer/core/local-dev';
-import type { BranchRow } from '../app/useBranches';
 import type { FileStatus } from '../git/files';
-import type { CommitFile, LogRow } from '../git/log';
+import { graphWidth } from '../git/graph';
+import type { GraphRow } from '../git/graph';
+import type { CommitFile, LogCommit } from '../git/log';
 import type { SessionStatus } from '../process/ptySession';
 import type { TreeNode, TreeRow } from '../tree/fileTree';
 import { padEnd, truncate } from '../text/measure';
-import { ago } from '../text/time';
 import { mix } from './palette';
 import type { Palette } from './palette';
 import { fitSegs, spread } from './styled';
@@ -94,164 +94,63 @@ export function treeItems(
   }));
 }
 
-export function branchItems(
-  palette: Palette,
-  rows: BranchRow[],
-  opts: {
-    remoteOpen: boolean;
-    remoteCount: number;
-    compared: string | null;
-    aim: string | null;
-  },
-): Array<ListItem<BranchRow>> {
-  const items: Array<ListItem<BranchRow>> = [];
-  let section: string | null = null;
-  for (const row of rows) {
-    if (row.section !== section) {
-      section = row.section;
-      const count = rows.filter(
-        (other) => other.section === row.section,
-      ).length;
-      items.push(heading(palette, `head:${section}`, section, String(count)));
-    }
-    items.push({
-      key: `${row.section}:${row.branch.name}`,
-      selectable: true,
-      value: row,
-      rows: (look) => {
-        const { branch } = row;
-        const bg = rowBg(palette, look);
-        const right: Seg[] = [];
-        if (branch.remote)
-          right.push({
-            text: branch.name.split('/')[0] ?? '',
-            fg: palette.faint,
-            bg,
-          });
-        if (branch.ahead > 0)
-          right.push({ text: `↑${branch.ahead}`, fg: palette.added, bg });
-        if (branch.behind > 0)
-          right.push({ text: ` ↓${branch.behind}`, fg: palette.modified, bg });
-        right.push({
-          text: ` ${ago(branch.committedAt)} `,
-          fg: palette.faint,
-          bg,
-        });
-        const badges: Seg[] = [];
-        if (branch.name === opts.compared)
-          badges.push({ text: ' ⇄', fg: palette.accent, bg, bold: true });
-        if (branch.name === opts.aim)
-          badges.push({ text: ' ◎', fg: palette.faint, bg });
-        return [
-          spread(
-            [
-              bar(palette, look, bg),
-              {
-                text: branch.current ? ' ★ ' : ' ⎇ ',
-                fg: branch.current ? '#ff9f0a' : palette.faint,
-                bg,
-              },
-              {
-                text: branch.name,
-                fg:
-                  branch.current || look.selected
-                    ? palette.text
-                    : palette.muted,
-                bg,
-                bold: branch.current,
-              },
-              ...badges,
-            ],
-            right,
-            look.width,
-            bg,
-          ),
-        ];
-      },
-    });
-  }
-  if (!opts.remoteOpen && opts.remoteCount > 0) {
-    items.push(
-      heading(palette, 'head:remote', '▸ Remote', String(opts.remoteCount)),
-    );
-  }
-  return items;
-}
-
 const DATE = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' });
 
 export function historyItems(
   palette: Palette,
-  rows: LogRow[],
+  commits: LogCommit[],
+  graph: GraphRow[] | null,
   shownSha: string | null,
-): Array<ListItem<LogRow>> {
-  return rows.map((row, index) => {
-    const { commit } = row;
-    if (!commit) {
-      return {
-        key: `graph:${index}`,
-        selectable: false,
-        rows: ({ width }) => [
-          fitSegs(
-            [{ text: ' ' }, ...graphSegs(palette, row.graph, palette.frame)],
-            width,
-            palette.frame,
-          ),
-        ],
-      };
-    }
-    return {
-      key: commit.sha,
-      selectable: true,
-      value: row,
-      rows: (look) => {
-        const bg = rowBg(palette, look);
-        const shown = commit.sha === shownSha;
-        const left: Seg[] = [
-          bar(palette, look, bg),
-          ...graphSegs(palette, row.graph, bg),
-          { text: ' ', bg },
-          ...commit.refs
-            .slice(0, 3)
-            .flatMap((ref) => refChip(palette, ref, bg)),
-          { text: ' ', bg },
-          {
-            text: commit.subject,
-            fg:
-              look.selected || shown
-                ? palette.text
-                : mix(palette.frame, palette.text, 0.85),
-            bg,
-          },
-        ];
-        const right: Seg[] = [
-          {
-            text: `${padEnd(truncate(commit.author, 16), 16)} `,
-            fg: palette.faint,
-            bg,
-          },
-          {
-            text: `${padEnd(DATE.format(new Date(commit.date)), 6)} `,
-            fg: palette.faint,
-            bg,
-          },
-          {
-            text: `${commit.shortSha} `,
-            fg: shown ? palette.accent : palette.faint,
-            bg,
-          },
-        ];
-        return [
-          spread(
-            left,
-            look.width > 90 ? right : right.slice(1),
-            look.width,
-            bg,
-          ),
-        ];
-      },
-    };
-  });
+  /** The commits near the viewport, whose lanes set the graph's width. */
+  around: { from: number; to: number },
+): Array<ListItem<LogCommit>> {
+  const laneCells = graph
+    ? Math.min(MAX_GRAPH_CELLS, graphWidth(graph.slice(around.from, around.to)))
+    : 1;
+  return commits.map((commit, index) => ({
+    key: commit.sha,
+    selectable: true,
+    value: commit,
+    rows: (look) => {
+      const bg = rowBg(palette, look);
+      const shown = commit.sha === shownSha;
+      const left: Seg[] = [
+        bar(palette, look, bg),
+        ...graphSegs(palette, graph?.[index], laneCells, bg),
+        { text: ' ', bg },
+        ...commit.refs.slice(0, 3).flatMap((ref) => refChip(palette, ref, bg)),
+        { text: ' ', bg },
+        {
+          text: commit.subject,
+          fg:
+            look.selected || shown
+              ? palette.text
+              : mix(palette.frame, palette.text, 0.85),
+          bg,
+        },
+      ];
+      const right: Seg[] = [
+        {
+          text: `${padEnd(truncate(commit.author, 16), 16)} `,
+          fg: palette.faint,
+          bg,
+        },
+        {
+          text: `${padEnd(DATE.format(new Date(commit.date)), 6)} `,
+          fg: palette.faint,
+          bg,
+        },
+        {
+          text: `${commit.shortSha} `,
+          fg: shown ? palette.accent : palette.faint,
+          bg,
+        },
+      ];
+      return [
+        spread(left, look.width > 90 ? right : right.slice(1), look.width, bg),
+      ];
+    },
+  }));
 }
 
 export function commitFileItems(
@@ -419,26 +318,28 @@ function bar(palette: Palette, look: ItemLook, bg: string): Seg {
   };
 }
 
-const GRAPH_GLYPHS: Record<string, string> = {
-  '*': '●',
-  '|': '│',
-  '/': '╱',
-  '\\': '╲',
-  _: '─',
-  '-': '─',
-  '.': '·',
-};
+const MAX_GRAPH_CELLS = 24;
 
-function graphSegs(palette: Palette, graph: string, bg: string): Seg[] {
-  return Array.from(graph, (char, i) => ({
-    text: GRAPH_GLYPHS[char] ?? char,
-    fg:
-      char === '*'
-        ? palette.text
-        : palette.lanes[Math.floor(i / 2) % palette.lanes.length],
-    bg,
-    bold: char === '*',
-  }));
+/** A graph row padded to `width`, so every subject starts in one column. */
+function graphSegs(
+  palette: Palette,
+  row: GraphRow | undefined,
+  width: number,
+  bg: string,
+): Seg[] {
+  const cells = row?.cells ?? [{ glyph: '●', lane: 0 }];
+  const shown = cells.slice(0, width);
+  return [
+    ...shown.map((cell) => ({
+      text: cell.glyph,
+      fg:
+        cell.lane === null
+          ? palette.faint
+          : palette.lanes[cell.lane % palette.lanes.length],
+      bg,
+    })),
+    { text: ' '.repeat(Math.max(0, width - shown.length)), bg },
+  ];
 }
 
 function refChip(palette: Palette, ref: string, bg: string): Seg[] {

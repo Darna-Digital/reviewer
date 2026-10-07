@@ -14,11 +14,14 @@ export interface FileContent {
 export interface GrepMatch {
   path: string;
   line: number;
+  /** 1-based, where the first match on the line starts. */
+  column: number;
   text: string;
 }
 
 const MAX_VIEW_BYTES = 2 * 1024 * 1024;
-const GREP_LIMIT = 300;
+const GREP_LIMIT = 500;
+const MAX_LINE_CHARS = 400;
 
 /** Every file a browse tree shows: tracked plus untracked, ignored left out. */
 export async function listFiles(root: string): Promise<string[]> {
@@ -83,33 +86,57 @@ export async function readFile(
   return { text: new TextDecoder().decode(bytes), binary: false };
 }
 
-/** `git grep`, fixed-string and case-insensitive unless the query has capitals. */
-export async function grep(root: string, query: string): Promise<GrepMatch[]> {
-  if (query.trim().length < 2) return [];
-  const caseFlag = query === query.toLowerCase() ? ['-i'] : [];
+export interface GrepOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  regex: boolean;
+}
+
+export interface GrepResult {
+  matches: GrepMatch[];
+  /** More matched than `GREP_LIMIT`. */
+  truncated: boolean;
+}
+
+/** `git grep` over the working tree with untracked files, as the server runs it. */
+export async function grep(
+  root: string,
+  query: string,
+  opts: GrepOptions,
+): Promise<GrepResult> {
+  if (query.trim().length < 2) return { matches: [], truncated: false };
   const out = await git(
     root,
     [
       'grep',
+      '--no-color',
       '-n',
+      '--column',
+      '--null',
       '-I',
       '--untracked',
-      '--fixed-strings',
-      ...caseFlag,
+      ...(opts.caseSensitive ? [] : ['-i']),
+      ...(opts.wholeWord ? ['-w'] : []),
+      opts.regex ? '-E' : '-F',
       '-e',
       query,
     ],
     [0, 1],
   );
-  return out
-    .split('\n')
-    .filter(Boolean)
-    .slice(0, GREP_LIMIT)
-    .flatMap((line) => {
-      const match = /^(.*?):(\d+):(.*)$/.exec(line);
-      if (!match) return [];
+  const lines = out.split('\n').filter(Boolean);
+  return {
+    truncated: lines.length > GREP_LIMIT,
+    matches: lines.slice(0, GREP_LIMIT).flatMap((line) => {
+      const [path, lineNo, column, ...text] = line.split('\0');
+      if (!path || !lineNo || !column) return [];
       return [
-        { path: match[1]!, line: Number(match[2]), text: match[3]!.trim() },
+        {
+          path,
+          line: Number(lineNo),
+          column: Number(column),
+          text: text.join('\0').slice(0, MAX_LINE_CHARS),
+        },
       ];
-    });
+    }),
+  };
 }

@@ -1,7 +1,8 @@
-import { activeCommands } from '../app/commands';
+import { activeCommands, shownKey } from '../app/commands';
 import { keyLabel } from '../app/keys';
 import { NOTICE_MS } from '../app/useApp';
 import type { App } from '../app/useApp';
+import type { BottomTab } from '../app/useWorkspace';
 import { processDot } from '../render/listItems';
 import { segsWidth } from '../render/styled';
 import type { Seg } from '../render/styled';
@@ -10,12 +11,17 @@ import { useAppContext } from './AppContext';
 import { Button, Line } from './Line';
 
 const NOTICE_GLYPH = { error: '✗ ', success: '✓ ', info: '· ' } as const;
+const PANES: Array<{ tab: BottomTab; label: string }> = [
+  { tab: 'history', label: '◷ History' },
+  { tab: 'terminal', label: '❯ Terminal' },
+  { tab: 'run', label: '▶ Run' },
+];
 const MAX_HINTS = 6;
 
-/** Mode, a notice or the live keys, then the services and the branch. */
+/** Mode, a notice or the live keys; the bottom pane's tabs; the services. */
 export function BottomRail() {
   const app = useAppContext();
-  const { palette, screen, review, services, actions } = app;
+  const { palette, screen, review, services, actions, workspace } = app;
   const bg = palette.frame;
   const mode: Seg[] = [
     {
@@ -33,7 +39,10 @@ export function BottomRail() {
   const hints = notice
     ? []
     : activeCommands(app)
-        .filter((command) => command.hint && command.keys[0])
+        .flatMap((command) => {
+          const key = shownKey(command, app.chords);
+          return command.hint && key ? [{ command, key }] : [];
+        })
         .slice(0, MAX_HINTS);
   const noticeColor =
     notice?.kind === 'error'
@@ -66,12 +75,12 @@ export function BottomRail() {
           fill={bg}
         />
       ) : (
-        hints.map((command) => (
+        hints.map(({ command, key }) => (
           <Button
             key={command.id}
             segs={[
               {
-                text: keyLabel(command.keys[0]!),
+                text: keyLabel(key),
                 fg: palette.muted,
                 bg,
                 bold: true,
@@ -85,6 +94,33 @@ export function BottomRail() {
         ))
       )}
       <box flexGrow={1} height={1} backgroundColor={bg} />
+      {PANES.map(({ tab, label }) => {
+        const on = workspace.bottomOpen && workspace.bottomTab === tab;
+        const paneBg = on ? palette.selection : bg;
+        const running = tab === 'run' ? services.running().length : 0;
+        return (
+          <Button
+            key={tab}
+            segs={[
+              {
+                text: ` ${label}`,
+                fg: on ? palette.text : palette.muted,
+                bg: paneBg,
+                bold: on,
+              },
+              {
+                text: running ? ` ●${running} ` : ' ',
+                fg: palette.process.running,
+                bg: paneBg,
+              },
+            ]}
+            bg={paneBg}
+            hoverTint={palette.text}
+            onPress={() => actions.toggleBottomTab(tab)}
+          />
+        );
+      })}
+      <Line segs={[{ text: ' │ ', fg: palette.rule }]} width={3} fill={bg} />
       {services.commands.slice(0, 5).map((command) => (
         <Button
           key={command.id}
@@ -113,25 +149,9 @@ export function BottomRail() {
           }}
         />
       ))}
-      {services.commands.length === 0 ? (
-        <Button
-          segs={[{ text: '▶ add a service  ', fg: palette.faint, bg }]}
-          bg={bg}
-          hoverTint={palette.text}
-          onPress={actions.addService}
-        />
+      {services.commands.length > 0 ? (
+        <Line segs={[{ text: '│', fg: palette.rule }]} width={1} fill={bg} />
       ) : null}
-      <Line segs={[{ text: '│ ', fg: palette.rule }]} width={2} fill={bg} />
-      <Button
-        segs={[
-          { text: '⎇ ', fg: palette.faint, bg },
-          { text: review.repo?.branch ?? 'detached', fg: palette.added, bg },
-          { text: ' ', bg },
-        ]}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => actions.toggleBottomTab('branches')}
-      />
       <Button
         segs={[{ text: ' ? keys ', fg: palette.faint, bg }]}
         bg={bg}

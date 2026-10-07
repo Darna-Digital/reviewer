@@ -1,11 +1,7 @@
 #!/usr/bin/env bun
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
-import {
-  deriveChromeTokens,
-  describeThemes,
-  loadTheme,
-} from '@reviewer/core/themes';
+import { describeThemes, findTheme } from '@reviewer/core/themes';
 import { App } from './app/App';
 import { WORKTREE } from './app/comparison';
 import type { Comparison } from './app/comparison';
@@ -13,8 +9,11 @@ import { parseCli, USAGE } from './cli';
 import type { CliOptions } from './cli';
 import { git, resolves } from './git/exec';
 import { repoInfo, repoRoot } from './git/repo';
-import { createPalette } from './render/palette';
+import { readTerminalLook } from './app/useTheme';
 import { stopAllSessions } from './process/ptySession';
+import { loadSettings, TERMINAL_THEME } from './store/settings';
+import { resolveLook } from './theme/resolveLook';
+import { readSystemScheme } from './theme/systemAppearance';
 import { openStore } from './store/createStore';
 import type { Store } from './store/createStore';
 
@@ -32,15 +31,19 @@ async function main(cli: CliOptions) {
         .join('\n'),
     );
   }
+  if (
+    cli.themeName &&
+    cli.themeName !== TERMINAL_THEME &&
+    !findTheme(cli.themeName)
+  ) {
+    fail(`no theme named "${cli.themeName}" — see --themes`);
+  }
 
   const root = await repoRoot(cli.path).catch(() =>
     fail(`not a git repository: ${cli.path}`),
   );
-  const theme = await (loadTheme(cli.themeName) ??
-    fail(`no theme named "${cli.themeName}" — see --themes`));
   const store = openStore();
   const initial = await initialComparison({ root, store, cli });
-  const palette = createPalette(deriveChromeTokens(theme));
 
   // services and shells belong to this process: never leave them behind
   process.on('exit', stopAllSessions);
@@ -52,16 +55,23 @@ async function main(cli: CliOptions) {
     exitOnCtrlC: false,
     useMouse: true,
     targetFps: 60,
-    backgroundColor: palette.frame,
+    backgroundColor: 'transparent',
   });
+  const settings = loadSettings();
+  const [system, terminal] = await Promise.all([
+    readSystemScheme(),
+    readTerminalLook(renderer),
+  ]);
+  const start = { settings, system, terminal, override: cli.themeName };
+  const look = await resolveLook(start);
+  renderer.setBackgroundColor(look.palette.frame);
   createRoot(renderer).render(
     <App
       root={root}
       store={store}
-      palette={palette}
-      theme={theme}
-      themeName={cli.themeName}
+      themeStart={{ ...start, look }}
       initial={initial}
+      startServer={cli.startServer}
     />,
   );
 }
@@ -96,6 +106,6 @@ function exit(message: string): never {
 }
 
 function fail(message: string): never {
-  console.error(`reviewer-tui: ${message}`);
+  console.error(`reviewer: ${message}`);
   process.exit(1);
 }

@@ -2,19 +2,24 @@
  * Renders the app headlessly, plays input, and writes the frame as HTML.
  *
  *   bun scripts/snapshot.tsx [--repo .] [--size 160x45] [--db file] [--out frame.html] \
- *     [--input "j j c text:hello enter click:40,10 dclick:40,10 wheel:60,20,down drag:30,5,50,5"]
+ *     [--input "j j c text:hello enter click:40,10 dclick:40,10 wheel:60,20,down drag:30,5,50,5"] \
+ *     [--theme name] [--terminal-bg '#1e1e2e' --terminal-fg '#cdd6f4']
+ *
+ * The test renderer answers no colour queries; `--terminal-bg/-fg` stand in
+ * for a terminal that does. Transparent cells are drawn on that background.
  */
 import type { CapturedFrame } from '@opentui/core';
 import { testRender } from '@opentui/react/test-utils';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { deriveChromeTokens, loadTheme } from '@reviewer/core/themes';
 import { App } from '../src/app/App';
 import { WORKTREE } from '../src/app/comparison';
 import type { Comparison } from '../src/app/comparison';
 import { repoRoot } from '../src/git/repo';
-import { createPalette } from '../src/render/palette';
 import { openStore } from '../src/store/createStore';
+import { loadSettings } from '../src/store/settings';
+import { resolveLook } from '../src/theme/resolveLook';
+import { schemeOf } from '../src/theme/terminalTheme';
 
 type Setup = Awaited<ReturnType<typeof testRender>>;
 
@@ -29,6 +34,8 @@ const { values } = parseArgs({
     against: { type: 'string' },
     commit: { type: 'string' },
     db: { type: 'string' },
+    'terminal-bg': { type: 'string' },
+    'terminal-fg': { type: 'string' },
   },
 });
 
@@ -36,8 +43,21 @@ const [width = 160, height = 45] = (values.size ?? '160x45')
   .split('x')
   .map(Number);
 const root = await repoRoot(resolve(values.repo ?? '.'));
-const themeName = values.theme ?? 'reviewer-dark';
-const theme = (await loadTheme(themeName))!;
+const terminalBg = values['terminal-bg'] ?? '#1b1d23';
+const terminal = values['terminal-bg']
+  ? {
+      background: terminalBg,
+      foreground: values['terminal-fg'] ?? '#d8dee9',
+      ansi: null,
+    }
+  : null;
+const start = {
+  settings: loadSettings(),
+  system: schemeOf(terminalBg),
+  terminal,
+  override: values.theme,
+};
+const look = await resolveLook(start);
 const store = openStore(values.db);
 const initial: Comparison = values.commit
   ? { kind: 'commit', sha: values.commit }
@@ -49,9 +69,7 @@ const setup = await testRender(
   <App
     root={root}
     store={store}
-    palette={createPalette(deriveChromeTokens(theme))}
-    theme={theme}
-    themeName={themeName}
+    themeStart={{ ...start, look }}
     initial={initial}
   />,
   { width, height },
@@ -118,7 +136,9 @@ async function play({ mockInput, mockMouse }: Setup, step: string) {
 
 function toHtml(frame: CapturedFrame): string {
   const color = (c: { r: number; g: number; b: number; a: number }) =>
-    `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${c.a})`;
+    c.a === 0
+      ? terminalBg
+      : `rgba(${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)},${c.a})`;
   const escape = (text: string) =>
     text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const lines = frame.lines

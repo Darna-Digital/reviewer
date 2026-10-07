@@ -8,7 +8,7 @@ import { useAppContext } from './AppContext';
 import { Backdrop, centered } from './Modal';
 import { Line } from './Line';
 
-const KEY_WIDTH = 10;
+const KEY_WIDTH = 14;
 const MOUSE_HELP =
   ' click selects · double-click opens · right-click for actions · wheel scrolls · drag the dividers to resize · ^o leaves a terminal';
 
@@ -35,7 +35,7 @@ export function HelpOverlay() {
       ),
     ).map((command): Seg[] => [
       {
-        text: ` ${padStart(command.keys.slice(0, 2).map(keyLabel).join(' '), KEY_WIDTH - 1)}  `,
+        text: ` ${padStart(command.keys.slice(0, 3).map(keyLabel).join(' '), KEY_WIDTH - 1)}  `,
         fg: palette.text,
         bold: true,
       },

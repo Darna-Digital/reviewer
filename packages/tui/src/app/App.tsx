@@ -1,6 +1,6 @@
 import { useKeyboard } from '@opentui/react';
 import { AppContext } from '../components/AppContext';
-import { AppRail } from '../components/AppRail';
+import { BranchPicker } from '../components/BranchPicker';
 import { BottomPane } from '../components/BottomPane';
 import { BottomRail } from '../components/BottomRail';
 import { Composer } from '../components/Composer';
@@ -10,12 +10,8 @@ import { Divider } from '../components/Divider';
 import { Editor } from '../components/Editor';
 import { FormDialog } from '../components/FormDialog';
 import { HelpOverlay } from '../components/HelpOverlay';
-import {
-  CommandPalette,
-  CommentsPicker,
-  FilePicker,
-  SearchPicker,
-} from '../components/Pickers';
+import { CommandPalette } from '../components/CommandPalette';
+import { CommentsPicker, ThemePicker } from '../components/Pickers';
 import { Sidebar } from '../components/Sidebar';
 import { TargetPicker } from '../components/TargetPicker';
 import { TopRail } from '../components/TopRail';
@@ -45,7 +41,6 @@ export function App(props: AppProps) {
           height={layout.bodyHeight}
           width={screen.width}
         >
-          <AppRail />
           {workspace.sidebarVisible ? (
             <>
               <Sidebar />
@@ -61,12 +56,18 @@ export function App(props: AppProps) {
             {workspace.bottomOpen ? <BottomPane /> : null}
           </box>
         </box>
-        {overlay?.kind === 'compose' ? <Composer overlay={overlay} /> : null}
         <BottomRail />
-        {overlay?.kind === 'targets' ? <TargetPicker /> : null}
-        {overlay?.kind === 'files' ? <FilePicker /> : null}
-        {overlay?.kind === 'palette' ? <CommandPalette /> : null}
-        {overlay?.kind === 'search' ? <SearchPicker /> : null}
+        {overlay?.kind === 'compose' ? <Composer overlay={overlay} /> : null}
+        {overlay?.kind === 'targets' ? (
+          <TargetPicker overlay={overlay} />
+        ) : null}
+        {overlay?.kind === 'branches' ? (
+          <BranchPicker overlay={overlay} />
+        ) : null}
+        {overlay?.kind === 'palette' ? (
+          <CommandPalette overlay={overlay} />
+        ) : null}
+        {overlay?.kind === 'theme' ? <ThemePicker /> : null}
         {overlay?.kind === 'comments' ? <CommentsPicker /> : null}
         {overlay?.kind === 'confirm' ? (
           <ConfirmDialog overlay={overlay} />
@@ -81,8 +82,8 @@ export function App(props: AppProps) {
 
 /**
  * Routes a key: overlays own their keys, a captured terminal gets everything
- * but `ctrl+o`, a focused text field everything but Esc/Return (and the
- * commit keys), and the command table the rest.
+ * but `ctrl+o`, a focused text field everything but Esc/Return, the commit
+ * keys and ⌘ chords, and the command table the rest.
  */
 function dispatchKey(app: AppState, key: string, consume: () => void) {
   const { actions } = app;
@@ -96,7 +97,10 @@ function dispatchKey(app: AppState, key: string, consume: () => void) {
     return;
   }
   if (app.typing) {
-    if (app.typing === 'message' && key === 'ctrl+s') {
+    if (
+      app.typing === 'message' &&
+      (key === 'ctrl+s' || key === 'cmd+return')
+    ) {
       consume();
       actions.setTyping(null);
       return void app.commit.commit();
@@ -108,8 +112,10 @@ function dispatchKey(app: AppState, key: string, consume: () => void) {
     if (key === 'escape' || (key === 'return' && app.typing !== 'message')) {
       consume();
       actions.setTyping(null);
+      return;
     }
-    return;
+    if (!key.startsWith('cmd+')) return;
+    actions.setTyping(null);
   }
   const command = findCommand(app, key);
   if (!command) return;

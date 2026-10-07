@@ -5,6 +5,7 @@ import { paintFileHeader, paintRow } from '../render/diffRows';
 import { useAppContext } from './AppContext';
 import { Line } from './Line';
 import { useDoubleClick } from './useDoubleClick';
+import { useWheel } from './useWheel';
 
 export interface DiffPaneProps {
   view: DiffView;
@@ -14,7 +15,6 @@ export interface DiffPaneProps {
   sticky: boolean;
 }
 
-const WHEEL_STEP = 3;
 const CHEVRON_CELLS = 4;
 
 /** A virtualized diff or file: only the rows in view are drawn. */
@@ -22,6 +22,7 @@ export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
   const app = useAppContext();
   const { palette } = app;
   const isDoubleClick = useDoubleClick();
+  const wheel = useWheel(view.scrollBy);
   const { rows, stops } = view.layout;
   const visible = rows.slice(view.top, view.top + height);
   const cursor = view.stop
@@ -35,10 +36,7 @@ export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
       width={width}
       height={height}
       backgroundColor={palette.island}
-      onMouseScroll={(event) => {
-        if (event.scroll?.direction === 'up') view.scrollBy(-WHEEL_STEP);
-        if (event.scroll?.direction === 'down') view.scrollBy(WHEEL_STEP);
-      }}
+      onMouseScroll={wheel}
     >
       {visible.map((row, i) => {
         const index = view.top + i;

@@ -419,7 +419,7 @@ function cardBox(
   comment: ReviewComment,
 ): [left: number, width: number] {
   const { geometry } = ctx;
-  if (ctx.view === 'unified') {
+  if (ctx.view !== 'split') {
     return [geometry.gutter, cardWidth(geometry, ctx.width)];
   }
   const offset = comment.side === 'additions' ? geometry.half + 1 : 0;

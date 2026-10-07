@@ -1,125 +1,94 @@
-import * as React from 'react';
-import { COMMANDS } from '../app/commands';
+import { describeThemes } from '@reviewer/core/themes';
 import { describeTarget } from '../app/comparison';
-import { keyLabel } from '../app/keys';
-import { grep } from '../git/files';
-import type { GrepMatch } from '../git/files';
-import { STATUS_LETTER } from '../render/listItems';
-import { truncate } from '../text/measure';
+import { TERMINAL_THEME } from '../store/settings';
 import { ago } from '../text/time';
 import { useAppContext } from './AppContext';
 import { Picker } from './Picker';
 
-const SEARCH_DEBOUNCE_MS = 180;
+const APPEARANCE_LABEL = { system: 'System', light: 'Light', dark: 'Dark' };
 
-/** Go to file: the whole project on Browse, the changed files on Review. */
-export function FilePicker() {
+/** Theme and appearance, as the Mac app's settings; moving previews live. */
+export function ThemePicker() {
   const app = useAppContext();
-  const { palette, review, workspace, actions } = app;
-  const isReview = workspace.surface === 'review';
-  const options = isReview
-    ? review.files.map((file) => ({
-        key: file.path,
-        label: file.path,
-        hint: `${STATUS_LETTER[file.status]}  +${file.additions} −${file.deletions}`,
-        hintColor: palette.gitStatus[file.status],
-      }))
-    : review.projectFiles.map((path) => {
-        const status = review.statusMap.get(path);
-        return {
-          key: path,
-          label: path,
-          hint: status ? STATUS_LETTER[status] : '',
-          hintColor: status ? palette.gitStatus[status] : undefined,
-        };
-      });
-  return (
-    <Picker
-      palette={palette}
-      screen={app.screen}
-      title={isReview ? 'Go to changed file' : 'Go to file'}
-      placeholder="Search files by name…"
-      options={options}
-      onClose={actions.closeOverlay}
-      onPick={(option) => {
-        actions.closeOverlay();
-        if (isReview) actions.showInDiff(option.key);
-        else actions.openFile(option.key);
-        actions.setFocus('main');
-      }}
-    />
-  );
-}
-
-/** Every command, by name — the ⌘K palette. */
-export function CommandPalette() {
-  const app = useAppContext();
-  const options = COMMANDS.filter((command) => command.palette).map(
-    (command) => ({
-      key: command.id,
-      label: capitalize(command.title),
-      hint: command.keys[0] ? keyLabel(command.keys[0]) : '',
-    }),
-  );
-  return (
-    <Picker
-      palette={app.palette}
-      screen={app.screen}
-      title="Commands"
-      placeholder="Type a command…"
-      options={options}
-      onClose={app.actions.closeOverlay}
-      onPick={(option) => {
-        app.actions.closeOverlay();
-        COMMANDS.find((command) => command.id === option.key)?.run(app);
-      }}
-    />
-  );
-}
-
-/** `git grep` across the working tree; picking opens the file at the line. */
-export function SearchPicker() {
-  const app = useAppContext();
-  const { palette, review, actions } = app;
-  const [matches, setMatches] = React.useState<GrepMatch[]>([]);
-  const [query, setQuery] = React.useState('');
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      void grep(review.root, query).then(
-        (found) => !cancelled && setMatches(found),
-      );
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query, review.root]);
+  const { palette, themes, actions, review } = app;
+  const { settings } = themes;
+  const chosen = (name: string) =>
+    [
+      settings.lightTheme === name ? 'light' : '',
+      settings.darkTheme === name ? 'dark' : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  const options = [
+    {
+      key: TERMINAL_THEME,
+      label: 'Terminal — its own background and colours',
+      group: 'Terminal',
+      hint: chosen(TERMINAL_THEME),
+      hintColor: palette.accent,
+    },
+    ...(['light', 'dark'] as const).flatMap((scheme) =>
+      describeThemes()
+        .filter((theme) => theme.colorScheme === scheme)
+        .map((theme) => ({
+          key: theme.name,
+          label: theme.displayName,
+          group: scheme === 'light' ? 'Light themes' : 'Dark themes',
+          hint: chosen(theme.name),
+          hintColor: palette.accent,
+        })),
+    ),
+  ];
+  const appearance = (['system', 'light', 'dark'] as const).flatMap((mode) => {
+    const on = settings.appearance === mode;
+    return [
+      {
+        text: ` ${APPEARANCE_LABEL[mode]} `,
+        fg: on ? palette.accentInk : palette.muted,
+        bg: on ? palette.accent : palette.popover,
+        bold: on,
+      },
+      { text: ' ' },
+    ];
+  });
+  const close = () => {
+    themes.preview(null);
+    actions.closeOverlay();
+  };
+  const cycle = () => themes.cycleAppearance();
 
   return (
     <Picker
       palette={palette}
       screen={app.screen}
-      title="Search in files"
-      placeholder="Search text…"
-      filter={false}
-      onQueryChange={setQuery}
-      emptyText={
-        query.trim().length < 2 ? 'Type at least two characters' : 'No matches'
-      }
-      options={matches.map((match) => ({
-        key: `${match.path}:${match.line}`,
-        label: `${match.path}:${match.line}`,
-        hint: truncate(match.text, 40),
-      }))}
-      onClose={actions.closeOverlay}
+      title="Theme"
+      placeholder="Search themes…"
+      options={options}
+      initialKey={themes.look.name}
+      onHighlight={(option) => themes.preview(option.key)}
+      footer={[
+        { text: ' Appearance  ', fg: palette.faint },
+        ...appearance,
+        {
+          text: ` tab · now ${themes.scheme}`,
+          fg: palette.faint,
+        },
+      ]}
+      onFooterPress={cycle}
+      onKey={(key) => {
+        if (key !== 'tab') return false;
+        cycle();
+        return true;
+      }}
+      onClose={close}
       onPick={(option) => {
-        const match = matches.find((m) => `${m.path}:${m.line}` === option.key);
+        const scheme = themes.choose(option.key);
         actions.closeOverlay();
-        if (!match) return;
-        actions.openFile(match.path, { line: match.line });
-        actions.setFocus('main');
+        if (scheme !== 'both' && scheme !== themes.scheme)
+          review.notify(
+            'info',
+            `${option.label} is your ${scheme} theme — it shows when the appearance is ${scheme}`,
+          );
       }}
     />
   );
@@ -150,8 +119,4 @@ export function CommentsPicker() {
       }}
     />
   );
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }

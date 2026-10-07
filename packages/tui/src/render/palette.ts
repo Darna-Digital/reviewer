@@ -1,8 +1,11 @@
 import { RGBA } from '@opentui/core';
 import type { ChromeTokens } from '@reviewer/core/themes';
+import type { AnsiColors } from '../theme/terminalTheme';
 
 export interface Palette {
   scheme: 'light' | 'dark';
+  /** Frame and island let the terminal's own background through. */
+  transparent: boolean;
   /** Header, status bar and sidebar. */
   frame: string;
   /** Where code sits. */
@@ -64,18 +67,35 @@ export function mix(bottom: string, top: string, amount = 1): string {
   );
 }
 
-/** The app's chrome tokens, plus the tints a terminal diff needs. */
-export function createPalette(chrome: ChromeTokens): Palette {
+export interface PaletteOptions {
+  transparent?: boolean;
+  /** The terminal's ANSI colours, used for status and graph colours. */
+  ansi?: AnsiColors | null;
+}
+
+/**
+ * The app's chrome tokens, plus the tints a terminal diff needs. A
+ * transparent palette keeps the colour in the hex (tints are still mixed
+ * over it) and zeroes the alpha, which OpenTUI draws as the default background.
+ */
+export function createPalette(
+  chrome: ChromeTokens,
+  opts: PaletteOptions = {},
+): Palette {
   const dark = chrome.colorScheme === 'dark';
-  const { island, frame } = chrome;
+  const transparent = opts.transparent ?? false;
+  const island = chrome.island;
+  const frame = transparent ? island : chrome.frame;
+  const ansi = opts.ansi ?? null;
   const tint = dark ? 1 : 0.8;
-  const warning = dark ? '#e5c07b' : '#b58407';
-  const renamed = dark ? '#c792ea' : '#8250df';
+  const warning = ansi?.yellow ?? (dark ? '#e5c07b' : '#b58407');
+  const renamed = ansi?.magenta ?? (dark ? '#c792ea' : '#8250df');
 
   return {
     scheme: chrome.colorScheme,
-    frame,
-    island,
+    transparent,
+    frame: transparent ? clear(frame) : frame,
+    island: transparent ? clear(island) : island,
     control: chrome.control,
     popover: chrome.popover,
     text: chrome.text,
@@ -105,38 +125,53 @@ export function createPalette(chrome: ChromeTokens): Palette {
       lineNumber: chrome.textTertiary,
       fileBg: mix(island, chrome.text, 0.05),
     },
-    gitStatus: dark
+    gitStatus: ansi
       ? {
-          added: '#00cab1',
-          untracked: '#00cab1',
-          modified: '#08c0ef',
-          deleted: '#ff6762',
-          renamed: '#ffd452',
+          added: ansi.green,
+          untracked: ansi.green,
+          modified: ansi.cyan,
+          deleted: ansi.red,
+          renamed: ansi.yellow,
         }
-      : {
-          added: '#16a994',
-          untracked: '#16a994',
-          modified: '#1ca1c7',
-          deleted: '#ff2e3f',
-          renamed: '#d5a910',
-        },
+      : dark
+        ? {
+            added: '#00cab1',
+            untracked: '#00cab1',
+            modified: '#08c0ef',
+            deleted: '#ff6762',
+            renamed: '#ffd452',
+          }
+        : {
+            added: '#16a994',
+            untracked: '#16a994',
+            modified: '#1ca1c7',
+            deleted: '#ff2e3f',
+            renamed: '#d5a910',
+          },
     process: {
       running: chrome.added,
       failed: chrome.deleted,
       idle: chrome.textTertiary,
     },
     // the Mac history graph's lane colours
-    lanes: [
-      '#5b9bf8',
-      '#48b884',
-      '#e0533d',
-      '#d8a13a',
-      '#a86fd4',
-      '#3bb0c9',
-      '#e06fa8',
-      '#8c9440',
-    ],
+    lanes: ansi
+      ? [ansi.blue, ansi.green, ansi.red, ansi.yellow, ansi.magenta, ansi.cyan]
+      : [
+          '#5b9bf8',
+          '#48b884',
+          '#e0533d',
+          '#d8a13a',
+          '#a86fd4',
+          '#3bb0c9',
+          '#e06fa8',
+          '#8c9440',
+        ],
   };
+}
+
+/** Same colour, alpha zero: drawn as the terminal's default background. */
+function clear(color: string): string {
+  return `${color.slice(0, 7)}00`;
 }
 
 const rgbaCache = new Map<string, RGBA>();

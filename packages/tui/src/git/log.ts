@@ -2,18 +2,12 @@ import { git, US } from './exec';
 
 export interface LogCommit {
   sha: string;
+  parents: string[];
   shortSha: string;
   author: string;
   date: string;
   subject: string;
   refs: string[];
-}
-
-export interface LogRow {
-  /** Graph drawing to the left of the row. */
-  graph: string;
-  /** `null` for rows that only carry graph edges. */
-  commit: LogCommit | null;
 }
 
 export interface CommitDetail extends LogCommit {
@@ -35,50 +29,59 @@ export interface LogOptions {
   path?: string | null;
 }
 
-/** The log with its graph; filtered logs drop the graph, which would lie. */
+/** Whether a log is narrowed, so its parent links no longer make a graph. */
+export function isFilteredLog(
+  opts: Pick<LogOptions, 'grep' | 'path'>,
+): boolean {
+  return (opts.grep?.trim() ?? '').length > 0 || !!opts.path;
+}
+
+/** The log, children first, with each commit's parents for the graph. */
 export async function readLog(
   root: string,
   opts: LogOptions,
-): Promise<LogRow[]> {
+): Promise<LogCommit[]> {
   const grep = opts.grep?.trim() ?? '';
-  const filtered = grep.length > 0 || !!opts.path;
   const isHash = /^[0-9a-f]{4,40}$/i.test(grep);
   const out = await git(
     root,
     [
       'log',
-      ...(filtered ? [] : ['--graph']),
       '--date-order',
       `-n${opts.limit}`,
-      `--format=${US}%H${US}%h${US}%an${US}%aI${US}%s${US}%D`,
+      `--format=%H${US}%P${US}%h${US}%an${US}%aI${US}%s${US}%D`,
       ...(grep && !isHash ? ['-i', '--fixed-strings', `--grep=${grep}`] : []),
       opts.all ? '--all' : 'HEAD',
       ...(opts.path ? ['--', opts.path] : []),
     ],
     [0, 128],
   );
-  const rows = out
+  const commits = out
     .split('\n')
     .filter(Boolean)
-    .map((line): LogRow => {
-      const at = line.indexOf(US);
-      if (at === -1) return { graph: line.trimEnd(), commit: null };
+    .map((line): LogCommit => {
       const [
         sha = '',
+        parents = '',
         shortSha = '',
         author = '',
         date = '',
         subject = '',
         refs = '',
-      ] = line.slice(at + 1).split(US);
+      ] = line.split(US);
       return {
-        graph: line.slice(0, at).trimEnd() || '*',
-        commit: { sha, shortSha, author, date, subject, refs: parseRefs(refs) },
+        sha,
+        parents: parents.split(' ').filter(Boolean),
+        shortSha,
+        author,
+        date,
+        subject,
+        refs: parseRefs(refs),
       };
     });
   return isHash
-    ? rows.filter((row) => row.commit?.sha.startsWith(grep.toLowerCase()))
-    : rows;
+    ? commits.filter((commit) => commit.sha.startsWith(grep.toLowerCase()))
+    : commits;
 }
 
 export async function readCommitFiles(
@@ -121,11 +124,12 @@ export async function readCommit(
   const out = await git(root, [
     'show',
     '-s',
-    `--format=%H${US}%h${US}%an${US}%ae${US}%aI${US}%s${US}%D${US}%b`,
+    `--format=%H${US}%P${US}%h${US}%an${US}%ae${US}%aI${US}%s${US}%D${US}%b`,
     sha,
   ]);
   const [
     full = sha,
+    parents = '',
     shortSha = '',
     author = '',
     email = '',
@@ -136,6 +140,7 @@ export async function readCommit(
   ] = out.split(US);
   return {
     sha: full,
+    parents: parents.split(' ').filter(Boolean),
     shortSha,
     author,
     email,

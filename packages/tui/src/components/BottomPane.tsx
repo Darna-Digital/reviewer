@@ -5,7 +5,6 @@ import { BOTTOM_TABS } from '../app/useWorkspace';
 import type { BottomTab } from '../app/useWorkspace';
 import { mix } from '../render/palette';
 import { useAppContext } from './AppContext';
-import { BranchesPane } from './BranchesPane';
 import { captureMouse } from './captureMouse';
 import { HistoryPane } from './HistoryPane';
 import { Button, Line } from './Line';
@@ -13,7 +12,6 @@ import { RunPane } from './RunPane';
 import { TerminalPane } from './TerminalPane';
 
 const LABEL: Record<BottomTab, string> = {
-  branches: 'Branches',
   history: 'History',
   terminal: 'Terminal',
   run: 'Run',
@@ -102,9 +100,6 @@ export function BottomPane() {
           onPress={actions.toggleBottom}
         />
       </box>
-      {workspace.bottomTab === 'branches' ? (
-        <BranchesPane height={height} focused={focused} />
-      ) : null}
       {workspace.bottomTab === 'history' ? (
         <HistoryPane height={height} focused={focused} />
       ) : null}

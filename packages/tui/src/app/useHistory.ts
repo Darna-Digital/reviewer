@@ -1,6 +1,12 @@
 import * as React from 'react';
-import { readCommit, readCommitFiles, readLog } from '../git/log';
-import type { CommitDetail, CommitFile, LogRow } from '../git/log';
+import { layoutGraph } from '../git/graph';
+import {
+  isFilteredLog,
+  readCommit,
+  readCommitFiles,
+  readLog,
+} from '../git/log';
+import type { CommitDetail, CommitFile, LogCommit } from '../git/log';
 import type { Review } from './useReview';
 
 export type History = ReturnType<typeof useHistory>;
@@ -9,7 +15,7 @@ const PAGE = 300;
 
 /** The History pane: the log under its filters, and the selected commit. */
 export function useHistory(review: Review, visible: boolean) {
-  const [rows, setRows] = React.useState<LogRow[]>([]);
+  const [commits, setCommits] = React.useState<LogCommit[]>([]);
   const [all, setAll] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [path, setPath] = React.useState<string | null>(null);
@@ -24,8 +30,8 @@ export function useHistory(review: Review, visible: boolean) {
     if (!visible) return;
     let cancelled = false;
     void readLog(review.root, { all, limit: PAGE, grep: query, path }).then(
-      (next) => !cancelled && setRows(next),
-      () => !cancelled && setRows([]),
+      (next) => !cancelled && setCommits(next),
+      () => !cancelled && setCommits([]),
     );
     return () => {
       cancelled = true;
@@ -47,13 +53,19 @@ export function useHistory(review: Review, visible: boolean) {
     };
   }, [review.root, selectedSha]);
 
-  const commits = rows.filter((row) => row.commit);
+  const filtered = isFilteredLog({ grep: query, path });
+  const graph = React.useMemo(
+    () => (filtered ? null : layoutGraph(commits)),
+    [commits, filtered],
+  );
   const selectedIndex = commits.findIndex(
-    (row) => row.commit?.sha === selectedSha,
+    (commit) => commit.sha === selectedSha,
   );
 
   return {
-    rows,
+    commits,
+    /** One row per commit; `null` when filters make the parent links lie. */
+    graph,
     all,
     toggleAll: () => setAll((on) => !on),
     query,
@@ -62,14 +74,18 @@ export function useHistory(review: Review, visible: boolean) {
     /** Narrows the log to one file (the tree's "Show history"). */
     setPath,
     selectedSha,
+    selectedIndex,
     detail,
     select: setSelectedSha,
-    step(delta: number) {
+    /** Selects the commit `delta` away and returns its sha. */
+    step(delta: number): string | null {
       const next =
         commits[
           Math.max(0, Math.min(commits.length - 1, selectedIndex + delta))
         ];
-      if (next?.commit) setSelectedSha(next.commit.sha);
+      if (!next) return null;
+      setSelectedSha(next.sha);
+      return next.sha;
     },
   };
 }

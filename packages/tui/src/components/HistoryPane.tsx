@@ -28,8 +28,10 @@ export function HistoryPane({
   const listWidth = width - detailsWidth - (detailsWidth ? 1 : 0);
   const items = historyItems(
     palette,
-    history.rows,
+    history.commits,
+    history.graph,
     review.comparison.kind === 'commit' ? review.comparison.sha : null,
+    viewportAround(history.selectedIndex, height),
   );
   const bg = palette.frame;
 
@@ -105,6 +107,7 @@ export function HistoryPane({
           onSelect={(item) => {
             actions.setFocus('bottom');
             history.select(item.key);
+            actions.showCommit(item.key);
           }}
           onActivate={(item) => actions.showCommit(item.key)}
           onContextMenu={(item, at) =>
@@ -116,7 +119,7 @@ export function HistoryPane({
               { label: 'Copy hash', run: () => actions.copy(item.key) },
             ])
           }
-          onScroll={(delta) => history.step(delta)}
+          onScroll={(delta) => actions.stepHistory(delta)}
         />
         {history.detail ? (
           <>
@@ -188,4 +191,10 @@ function Details({ width, height }: { width: number; height: number }) {
       />
     </box>
   );
+}
+
+/** A screen of commits either side of the selection. */
+function viewportAround(selected: number, height: number) {
+  const at = Math.max(0, selected);
+  return { from: Math.max(0, at - height), to: at + height };
 }

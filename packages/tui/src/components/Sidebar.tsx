@@ -3,6 +3,8 @@ import { COMMIT_BOX_HEIGHT } from '../app/useApp';
 import type { Check } from '../render/listItems';
 import { treeItems } from '../render/listItems';
 import { mix } from '../render/palette';
+import { segsWidth } from '../render/styled';
+import type { Seg } from '../render/styled';
 import type { TreeNode } from '../tree/fileTree';
 import { truncate } from '../text/measure';
 import { useAppContext } from './AppContext';
@@ -85,6 +87,32 @@ function Header() {
   const chip = mix(bg, palette.text, 0.07);
   const half = Math.floor((layout.sidebarWidth - 2) / 2);
   const branch = review.repo?.branch ?? 'No branch';
+  const ahead = review.status?.ahead ?? 0;
+  const behind = review.status?.behind ?? 0;
+  const drift: Seg[] = [
+    ...(behind ? [{ text: ` ↓${behind}`, fg: palette.warning, bg: chip }] : []),
+    ...(ahead ? [{ text: ` ↑${ahead}`, fg: palette.added, bg: chip }] : []),
+  ];
+  const branchSegs: Seg[] = [
+    { text: ' ⎇ ', fg: palette.faint, bg: chip },
+    {
+      text: truncate(branch, half - 6 - segsWidth(drift)),
+      fg: palette.text,
+      bg: chip,
+      bold: true,
+    },
+    ...drift,
+    { text: ' ▾ ', fg: palette.faint, bg: chip },
+  ];
+  const targetSegs: Seg[] = [
+    { text: ' ⇄ ', fg: palette.accent, bg: chip },
+    {
+      text: truncate(describeComparison(review.comparison), half - 6),
+      fg: palette.text,
+      bg: chip,
+    },
+    { text: ' ▾ ', fg: palette.faint, bg: chip },
+  ];
   return (
     <box
       flexDirection="row"
@@ -93,35 +121,23 @@ function Header() {
       backgroundColor={bg}
     >
       <Button
-        segs={[
-          { text: ' ⎇ ', fg: palette.faint, bg: chip },
-          {
-            text: truncate(branch, half - 6),
-            fg: palette.text,
-            bg: chip,
-            bold: true,
-          },
-          { text: ' ▾ ', fg: palette.faint, bg: chip },
-        ]}
+        segs={branchSegs}
         bg={chip}
         hoverTint={palette.text}
-        onPress={() => actions.toggleBottomTab('branches')}
+        onPress={() => actions.openBranches({ x: 0, y: 2 })}
       />
       <box flexGrow={1} height={1} backgroundColor={bg} />
       {workspace.surface === 'review' ? (
         <Button
-          segs={[
-            { text: ' ⇄ ', fg: palette.accent, bg: chip },
-            {
-              text: truncate(describeComparison(review.comparison), half - 6),
-              fg: palette.text,
-              bg: chip,
-            },
-            { text: ' ▾ ', fg: palette.faint, bg: chip },
-          ]}
+          segs={targetSegs}
           bg={chip}
           hoverTint={palette.accent}
-          onPress={() => actions.openOverlay({ kind: 'targets' })}
+          onPress={() =>
+            actions.openTargets({
+              x: layout.sidebarWidth - 1 - segsWidth(targetSegs),
+              y: 2,
+            })
+          }
         />
       ) : null}
       <Line segs={[{ text: ' ' }]} width={1} fill={bg} />

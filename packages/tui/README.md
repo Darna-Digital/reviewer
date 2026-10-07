@@ -9,19 +9,20 @@ pnpm tui                     # the repository you run it from
 bun packages/tui/src/main.tsx ~/code/app --against main
 ```
 
-| Option            | Does                                                    |
-| ----------------- | ------------------------------------------------------- |
-| `[path]`          | Any path inside the repository (default: here)          |
-| `--against <ref>` | Read the branch against `<ref>`'s merge base            |
-| `--commit <sha>`  | Read one commit                                         |
-| `--theme <name>`  | Any theme in Reviewer's catalog (`--themes` lists them) |
-| `--light`         | The light default theme                                 |
+| Option            | Does                                                      |
+| ----------------- | --------------------------------------------------------- |
+| `[path]`          | Any path inside the repository (default: here)            |
+| `--against <ref>` | Read the branch against `<ref>`'s merge base              |
+| `--commit <sha>`  | Read one commit                                           |
+| `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`) |
+| `--light`         | This run only: the light default theme                    |
+| `--no-server`     | Leave the Reviewer server alone                           |
 
 ### Install
 
 ```bash
-pnpm install:tui             # builds dist/reviewer-tui and puts it in ~/.local/bin
-reviewer-tui                 # then, in any repository
+pnpm install:tui             # builds dist/reviewer and puts it in ~/.local/bin
+reviewer                     # then, in any repository
 ```
 
 The build is one self-contained binary (`bun build --compile`): Bun, the
@@ -31,6 +32,27 @@ installs it elsewhere; run the same command again to update it.
 
 With no option it opens where the Mac app would: the branch against the
 target recorded for it, or the uncommitted work.
+
+### The Reviewer server
+
+On launch it checks for the Reviewer server on `127.0.0.1:41811`
+(`REVIEWER_PORT`) the way the Mac app does, and starts it when nothing
+answers: from the Reviewer checkout the binary was built from, else from
+`/Applications/Reviewer.app`. It is started detached through a login shell
+and left running when the TUI quits — the Mac app and the
+`resolve-reviewer-comments` skill share it. Its output goes to
+`~/.reviewer/server.log`.
+
+### Theme
+
+By default it draws on the terminal's own background (transparent) and takes
+its foreground and ANSI colours; code keeps Reviewer's highlighting for the
+terminal's light or dark scheme. `⌘,` (or `⌃T`) opens the theme picker:
+moving through it previews each theme live, `tab` cycles the appearance —
+**System**, Light, Dark — and a theme is kept for its own scheme, as in the
+Mac app's settings (a light theme and a dark theme). With System it follows
+the OS appearance as it changes, and terminals that report colour-scheme
+changes repaint at once. Saved in `~/.reviewer/tui-settings.json`.
 
 ## Shared with the app
 
@@ -44,44 +66,69 @@ target recorded for it, or the uncommitted work.
   untracked files, a branch from its merge base through to the working tree.
 - **Colours** come from core's theme catalog and highlighter, so code is
   coloured exactly as in the app.
+- **The server**: started when it is not running (see above).
 
 ## Layout
 
 It is the Mac app's IDE, in a terminal:
 
-- **Top rail** — the project, Browse / Review, Fetch · Pull · Push, the
-  command palette.
-- **App rail** (left) — Browse `1`, Review `2`, Search `/`; then the bottom
-  pane's tabs: Branches `4`, History `5`, Terminal `6`, Run `7`.
-- **Sidebar** — the branch and compare chips, then the project tree (Browse)
+- **Top rail** — Browse · Review · Search (Search opens text search in the
+  palette).
+- **Sidebar** — the branch chip (with ↑ahead ↓behind) and the compare chip,
+  each opening a popover under it: the branch picker (Recent / Local /
+  Remote; `⏎` checks out, `tab` or right-click for every branch action,
+  `+ New branch…`) and the comparison picker. Then the project tree (Browse)
   or the changed files (Review) with the **commit box** under them: tick
   files, write or ✦ generate the message, Commit or Commit & push.
 - **Editor** — open-file tabs and the viewer (Browse), or the diff with its
   comparison and view toggles (Review). Comments work in both.
-- **Bottom pane** — Branches (Recent / Local / Remote and every branch
-  action), History (graph, filters, commit details), Terminal (real shells),
-  Run (the repository's services with live output).
-- **Bottom rail** — mode, live keys, each service's status, the branch.
+- **Bottom pane** — History (graph, filters, commit details — moving through it opens
+  each commit, with a `Browse › History › commit` trail under the diff to go
+  back), Terminal (real shells), Run (the repository's services with live
+  output).
+- **Palette** — the Mac app's: Commands at the root, with Files, Search
+  (text in files, with `Aa` case, `ab` whole word and `.*` regex — `⌥c`
+  `⌥w` `⌥r`) and Git › Branches under it. A breadcrumb shows where you are;
+  `⌫` on an empty field goes back up. Results are grouped by file with the
+  match marked, and the Files and Search queries are kept between openings.
+- **Comments** open in a popover under the line, lined up with the comment
+  cards: `⏎` saves, `⇧⏎` breaks the line, `esc` cancels.
+- **Bottom rail** — mode, live keys; the bottom pane's History · Terminal ·
+  Run toggles; each service's status.
 
 Services are the Mac app's Run commands, shared through the database; the TUI
 runs its own processes and stops them when it quits.
 
 ## Keys
 
-`?` lists every key; `^k` (or `:`) finds any command by name.
+The Mac app's shortcuts, where the terminal passes ⌘ through — that needs the
+kitty keyboard protocol (Ghostty, kitty, WezTerm, iTerm2 with CSI u) and ⌘
+not bound by the terminal itself. Each has a ⌃ or plain-key twin for
+terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay.
+`?` lists every key; the status bar shows the ones that work in yours.
 
-| Key              | Does                                              |
-| ---------------- | ------------------------------------------------- |
-| `tab`            | Sidebar → editor → bottom pane                    |
-| `1` `2`          | Browse · Review                                   |
-| `4` `5` `6` `7`  | Branches · History · Terminal · Run               |
-| `^b` · `\`       | Bottom pane · sidebar                             |
-| `p` · `/`        | Go to file · search in files                      |
-| `t` · `T`        | Compare against… · flip uncommitted ⇄ last branch |
-| `c` `e` `x`      | Comment on a line · edit · delete                 |
-| `space` `i` `^s` | Commit box: include file · message · commit       |
-| `^o`             | Leave a terminal you are typing into              |
-| `q`              | Quit                                              |
+| Mac       | Also           | Does                                         |
+| --------- | -------------- | -------------------------------------------- |
+| `⌘K`      | `⌃K` `:`       | Command palette                              |
+| `⇧⌘O`     | `⌃⇧O` `⌃P` `p` | Go to file                                   |
+| `⇧⌘F`     | `⌃⇧F` `/`      | Search in files                              |
+| `⌥⌘1` `2` | `1` `2`        | Browse · Review                              |
+| `⌥⌘4`     | `4`            | Switch branch (popover)                      |
+| `⌥⌘5`–`7` | `5`–`7`        | History · Terminal · Run                     |
+| `⌘B`      | `⌃B`           | Bottom pane                                  |
+| `⌃⌘S`     | `\`            | Sidebar                                      |
+| `⌘R`      | `⌃R` `r`       | Refresh                                      |
+| `⌘,`      | `⌃,` `⌃T`      | Theme & appearance                           |
+| `⇧⌘]` `[` | `]` `[`        | Next · previous tab                          |
+| `⌘W`      | `⌃W`           | Close tab                                    |
+| `⌘⏎`      | `⌃S`           | Commit (in the message box)                  |
+|           | `tab`          | Sidebar → editor → bottom pane               |
+|           | `t` · `T`      | Compare against… · uncommitted ⇄ last branch |
+|           | `c` `e` `x`    | Comment on a line · edit · delete            |
+|           | `space` `i`    | Commit box: include file · message           |
+|           | `esc`          | Back from a commit                           |
+|           | `^o`           | Leave a terminal you are typing into         |
+|           | `q`            | Quit                                         |
 
 ## Mouse
 
@@ -96,13 +143,20 @@ chip and button is clickable.
 bun test                       # parser, layout and store
 pnpm typecheck
 bun scripts/snapshot.tsx --input "3 j enter click:40,0" --out /tmp/frame.html
+bun scripts/bench.tsx --against v0.0.10  # frame times and event-loop stalls while scrolling
 ```
+
+Syntax highlighting runs in a worker (`diff/highlightWorker.ts`, bundled as a
+second entry point by `build:bin`), so a large file never freezes a frame.
 
 | Folder        | Holds                                                             |
 | ------------- | ----------------------------------------------------------------- |
 | `diff/`       | Parsing, inline changes, layout, highlighting — pure              |
 | `git/`        | One module per git concern: `exec`, `repo`, `diff`, `refs`, `log` |
-| `store/`      | The shared SQLite store                                           |
+| `store/`      | The shared SQLite store, and the TUI's layout and settings files  |
+| `theme/`      | Terminal colours, OS appearance, resolving the look               |
+| `search/`     | The palette's modes and fuzzy matching — pure                     |
+| `process/`    | Shells, services, and starting the Reviewer server                |
 | `render/`     | Painting rows into styled segments — pure                         |
 | `app/`        | Hooks, the command table (`commands.ts`) and `App`                |
 | `components/` | One component per piece of the screen                             |
@@ -112,4 +166,6 @@ one table, `app/commands.ts`.
 
 `scripts/snapshot.tsx` renders the app headlessly with OpenTUI's test
 renderer, plays the given keys and mouse events, and writes the frame as coloured HTML — a
-way to see a layout change without a terminal.
+way to see a layout change without a terminal. `--terminal-bg '#1e1e2e'`
+stands in for a terminal that reports its colours (the test renderer answers
+none); transparent cells are drawn on it.

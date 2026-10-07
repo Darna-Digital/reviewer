@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Overlay } from '../app/useApp';
 import {
   buildTargetOptions,
   describeDivergence,
@@ -19,7 +20,11 @@ const UNCOMMITTED = 'uncommitted';
  * HEAD has moved from each; `ctrl+r` (or clicking the toggle) also records
  * the pick as the branch's target, which the Mac app opens on too.
  */
-export function TargetPicker() {
+export function TargetPicker({
+  overlay,
+}: {
+  overlay: Extract<Overlay, { kind: 'targets' }>;
+}) {
   const app = useAppContext();
   const { palette, review, actions } = app;
   const current = review.repo?.branch ?? null;
@@ -94,6 +99,8 @@ export function TargetPicker() {
     <Picker
       palette={palette}
       screen={app.screen}
+      anchor={overlay.at}
+      width={72}
       title={current ? `Compare ${current} against` : 'Compare against'}
       placeholder="Search branches…"
       options={options}

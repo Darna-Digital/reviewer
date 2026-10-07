@@ -29,22 +29,38 @@ export interface PickerProps {
   /** Extra footer row, e.g. a toggle; clicking it calls `onFooterPress`. */
   footer?: Seg[];
   onFooterPress?: () => void;
-  /** Extra keys; return `true` when handled. */
-  onKey?: (key: string) => boolean;
+  /** Extra keys, given the highlighted option; return `true` when handled. */
+  onKey?: (key: string, option: PickerOption | undefined) => boolean;
+  /** Right-click on an option. */
+  onContextMenu?: (option: PickerOption, at: { x: number; y: number }) => void;
+  /** Opens as a popover hanging from this cell instead of centred. */
+  anchor?: { x: number; y: number };
+  /** Popover width; defaults to a centred dialog's. */
+  width?: number;
   /** `false` when the caller filters (async search); defaults to fuzzy matching here. */
   filter?: boolean;
   onQueryChange?: (query: string) => void;
   emptyText?: string;
+  /** Starts on this option. */
+  initialKey?: string;
+  /** Called as the selection moves, e.g. to preview it. */
+  onHighlight?: (option: PickerOption) => void;
 }
 
 const MAX_ROWS = 14;
 const WHEEL_STEP = 1;
+const RIGHT_BUTTON = 2;
 
 /** Fuzzy-filtered list with a search field; keyboard and mouse driven. */
 export function Picker(props: PickerProps) {
   const { palette, screen } = props;
   const [query, setQuery] = React.useState('');
-  const [index, setIndex] = React.useState(0);
+  const [index, setIndex] = React.useState(() =>
+    Math.max(
+      0,
+      props.options.findIndex((option) => option.key === props.initialKey),
+    ),
+  );
   const options = React.useMemo(
     () =>
       props.filter === false
@@ -53,6 +69,12 @@ export function Picker(props: PickerProps) {
     [props.options, props.filter, query],
   );
   const selected = Math.min(index, options.length - 1);
+  const highlighted = options[selected]?.key;
+  const { onHighlight } = props;
+  React.useEffect(() => {
+    const option = options.find((candidate) => candidate.key === highlighted);
+    if (option) onHighlight?.(option);
+  }, [highlighted]);
   const move = (delta: number) =>
     setIndex((i) => Math.max(0, Math.min(options.length - 1, i + delta)));
 
@@ -64,14 +86,25 @@ export function Picker(props: PickerProps) {
     else if (key === 'up' || key === 'ctrl+p') move(-1);
     else if (key === 'pagedown') move(10);
     else if (key === 'pageup') move(-10);
-    else if (!props.onKey?.(key)) return;
+    else if (!props.onKey?.(key, options[selected])) return;
     event.preventDefault();
   });
 
-  const width = Math.min(76, screen.width - 4);
+  const { anchor } = props;
+  const width = Math.min(props.width ?? 76, screen.width - 4);
   const inner = width - 2;
-  const listRows = Math.max(3, Math.min(MAX_ROWS, screen.height - 12));
-  const height = listRows + 5 + (props.footer ? 1 : 0);
+  const chrome = 5 + (props.footer ? 1 : 0);
+  const room = anchor
+    ? screen.height - anchor.y - 1 - chrome
+    : screen.height - 12;
+  const listRows = Math.max(3, Math.min(MAX_ROWS, room));
+  const height = listRows + chrome;
+  const left = anchor
+    ? Math.max(0, Math.min(anchor.x, screen.width - width))
+    : centered(screen.width, width);
+  const boxTop = anchor
+    ? Math.max(1, Math.min(anchor.y, screen.height - height))
+    : Math.max(1, centered(screen.height, height) - 2);
   const rows = layoutRows(palette, options, selected, inner);
   const selectedRow = rows.findIndex((row) => row.option === selected);
   const top = Math.max(
@@ -84,8 +117,8 @@ export function Picker(props: PickerProps) {
       <Backdrop onPress={props.onClose} />
       <box
         position="absolute"
-        left={centered(screen.width, width)}
-        top={Math.max(1, centered(screen.height, height) - 2)}
+        left={left}
+        top={boxTop}
         width={width}
         height={height}
         zIndex={20}
@@ -142,20 +175,23 @@ export function Picker(props: PickerProps) {
               fill={palette.popover}
             />
           ) : (
-            rows
-              .slice(top, top + listRows)
-              .map((row, i) => (
-                <Line
-                  key={top + i}
-                  segs={row.segs}
-                  width={inner}
-                  fill={palette.popover}
-                  onMouseDown={() => row.option !== null && pick(row.option)}
-                  onMouseOver={() =>
-                    row.option !== null && setIndex(row.option)
-                  }
-                />
-              ))
+            rows.slice(top, top + listRows).map((row, i) => (
+              <Line
+                key={top + i}
+                segs={row.segs}
+                width={inner}
+                fill={palette.popover}
+                onMouseDown={(event) => {
+                  if (row.option === null) return;
+                  const option = options[row.option];
+                  if (event.button === RIGHT_BUTTON && option) {
+                    setIndex(row.option);
+                    props.onContextMenu?.(option, { x: event.x, y: event.y });
+                  } else pick(row.option);
+                }}
+                onMouseOver={() => row.option !== null && setIndex(row.option)}
+              />
+            ))
           )}
         </box>
         {props.footer ? (

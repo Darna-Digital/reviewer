@@ -6,7 +6,6 @@ export type Scope =
   | 'commit'
   | 'diff'
   | 'viewer'
-  | 'branches'
   | 'history'
   | 'terminal'
   | 'run';
@@ -28,7 +27,7 @@ export const HELP_GROUPS: Array<{ title: string; scopes: Scope[] }> = [
   { title: 'Anywhere', scopes: ['global'] },
   { title: 'Sidebar', scopes: ['tree', 'commit'] },
   { title: 'Diff & file', scopes: ['diff', 'viewer'] },
-  { title: 'Bottom pane', scopes: ['branches', 'history', 'terminal', 'run'] },
+  { title: 'Bottom pane', scopes: ['history', 'terminal', 'run'] },
 ];
 
 const onCard = (app: App) => app.activeView.stop?.target.kind === 'comment';
@@ -52,9 +51,9 @@ export const COMMANDS: Command[] = [
   {
     id: 'palette',
     scope: 'global',
-    keys: ['ctrl+k', ':'],
+    keys: ['cmd+k', 'ctrl+k', ':'],
     title: 'command palette',
-    run: (app) => app.actions.openOverlay({ kind: 'palette' }),
+    run: (app) => app.actions.openPalette('commands'),
   },
   {
     id: 'quit',
@@ -81,7 +80,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'surface.browse',
     scope: 'global',
-    keys: ['1'],
+    keys: ['alt+cmd+1', '1'],
     title: 'browse the project',
     palette: true,
     run: (app) => app.actions.setSurface('browse'),
@@ -89,23 +88,23 @@ export const COMMANDS: Command[] = [
   {
     id: 'surface.review',
     scope: 'global',
-    keys: ['2'],
+    keys: ['alt+cmd+2', '2'],
     title: 'review changes',
     palette: true,
     run: (app) => app.actions.setSurface('review'),
   },
   {
-    id: 'bottom.branches',
+    id: 'branch.pick',
     scope: 'global',
-    keys: ['4'],
-    title: 'branches pane',
+    keys: ['alt+cmd+4', '4'],
+    title: 'switch branch…',
     palette: true,
-    run: (app) => app.actions.toggleBottomTab('branches'),
+    run: (app) => app.actions.openBranches(),
   },
   {
     id: 'bottom.history',
     scope: 'global',
-    keys: ['5'],
+    keys: ['alt+cmd+5', '5'],
     title: 'history pane',
     palette: true,
     run: (app) => app.actions.toggleBottomTab('history'),
@@ -113,7 +112,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'bottom.terminal',
     scope: 'global',
-    keys: ['6'],
+    keys: ['alt+cmd+6', '6'],
     title: 'terminal pane',
     palette: true,
     run: (app) => app.actions.toggleBottomTab('terminal'),
@@ -121,7 +120,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'bottom.run',
     scope: 'global',
-    keys: ['7'],
+    keys: ['alt+cmd+7', '7'],
     title: 'run pane (services)',
     palette: true,
     run: (app) => app.actions.toggleBottomTab('run'),
@@ -129,7 +128,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'bottom.toggle',
     scope: 'global',
-    keys: ['ctrl+b'],
+    keys: ['cmd+b', 'ctrl+b'],
     title: 'show / hide bottom pane',
     palette: true,
     run: (app) => app.actions.toggleBottom(),
@@ -137,7 +136,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'sidebar.toggle',
     scope: 'global',
-    keys: ['\\'],
+    keys: ['ctrl+cmd+s', '\\'],
     title: 'show / hide sidebar',
     palette: true,
     run: (app) => app.actions.toggleSidebar(),
@@ -149,7 +148,7 @@ export const COMMANDS: Command[] = [
     title: 'compare against…',
     hint: 'target',
     palette: true,
-    run: (app) => app.actions.openOverlay({ kind: 'targets' }),
+    run: (app) => app.actions.openTargets(),
   },
   {
     id: 'target.toggle',
@@ -162,19 +161,19 @@ export const COMMANDS: Command[] = [
   {
     id: 'file.find',
     scope: 'global',
-    keys: ['p'],
+    keys: ['cmd+shift+o', 'ctrl+shift+o', 'ctrl+p', 'p'],
     title: 'go to file…',
     hint: 'file',
     palette: true,
-    run: (app) => app.actions.openOverlay({ kind: 'files' }),
+    run: (app) => app.actions.openPalette('files'),
   },
   {
     id: 'search',
     scope: 'global',
-    keys: ['/'],
+    keys: ['cmd+shift+f', 'ctrl+shift+f', '/'],
     title: 'search in files…',
     palette: true,
-    run: (app) => app.actions.openOverlay({ kind: 'search' }),
+    run: (app) => app.actions.openPalette('text'),
   },
   {
     id: 'comments.list',
@@ -208,6 +207,25 @@ export const COMMANDS: Command[] = [
     title: 'show / hide comments',
     palette: true,
     run: (app) => app.activeView.setShowComments((s) => !s),
+  },
+  {
+    id: 'theme.pick',
+    scope: 'global',
+    keys: ['cmd+,', 'ctrl+,', 'ctrl+t'],
+    title: 'theme & appearance…',
+    palette: true,
+    run: (app) => app.actions.openOverlay({ kind: 'theme' }),
+  },
+  {
+    id: 'theme.appearance',
+    scope: 'global',
+    keys: [],
+    title: 'cycle appearance: system · light · dark',
+    palette: true,
+    run: (app) => {
+      const appearance = app.themes.cycleAppearance();
+      app.review.notify('info', `Appearance: ${appearance}`);
+    },
   },
   {
     id: 'git.fetch',
@@ -268,7 +286,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'refresh',
     scope: 'global',
-    keys: ['r'],
+    keys: ['cmd+r', 'ctrl+r', 'r'],
     title: 'refresh',
     palette: true,
     run: (app) => app.actions.refresh(),
@@ -423,7 +441,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'commit.commit',
     scope: 'commit',
-    keys: ['ctrl+s'],
+    keys: ['cmd+return', 'ctrl+s'],
     title: 'commit',
     hint: 'commit',
     palette: true,
@@ -608,7 +626,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'viewer.nextTab',
     scope: 'viewer',
-    keys: [']'],
+    keys: ['cmd+shift+]', ']'],
     title: 'next tab',
     hint: 'tab',
     run: (app) => app.editor.step(1),
@@ -616,14 +634,14 @@ export const COMMANDS: Command[] = [
   {
     id: 'viewer.prevTab',
     scope: 'viewer',
-    keys: ['['],
+    keys: ['cmd+shift+[', '['],
     title: 'previous tab',
     run: (app) => app.editor.step(-1),
   },
   {
     id: 'viewer.close',
     scope: 'viewer',
-    keys: ['ctrl+w'],
+    keys: ['cmd+w', 'ctrl+w'],
     title: 'close tab',
     hint: 'close',
     run: (app) => {
@@ -684,94 +702,20 @@ export const COMMANDS: Command[] = [
     },
   ]),
 
-  // branches pane
-  {
-    id: 'branches.down',
-    scope: 'branches',
-    keys: ['j', 'down'],
-    title: 'next branch',
-    run: (app) => app.branches.step(1),
-  },
-  {
-    id: 'branches.up',
-    scope: 'branches',
-    keys: ['k', 'up'],
-    title: 'previous branch',
-    run: (app) => app.branches.step(-1),
-  },
-  {
-    id: 'branches.checkout',
-    scope: 'branches',
-    keys: ['return'],
-    title: 'check out',
-    hint: 'checkout',
-    run: (app) => {
-      if (app.branches.selected)
-        app.actions.checkoutBranch(app.branches.selected);
-    },
-  },
-  {
-    id: 'branches.review',
-    scope: 'branches',
-    keys: ['c'],
-    title: 'review HEAD against it',
-    hint: 'compare',
-    run: (app) => {
-      if (app.branches.selected)
-        app.actions.pickTarget(app.branches.selected.name, false);
-    },
-  },
-  {
-    id: 'branches.new',
-    scope: 'branches',
-    keys: ['n'],
-    title: 'new branch from it…',
-    hint: 'new',
-    run: (app) => app.actions.newBranch(app.branches.selected),
-  },
-  {
-    id: 'branches.actions',
-    scope: 'branches',
-    keys: ['.', 'a'],
-    title: 'more actions…',
-    hint: 'actions',
-    run: (app) => {
-      if (app.branches.selected)
-        app.actions.branchMenu(app.branches.selected, {
-          x: app.layout.mainLeft + 4,
-          y: app.screen.height - app.layout.bottomHeight,
-        });
-    },
-  },
-  {
-    id: 'branches.filter',
-    scope: 'branches',
-    keys: ['f'],
-    title: 'filter branches',
-    run: (app) => app.actions.setTyping('branchFilter'),
-  },
-  {
-    id: 'branches.remote',
-    scope: 'branches',
-    keys: ['R'],
-    title: 'show / hide remotes',
-    run: (app) => app.branches.toggleRemote(),
-  },
-
   // history pane
   {
     id: 'history.down',
     scope: 'history',
     keys: ['j', 'down'],
     title: 'older commit',
-    run: (app) => app.history.step(1),
+    run: (app) => app.actions.stepHistory(1),
   },
   {
     id: 'history.up',
     scope: 'history',
     keys: ['k', 'up'],
     title: 'newer commit',
-    run: (app) => app.history.step(-1),
+    run: (app) => app.actions.stepHistory(-1),
   },
   {
     id: 'history.show',
@@ -938,6 +882,21 @@ export const COMMANDS: Command[] = [
     run: (app) => app.actions.capture(true),
   },
 ];
+
+const NEEDS_KITTY = /cmd\+|ctrl\+shift\+|ctrl\+,/;
+
+/**
+ * The key to show for a command: its ⌘ chord where the terminal speaks the
+ * kitty keyboard protocol, otherwise the first key any terminal can send.
+ */
+export function shownKey(
+  command: Command,
+  chords: boolean,
+): string | undefined {
+  return chords
+    ? command.keys[0]
+    : command.keys.find((key) => !NEEDS_KITTY.test(key));
+}
 
 /** Commands live right now, most specific scope first. */
 export function activeCommands(app: App): Command[] {

@@ -207,7 +207,7 @@ pnpm dev:mac  # build and open the debug app, in another
 | `pnpm dev:mac`      | Build and open the debug `Reviewer.app`            |
 | `pnpm dev:www`      | The reviewer.sh site                               |
 | `pnpm tui`          | The terminal UI, on the repository you are in      |
-| `pnpm install:tui`  | Build the terminal UI and install `reviewer-tui`   |
+| `pnpm install:tui`  | Build the terminal UI and install `reviewer`       |
 | `pnpm build:mac`    | A release build of `Reviewer.app`, as CI builds it |
 | `pnpm lint`         | ESLint across the workspace                        |
 | `pnpm format:check` | Prettier across the workspace                      |

@@ -4,6 +4,7 @@ import type { Palette } from '../render/palette';
 import type { Seg } from '../render/styled';
 import { Line } from './Line';
 import { useDoubleClick } from './useDoubleClick';
+import { useWheel } from './useWheel';
 
 export interface ListProps<TValue> {
   items: Array<ListItem<TValue>>;
@@ -27,7 +28,6 @@ export interface ListProps<TValue> {
 }
 
 const MARGIN = 2;
-const WHEEL_STEP = 3;
 const RIGHT_BUTTON = 2;
 
 /**
@@ -40,6 +40,7 @@ export function List<TValue>(props: ListProps<TValue>) {
   const top = React.useRef(0);
   const [hovered, setHovered] = React.useState<number | null>(null);
   const isDoubleClick = useDoubleClick();
+  const wheel = useWheel((rows) => props.onScroll?.(rows));
 
   const rows: Array<{ segs: Seg[]; item: number }> = [];
   let selectedStart = 0;
@@ -84,10 +85,7 @@ export function List<TValue>(props: ListProps<TValue>) {
       height={height}
       flexDirection="column"
       backgroundColor={bg}
-      onMouseScroll={(event) => {
-        if (event.scroll?.direction === 'up') props.onScroll?.(-WHEEL_STEP);
-        if (event.scroll?.direction === 'down') props.onScroll?.(WHEEL_STEP);
-      }}
+      onMouseScroll={wheel}
       onMouseOut={() => setHovered(null)}
     >
       {rows.slice(top.current, top.current + height).map((row, i) => (

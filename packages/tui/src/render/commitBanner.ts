@@ -7,7 +7,7 @@ import type { Seg } from './styled';
 
 const MAX_BODY_LINES = 4;
 
-/** The rows above a commit's diff: subject, author, message, way back. */
+/** The rows above a commit's diff: subject, author and message. */
 export function commitBanner(
   palette: Palette,
   commit: CommitDetail,
@@ -43,19 +43,5 @@ export function commitBanner(
       fitSegs([{ text: `      ${line}`, fg: palette.muted, bg }], width, bg),
     );
   }
-  rows.push(
-    fitSegs(
-      [
-        { text: '      esc', fg: palette.muted, bg, bold: true },
-        {
-          text: ' back to the change you were reviewing',
-          fg: palette.faint,
-          bg,
-        },
-      ],
-      width,
-      bg,
-    ),
-  );
   return rows;
 }

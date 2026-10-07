@@ -1,11 +1,20 @@
 import { highlightCode } from '@reviewer/core/themes';
 import type { CodeToken, loadTheme } from '@reviewer/core/themes';
+import type { HighlightReply, HighlightRequest } from './highlightWorker';
 import type { FileDiff } from './parseDiff';
 
 export type Theme = Awaited<NonNullable<ReturnType<typeof loadTheme>>>;
 export type LineTokens = CodeToken[];
 /** Tokens per hunk line, keyed by `lineKey`. */
 export type FileTokens = Map<string, LineTokens>;
+
+/**
+ * `build:bin` bundles the worker as a second entry point; inside the binary
+ * it is addressed relative to the entry's folder (`src/`), not this module.
+ */
+const WORKER_URL = import.meta.url.includes('$bunfs')
+  ? './diff/highlightWorker.ts'
+  : new URL('./highlightWorker.ts', import.meta.url).href;
 
 /** Sides past this are left plain rather than stall the UI. */
 const MAX_SIDE_CHARS = 200_000;
@@ -105,10 +114,67 @@ function highlightSide(
     pending =
       text.length > MAX_SIDE_CHARS
         ? Promise.resolve([])
-        : highlightCode(text, language, theme)
-            .then((result) => result.lines.map((line) => [...line]))
-            .catch(() => []);
+        : tokenize(text, language, theme, themeName);
     cache.set(key, pending);
   }
   return pending;
+}
+
+interface Job {
+  text: string;
+  language: string;
+  theme: Theme;
+  resolve: (lines: LineTokens[]) => void;
+}
+
+let worker: Worker | null | undefined;
+let nextId = 0;
+const waiting = new Map<number, Job>();
+
+/** In the highlight worker when there is one, so scrolling never waits on a grammar. */
+function tokenize(
+  text: string,
+  language: string,
+  theme: Theme,
+  themeName: string,
+): Promise<LineTokens[]> {
+  return new Promise((resolve) => {
+    const job = { text, language, theme, resolve };
+    const thread = highlightWorker();
+    if (!thread) return void inline(job);
+    const id = (nextId += 1);
+    waiting.set(id, job);
+    thread.postMessage({
+      id,
+      text,
+      language,
+      themeName,
+    } satisfies HighlightRequest);
+  });
+}
+
+function highlightWorker(): Worker | null {
+  if (worker !== undefined) return worker;
+  try {
+    worker = new Worker(WORKER_URL);
+    worker.onmessage = (event: MessageEvent<HighlightReply>) => {
+      waiting.get(event.data.id)?.resolve(event.data.lines);
+      waiting.delete(event.data.id);
+    };
+    worker.onerror = () => {
+      worker = null;
+      for (const job of waiting.values()) inline(job);
+      waiting.clear();
+    };
+  } catch {
+    worker = null;
+  }
+  return worker;
+}
+
+function inline(job: Job) {
+  highlightCode(job.text, job.language, job.theme).then(
+    (result) => job.resolve(result.lines.map((line) => [...line])),
+    () => job.resolve([]),
+  );
 }

@@ -6,13 +6,7 @@ export type Surface = UiState['surface'];
 export type BottomTab = UiState['bottomTab'];
 export type Workspace = ReturnType<typeof useWorkspace>;
 
-export const BOTTOM_TABS: BottomTab[] = [
-  'branches',
-  'history',
-  'terminal',
-  'run',
-];
-export const RAIL_WIDTH = 3;
+export const BOTTOM_TABS: BottomTab[] = ['history', 'terminal', 'run'];
 
 const DEFAULT_SIDEBAR_SHARE = 0.24;
 const MIN_SIDEBAR = 24;
@@ -40,7 +34,7 @@ export function useWorkspace(
     ? clamp(
         state.sidebarWidth ?? Math.round(screen.width * DEFAULT_SIDEBAR_SHARE),
         MIN_SIDEBAR,
-        screen.width - RAIL_WIDTH - MIN_MAIN,
+        screen.width - MIN_MAIN,
       )
     : 0;
   const bodyHeight = screen.height - 2;
@@ -61,11 +55,7 @@ export function useWorkspace(
     sidebarWidth,
     resizeSidebar: (width: number) =>
       update({
-        sidebarWidth: clamp(
-          width,
-          MIN_SIDEBAR,
-          screen.width - RAIL_WIDTH - MIN_MAIN,
-        ),
+        sidebarWidth: clamp(width, MIN_SIDEBAR, screen.width - MIN_MAIN),
       }),
     bottomOpen: state.bottomOpen,
     bottomTab: state.bottomTab,

@@ -1,4 +1,5 @@
 import { describeComparison } from '../app/comparison';
+import { Breadcrumbs } from './Breadcrumbs';
 import { mix } from '../render/palette';
 import { segsWidth } from '../render/styled';
 import type { Seg } from '../render/styled';
@@ -6,6 +7,7 @@ import { truncate } from '../text/measure';
 import { useAppContext } from './AppContext';
 import { DiffPane } from './DiffPane';
 import { Button, Line } from './Line';
+import { useDoubleClick } from './useDoubleClick';
 
 /** The editor island: its header row, then the diff (Review) or the open file (Browse). */
 export function Editor() {
@@ -31,6 +33,7 @@ export function Editor() {
           ))
         : null}
       <Content />
+      {app.crumbs ? <Breadcrumbs /> : null}
     </box>
   );
 }
@@ -205,7 +208,7 @@ function ReviewHeader() {
         segs={summary}
         bg={bg}
         hoverTint={palette.text}
-        onPress={() => actions.openOverlay({ kind: 'targets' })}
+        onPress={() => actions.openTargets({ x: layout.mainLeft, y: 2 })}
       />
       <box flexGrow={1} height={1} backgroundColor={bg} />
       <Toggle
@@ -233,8 +236,10 @@ function ReviewHeader() {
   );
 }
 
+/** Open-file tabs; double-click keeps a preview (italic) tab open, as on the Mac. */
 function TabStrip() {
   const { palette, layout, editor } = useAppContext();
+  const isDoubleClick = useDoubleClick();
   const bg = palette.frame;
   return (
     <box
@@ -269,7 +274,11 @@ function TabStrip() {
               ]}
               bg={tabBg}
               hoverTint={palette.text}
-              onPress={() => editor.activate(tab.path)}
+              onPress={() =>
+                isDoubleClick(tab.path)
+                  ? editor.open(tab.path)
+                  : editor.activate(tab.path)
+              }
             />
             <Button
               segs={[{ text: '✕ ', fg: palette.faint, bg: tabBg }]}

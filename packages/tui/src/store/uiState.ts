@@ -7,16 +7,18 @@ export interface UiState {
   surface: 'browse' | 'review';
   sidebarWidth: number | null;
   bottomOpen: boolean;
-  bottomTab: 'branches' | 'history' | 'terminal' | 'run';
+  bottomTab: 'history' | 'terminal' | 'run';
   bottomHeight: number | null;
   commitMessage: string;
 }
+
+const BOTTOM_TABS: string[] = ['history', 'terminal', 'run'];
 
 export const DEFAULT_UI_STATE: UiState = {
   surface: 'review',
   sidebarWidth: null,
   bottomOpen: false,
-  bottomTab: 'branches',
+  bottomTab: 'history',
   bottomHeight: null,
   commitMessage: '',
 };
@@ -26,7 +28,10 @@ export function uiStatePath(): string {
 }
 
 export function loadUiState(root: string, path = uiStatePath()): UiState {
-  return { ...DEFAULT_UI_STATE, ...readAll(path)[root] };
+  const state = { ...DEFAULT_UI_STATE, ...readAll(path)[root] };
+  return BOTTOM_TABS.includes(state.bottomTab)
+    ? state
+    : { ...state, bottomTab: DEFAULT_UI_STATE.bottomTab };
 }
 
 export function saveUiState(
