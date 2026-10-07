@@ -44,7 +44,7 @@ export function Composer({ overlay }: { overlay: ComposeOverlay }) {
         fill={palette.control}
       />
       <textarea
-        ref={app.textarea}
+        ref={app.commentBox}
         focused
         initialValue={editing?.body ?? ''}
         placeholder="Leave a comment…"

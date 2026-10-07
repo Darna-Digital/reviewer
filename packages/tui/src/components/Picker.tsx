@@ -31,6 +31,10 @@ export interface PickerProps {
   onFooterPress?: () => void;
   /** Extra keys; return `true` when handled. */
   onKey?: (key: string) => boolean;
+  /** `false` when the caller filters (async search); defaults to fuzzy matching here. */
+  filter?: boolean;
+  onQueryChange?: (query: string) => void;
+  emptyText?: string;
 }
 
 const MAX_ROWS = 14;
@@ -42,8 +46,11 @@ export function Picker(props: PickerProps) {
   const [query, setQuery] = React.useState('');
   const [index, setIndex] = React.useState(0);
   const options = React.useMemo(
-    () => filterOptions(props.options, query),
-    [props.options, query],
+    () =>
+      props.filter === false
+        ? props.options
+        : filterOptions(props.options, query),
+    [props.options, props.filter, query],
   );
   const selected = Math.min(index, options.length - 1);
   const move = (delta: number) =>
@@ -105,6 +112,7 @@ export function Picker(props: PickerProps) {
             onInput={(value) => {
               setQuery(value);
               setIndex(0);
+              props.onQueryChange?.(value);
             }}
             width={inner - 3}
             backgroundColor={palette.popover}
@@ -124,7 +132,11 @@ export function Picker(props: PickerProps) {
           {rows.length === 0 ? (
             <Line
               segs={[
-                { text: '   No matches', fg: palette.faint, italic: true },
+                {
+                  text: `   ${props.emptyText ?? 'No matches'}`,
+                  fg: palette.faint,
+                  italic: true,
+                },
               ]}
               width={inner}
               fill={palette.popover}

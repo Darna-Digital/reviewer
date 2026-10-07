@@ -43,6 +43,13 @@ export interface Palette {
   };
   /** History graph lanes, cycled by column. */
   lanes: string[];
+  /** The Mac sidebar's git-status letter colours. */
+  gitStatus: Record<
+    'added' | 'untracked' | 'modified' | 'deleted' | 'renamed',
+    string
+  >;
+  /** Running / failed / finished process dots. */
+  process: { running: string; failed: string; idle: string };
 }
 
 /** Blends `top` over `bottom`; terminals have no alpha, so tints are mixed down. */
@@ -98,13 +105,36 @@ export function createPalette(chrome: ChromeTokens): Palette {
       lineNumber: chrome.textTertiary,
       fileBg: mix(island, chrome.text, 0.05),
     },
+    gitStatus: dark
+      ? {
+          added: '#00cab1',
+          untracked: '#00cab1',
+          modified: '#08c0ef',
+          deleted: '#ff6762',
+          renamed: '#ffd452',
+        }
+      : {
+          added: '#16a994',
+          untracked: '#16a994',
+          modified: '#1ca1c7',
+          deleted: '#ff2e3f',
+          renamed: '#d5a910',
+        },
+    process: {
+      running: chrome.added,
+      failed: chrome.deleted,
+      idle: chrome.textTertiary,
+    },
+    // the Mac history graph's lane colours
     lanes: [
-      chrome.accent,
-      chrome.added,
-      renamed,
-      warning,
-      chrome.deleted,
-      dark ? '#56d4dd' : '#0a7a83',
+      '#5b9bf8',
+      '#48b884',
+      '#e0533d',
+      '#d8a13a',
+      '#a86fd4',
+      '#3bb0c9',
+      '#e06fa8',
+      '#8c9440',
     ],
   };
 }

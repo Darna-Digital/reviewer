@@ -4,6 +4,11 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { ReviewComment } from '@reviewer/core/comments';
 import type { CommentSide } from '@reviewer/core/comments';
+import {
+  decodeStoredDevCommand,
+  normalizeDevCwd,
+} from '@reviewer/core/local-dev';
+import type { DevCommand } from '@reviewer/core/local-dev';
 import { MIGRATIONS } from '@reviewer/embedded-server/migrations';
 import * as Schema from 'effect/Schema';
 
@@ -41,6 +46,12 @@ const decodeComment = Schema.decodeUnknownSync(ReviewComment);
 /** Module-scoped so ids stay unique within a millisecond (server scheme). */
 let counter = 0;
 
+export interface NewDevCommand {
+  name: string;
+  command: string;
+  cwd?: string;
+}
+
 export function createStore(db: Database) {
   const listComments = db.query<{ data: string }, [string]>(
     'SELECT data FROM comment WHERE repo_path = ? ORDER BY created_at ASC, id',
@@ -67,6 +78,17 @@ export function createStore(db: Database) {
   );
   const deleteAim = db.prepare(
     'DELETE FROM branch_target WHERE repo_path = ? AND branch = ?',
+  );
+
+  const listDevCommands = db.query<{ data: string }, [string]>(
+    'SELECT data FROM dev_command WHERE repo_path = ? ORDER BY created_at ASC, id',
+  );
+  const putDevCommand = db.prepare(
+    `INSERT INTO dev_command (id, repo_path, created_at, data) VALUES (?, ?, ?, ?)
+     ON CONFLICT (id) DO UPDATE SET data = excluded.data`,
+  );
+  const deleteDevCommand = db.prepare(
+    'DELETE FROM dev_command WHERE repo_path = ? AND id = ?',
   );
 
   return {
@@ -112,6 +134,36 @@ export function createStore(db: Database) {
     setBranchAim(repo: string, branch: string, target: string | null): void {
       if (target === null) deleteAim.run(repo, branch);
       else putAim.run(repo, branch, target);
+    },
+
+    /** The repository's services — the Mac app's Run pane commands. */
+    devCommands(repo: string): DevCommand[] {
+      return listDevCommands.all(repo).flatMap((row) => {
+        try {
+          return [decodeStoredDevCommand(JSON.parse(row.data))];
+        } catch {
+          return [];
+        }
+      });
+    },
+
+    addDevCommand(repo: string, input: NewDevCommand): DevCommand {
+      counter += 1;
+      const now = new Date().toISOString();
+      const command: DevCommand = {
+        id: `d-${Date.now().toString(36)}-${counter}`,
+        name: input.name.trim(),
+        command: input.command.trim(),
+        cwd: normalizeDevCwd(input.cwd ?? ''),
+        createdAt: now,
+        updatedAt: now,
+      };
+      putDevCommand.run(command.id, repo, now, JSON.stringify(command));
+      return command;
+    },
+
+    removeDevCommand(repo: string, id: string): void {
+      deleteDevCommand.run(repo, id);
     },
 
     close(): void {

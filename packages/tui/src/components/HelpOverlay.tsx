@@ -10,7 +10,7 @@ import { Line } from './Line';
 
 const KEY_WIDTH = 10;
 const MOUSE_HELP =
-  ' click selects · double-click opens, comments, edits · wheel scrolls · drag the divider · click ⇄ to pick a target';
+  ' click selects · double-click opens · right-click for actions · wheel scrolls · drag the dividers to resize · ^o leaves a terminal';
 
 /** Every command, grouped, straight from the command table. */
 export function HelpOverlay() {
@@ -20,16 +20,19 @@ export function HelpOverlay() {
     actions.closeOverlay();
   });
 
-  const width = Math.min(120, screen.width - 4);
+  const width = Math.min(160, screen.width - 4);
   const inner = width - 2;
-  const columns = inner >= 100 ? 3 : 1;
+  const columns = inner >= 120 ? 4 : inner >= 90 ? 2 : 1;
   const columnWidth = Math.floor(inner / columns);
   const blocks = HELP_GROUPS.map((group) => [
     [
       { text: ` ${group.title.toUpperCase()}`, fg: palette.accent, bold: true },
     ] as Seg[],
     ...uniqueByTitle(
-      COMMANDS.filter((command) => group.scopes.includes(command.scope)),
+      COMMANDS.filter(
+        (command) =>
+          group.scopes.includes(command.scope) && command.keys.length > 0,
+      ),
     ).map((command): Seg[] => [
       {
         text: ` ${padStart(command.keys.slice(0, 2).map(keyLabel).join(' '), KEY_WIDTH - 1)}  `,

@@ -9,13 +9,13 @@ import { GitMessageChanges } from "./git-message.changes.ts";
 import { CommitDrafts, IDLE_DRAFT } from "./git-message.drafts.ts";
 import type { CommitAgent, CommitDraft } from "../schema/git-message.schema.ts";
 
-const MAX_DIFF_CHARS = 16000;
+export const MAX_DIFF_CHARS = 16000;
 export const DEFAULT_COMMIT_AGENT: CommitAgent = "claude";
-const branchSlug = (branch: string): string | null => {
+export const branchSlug = (branch: string): string | null => {
   const match = branch.match(/[A-Z][A-Z0-9]*-\d+/);
   return match?.[0] ?? null;
 };
-const buildPrompt = (changes: string, slug: string | null): string =>
+export const buildPrompt = (changes: string, slug: string | null): string =>
   [
     "Generate a git commit message for the changes below.",
     "",
@@ -37,7 +37,7 @@ const buildPrompt = (changes: string, slug: string | null): string =>
     "--- CHANGES ---",
     changes,
   ].join("\n");
-const cleanMessage = (raw: string): string => {
+export const cleanMessage = (raw: string): string => {
   let text = raw.trim();
   const fence = text.match(/^```[^\n]*\n([\s\S]*?)\n```$/);
   if (fence?.[1] !== undefined) text = fence[1].trim();

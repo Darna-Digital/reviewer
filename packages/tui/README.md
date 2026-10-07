@@ -45,39 +45,50 @@ target recorded for it, or the uncommitted work.
 - **Colours** come from core's theme catalog and highlighter, so code is
   coloured exactly as in the app.
 
+## Layout
+
+It is the Mac app's IDE, in a terminal:
+
+- **Top rail** — the project, Browse / Review, Fetch · Pull · Push, the
+  command palette.
+- **App rail** (left) — Browse `1`, Review `2`, Search `/`; then the bottom
+  pane's tabs: Branches `4`, History `5`, Terminal `6`, Run `7`.
+- **Sidebar** — the branch and compare chips, then the project tree (Browse)
+  or the changed files (Review) with the **commit box** under them: tick
+  files, write or ✦ generate the message, Commit or Commit & push.
+- **Editor** — open-file tabs and the viewer (Browse), or the diff with its
+  comparison and view toggles (Review). Comments work in both.
+- **Bottom pane** — Branches (Recent / Local / Remote and every branch
+  action), History (graph, filters, commit details), Terminal (real shells),
+  Run (the repository's services with live output).
+- **Bottom rail** — mode, live keys, each service's status, the branch.
+
+Services are the Mac app's Run commands, shared through the database; the TUI
+runs its own processes and stops them when it quits.
+
 ## Keys
 
-`?` shows them all.
+`?` lists every key; `^k` (or `:`) finds any command by name.
 
-| Key             | Does                                         |
-| --------------- | -------------------------------------------- |
-| `1` `2` `3` `4` | Files · branches · history · comments        |
-| `tab`           | Move between the sidebar and the diff        |
-| `j` `k`         | Move by line (or by item in a list)          |
-| `]` `[` `}` `{` | Next/previous file, next/previous hunk       |
-| `c`             | Comment on the line; `e` edits, `x` deletes  |
-| `t`             | Pick what to compare against                 |
-| `T`             | Flip between uncommitted and the last branch |
-| `m`             | Branches tab: make it the branch's target    |
-| `p`             | Jump to a file                               |
-| `s` · `w`       | Split/unified · wrap long lines              |
-| `q`             | Quit                                         |
+| Key              | Does                                              |
+| ---------------- | ------------------------------------------------- |
+| `tab`            | Sidebar → editor → bottom pane                    |
+| `1` `2`          | Browse · Review                                   |
+| `4` `5` `6` `7`  | Branches · History · Terminal · Run               |
+| `^b` · `\`       | Bottom pane · sidebar                             |
+| `p` · `/`        | Go to file · search in files                      |
+| `t` · `T`        | Compare against… · flip uncommitted ⇄ last branch |
+| `c` `e` `x`      | Comment on a line · edit · delete                 |
+| `space` `i` `^s` | Commit box: include file · message · commit       |
+| `^o`             | Leave a terminal you are typing into              |
+| `q`              | Quit                                              |
 
 ## Mouse
 
-Click selects, double-click opens (a branch is compared, a commit shown, a
-comment jumped to) — on a diff line it starts a comment, on a card it edits
-it. The wheel scrolls everything, the divider drags to resize the sidebar, and
-the header's `⇄` chip, the tabs, and the status bar's hints and toggles are
-all buttons.
-
-## Picking a target
-
-`t` (or the header chip) lists the likely targets first — the branch's saved
-target, the default branch, its upstream, recent picks — with how far HEAD is
-ahead/behind each, then every local and remote branch. Tick **remember**
-(`^r`) to save the pick as the branch's target: it is written to the same
-`branch_target` table the Mac app reads, so both open on it next time.
+Click selects, double-click opens, right-click gives a context menu (tree
+rows, branches, commits, services). The wheel scrolls everything; drag the
+sidebar's edge or the bottom pane's header to resize. Every rail icon, tab,
+chip and button is clickable.
 
 ## Development
 
@@ -96,8 +107,8 @@ bun scripts/snapshot.tsx --input "3 j enter click:40,0" --out /tmp/frame.html
 | `app/`        | Hooks, the command table (`commands.ts`) and `App`                |
 | `components/` | One component per piece of the screen                             |
 
-Every key, its help text and its status-bar hint live in one table,
-`app/commands.ts`.
+Every key, its help text, its status-bar hint and its palette entry live in
+one table, `app/commands.ts`.
 
 `scripts/snapshot.tsx` renders the app headlessly with OpenTUI's test
 renderer, plays the given keys and mouse events, and writes the frame as coloured HTML — a

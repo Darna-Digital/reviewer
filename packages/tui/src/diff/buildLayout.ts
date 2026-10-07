@@ -2,7 +2,8 @@ import type { ReviewComment } from '@reviewer/core/comments';
 import { wrapPoints, wrapProse } from '../text/measure';
 import type { DiffLine, FileDiff } from './parseDiff';
 
-export type ViewMode = 'unified' | 'split';
+/** `file` shows one file's lines with no diff chrome — the browse viewer. */
+export type ViewMode = 'unified' | 'split' | 'file';
 export type Side = ReviewComment['side'];
 
 /** One side of a split row. */
@@ -119,10 +120,13 @@ export function buildLayout(opts: LayoutOptions): Layout {
     cardWidth(geometry, view === 'unified' ? width : geometry.half) - 4;
 
   files.forEach((file, f) => {
-    if (f > 0) rows.push({ kind: 'spacer' });
     fileRows.push(rows.length);
-    pushStop(rows.length, 1, f, stopKey.file(file.path), { kind: 'file' });
-    rows.push({ kind: 'file', file: f });
+    if (view !== 'file') {
+      if (f > 0) rows.push({ kind: 'spacer' });
+      fileRows[f] = rows.length;
+      pushStop(rows.length, 1, f, stopKey.file(file.path), { kind: 'file' });
+      rows.push({ kind: 'file', file: f });
+    }
 
     const fileComments = showComments ? (byFile.get(file.path) ?? []) : [];
     const pending = groupBy(fileComments, (c) =>
@@ -145,8 +149,8 @@ export function buildLayout(opts: LayoutOptions): Layout {
     }
 
     file.hunks.forEach((hunk, h) => {
-      rows.push({ kind: 'hunk', file: f, hunk: h });
-      if (view === 'unified') {
+      if (view !== 'file') rows.push({ kind: 'hunk', file: f, hunk: h });
+      if (view !== 'split') {
         hunk.lines.forEach((line, l) => {
           const starts = pieces(line.text, geometry.codeWidth, wrap);
           pushStop(
@@ -260,6 +264,16 @@ export function geometryFor(
     }
   }
   const numberWidth = Math.max(MIN_NUMBER_WIDTH, String(highest).length);
+  if (view === 'file') {
+    // marker · number · comment mark · space
+    const gutter = 1 + numberWidth + 1 + 1;
+    return {
+      numberWidth,
+      gutter,
+      codeWidth: Math.max(8, width - gutter),
+      half: width,
+    };
+  }
   if (view === 'unified') {
     // marker · old · new · comment mark · sign + space
     const gutter = 1 + numberWidth + 1 + numberWidth + 1 + 2;

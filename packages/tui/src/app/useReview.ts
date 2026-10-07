@@ -3,8 +3,10 @@ import type { FSWatcher } from 'node:fs';
 import * as React from 'react';
 import type { FileDiff } from '../diff/parseDiff';
 import { branchDiff, commitDiff, worktreeDiff } from '../git/diff';
-import { readCommit, readLog } from '../git/log';
-import type { CommitDetail, LogRow } from '../git/log';
+import { listFiles, statusMap as readStatusMap } from '../git/files';
+import type { FileStatus } from '../git/files';
+import { readCommit } from '../git/log';
+import type { CommitDetail } from '../git/log';
 import {
   checkout as gitCheckout,
   defaultBranch as readDefaultBranch,
@@ -28,7 +30,6 @@ export type Review = ReturnType<typeof useReview>;
 const COMMENT_POLL_MS = 1500;
 const STATUS_POLL_MS = 4000;
 const WATCH_DEBOUNCE_MS = 250;
-const LOG_LIMIT = 500;
 const RECENT_LIMIT = 4;
 
 /** Churn that never changes what a review shows. */
@@ -48,8 +49,10 @@ export function useReview(root: string, store: Store, initial: Comparison) {
   const [commit, setCommit] = React.useState<CommitDetail | null>(null);
   const [branches, setBranches] = React.useState<Branch[]>([]);
   const [defaultBranch, setDefaultBranch] = React.useState<string | null>(null);
-  const [log, setLog] = React.useState<LogRow[]>([]);
-  const [logAll, setLogAll] = React.useState(false);
+  const [projectFiles, setProjectFiles] = React.useState<string[]>([]);
+  const [statusMap, setStatusMap] = React.useState<Map<string, FileStatus>>(
+    new Map(),
+  );
   const [comments, setComments] = React.useState(() => store.comments(root));
   const [recent, setRecent] = React.useState<string[]>([]);
   const [, bumpAim] = React.useReducer((n: number) => n + 1, 0);
@@ -57,8 +60,8 @@ export function useReview(root: string, store: Store, initial: Comparison) {
 
   const sequence = React.useRef(0);
   const fingerprint = React.useRef('');
-  const latest = React.useRef({ comparison, logAll });
-  latest.current = { comparison, logAll };
+  const latest = React.useRef({ comparison });
+  latest.current = { comparison };
 
   const notify = React.useCallback((kind: Notice['kind'], text: string) => {
     setNotice({ kind, text, at: Date.now() });
@@ -98,25 +101,19 @@ export function useReview(root: string, store: Store, initial: Comparison) {
 
   const loadRefs = React.useCallback(async () => {
     try {
-      const [info, state, list] = await Promise.all([
+      const [info, state, list, paths, statuses] = await Promise.all([
         repoInfo(root),
         repoStatus(root),
         listBranches(root),
+        listFiles(root),
+        readStatusMap(root),
       ]);
       setRepo(info);
       setStatus(state);
       setBranches(list);
+      setProjectFiles(paths);
+      setStatusMap(statuses);
       setDefaultBranch(await readDefaultBranch(root, list));
-    } catch (error) {
-      fail(error);
-    }
-  }, [root, fail]);
-
-  const loadLog = React.useCallback(async () => {
-    try {
-      setLog(
-        await readLog(root, { all: latest.current.logAll, limit: LOG_LIMIT }),
-      );
     } catch (error) {
       fail(error);
     }
@@ -141,19 +138,14 @@ export function useReview(root: string, store: Store, initial: Comparison) {
       await Promise.all([
         loadRefs(),
         loadDiff(latest.current.comparison, true),
-        loadLog(),
       ]);
     },
-    [root, loadRefs, loadDiff, loadLog],
+    [root, loadRefs, loadDiff],
   );
 
   React.useEffect(() => {
     void refresh(true);
   }, [refresh]);
-
-  React.useEffect(() => {
-    void loadLog();
-  }, [logAll, loadLog]);
 
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -220,6 +212,8 @@ export function useReview(root: string, store: Store, initial: Comparison) {
     root,
     repo,
     status,
+    projectFiles,
+    statusMap,
     comparison,
     setComparison,
     files,
@@ -227,9 +221,6 @@ export function useReview(root: string, store: Store, initial: Comparison) {
     commit,
     branches,
     defaultBranch,
-    log,
-    logAll,
-    setLogAll,
     comments,
     visibleComments,
     recent,
@@ -238,16 +229,34 @@ export function useReview(root: string, store: Store, initial: Comparison) {
     notice,
     notify,
     refresh: () => refresh(true),
-    addComment(input: Omit<NewComment, 'author' | 'target'>) {
+    /** Files under the comparison on screen unless `target` names another. */
+    addComment(input: Omit<NewComment, 'author' | 'target'>, target = key) {
       mutate(
         () =>
           store.addComment(root, {
             ...input,
             author: repo?.user ?? 'you',
-            target: key,
+            target,
           }),
         'Comment added',
       );
+    },
+    /** Runs a git action, reporting how it went, then re-reads the repository. */
+    async runGit(
+      pending: string,
+      action: () => Promise<string | void>,
+      done: (output: string) => string,
+    ): Promise<boolean> {
+      notify('info', pending);
+      let ok = false;
+      try {
+        notify('success', done((await action()) ?? ''));
+        ok = true;
+      } catch (error) {
+        fail(error);
+      }
+      await refresh(true);
+      return ok;
     },
     updateComment(id: string, body: string) {
       mutate(() => store.updateComment(root, id, body), 'Comment updated');

@@ -265,6 +265,34 @@ function paintUnified(
   const bg = lit(palette, look.bg, cursor);
   const numberFg = cursor ? palette.text : look.numberFg;
   const commented = row.first && ctx.commentsAt(row.file, line) > 0;
+  const code = codeSegs(
+    ctx,
+    row.file,
+    row.hunk,
+    row.line,
+    line,
+    row,
+    look,
+    cursor,
+  );
+
+  if (ctx.view === 'file') {
+    return fitSegs(
+      [
+        marker(ctx, cursor, gutterBg),
+        {
+          text: lineNumber(line.newNo, geometry.numberWidth, row.first),
+          fg: numberFg,
+          bg: gutterBg,
+        },
+        { text: commented ? '◆' : ' ', fg: palette.accent, bg: gutterBg },
+        { text: ' ', bg },
+        ...code,
+      ],
+      ctx.width,
+      bg,
+    );
+  }
 
   return fitSegs(
     [
@@ -283,7 +311,7 @@ function paintUnified(
       { text: commented ? '◆' : ' ', fg: palette.accent, bg: gutterBg },
       { text: row.first ? look.sign : ' ', fg: look.signFg, bg, bold: true },
       { text: ' ', bg },
-      ...codeSegs(ctx, row.file, row.hunk, row.line, line, row, look, cursor),
+      ...code,
     ],
     ctx.width,
     bg,

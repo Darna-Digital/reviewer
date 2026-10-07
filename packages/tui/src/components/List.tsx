@@ -1,33 +1,42 @@
 import * as React from 'react';
+import type { ListItem } from '../render/listItems';
 import type { Palette } from '../render/palette';
-import type { ListItem } from '../render/sidebarItems';
 import type { Seg } from '../render/styled';
 import { Line } from './Line';
 import { useDoubleClick } from './useDoubleClick';
 
-export interface ListProps {
-  items: ListItem[];
+export interface ListProps<TValue> {
+  items: Array<ListItem<TValue>>;
   selected: number;
   focused: boolean;
   width: number;
   height: number;
   palette: Palette;
   emptyText: string;
-  onSelect: (index: number) => void;
-  onActivate: (index: number) => void;
-  onScroll: (delta: number) => void;
+  onSelect: (item: ListItem<TValue>, index: number) => void;
+  onActivate?: (item: ListItem<TValue>, index: number) => void;
+  /** Right-click, with the screen position for a context menu. */
+  onContextMenu?: (
+    item: ListItem<TValue>,
+    at: { x: number; y: number },
+  ) => void;
+  /** Clicks on rows that are not selectable (headings). */
+  onHeading?: (item: ListItem<TValue>) => void;
+  onScroll?: (delta: number) => void;
+  bg?: string;
 }
 
-/** Rows kept between the selection and the list's edge. */
 const MARGIN = 2;
 const WHEEL_STEP = 3;
+const RIGHT_BUTTON = 2;
 
 /**
- * A list scrolled to keep its selection in view. Click selects,
- * double-click opens, the wheel moves the selection.
+ * A virtualized list scrolled to keep its selection in view. Click selects,
+ * double-click activates, right-click asks for a context menu.
  */
-export function List(props: ListProps) {
+export function List<TValue>(props: ListProps<TValue>) {
   const { items, selected, focused, width, height, palette } = props;
+  const bg = props.bg ?? palette.frame;
   const top = React.useRef(0);
   const [hovered, setHovered] = React.useState<number | null>(null);
   const isDoubleClick = useDoubleClick();
@@ -49,22 +58,21 @@ export function List(props: ListProps) {
   });
 
   const margin = Math.min(MARGIN, Math.floor((height - 1) / 2));
-  if (selectedStart - margin < top.current) {
+  if (selectedStart - margin < top.current)
     top.current = selectedStart - margin;
-  } else if (selectedEnd + margin > top.current + height) {
+  else if (selectedEnd + margin > top.current + height)
     top.current = selectedEnd + margin - height;
-  }
   top.current = Math.max(0, Math.min(top.current, rows.length - height));
 
   if (items.length === 0) {
     return (
-      <box width={width} height={height} backgroundColor={palette.frame}>
+      <box width={width} height={height} backgroundColor={bg}>
         <Line
           segs={[
             { text: `  ${props.emptyText}`, fg: palette.faint, italic: true },
           ]}
           width={width}
-          fill={palette.frame}
+          fill={bg}
         />
       </box>
     );
@@ -75,10 +83,10 @@ export function List(props: ListProps) {
       width={width}
       height={height}
       flexDirection="column"
-      backgroundColor={palette.frame}
+      backgroundColor={bg}
       onMouseScroll={(event) => {
-        if (event.scroll?.direction === 'up') props.onScroll(-WHEEL_STEP);
-        if (event.scroll?.direction === 'down') props.onScroll(WHEEL_STEP);
+        if (event.scroll?.direction === 'up') props.onScroll?.(-WHEEL_STEP);
+        if (event.scroll?.direction === 'down') props.onScroll?.(WHEEL_STEP);
       }}
       onMouseOut={() => setHovered(null)}
     >
@@ -87,18 +95,26 @@ export function List(props: ListProps) {
           key={top.current + i}
           segs={row.segs}
           width={width}
-          fill={palette.frame}
+          fill={bg}
           onMouseOver={() =>
             setHovered(items[row.item]?.selectable ? row.item : null)
           }
-          onMouseDown={() => {
+          onMouseDown={(event) => {
             const item = items[row.item];
-            if (!item?.selectable) return;
-            if (isDoubleClick(item.key)) props.onActivate(row.item);
-            else props.onSelect(row.item);
+            if (!item) return;
+            if (!item.selectable) return props.onHeading?.(item);
+            if (event.button === RIGHT_BUTTON) {
+              props.onSelect(item, row.item);
+              props.onContextMenu?.(item, { x: event.x, y: event.y });
+            } else if (isDoubleClick(item.key)) {
+              props.onActivate?.(item, row.item);
+            } else {
+              props.onSelect(item, row.item);
+            }
           }}
         />
       ))}
+      <box flexGrow={1} backgroundColor={bg} />
     </box>
   );
 }

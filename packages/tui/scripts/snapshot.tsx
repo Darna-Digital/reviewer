@@ -87,12 +87,16 @@ async function play({ mockInput, mockMouse }: Setup, step: string) {
       return mockInput.typeText(arg.replace(/_/g, ' '));
     case 'click':
       return mockMouse.click(x, y);
+    case 'rclick':
+      return mockMouse.click(x, y, 2);
     case 'dclick':
       return mockMouse.doubleClick(x, y);
     case 'wheel':
       return mockMouse.scroll(x, y, (a as unknown as 'up' | 'down') ?? 'down');
     case 'drag':
       return mockMouse.drag(x, y, a!, b!);
+    case 'space':
+      return mockInput.pressKey(' ');
     case 'enter':
       return mockInput.pressEnter();
     case 'esc':

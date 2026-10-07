@@ -14,6 +14,7 @@ import type { CliOptions } from './cli';
 import { git, resolves } from './git/exec';
 import { repoInfo, repoRoot } from './git/repo';
 import { createPalette } from './render/palette';
+import { stopAllSessions } from './process/ptySession';
 import { openStore } from './store/createStore';
 import type { Store } from './store/createStore';
 
@@ -40,6 +41,12 @@ async function main(cli: CliOptions) {
   const store = openStore();
   const initial = await initialComparison({ root, store, cli });
   const palette = createPalette(deriveChromeTokens(theme));
+
+  // services and shells belong to this process: never leave them behind
+  process.on('exit', stopAllSessions);
+  for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT'] as const) {
+    process.on(signal, () => process.exit(0));
+  }
 
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,

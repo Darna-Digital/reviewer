@@ -1,164 +1,141 @@
-import { TABS } from '../app/useSidebar';
-import type { Tab } from '../app/useSidebar';
-import type { Palette } from '../render/palette';
-import { segsWidth } from '../render/styled';
-import type { Seg } from '../render/styled';
+import { describeComparison } from '../app/comparison';
+import { COMMIT_BOX_HEIGHT } from '../app/useApp';
+import type { Check } from '../render/listItems';
+import { treeItems } from '../render/listItems';
+import { mix } from '../render/palette';
+import type { TreeNode } from '../tree/fileTree';
+import { truncate } from '../text/measure';
 import { useAppContext } from './AppContext';
-import { Line } from './Line';
+import { CommitBox } from './CommitBox';
+import { Button, Line } from './Line';
 import { List } from './List';
+import { TextField } from './TextField';
 
-const TAB_LABEL: Record<Tab, string> = {
-  files: 'Files',
-  branches: 'Branches',
-  history: 'History',
-  comments: 'Comments',
-};
-
-/** Fallback names for a sidebar too narrow for the full ones. */
-const TAB_SHORT: Record<Tab, string> = {
-  files: 'Files',
-  branches: 'Refs',
-  history: 'Log',
-  comments: 'Notes',
-};
-
-const EMPTY_TEXT: Record<Tab, string> = {
-  files: 'No changed files',
-  branches: 'No branches',
-  history: 'No commits yet',
-  comments: 'No comments yet — press c on a line',
-};
-
+/** Branch and compare chips, the project or changes tree, and the commit box. */
 export function Sidebar() {
   const app = useAppContext();
-  const { palette, sidebar, list, review, actions, bodyHeight, overlay } = app;
-  const focused = app.focus === 'sidebar' && !overlay;
-  const counts: Partial<Record<Tab, number>> = {
-    files: review.files.length,
-    comments: review.comments.length,
-  };
+  const { palette, layout, workspace, tree, commit, review, actions } = app;
+  const width = layout.sidebarWidth;
+  const focused = app.focus === 'sidebar' && !app.overlay;
+  const isReview = workspace.surface === 'review';
+  const checkOf = app.isCommitMode
+    ? (node: TreeNode) => checkState(node, commit.isIncluded, commit.paths)
+    : null;
 
   return (
     <box
       flexDirection="column"
-      width={sidebar.width}
-      height={bodyHeight}
+      width={width}
+      height={layout.bodyHeight}
       backgroundColor={palette.frame}
     >
-      <TabBar
-        palette={palette}
-        active={sidebar.tab}
-        focused={focused}
-        counts={counts}
-        width={sidebar.width}
-        onPick={(tab) => actions.focusSidebar(tab)}
-      />
-      <Line
-        segs={[{ text: '─'.repeat(sidebar.width), fg: palette.rule }]}
-        width={sidebar.width}
-        fill={palette.frame}
-      />
+      <Header />
+      {isReview ? (
+        <TextField
+          palette={palette}
+          width={width}
+          placeholder="Filter changed files"
+          value={tree.query}
+          focused={app.typing === 'treeFilter'}
+          onInput={tree.setQuery}
+          onFocus={() => {
+            actions.setFocus('sidebar');
+            actions.setTyping('treeFilter');
+          }}
+          bg={palette.frame}
+        />
+      ) : null}
       <List
-        key={sidebar.tab}
-        items={list.items}
-        selected={list.selected}
+        items={treeItems(palette, tree.rows, checkOf)}
+        selected={tree.selected}
         focused={focused}
-        width={sidebar.width}
-        height={bodyHeight - 2}
+        width={width}
+        height={layout.treeHeight}
         palette={palette}
-        emptyText={review.loading ? 'Loading…' : EMPTY_TEXT[sidebar.tab]}
-        onSelect={(index) => {
-          app.setFocus('sidebar');
-          actions.selectItem(index);
+        emptyText={
+          review.loading
+            ? 'Loading…'
+            : isReview
+              ? tree.query
+                ? 'No files match'
+                : 'No changes'
+              : 'No files'
+        }
+        onSelect={(item) => {
+          actions.setFocus('sidebar');
+          if (!item.value) return;
+          tree.select(item.value.path);
+          if (item.value.kind === 'file')
+            actions.openTreeNode(item.value, { preview: true });
         }}
-        onActivate={(index) => actions.activate(actions.selectItem(index))}
-        onScroll={(delta) => actions.stepSelection(delta)}
+        onActivate={(item) => item.value && actions.openTreeNode(item.value)}
+        onContextMenu={(item, at) =>
+          item.value && actions.treeMenu(item.value, at)
+        }
+        onScroll={(delta) => tree.step(delta)}
       />
+      {app.isCommitMode ? <CommitBox height={COMMIT_BOX_HEIGHT} /> : null}
     </box>
   );
 }
 
-interface TabBarProps {
-  palette: Palette;
-  active: Tab;
-  focused: boolean;
-  counts: Partial<Record<Tab, number>>;
-  width: number;
-  onPick: (tab: Tab) => void;
-}
-
-/** The widest of full names, short names, or numbers-only that fits. */
-function TabBar(props: TabBarProps) {
-  const { palette, active, focused, counts, width } = props;
-  const forms = [
-    (tab: Tab) => TAB_LABEL[tab],
-    (tab: Tab) => TAB_SHORT[tab],
-    (tab: Tab) => (tab === active ? TAB_LABEL[tab] : null),
-  ];
-  const tabs =
-    forms
-      .map((label) =>
-        TABS.map((tab, index) => ({
-          tab,
-          segs: tabSegs(tab, index, label(tab)),
-        })),
-      )
-      .find(
-        (form) =>
-          1 + form.reduce((sum, t) => sum + segsWidth(t.segs), 0) <= width,
-      ) ?? TABS.map((tab, index) => ({ tab, segs: tabSegs(tab, index, null) }));
-  const used = 1 + tabs.reduce((sum, t) => sum + segsWidth(t.segs), 0);
-
+function Header() {
+  const { palette, layout, workspace, review, actions } = useAppContext();
+  const bg = palette.frame;
+  const chip = mix(bg, palette.text, 0.07);
+  const half = Math.floor((layout.sidebarWidth - 2) / 2);
+  const branch = review.repo?.branch ?? 'No branch';
   return (
     <box
       flexDirection="row"
       height={1}
-      width={width}
-      backgroundColor={palette.frame}
+      width={layout.sidebarWidth}
+      backgroundColor={bg}
     >
-      <Line segs={[{ text: ' ' }]} width={1} fill={palette.frame} />
-      {tabs.map(({ tab, segs }) => (
-        <Line
-          key={tab}
-          segs={segs}
-          width={segsWidth(segs)}
-          onMouseDown={() => props.onPick(tab)}
+      <Button
+        segs={[
+          { text: ' ⎇ ', fg: palette.faint, bg: chip },
+          {
+            text: truncate(branch, half - 6),
+            fg: palette.text,
+            bg: chip,
+            bold: true,
+          },
+          { text: ' ▾ ', fg: palette.faint, bg: chip },
+        ]}
+        bg={chip}
+        hoverTint={palette.text}
+        onPress={() => actions.toggleBottomTab('branches')}
+      />
+      <box flexGrow={1} height={1} backgroundColor={bg} />
+      {workspace.surface === 'review' ? (
+        <Button
+          segs={[
+            { text: ' ⇄ ', fg: palette.accent, bg: chip },
+            {
+              text: truncate(describeComparison(review.comparison), half - 6),
+              fg: palette.text,
+              bg: chip,
+            },
+            { text: ' ▾ ', fg: palette.faint, bg: chip },
+          ]}
+          bg={chip}
+          hoverTint={palette.accent}
+          onPress={() => actions.openOverlay({ kind: 'targets' })}
         />
-      ))}
-      <Line segs={[]} width={Math.max(0, width - used)} fill={palette.frame} />
+      ) : null}
+      <Line segs={[{ text: ' ' }]} width={1} fill={bg} />
     </box>
   );
+}
 
-  function tabSegs(tab: Tab, index: number, label: string | null): Seg[] {
-    const on = tab === active;
-    const bg = on
-      ? focused
-        ? palette.selection
-        : palette.selectionIdle
-      : palette.frame;
-    const count = counts[tab] ?? 0;
-    const segs: Seg[] = [
-      {
-        text: ` ${index + 1}${label ? ' ' : ''}`,
-        fg: on ? palette.accent : palette.faint,
-        bg,
-        bold: on,
-      },
-    ];
-    if (label)
-      segs.push({
-        text: label,
-        fg: on ? palette.text : palette.muted,
-        bg,
-        bold: on,
-      });
-    if (label && count > 0)
-      segs.push({
-        text: ` ${count}`,
-        fg: on ? palette.accent : palette.faint,
-        bg,
-      });
-    segs.push({ text: ' ', bg });
-    return segs;
-  }
+function checkState(
+  node: TreeNode,
+  isIncluded: (path: string) => boolean,
+  paths: string[],
+): Check {
+  const files = node.files.filter((path) => paths.includes(path));
+  const included = files.filter(isIncluded).length;
+  if (included === 0) return 'none';
+  return included === files.length ? 'all' : 'some';
 }

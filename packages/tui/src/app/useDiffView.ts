@@ -29,6 +29,8 @@ interface DiffViewOptions {
   themeName: string;
   focused: boolean;
   now: number;
+  /** Pins the view mode, e.g. `file` for the browse viewer. */
+  fixedView?: ViewMode;
 }
 
 /** Rows kept between the cursor and the pane's edge. */
@@ -43,7 +45,8 @@ const GENERATED =
  */
 export function useDiffView(opts: DiffViewOptions) {
   const { files, comments, width, height } = opts;
-  const [view, setView] = React.useState<ViewMode>('unified');
+  const [chosenView, setView] = React.useState<ViewMode>('unified');
+  const view = opts.fixedView ?? chosenView;
   const [wrap, setWrap] = React.useState(true);
   const [showComments, setShowComments] = React.useState(true);
   const [folds, setFolds] = React.useState<ReadonlyMap<string, boolean>>(
