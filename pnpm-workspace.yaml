@@ -19,3 +19,10 @@ allowBuilds:
 # non-Chromium WebKit as Safari.
 patchedDependencies:
   '@pierre/diffs@1.5.1': patches/@pierre__diffs@1.5.1.patch
+
+# Security floors for transitive pins Dependabot flagged: miniflare pins
+# sharp@0.35.4 and solid-js@1.9.15 pins seroval ~1.5.4.
+overrides:
+  sharp@<0.35.5: ^0.35.5
+  seroval@<1.6.3: ^1.6.8
+  seroval-plugins@<1.6.3: ^1.6.8
