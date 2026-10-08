@@ -1,4 +1,5 @@
-import { useKeyboard } from '@opentui/react';
+import { useKeyboard, useRenderer } from '@opentui/react';
+import * as React from 'react';
 import { AppContext } from '../components/AppContext';
 import { BranchPicker } from '../components/BranchPicker';
 import { CommentsPopover } from '../components/CommentsPopover';
@@ -18,11 +19,15 @@ import { TargetPicker } from '../components/TargetPicker';
 import { TopRail } from '../components/TopRail';
 import { findCommand } from './commands';
 import { keyName } from './keys';
+import { guardMouseFragments } from './mouseFragments';
 import { useApp } from './useApp';
 import type { App as AppState, AppProps } from './useApp';
 
 export function App(props: AppProps) {
   const app = useApp(props);
+  const renderer = useRenderer();
+  const [fragments] = React.useState(() => guardMouseFragments(renderer));
+  React.useEffect(() => fragments.dispose, [fragments]);
   useKeyboard((event) =>
     dispatchKey(app, keyName(event), () => event.preventDefault()),
   );
@@ -34,6 +39,7 @@ export function App(props: AppProps) {
         width={screen.width}
         height={screen.height}
         flexDirection="column"
+        onMouseScroll={fragments.noteScroll}
         backgroundColor={palette.frame}
       >
         <TopRail />
