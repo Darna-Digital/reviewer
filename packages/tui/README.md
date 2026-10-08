@@ -140,7 +140,7 @@ side of uncommitted or branch diffs.
 - **`.`** on a line lists its symbols: `⏎` definition, `⌃U` usages, `→` the
   full menu.
 - **`@`** lists the symbols in the open file to jump to one.
-- **Usages** (`6`, bottom pane): the symbol's usages by category and file,
+- **Usages** (`⌥⌘6`, bottom pane): the symbol's usages by category and file,
   beside a preview of the selected one scrolled to its line; `j`/`k` move,
   `⏎` opens, `r` searches again. Drag the rule between them to resize.
 
@@ -189,6 +189,163 @@ no plain-digit keys; a lone `0` still goes to the line's first symbol.
 |           | `⌃O` `⌥←` `⌥→`  | Back · back · forward through jumps                |
 |           | `W` `⌥Z`        | Wrap long lines                                    |
 |           | `q`             | Quit                                               |
+
+## Every key
+
+What a key does depends on where the focus is — `tab` / `⇧tab` moves it
+sidebar → editor → bottom pane — and a pane's own keys win over the ones that
+work anywhere (`r` searches the usages again, rather than refreshing). A
+number typed first repeats a move: `10j`. The ⌘ chords need a terminal that
+passes ⌘ through (see Keys).
+
+### Anywhere
+
+| Key                  | Does                            |
+| -------------------- | ------------------------------- |
+| `?`                  | The keys for where you are      |
+| `⌘E` `⌃K` `:`        | Command palette                 |
+| `⇧⌘O` `⌃⇧O` `⌃P` `p` | Go to file                      |
+| `⇧⌘F` `⌃⇧F` `/`      | Search in files                 |
+| `@`                  | Go to a symbol in the open file |
+| `m`                  | All comments                    |
+| `tab` `⇧tab`         | Next · previous pane            |
+| `⌃O` `⌥←`            | Back to where you jumped from   |
+| `⌥→`                 | Forward again                   |
+| `⌥⌘1` `⌥⌘2`          | Browse · Review                 |
+| `⌘G`                 | Switch Browse ⇄ Review          |
+| `⌥⌘4`                | Switch branch                   |
+| `⌥⌘5` `⌥⌘6` `⌥⌘7`    | History · Usages · Run pane     |
+| `⌘B` `⌃B`            | Show / hide the bottom pane     |
+| `⌃⌘S` `\`            | Show / hide the sidebar         |
+| `t`                  | Compare against…                |
+| `T`                  | Uncommitted ⇄ last branch       |
+| `s`                  | Split ⇄ unified diff            |
+| `E`                  | Changed hunks ⇄ full files      |
+| `W` `⌥Z`             | Wrap long lines                 |
+| `C`                  | Show / hide comments            |
+| `F` `L` `P`          | Fetch · pull · push             |
+| `⌘R` `⌃R` `r`        | Refresh                         |
+| `⌘,` `⌃,` `⌃T`       | Theme & appearance              |
+| `q` `⌃C`             | Quit                            |
+
+Create branch, add a service, start / stop all services, commit and push,
+cycle the appearance and show / hide file icons have no key; they are in the
+command palette.
+
+### Sidebar
+
+| Key                     | Does                               |
+| ----------------------- | ---------------------------------- |
+| `j` `k` `↓` `↑`         | Next · previous row                |
+| `⌃D` `⌃U` `pgdn` `pgup` | Ten down · ten up                  |
+| `g` `G` `home` `end`    | First · last                       |
+| `⏎` `l` `→`             | Open the file / expand the folder  |
+| `h` `←`                 | Collapse / go to the parent        |
+| `f`                     | Filter the changed files (Review)  |
+| `x`                     | Discard changes…                   |
+| `y`                     | Copy the path                      |
+| `H`                     | The file's history                 |
+| `space`                 | Commit box: include / leave out    |
+| `A`                     | Commit box: include all / none     |
+| `i`                     | Commit box: write the message      |
+| `⌃G`                    | Commit box: ✦ generate the message |
+| `⌘⏎` `⌃S`               | Commit box: commit                 |
+
+While writing the message, `⌘⏎` / `⌃S` commits, `⌃G` generates and `esc`
+stops typing. In a filter field `⏎` or `esc` stops typing.
+
+### Diff & file
+
+| Key                  | Does                              |
+| -------------------- | --------------------------------- |
+| `j` `k` `↓` `↑`      | Next · previous line              |
+| `⌃D` `pgdn` `space`  | Half a page down                  |
+| `⌃U` `pgup`          | Half a page up                    |
+| `g` `G` `home` `end` | Top · bottom                      |
+| `←` `→`              | Scroll sideways (wrap off)        |
+| `w` `b`              | Next · previous symbol            |
+| `0` `$`              | First · last symbol on the line   |
+| `*` `#`              | Next · previous use of the symbol |
+| `⏎`                  | Go to definition                  |
+| `K`                  | Symbol info                       |
+| `u`                  | Find usages                       |
+| `.`                  | Symbols on this line…             |
+| `c`                  | Comment on the line               |
+| `n` `N`              | Next · previous comment           |
+| `e` `⏎`              | Edit the comment (on a comment)   |
+| `x`                  | Delete the comment (on a comment) |
+
+In the diff (Review):
+
+| Key     | Does                                                 |
+| ------- | ---------------------------------------------------- |
+| `]` `[` | Next · previous file                                 |
+| `}` `{` | Next · previous hunk                                 |
+| `h` `l` | Old · new side (split; `←` `→` too while wrap is on) |
+| `z`     | Fold the file                                        |
+| `⏎`     | Fold the file (on its header)                        |
+| `esc`   | Back from a commit                                   |
+
+In a file (Browse):
+
+| Key                 | Does                                      |
+| ------------------- | ----------------------------------------- |
+| `}` `{`             | Next · previous definition (or paragraph) |
+| `⇧⌘]` `⇧⌘[` `]` `[` | Next · previous tab                       |
+| `⌘W` `⌃W`           | Close the tab                             |
+
+### Bottom pane
+
+| Pane    | Key             | Does                         |
+| ------- | --------------- | ---------------------------- |
+| Usages  | `j` `k` `↓` `↑` | Next · previous usage        |
+|         | `⏎`             | Open the usage               |
+|         | `r`             | Search again                 |
+| History | `j` `k` `↓` `↑` | Older · newer commit         |
+|         | `⏎`             | Show the commit              |
+|         | `a`             | All branches ⇄ HEAD          |
+|         | `f`             | Filter by text or hash       |
+|         | `esc`           | Clear the filters            |
+|         | `y`             | Copy the hash                |
+| Run     | `j` `k` `↓` `↑` | Next · previous service      |
+|         | `←` `→`         | Scroll the commands sideways |
+|         | `⏎` `space`     | Start / stop                 |
+|         | `R`             | Restart                      |
+|         | `a` `+`         | Add a service…               |
+|         | `d` `-`         | Remove the service…          |
+|         | `A` `X`         | Start all · stop all         |
+|         | `i`             | Type into its output         |
+|         | `⌃O`            | Stop typing into it          |
+
+### Popovers
+
+| In                      | Key                     | Does                               |
+| ----------------------- | ----------------------- | ---------------------------------- |
+| Palette and pickers     | `↓` `↑` `⌃N` `⌃P`       | Next · previous                    |
+|                         | `pgdn` `pgup`           | Ten down · ten up                  |
+|                         | `⏎`                     | Pick                               |
+|                         | `esc`                   | Close                              |
+| Palette                 | `home` `end`            | First · last                       |
+|                         | `⌫` (empty field)       | Up a level                         |
+|                         | `⌘E` `⌃K`               | Back to Commands (closes it there) |
+|                         | `⌥C` `⌥W` `⌥R`          | Search: case · whole word · regex  |
+| Branch picker           | `→` `tab`               | The branch's actions               |
+| Compare picker          | `⌃R`                    | Remember as the branch's target    |
+| Theme picker            | `tab`                   | Cycle System · Light · Dark        |
+| Symbols on a line (`.`) | `⏎`                     | Go to definition                   |
+|                         | `⌃U`                    | Find usages                        |
+|                         | `→`                     | Every action for the symbol        |
+| Menus                   | `j` `k` `↓` `↑`         | Next · previous                    |
+|                         | `⏎` `→`                 | Run                                |
+|                         | `←`                     | Back to the menu it opened from    |
+|                         | `esc`                   | Close                              |
+| Comment                 | `⏎`                     | Save                               |
+|                         | `⇧⏎` `⌥⏎`               | New line                           |
+|                         | `esc`                   | Cancel                             |
+| Forms                   | `tab` `↓` · `⇧tab` `↑`  | Next · previous field              |
+|                         | `⏎` · `esc`             | Submit · cancel                    |
+| Confirm                 | `y` `⏎` · `n` `esc` `q` | Yes · no                           |
+| Hover card              | any key                 | Hide it (`esc` does nothing else)  |
 
 ## Mouse
 
