@@ -87,8 +87,10 @@ It is the Mac app's IDE, in a terminal:
   the `wrap` toggle in either header) is one setting for both; with it off,
   long lines scroll sideways: `←` `→`, a sideways swipe, or ⇧+wheel (the TUI
   asks the terminal to pass ⇧ through, which Ghostty and xterm honour).
-  The header's `◆ N comments ▾` opens this change's comments by file, each
-  with its line of code; picking one jumps to it.
+  Either header's `◆ N comments ▾` lists comments by file, each with its
+  line of code — this change's first, then every note left on the codebase
+  while browsing; picking one jumps to it (opening the file when it is not in
+  the diff).
 - **Bottom pane** — History (graph, filters, commit details — moving
   through it opens each commit; `esc` or Browse goes back) and Run (the repository's services with live
   output; the commands table scrolls sideways when it overflows).

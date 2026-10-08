@@ -1,4 +1,4 @@
-import { COMMENTS_POPOVER_WIDTH } from './CommentsPopover';
+import { COMMENTS_POPOVER_WIDTH, commentsToList } from './CommentsPopover';
 import { mix } from '../render/palette';
 import { segsWidth } from '../render/styled';
 import type { Seg } from '../render/styled';
@@ -144,7 +144,7 @@ function Empty({ lines }: { lines: Seg[][] }) {
 
 /** What the diff holds and how it is drawn; the comparison is picked in the sidebar. */
 function ReviewHeader() {
-  const { palette, layout, review, diff, actions, workspace } = useAppContext();
+  const { palette, layout, review, diff, workspace } = useAppContext();
   const bg = palette.frame;
   const additions = review.files.reduce((sum, file) => sum + file.additions, 0);
   const deletions = review.files.reduce((sum, file) => sum + file.deletions, 0);
@@ -203,19 +203,7 @@ function ReviewHeader() {
         on={diff.wrap}
         onPress={() => diff.setWrap((w) => !w)}
       />
-      <Toggle
-        label={`◆ ${review.visibleComments.length} comments ▾`}
-        on={diff.showComments}
-        onPress={() =>
-          actions.openOverlay({
-            kind: 'commentsHere',
-            at: {
-              x: layout.mainLeft + layout.mainWidth - COMMENTS_POPOVER_WIDTH,
-              y: 2,
-            },
-          })
-        }
-      />
+      <CommentsButton />
     </box>
   );
 }
@@ -288,7 +276,29 @@ function TabStrip() {
         on={workspace.wrap}
         onPress={() => workspace.setWrap((on) => !on)}
       />
+      <CommentsButton />
     </box>
+  );
+}
+
+/** Opens the comments popover under itself, at the header's right end. */
+function CommentsButton() {
+  const app = useAppContext();
+  const { layout, activeView, actions } = app;
+  return (
+    <Toggle
+      label={`◆ ${commentsToList(app).length} comments ▾`}
+      on={activeView.showComments}
+      onPress={() =>
+        actions.openOverlay({
+          kind: 'commentsHere',
+          at: {
+            x: layout.mainLeft + layout.mainWidth - COMMENTS_POPOVER_WIDTH,
+            y: 2,
+          },
+        })
+      }
+    />
   );
 }
 
