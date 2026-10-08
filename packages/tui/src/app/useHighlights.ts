@@ -21,8 +21,10 @@ interface HighlightOptions {
  */
 export function useHighlights(opts: HighlightOptions) {
   const { files, rows, top, height, collapsed, theme, themeName } = opts;
-  const tokens = React.useRef(new WeakMap<FileDiff, FileTokens>());
-  const pending = React.useRef(new WeakSet<FileDiff>());
+  const store = React.useRef(emptyStore(themeName));
+  if (store.current.themeName !== themeName)
+    store.current = emptyStore(themeName);
+  const { tokens, pending } = store.current;
   const [, redraw] = React.useReducer((n: number) => n + 1, 0);
 
   React.useEffect(() => {
@@ -35,10 +37,10 @@ export function useHighlights(opts: HighlightOptions) {
     for (const index of wanted) {
       const file = files[index];
       if (!file || collapsed.has(file.path)) continue;
-      if (tokens.current.has(file) || pending.current.has(file)) continue;
-      pending.current.add(file);
+      if (tokens.has(file) || pending.has(file)) continue;
+      pending.add(file);
       void highlightFile(file, theme, themeName).then((result) => {
-        tokens.current.set(file, result);
+        tokens.set(file, result);
         redraw();
       });
     }
@@ -47,8 +49,17 @@ export function useHighlights(opts: HighlightOptions) {
   return React.useCallback(
     (index: number) => {
       const file = files[index];
-      return file ? tokens.current.get(file) : undefined;
+      return file ? tokens.get(file) : undefined;
     },
-    [files],
+    [files, tokens],
   );
+}
+
+/** Tokens belong to the theme they were coloured in; a new theme starts over. */
+function emptyStore(themeName: string) {
+  return {
+    themeName,
+    tokens: new WeakMap<FileDiff, FileTokens>(),
+    pending: new WeakSet<FileDiff>(),
+  };
 }

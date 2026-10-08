@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { ListItem } from '../render/listItems';
 import type { Palette } from '../render/palette';
+import { sliceSegs } from '../render/styled';
 import type { Seg } from '../render/styled';
 import { Line } from './Line';
 import { useDoubleClick } from './useDoubleClick';
@@ -25,6 +26,10 @@ export interface ListProps<TValue> {
   onHeading?: (item: ListItem<TValue>) => void;
   onScroll?: (delta: number) => void;
   bg?: string;
+  /** Rows laid out this wide and scrolled sideways by `scrollX`. */
+  contentWidth?: number;
+  scrollX?: number;
+  onScrollX?: (delta: number) => void;
 }
 
 const MARGIN = 2;
@@ -40,7 +45,7 @@ export function List<TValue>(props: ListProps<TValue>) {
   const top = React.useRef(0);
   const [hovered, setHovered] = React.useState<number | null>(null);
   const isDoubleClick = useDoubleClick();
-  const wheel = useWheel((rows) => props.onScroll?.(rows));
+  const wheel = useWheel((rows) => props.onScroll?.(rows), props.onScrollX);
 
   const rows: Array<{ segs: Seg[]; item: number }> = [];
   let selectedStart = 0;
@@ -52,7 +57,7 @@ export function List<TValue>(props: ListProps<TValue>) {
       selected: isSelected,
       focused,
       hovered: index === hovered,
-      width,
+      width: props.contentWidth ?? width,
     };
     for (const segs of item.rows(look)) rows.push({ segs, item: index });
     if (isSelected) selectedEnd = rows.length;
@@ -91,7 +96,7 @@ export function List<TValue>(props: ListProps<TValue>) {
       {rows.slice(top.current, top.current + height).map((row, i) => (
         <Line
           key={top.current + i}
-          segs={row.segs}
+          segs={sliceSegs(row.segs, props.scrollX ?? 0, width, bg)}
           width={width}
           fill={bg}
           onMouseOver={() =>

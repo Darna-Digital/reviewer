@@ -16,6 +16,8 @@ import { cellWidth, padStart, truncateStart } from '../text/measure';
 import { useAppContext } from './AppContext';
 import { Button, Line } from './Line';
 import { Backdrop, centered } from './Modal';
+import { useScrollWindow } from './useScrollWindow';
+import { useWheel } from './useWheel';
 
 type PaletteOverlay = Extract<Overlay, { kind: 'palette' }>;
 
@@ -32,6 +34,12 @@ const TOGGLES: Array<{ key: keyof GrepOptions; label: string; chord: string }> =
     { key: 'wholeWord', label: 'ab', chord: 'alt+w' },
     { key: 'regex', label: '.*', chord: 'alt+r' },
   ];
+
+/** Each toggle is a space, then its label padded by a space either side. */
+const TOGGLES_WIDTH = TOGGLES.reduce(
+  (sum, toggle) => sum + 1 + toggle.label.length + 2,
+  1,
+);
 
 /**
  * The Mac app's palette: Commands at the root, with Files, Search (text in
@@ -81,10 +89,9 @@ export function CommandPalette({ overlay }: { overlay: PaletteOverlay }) {
   const height = listRows + 6;
   const rows = layoutRows(palette, items, selected, inner);
   const selectedRow = rows.findIndex((row) => row.item === selected);
-  const top = Math.max(
-    0,
-    Math.min(selectedRow - listRows + 2, rows.length - listRows),
-  );
+  const view = useScrollWindow(selectedRow, rows.length, listRows);
+  const wheel = useWheel(view.scrollBy);
+  const top = view.top;
   const bg = palette.popover;
 
   return (
@@ -102,10 +109,7 @@ export function CommandPalette({ overlay }: { overlay: PaletteOverlay }) {
         borderColor={palette.accent}
         backgroundColor={bg}
         flexDirection="column"
-        onMouseScroll={(event) => {
-          if (event.scroll?.direction === 'up') move(-1, false);
-          if (event.scroll?.direction === 'down') move(1, false);
-        }}
+        onMouseScroll={wheel}
       >
         <Crumbs mode={mode} width={inner} onPick={enter} />
         <box flexDirection="row" height={1}>
@@ -124,7 +128,7 @@ export function CommandPalette({ overlay }: { overlay: PaletteOverlay }) {
               setIndex(0);
               actions.rememberSearch(mode, value);
             }}
-            width={inner - 3 - (mode === 'text' ? 13 : 0)}
+            width={inner - 3 - (mode === 'text' ? TOGGLES_WIDTH : 0)}
             backgroundColor={bg}
             focusedBackgroundColor={bg}
             textColor={palette.text}

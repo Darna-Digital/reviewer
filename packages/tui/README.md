@@ -76,16 +76,22 @@ It is the Mac app's IDE, in a terminal:
   palette).
 - **Sidebar** — the branch chip (with ↑ahead ↓behind) and the compare chip,
   each opening a popover under it: the branch picker (Recent / Local /
-  Remote; `⏎` checks out, `tab` or right-click for every branch action,
+  Remote; `⏎` checks out, `→` (or right-click) opens every branch action
+  beside it and `←` comes back,
   `+ New branch…`) and the comparison picker. Then the project tree (Browse)
   or the changed files (Review) with the **commit box** under them: tick
   files, write or ✦ generate the message, Commit or Commit & push.
 - **Editor** — open-file tabs and the viewer (Browse), or the diff with its
-  comparison and view toggles (Review). Comments work in both.
-- **Bottom pane** — History (graph, filters, commit details — moving through it opens
-  each commit, with a `Browse › History › commit` trail under the diff to go
-  back), Terminal (real shells), Run (the repository's services with live
-  output).
+  file stats and view toggles — changed hunks or full files (`E`), unified
+  or split (Review). Comments work in both. Wrap (`w`, or
+  the `wrap` toggle in either header) is one setting for both; with it off,
+  long lines scroll sideways: `←` `→`, a sideways swipe, or ⇧+wheel (the TUI
+  asks the terminal to pass ⇧ through, which Ghostty and xterm honour).
+  The header's `◆ N comments ▾` opens this change's comments by file, each
+  with its line of code; picking one jumps to it.
+- **Bottom pane** — History (graph, filters, commit details — moving
+  through it opens each commit; `esc` or Browse goes back) and Run (the repository's services with live
+  output; the commands table scrolls sideways when it overflows).
 - **Palette** — the Mac app's: Commands at the root, with Files, Search
   (text in files, with `Aa` case, `ab` whole word and `.*` regex — `⌥c`
   `⌥w` `⌥r`) and Git › Branches under it. A breadcrumb shows where you are;
@@ -93,8 +99,8 @@ It is the Mac app's IDE, in a terminal:
   match marked, and the Files and Search queries are kept between openings.
 - **Comments** open in a popover under the line, lined up with the comment
   cards: `⏎` saves, `⇧⏎` breaks the line, `esc` cancels.
-- **Bottom rail** — mode, live keys; the bottom pane's History · Terminal ·
-  Run toggles; each service's status.
+- **Bottom rail** — a notice, or three live keys; then History · Run (with
+  how many services are running) and `?`.
 
 Services are the Mac app's Run commands, shared through the database; the TUI
 runs its own processes and stops them when it quits.
@@ -114,11 +120,12 @@ terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay.
 | `⇧⌘F`     | `⌃⇧F` `/`      | Search in files                              |
 | `⌥⌘1` `2` | `1` `2`        | Browse · Review                              |
 | `⌥⌘4`     | `4`            | Switch branch (popover)                      |
-| `⌥⌘5`–`7` | `5`–`7`        | History · Terminal · Run                     |
+| `⌥⌘5` `7` | `5` `7`        | History · Run                                |
 | `⌘B`      | `⌃B`           | Bottom pane                                  |
 | `⌃⌘S`     | `\`            | Sidebar                                      |
 | `⌘R`      | `⌃R` `r`       | Refresh                                      |
 | `⌘,`      | `⌃,` `⌃T`      | Theme & appearance                           |
+|           | `E`            | Changed hunks ⇄ full files                   |
 | `⇧⌘]` `[` | `]` `[`        | Next · previous tab                          |
 | `⌘W`      | `⌃W`           | Close tab                                    |
 | `⌘⏎`      | `⌃S`           | Commit (in the message box)                  |
@@ -127,15 +134,16 @@ terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay.
 |           | `c` `e` `x`    | Comment on a line · edit · delete            |
 |           | `space` `i`    | Commit box: include file · message           |
 |           | `esc`          | Back from a commit                           |
-|           | `^o`           | Leave a terminal you are typing into         |
+|           | `^o`           | Stop typing into a service                   |
 |           | `q`            | Quit                                         |
 
 ## Mouse
 
 Click selects, double-click opens, right-click gives a context menu (tree
-rows, branches, commits, services). The wheel scrolls everything; drag the
-sidebar's edge or the bottom pane's header to resize. Every rail icon, tab,
-chip and button is clickable.
+rows, branches, commits, services). The wheel scrolls everything (⇧+wheel or
+a sideways swipe scrolls across); drag the rules — the sidebar's edge, the
+line above the bottom pane, the one between the history list and its details
+— to resize. Every tab, chip and button is clickable.
 
 ## Development
 

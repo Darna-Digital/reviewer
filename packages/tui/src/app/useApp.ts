@@ -11,7 +11,6 @@ import { discard, fetchAll, pull, push, summarize } from '../git/actions';
 import type { GrepOptions } from '../git/files';
 import type { Branch } from '../git/refs';
 import { stopAllSessions } from '../process/ptySession';
-import { commitBanner } from '../render/commitBanner';
 import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
 import type { TreeNode } from '../tree/fileTree';
@@ -30,7 +29,6 @@ import { useHistory } from './useHistory';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
 import { useServices } from './useServices';
-import { useTerminals } from './useTerminals';
 import { useTheme } from './useTheme';
 import type { ThemeStart } from './useTheme';
 import { useTree } from './useTree';
@@ -61,10 +59,17 @@ export interface FormField {
 export type Overlay =
   | { kind: 'help' }
   | { kind: 'targets'; at?: Cell }
-  | { kind: 'branches'; at?: Cell }
+  | {
+      kind: 'branches';
+      at?: Cell;
+      /** Restored when coming back from a branch's submenu. */
+      highlighted?: string;
+      query?: string;
+    }
   | { kind: 'palette'; mode: PaletteMode }
   | { kind: 'theme' }
   | { kind: 'comments' }
+  | { kind: 'commentsHere'; at: Cell }
   | {
       kind: 'compose';
       anchor: Anchor;
@@ -88,7 +93,13 @@ export type Overlay =
       /** Returns an error to show, or nothing to close. */
       submit: (values: Record<string, string>) => string | null | void;
     }
-  | { kind: 'menu'; at: { x: number; y: number }; entries: MenuEntry[] };
+  | {
+      kind: 'menu';
+      at: { x: number; y: number };
+      entries: MenuEntry[];
+      /** The popover the menu was opened from; dismissing returns to it. */
+      under?: Overlay;
+    };
 
 export interface AppProps {
   root: string;
@@ -104,7 +115,7 @@ export type App = ReturnType<typeof useApp>;
 export const COMPOSER_HEIGHT = 6;
 export const NOTICE_MS = 4000;
 export const SIDEBAR_HEADER = 1;
-export const COMMIT_BOX_HEIGHT = 8;
+export const COMMIT_BOX_HEIGHT = 7;
 const CLOCK_MS = 30_000;
 
 /** Composes every part of the screen and owns the actions that span them. */
@@ -114,8 +125,13 @@ export function useApp(props: AppProps) {
   const themes = useTheme(renderer, props.themeStart);
   const { palette, theme, themeName } = themes.look;
   const screen = useTerminalDimensions();
-  const review = useReview(root, store, props.initial);
   const workspace = useWorkspace(root, screen);
+  const review = useReview(
+    root,
+    store,
+    props.initial,
+    workspace.fullFiles ? 'full' : 'hunks',
+  );
   useServer(review, props.startServer ?? false);
   const [now, setNow] = React.useState(Date.now);
   const [focus, setFocusState] = React.useState<Focus>('main');
@@ -156,16 +172,8 @@ export function useApp(props: AppProps) {
     ? Math.min(workspace.bottomHeight, bodyHeight - 4)
     : 0;
   const editorHeight = bodyHeight - bottomHeight;
-  const banner =
-    surface === 'review' && review.comparison.kind === 'commit' && review.commit
-      ? commitBanner(palette, review.commit, mainWidth, now)
-      : [];
-  const crumbs = surface === 'review' && review.comparison.kind === 'commit';
-  const contentTop = 2 + (surface === 'review' ? banner.length : 0);
-  const contentHeight = Math.max(
-    1,
-    editorHeight - 1 - banner.length - (crumbs ? 1 : 0),
-  );
+  const contentTop = 2;
+  const contentHeight = Math.max(1, editorHeight - 1);
   const treeHeight = Math.max(
     1,
     bodyHeight -
@@ -185,6 +193,8 @@ export function useApp(props: AppProps) {
     themeName,
     focused: mainFocused && surface === 'review',
     now,
+    wrap: workspace.wrap,
+    setWrap: workspace.setWrap,
   });
   const editor = useEditor({
     review,
@@ -195,6 +205,8 @@ export function useApp(props: AppProps) {
     themeName,
     focused: mainFocused && surface === 'browse',
     now,
+    wrap: workspace.wrap,
+    setWrap: workspace.setWrap,
   });
   // the review tree follows the diff cursor unless the sidebar has the keyboard
   const diffFile = diff.stop ? review.files[diff.stop.file]?.path : undefined;
@@ -210,12 +222,11 @@ export function useApp(props: AppProps) {
   );
   const branches = useBranches(review);
   const services = useServices(review, store);
-  const terminals = useTerminals(root);
   const activeView = surface === 'review' ? diff : editor.viewer;
 
   const notify = review.notify;
 
-  /** Moving focus leaves any field being typed in and lets go of a terminal. */
+  /** Moving focus leaves any field being typed in and lets go of a service. */
   function setFocus(next: Focus) {
     if (next === 'sidebar' && surface === 'review' && diffFile)
       tree.select(diffFile);
@@ -283,8 +294,12 @@ export function useApp(props: AppProps) {
     setSearchOptions: (options: GrepOptions) =>
       setSearchMemory((memory) => ({ ...memory, options })),
     closeOverlay: () => setOverlay(null),
-    openMenu(at: { x: number; y: number }, entries: MenuEntry[]) {
-      setOverlay({ kind: 'menu', at, entries });
+    openMenu(at: Cell, entries: MenuEntry[], under?: Overlay) {
+      setOverlay({ kind: 'menu', at, entries, under });
+    },
+    /** Esc or a click away: back to the popover the menu came from, if any. */
+    dismissMenu() {
+      setOverlay(overlay?.kind === 'menu' ? (overlay.under ?? null) : null);
     },
     confirm(
       title: string,
@@ -544,68 +559,72 @@ export function useApp(props: AppProps) {
         },
       );
     },
-    branchMenu(branch: Branch, at: { x: number; y: number }) {
+    branchMenu(branch: Branch, at: Cell, under?: Overlay) {
       const head = review.repo?.branch ?? 'HEAD';
-      actions.openMenu(at, [
-        {
-          label: 'Checkout',
-          disabled: branch.current,
-          run: () => actions.checkoutBranch(branch),
-        },
-        {
-          label: `New branch from ‘${branch.name}’…`,
-          run: () => actions.newBranch(branch),
-        },
-        { separator: true },
-        {
-          label: `Review ‘${head}’ against ‘${branch.name}’`,
-          disabled: branch.current,
-          run: () => actions.pickTarget(branch.name, false),
-        },
-        {
-          label: `Merge ‘${branch.name}’ into ‘${head}’`,
-          disabled: branch.current,
-          run: () =>
-            actions.confirm(
-              'Merge',
-              `Merge ${branch.name} into ${head}?`,
-              'merge',
-              () => void branches.merge(branch),
-            ),
-        },
-        {
-          label: `Rebase ‘${head}’ onto ‘${branch.name}’`,
-          disabled: branch.current,
-          run: () =>
-            actions.confirm(
-              'Rebase',
-              `Rebase ${head} onto ${branch.name}?`,
-              'rebase',
-              () => void branches.rebase(branch),
-            ),
-        },
-        { separator: true },
-        { label: 'Update (fetch)', run: () => void actions.fetch() },
-        { label: 'Push', run: () => void actions.push() },
-        ...(branch.remote
-          ? []
-          : [
-              { separator: true as const },
-              { label: 'Rename…', run: () => actions.renameBranch(branch) },
-              {
-                label: 'Delete',
-                danger: true,
-                disabled: branch.current,
-                run: () =>
-                  actions.confirm(
-                    'Delete branch',
-                    `Delete ‘${branch.name}’? This cannot be undone.`,
-                    'delete',
-                    () => void branches.remove(branch),
-                  ),
-              },
-            ]),
-      ]);
+      actions.openMenu(
+        at,
+        [
+          {
+            label: 'Checkout',
+            disabled: branch.current,
+            run: () => actions.checkoutBranch(branch),
+          },
+          {
+            label: `New branch from ‘${branch.name}’…`,
+            run: () => actions.newBranch(branch),
+          },
+          { separator: true },
+          {
+            label: `Review ‘${head}’ against ‘${branch.name}’`,
+            disabled: branch.current,
+            run: () => actions.pickTarget(branch.name, false),
+          },
+          {
+            label: `Merge ‘${branch.name}’ into ‘${head}’`,
+            disabled: branch.current,
+            run: () =>
+              actions.confirm(
+                'Merge',
+                `Merge ${branch.name} into ${head}?`,
+                'merge',
+                () => void branches.merge(branch),
+              ),
+          },
+          {
+            label: `Rebase ‘${head}’ onto ‘${branch.name}’`,
+            disabled: branch.current,
+            run: () =>
+              actions.confirm(
+                'Rebase',
+                `Rebase ${head} onto ${branch.name}?`,
+                'rebase',
+                () => void branches.rebase(branch),
+              ),
+          },
+          { separator: true },
+          { label: 'Update (fetch)', run: () => void actions.fetch() },
+          { label: 'Push', run: () => void actions.push() },
+          ...(branch.remote
+            ? []
+            : [
+                { separator: true as const },
+                { label: 'Rename…', run: () => actions.renameBranch(branch) },
+                {
+                  label: 'Delete',
+                  danger: true,
+                  disabled: branch.current,
+                  run: () =>
+                    actions.confirm(
+                      'Delete branch',
+                      `Delete ‘${branch.name}’? This cannot be undone.`,
+                      'delete',
+                      () => void branches.remove(branch),
+                    ),
+                },
+              ]),
+        ],
+        under,
+      );
     },
 
     addService() {
@@ -686,7 +705,6 @@ export function useApp(props: AppProps) {
     history,
     branches,
     services,
-    terminals,
     activeView,
     focus,
     typing,
@@ -696,8 +714,6 @@ export function useApp(props: AppProps) {
     searchMemory,
     /** The terminal reports ⌘ (kitty keyboard protocol). */
     chords,
-    banner,
-    crumbs,
     isCommitMode,
     layout: {
       bodyHeight,

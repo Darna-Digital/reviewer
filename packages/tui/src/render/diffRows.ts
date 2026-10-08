@@ -24,6 +24,8 @@ export interface PaintContext {
   /** The pane has the keyboard; the cursor is drawn quieter when not. */
   focused: boolean;
   cursorSide: CursorSide;
+  /** Columns the unwrapped code is scrolled sideways. */
+  scrollX: number;
   now: number;
   tokensOf: (file: number) => FileTokens | undefined;
   inlineOf: (file: number) => Map<string, Span>;
@@ -225,11 +227,12 @@ function codeSegs(
   const tokens = ctx.tokensOf(file)?.get(key) ?? [{ text: line.text }];
   const out: Seg[] = [];
   let offset = 0;
+  const start = range.start + ctx.scrollX;
 
   for (const token of tokens) {
     const from = offset;
     offset += token.text.length;
-    const a = Math.max(from, range.start);
+    const a = Math.max(from, start);
     const b = Math.min(offset, range.end);
     if (a >= b) continue;
     const cuts = [a, b];
@@ -298,13 +301,11 @@ function paintUnified(
     [
       marker(ctx, cursor, gutterBg),
       {
-        text: lineNumber(line.oldNo, geometry.numberWidth, row.first),
-        fg: numberFg,
-        bg: gutterBg,
-      },
-      { text: ' ', bg: gutterBg },
-      {
-        text: lineNumber(line.newNo, geometry.numberWidth, row.first),
+        text: lineNumber(
+          line.kind === 'del' ? line.oldNo : line.newNo,
+          geometry.numberWidth,
+          row.first,
+        ),
         fg: numberFg,
         bg: gutterBg,
       },

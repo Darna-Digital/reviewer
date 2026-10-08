@@ -4,12 +4,14 @@ import type { Seg } from '../render/styled';
 import { truncate, wrapProse } from '../text/measure';
 import { agoLong } from '../text/time';
 import { useAppContext } from './AppContext';
+import { DragRule } from './DragRule';
 import { Button, Line } from './Line';
 import { List } from './List';
 import { TextField } from './TextField';
 
 const DETAILS_SHARE = 0.36;
-const MIN_DETAILS = 34;
+const MIN_DETAILS = 24;
+const MIN_LIST = 40;
 
 /** Filter bar over the commit graph, with the selected commit's details beside it. */
 export function HistoryPane({
@@ -20,10 +22,16 @@ export function HistoryPane({
   focused: boolean;
 }) {
   const app = useAppContext();
-  const { palette, layout, history, review, actions } = app;
+  const { palette, layout, history, review, actions, workspace } = app;
   const width = layout.mainWidth;
   const detailsWidth = history.detail
-    ? Math.max(MIN_DETAILS, Math.round(width * DETAILS_SHARE))
+    ? Math.max(
+        MIN_DETAILS,
+        Math.min(
+          workspace.historyDetailsWidth ?? Math.round(width * DETAILS_SHARE),
+          width - MIN_LIST,
+        ),
+      )
     : 0;
   const listWidth = width - detailsWidth - (detailsWidth ? 1 : 0);
   const items = historyItems(
@@ -123,13 +131,14 @@ export function HistoryPane({
         />
         {history.detail ? (
           <>
-            <box
-              width={1}
-              height={height - 1}
-              border={['left']}
-              borderStyle="single"
-              borderColor={palette.rule}
-              backgroundColor={bg}
+            <DragRule
+              direction="vertical"
+              length={height - 1}
+              onDrag={(event) =>
+                workspace.resizeHistoryDetails(
+                  layout.mainLeft + width - event.x - 1,
+                )
+              }
             />
             <Details width={detailsWidth} height={height - 1} />
           </>

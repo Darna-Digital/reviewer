@@ -1,6 +1,7 @@
 import { useKeyboard } from '@opentui/react';
 import { AppContext } from '../components/AppContext';
 import { BranchPicker } from '../components/BranchPicker';
+import { CommentsPopover } from '../components/CommentsPopover';
 import { BottomPane } from '../components/BottomPane';
 import { BottomRail } from '../components/BottomRail';
 import { Composer } from '../components/Composer';
@@ -64,11 +65,17 @@ export function App(props: AppProps) {
         {overlay?.kind === 'branches' ? (
           <BranchPicker overlay={overlay} />
         ) : null}
+        {overlay?.kind === 'menu' && overlay.under?.kind === 'branches' ? (
+          <BranchPicker overlay={overlay.under} inert />
+        ) : null}
         {overlay?.kind === 'palette' ? (
           <CommandPalette overlay={overlay} />
         ) : null}
         {overlay?.kind === 'theme' ? <ThemePicker /> : null}
         {overlay?.kind === 'comments' ? <CommentsPicker /> : null}
+        {overlay?.kind === 'commentsHere' ? (
+          <CommentsPopover overlay={overlay} />
+        ) : null}
         {overlay?.kind === 'confirm' ? (
           <ConfirmDialog overlay={overlay} />
         ) : null}
@@ -81,7 +88,7 @@ export function App(props: AppProps) {
 }
 
 /**
- * Routes a key: overlays own their keys, a captured terminal gets everything
+ * Routes a key: overlays own their keys, a captured service gets everything
  * but `ctrl+o`, a focused text field everything but Esc/Return, the commit
  * keys and ⌘ chords, and the command table the rest.
  */

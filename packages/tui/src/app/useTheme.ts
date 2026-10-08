@@ -21,6 +21,7 @@ export interface ThemeStart {
 
 const APPEARANCES: Appearance[] = ['system', 'light', 'dark'];
 const PALETTE_TIMEOUT_MS = 400;
+const TERMINAL_RECHECK_MS = [500, 1500];
 
 /** Asks the terminal for its colours; `null` when it does not answer. */
 export async function readTerminalLook(
@@ -51,13 +52,18 @@ export function useTheme(renderer: CliRenderer, start: ThemeStart) {
   React.useEffect(() => {
     const refreshTerminal = () =>
       void readTerminalLook(renderer).then((next) => next && setTerminal(next));
+    const followUps: Array<ReturnType<typeof setTimeout>> = [];
     const stopWatching = watchSystemScheme((scheme) => {
       setSystem(scheme);
       refreshTerminal();
+      // terminals that follow the OS repaint a beat later, often unannounced
+      for (const delay of TERMINAL_RECHECK_MS)
+        followUps.push(setTimeout(refreshTerminal, delay));
     });
     renderer.on('theme_mode', refreshTerminal);
     return () => {
       stopWatching();
+      followUps.forEach(clearTimeout);
       renderer.off('theme_mode', refreshTerminal);
     };
   }, [renderer]);

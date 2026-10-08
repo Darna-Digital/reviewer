@@ -3,6 +3,7 @@
  *
  *   bun scripts/snapshot.tsx [--repo .] [--size 160x45] [--db file] [--out frame.html] \
  *     [--input "j j c text:hello enter click:40,10 dclick:40,10 wheel:60,20,down drag:30,5,50,5"] \
+ *     (swipe:x,y,right,10 sends a burst of wheel events within one frame, as a trackpad does)
  *     [--theme name] [--terminal-bg '#1e1e2e' --terminal-fg '#cdd6f4']
  *
  * The test renderer answers no colour queries; `--terminal-bg/-fg` stand in
@@ -107,8 +108,18 @@ async function play({ mockInput, mockMouse }: Setup, step: string) {
       return mockMouse.click(x, y);
     case 'rclick':
       return mockMouse.click(x, y, 2);
+    case 'press':
+      return mockMouse.pressDown(x, y);
+    case 'release':
+      return mockMouse.release(x, y);
     case 'dclick':
       return mockMouse.doubleClick(x, y);
+    case 'swipe':
+      return Promise.all(
+        Array.from({ length: Number(b ?? 10) }, () =>
+          mockMouse.scroll(x, y, a as unknown as 'up' | 'down'),
+        ),
+      );
     case 'wheel':
       return mockMouse.scroll(x, y, (a as unknown as 'up' | 'down') ?? 'down');
     case 'drag':
@@ -123,6 +134,8 @@ async function play({ mockInput, mockMouse }: Setup, step: string) {
       return mockInput.pressTab();
     case 'down':
     case 'up':
+    case 'left':
+    case 'right':
       return mockInput.pressArrow(verb);
     default: {
       const [mod, name] = step.includes('+') ? step.split('+') : [null, step];

@@ -45,6 +45,7 @@ function paintedCard(view: ViewMode, width: number): string {
       collapsed: new Set(),
       focused: true,
       cursorSide: 'right',
+      scrollX: 0,
       now: Date.now(),
       tokensOf: () => undefined,
       inlineOf: () => new Map(),

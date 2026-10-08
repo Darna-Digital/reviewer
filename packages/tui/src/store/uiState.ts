@@ -7,12 +7,18 @@ export interface UiState {
   surface: 'browse' | 'review';
   sidebarWidth: number | null;
   bottomOpen: boolean;
-  bottomTab: 'history' | 'terminal' | 'run';
+  bottomTab: 'history' | 'run';
   bottomHeight: number | null;
+  /** The commit details beside the history list. */
+  historyDetailsWidth: number | null;
   commitMessage: string;
+  /** Long lines wrap; off, they scroll sideways. Shared by the diff and the viewer. */
+  wrap: boolean;
+  /** Diffs show whole files instead of the changed hunks. */
+  fullFiles: boolean;
 }
 
-const BOTTOM_TABS: string[] = ['history', 'terminal', 'run'];
+const BOTTOM_TABS: string[] = ['history', 'run'];
 
 export const DEFAULT_UI_STATE: UiState = {
   surface: 'review',
@@ -20,7 +26,10 @@ export const DEFAULT_UI_STATE: UiState = {
   bottomOpen: false,
   bottomTab: 'history',
   bottomHeight: null,
+  historyDetailsWidth: null,
   commitMessage: '',
+  wrap: true,
+  fullFiles: false,
 };
 
 export function uiStatePath(): string {

@@ -204,9 +204,15 @@ export interface ServiceColumns {
 }
 
 /** Column widths for the Run table at `width`. */
+export const SERVICE_NAME_COLUMN = 22;
+export const SERVICE_STATUS_COLUMN = 12;
+
 export function serviceColumns(width: number): ServiceColumns {
-  const status = 12;
-  const name = Math.max(10, Math.min(22, Math.floor(width * 0.3)));
+  const status = SERVICE_STATUS_COLUMN;
+  const name = Math.max(
+    10,
+    Math.min(SERVICE_NAME_COLUMN, Math.floor(width * 0.3)),
+  );
   return { name, status, command: Math.max(8, width - name - status - 8) };
 }
 

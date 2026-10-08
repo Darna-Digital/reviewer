@@ -1,14 +1,7 @@
 import type { App } from './useApp';
 
 export type Scope =
-  | 'global'
-  | 'tree'
-  | 'commit'
-  | 'diff'
-  | 'viewer'
-  | 'history'
-  | 'terminal'
-  | 'run';
+  'global' | 'tree' | 'commit' | 'diff' | 'viewer' | 'history' | 'run';
 
 export interface Command {
   id: string;
@@ -27,13 +20,15 @@ export const HELP_GROUPS: Array<{ title: string; scopes: Scope[] }> = [
   { title: 'Anywhere', scopes: ['global'] },
   { title: 'Sidebar', scopes: ['tree', 'commit'] },
   { title: 'Diff & file', scopes: ['diff', 'viewer'] },
-  { title: 'Bottom pane', scopes: ['history', 'terminal', 'run'] },
+  { title: 'Bottom pane', scopes: ['history', 'run'] },
 ];
 
 const onCard = (app: App) => app.activeView.stop?.target.kind === 'comment';
 const onFileHeader = (app: App) => app.diff.stop?.target.kind === 'file';
 const inCommit = (app: App) => app.review.comparison.kind === 'commit';
 const isSplit = (app: App) => app.diff.view === 'split';
+const unwrapped = (app: App) => !app.activeView.wrap;
+const SIDEWAYS_KEY_STEP = 8;
 const cardComment = (app: App) => {
   const stop = app.activeView.stop;
   return stop?.target.kind === 'comment' ? stop.target.comment : undefined;
@@ -110,14 +105,6 @@ export const COMMANDS: Command[] = [
     run: (app) => app.actions.toggleBottomTab('history'),
   },
   {
-    id: 'bottom.terminal',
-    scope: 'global',
-    keys: ['alt+cmd+6', '6'],
-    title: 'terminal pane',
-    palette: true,
-    run: (app) => app.actions.toggleBottomTab('terminal'),
-  },
-  {
     id: 'bottom.run',
     scope: 'global',
     keys: ['alt+cmd+7', '7'],
@@ -191,6 +178,14 @@ export const COMMANDS: Command[] = [
     palette: true,
     run: (app) =>
       app.diff.setView((v) => (v === 'split' ? 'unified' : 'split')),
+  },
+  {
+    id: 'view.fullFiles',
+    scope: 'global',
+    keys: ['E'],
+    title: 'full files / changed hunks',
+    palette: true,
+    run: (app) => app.workspace.toggleFullFiles(),
   },
   {
     id: 'view.wrap',
@@ -529,6 +524,24 @@ export const COMMANDS: Command[] = [
     title: 'previous hunk',
     run: (app) => app.diff.prevHunk(),
   },
+  ...(['diff', 'viewer'] as const).flatMap((scope): Command[] => [
+    {
+      id: `${scope}.scrollLeft`,
+      scope,
+      keys: ['left'],
+      title: 'scroll left (wrap off)',
+      when: unwrapped,
+      run: (app) => app.activeView.scrollXBy(-SIDEWAYS_KEY_STEP),
+    },
+    {
+      id: `${scope}.scrollRight`,
+      scope,
+      keys: ['right'],
+      title: 'scroll right (wrap off)',
+      when: unwrapped,
+      run: (app) => app.activeView.scrollXBy(SIDEWAYS_KEY_STEP),
+    },
+  ]),
   {
     id: 'diff.left',
     scope: 'diff',
@@ -765,48 +778,6 @@ export const COMMANDS: Command[] = [
     },
   },
 
-  // terminal pane
-  {
-    id: 'terminal.focus',
-    scope: 'terminal',
-    keys: ['return', 'i'],
-    title: 'type into the terminal',
-    hint: 'type',
-    run: (app) => app.actions.capture(true),
-  },
-  {
-    id: 'terminal.new',
-    scope: 'terminal',
-    keys: ['n', '+'],
-    title: 'new shell',
-    hint: 'new',
-    run: (app) => app.terminals.open(),
-  },
-  {
-    id: 'terminal.close',
-    scope: 'terminal',
-    keys: ['x'],
-    title: 'close shell',
-    hint: 'close',
-    run: (app) => {
-      if (app.terminals.active) app.terminals.close(app.terminals.active.id);
-    },
-  },
-  {
-    id: 'terminal.next',
-    scope: 'terminal',
-    keys: [']'],
-    title: 'next shell',
-    run: (app) => app.terminals.step(1),
-  },
-  {
-    id: 'terminal.prev',
-    scope: 'terminal',
-    keys: ['['],
-    title: 'previous shell',
-    run: (app) => app.terminals.step(-1),
-  },
-
   // run pane
   {
     id: 'run.down',
@@ -821,6 +792,20 @@ export const COMMANDS: Command[] = [
     keys: ['k', 'up'],
     title: 'previous service',
     run: (app) => stepService(app, -1),
+  },
+  {
+    id: 'run.scrollLeft',
+    scope: 'run',
+    keys: ['left'],
+    title: 'scroll the commands left',
+    run: (app) => app.services.scrollTable(-SIDEWAYS_KEY_STEP),
+  },
+  {
+    id: 'run.scrollRight',
+    scope: 'run',
+    keys: ['right'],
+    title: 'scroll the commands right',
+    run: (app) => app.services.scrollTable(SIDEWAYS_KEY_STEP),
   },
   {
     id: 'run.toggle',

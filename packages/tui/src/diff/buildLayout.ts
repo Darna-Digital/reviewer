@@ -275,8 +275,8 @@ export function geometryFor(
     };
   }
   if (view === 'unified') {
-    // marker · old · new · comment mark · sign + space
-    const gutter = 1 + numberWidth + 1 + numberWidth + 1 + 2;
+    // marker · number · comment mark · sign + space; one number, as Pierre's diffs show it
+    const gutter = 1 + numberWidth + 1 + 2;
     return {
       numberWidth,
       gutter,

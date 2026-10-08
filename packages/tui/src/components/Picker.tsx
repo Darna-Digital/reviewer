@@ -7,6 +7,8 @@ import { fitSegs } from '../render/styled';
 import type { Seg } from '../render/styled';
 import { Backdrop, centered } from './Modal';
 import { Line } from './Line';
+import { useScrollWindow } from './useScrollWindow';
+import { useWheel } from './useWheel';
 
 export interface PickerOption {
   key: string;
@@ -16,6 +18,9 @@ export interface PickerOption {
   hint?: string;
   hintColor?: string;
   labelColor?: string;
+  /** A second, quieter row under the label — a comment's line of code. */
+  detail?: string;
+  detailColor?: string;
 }
 
 export interface PickerProps {
@@ -29,38 +34,55 @@ export interface PickerProps {
   /** Extra footer row, e.g. a toggle; clicking it calls `onFooterPress`. */
   footer?: Seg[];
   onFooterPress?: () => void;
-  /** Extra keys, given the highlighted option; return `true` when handled. */
-  onKey?: (key: string, option: PickerOption | undefined) => boolean;
+  /**
+   * Extra keys, given the highlighted option and the cell just right of its
+   * row (where a submenu opens); return `true` when handled.
+   */
+  onKey?: (
+    key: string,
+    option: PickerOption | undefined,
+    beside: { x: number; y: number },
+  ) => boolean;
   /** Right-click on an option. */
   onContextMenu?: (option: PickerOption, at: { x: number; y: number }) => void;
   /** Opens as a popover hanging from this cell instead of centred. */
   anchor?: { x: number; y: number };
   /** Popover width; defaults to a centred dialog's. */
   width?: number;
+  /** Drawn under a menu opened from it: shown, but taking no input. */
+  inert?: boolean;
+  /** Group headings are file paths: shown as written, not as captions. */
+  pathGroups?: boolean;
   /** `false` when the caller filters (async search); defaults to fuzzy matching here. */
   filter?: boolean;
   onQueryChange?: (query: string) => void;
   emptyText?: string;
-  /** Starts on this option. */
+  /** Starts on this option, with this typed. */
   initialKey?: string;
+  initialQuery?: string;
   /** Called as the selection moves, e.g. to preview it. */
   onHighlight?: (option: PickerOption) => void;
 }
 
 const MAX_ROWS = 14;
-const WHEEL_STEP = 1;
 const RIGHT_BUTTON = 2;
+/** The search field and the rule under it, above the list. */
+const LIST_OFFSET = 2;
 
 /** Fuzzy-filtered list with a search field; keyboard and mouse driven. */
 export function Picker(props: PickerProps) {
   const { palette, screen } = props;
-  const [query, setQuery] = React.useState('');
-  const [index, setIndex] = React.useState(() =>
-    Math.max(
+  const [query, setQuery] = React.useState(props.initialQuery ?? '');
+  const [index, setIndex] = React.useState(() => {
+    const shown =
+      props.filter === false
+        ? props.options
+        : filterOptions(props.options, props.initialQuery ?? '');
+    return Math.max(
       0,
-      props.options.findIndex((option) => option.key === props.initialKey),
-    ),
-  );
+      shown.findIndex((option) => option.key === props.initialKey),
+    );
+  });
   const options = React.useMemo(
     () =>
       props.filter === false
@@ -79,6 +101,7 @@ export function Picker(props: PickerProps) {
     setIndex((i) => Math.max(0, Math.min(options.length - 1, i + delta)));
 
   useKeyboard((event) => {
+    if (props.inert) return;
     const key = keyName(event);
     if (key === 'escape') props.onClose();
     else if (key === 'return') pick(selected);
@@ -86,7 +109,7 @@ export function Picker(props: PickerProps) {
     else if (key === 'up' || key === 'ctrl+p') move(-1);
     else if (key === 'pagedown') move(10);
     else if (key === 'pageup') move(-10);
-    else if (!props.onKey?.(key, options[selected])) return;
+    else if (!props.onKey?.(key, options[selected], besideSelected())) return;
     event.preventDefault();
   });
 
@@ -105,16 +128,15 @@ export function Picker(props: PickerProps) {
   const boxTop = anchor
     ? Math.max(1, Math.min(anchor.y, screen.height - height))
     : Math.max(1, centered(screen.height, height) - 2);
-  const rows = layoutRows(palette, options, selected, inner);
+  const rows = layoutRows(palette, options, selected, inner, props.pathGroups);
   const selectedRow = rows.findIndex((row) => row.option === selected);
-  const top = Math.max(
-    0,
-    Math.min(selectedRow - listRows + 2, rows.length - listRows),
-  );
+  const view = useScrollWindow(selectedRow, rows.length, listRows);
+  const wheel = useWheel(view.scrollBy);
+  const top = view.top;
 
   return (
     <>
-      <Backdrop onPress={props.onClose} />
+      {props.inert ? null : <Backdrop onPress={props.onClose} />}
       <box
         position="absolute"
         left={left}
@@ -128,10 +150,7 @@ export function Picker(props: PickerProps) {
         backgroundColor={palette.popover}
         title={` ${props.title} `}
         flexDirection="column"
-        onMouseScroll={(event) => {
-          if (event.scroll?.direction === 'up') move(-WHEEL_STEP);
-          if (event.scroll?.direction === 'down') move(WHEEL_STEP);
-        }}
+        onMouseScroll={wheel}
       >
         <box flexDirection="row" height={1}>
           <Line
@@ -140,7 +159,8 @@ export function Picker(props: PickerProps) {
             fill={palette.popover}
           />
           <input
-            focused
+            focused={!props.inert}
+            value={query}
             placeholder={props.placeholder}
             onInput={(value) => {
               setQuery(value);
@@ -222,6 +242,11 @@ export function Picker(props: PickerProps) {
     </>
   );
 
+  function besideSelected() {
+    const listTop = boxTop + 1 + LIST_OFFSET;
+    return { x: left + width, y: listTop + Math.max(0, selectedRow - top) };
+  }
+
   function pick(at: number) {
     const option = options[at];
     if (option) props.onPick(option);
@@ -263,6 +288,7 @@ function layoutRows(
   options: PickerOption[],
   selected: number,
   width: number,
+  pathGroups = false,
 ): Array<{ segs: Seg[]; option: number | null }> {
   const rows: Array<{ segs: Seg[]; option: number | null }> = [];
   let group: string | undefined;
@@ -272,7 +298,17 @@ function layoutRows(
       rows.push({
         option: null,
         segs: [
-          { text: ` ${group.toUpperCase()}`, fg: palette.faint, bold: true },
+          pathGroups
+            ? {
+                text: ` ${truncateStart(group, width - 2)}`,
+                fg: palette.muted,
+                bold: true,
+              }
+            : {
+                text: ` ${group.toUpperCase()}`,
+                fg: palette.faint,
+                bold: true,
+              },
         ],
       });
     }
@@ -295,6 +331,23 @@ function layoutRows(
         bg,
       ),
     });
+    if (option.detail !== undefined) {
+      rows.push({
+        option: index,
+        segs: fitSegs(
+          [
+            { text: lit ? '▌' : ' ', fg: palette.accent, bg },
+            {
+              text: `      ${option.detail}`,
+              fg: option.detailColor ?? palette.faint,
+              bg,
+            },
+          ],
+          width,
+          bg,
+        ),
+      });
+    }
   });
   return rows;
 }

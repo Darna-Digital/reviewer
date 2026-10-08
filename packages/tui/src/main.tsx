@@ -17,6 +17,9 @@ import { readSystemScheme } from './theme/systemAppearance';
 import { openStore } from './store/createStore';
 import type { Store } from './store/createStore';
 
+const SHIFT_TO_APP = '\x1b[>1s';
+const SHIFT_TO_TERMINAL = '\x1b[>0s';
+
 await main(parseCli(Bun.argv.slice(2)));
 
 async function main(cli: CliOptions) {
@@ -45,8 +48,12 @@ async function main(cli: CliOptions) {
   const store = openStore();
   const initial = await initialComparison({ root, store, cli });
 
-  // services and shells belong to this process: never leave them behind
+  // services belong to this process: never leave them behind
   process.on('exit', stopAllSessions);
+  // Ghostty and xterm keep ⇧ for their own selection unless the app asks
+  // (XTSHIFTESCAPE); without it ⇧+wheel never arrives to scroll sideways
+  process.stdout.write(SHIFT_TO_APP);
+  process.on('exit', () => process.stdout.write(SHIFT_TO_TERMINAL));
   for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT'] as const) {
     process.on(signal, () => process.exit(0));
   }

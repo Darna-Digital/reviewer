@@ -22,7 +22,7 @@ export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
   const app = useAppContext();
   const { palette } = app;
   const isDoubleClick = useDoubleClick();
-  const wheel = useWheel(view.scrollBy);
+  const wheel = useWheel(view.scrollBy, view.wrap ? undefined : view.scrollXBy);
   const { rows, stops } = view.layout;
   const visible = rows.slice(view.top, view.top + height);
   const cursor = view.stop

@@ -10,7 +10,6 @@ import {
 import type { Anchor, Stop, ViewMode } from '../diff/buildLayout';
 import type { Theme } from '../diff/highlight';
 import { inlineChangesOf } from '../diff/inlineChanges';
-import { lineCount } from '../diff/parseDiff';
 import type { DiffLine, FileDiff } from '../diff/parseDiff';
 import type { CursorSide, PaintContext } from '../render/diffRows';
 import type { Palette } from '../render/palette';
@@ -29,12 +28,16 @@ interface DiffViewOptions {
   themeName: string;
   focused: boolean;
   now: number;
+  wrap: boolean;
+  setWrap: React.Dispatch<React.SetStateAction<boolean>>;
   /** Pins the view mode, e.g. `file` for the browse viewer. */
   fixedView?: ViewMode;
 }
 
 /** Rows kept between the cursor and the pane's edge. */
 const MARGIN = 3;
+/** Room left after the longest line when scrolled all the way. */
+const EDGE_ROOM = 4;
 const FOLD_LINES = 1500;
 const GENERATED =
   /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?|Cargo\.lock|Gemfile\.lock|poetry\.lock|composer\.lock|go\.sum)$|\.min\.(js|css)$|\.map$/;
@@ -47,13 +50,14 @@ export function useDiffView(opts: DiffViewOptions) {
   const { files, comments, width, height } = opts;
   const [chosenView, setView] = React.useState<ViewMode>('unified');
   const view = opts.fixedView ?? chosenView;
-  const [wrap, setWrap] = React.useState(true);
+  const { wrap, setWrap } = opts;
   const [showComments, setShowComments] = React.useState(true);
   const [folds, setFolds] = React.useState<ReadonlyMap<string, boolean>>(
     new Map(),
   );
   const [cursor, setCursor] = React.useState(0);
   const [side, setSide] = React.useState<CursorSide>('right');
+  const [scrollX, setScrollX] = React.useState(0);
   const [, redraw] = React.useReducer((n: number) => n + 1, 0);
   const top = React.useRef(0);
   const pendingKey = React.useRef<string | null>(null);
@@ -81,6 +85,11 @@ export function useDiffView(opts: DiffViewOptions) {
     [files, comments, width, view, wrap, collapsed, showComments],
   );
   const { rows, stops } = layout;
+  const longest = React.useMemo(() => longestLine(files), [files]);
+  const maxScrollX = wrap
+    ? 0
+    : Math.max(0, longest - layout.geometry.codeWidth + EDGE_ROOM);
+  const shiftX = Math.min(scrollX, maxScrollX);
 
   let current = clamp(cursor, 0, stops.length - 1);
   const lastLayout = React.useRef(layout);
@@ -130,6 +139,7 @@ export function useDiffView(opts: DiffViewOptions) {
     collapsed,
     focused: opts.focused,
     cursorSide: side,
+    scrollX: shiftX,
     now: opts.now,
     tokensOf,
     inlineOf: (index) => inlineChangesOf(files[index]!),
@@ -145,6 +155,10 @@ export function useDiffView(opts: DiffViewOptions) {
     height,
     view,
     wrap,
+    /** Columns scrolled sideways; always 0 while wrapping. */
+    scrollX: shiftX,
+    scrollXBy: (delta: number) =>
+      setScrollX((x) => clamp(Math.min(x, maxScrollX) + delta, 0, maxScrollX)),
     showComments,
     collapsed,
     side,
@@ -172,7 +186,9 @@ export function useDiffView(opts: DiffViewOptions) {
     nextComment: () => moveToComment(1),
     prevComment: () => moveToComment(-1),
     toggleFold,
-    unfold: (path: string) => setFolds((map) => new Map(map).set(path, false)),
+    unfold: (path: string) => {
+      if (collapsed.has(path)) setFolds((map) => new Map(map).set(path, false));
+    },
     landOn,
     anchorAtCursor,
     stopAtRow: (row: number) => stopAtRow(stops, row),
@@ -194,8 +210,11 @@ export function useDiffView(opts: DiffViewOptions) {
     top.current = clamp(top.current, 0, rows.length - height);
   }
 
+  /** The key is recorded at once, so a layout rebuilt in the same update keeps the move. */
   function moveTo(index: number) {
-    setCursor(clamp(index, 0, stops.length - 1));
+    const next = clamp(index, 0, stops.length - 1);
+    cursorKey.current = stops[next]?.key ?? cursorKey.current;
+    setCursor(next);
   }
 
   function page(direction: 1 | -1) {
@@ -311,8 +330,19 @@ export function useDiffView(opts: DiffViewOptions) {
   }
 }
 
+function longestLine(files: FileDiff[]): number {
+  let longest = 0;
+  for (const file of files)
+    for (const hunk of file.hunks)
+      for (const line of hunk.lines)
+        longest = Math.max(longest, line.text.length);
+  return longest;
+}
+
 function isFoldedByDefault(file: FileDiff): boolean {
-  return GENERATED.test(file.path) || lineCount(file) > FOLD_LINES;
+  return (
+    GENERATED.test(file.path) || file.additions + file.deletions > FOLD_LINES
+  );
 }
 
 function hunkOf(stop: Stop): string | null {

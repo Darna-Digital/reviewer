@@ -10,7 +10,7 @@ import { Line } from './Line';
 
 const KEY_WIDTH = 14;
 const MOUSE_HELP =
-  ' click selects · double-click opens · right-click for actions · wheel scrolls · drag the dividers to resize · ^o leaves a terminal';
+  ' click selects · double-click opens · right-click for actions · wheel scrolls · drag the dividers to resize · ^o stops typing into a service';
 
 /** Every command, grouped, straight from the command table. */
 export function HelpOverlay() {

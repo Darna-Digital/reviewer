@@ -120,19 +120,6 @@ export function CommitBox({ height }: { height: number }) {
         />
         <Line segs={[{ text: ' ' }]} width={1} fill={bg} />
       </box>
-      <Line
-        segs={[
-          {
-            text: editing
-              ? ' esc done · ^s commit'
-              : ' space include · i message · ^g generate · ^s commit',
-            fg: palette.faint,
-            italic: true,
-          },
-        ]}
-        width={width}
-        fill={bg}
-      />
     </box>
   );
 }

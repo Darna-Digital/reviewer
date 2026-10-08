@@ -6,13 +6,14 @@ export type Surface = UiState['surface'];
 export type BottomTab = UiState['bottomTab'];
 export type Workspace = ReturnType<typeof useWorkspace>;
 
-export const BOTTOM_TABS: BottomTab[] = ['history', 'terminal', 'run'];
+export const BOTTOM_TABS: BottomTab[] = ['history', 'run'];
 
 const DEFAULT_SIDEBAR_SHARE = 0.24;
 const MIN_SIDEBAR = 24;
 const MIN_MAIN = 40;
 const MIN_BOTTOM = 6;
 const MIN_EDITOR = 6;
+const MIN_HISTORY_DETAILS = 24;
 const SAVE_DELAY_MS = 400;
 
 /** Which surface is up, and where the panes sit; restored per repository. */
@@ -74,6 +75,18 @@ export function useWorkspace(
       ),
     openBottom: (tab: BottomTab) =>
       update({ bottomOpen: true, bottomTab: tab }),
+    historyDetailsWidth: state.historyDetailsWidth,
+    resizeHistoryDetails: (width: number) =>
+      update({ historyDetailsWidth: Math.max(MIN_HISTORY_DETAILS, width) }),
+    fullFiles: state.fullFiles,
+    toggleFullFiles: () =>
+      setState((prev) => ({ ...prev, fullFiles: !prev.fullFiles })),
+    wrap: state.wrap,
+    setWrap: (next: React.SetStateAction<boolean>) =>
+      setState((prev) => ({
+        ...prev,
+        wrap: typeof next === 'function' ? next(prev.wrap) : next,
+      })),
     commitMessage: state.commitMessage,
     setCommitMessage: (commitMessage: string) => update({ commitMessage }),
   };

@@ -22,6 +22,7 @@ export function useServices(review: Review, store: Store) {
     store.devCommands(root),
   );
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [tableScroll, setTableScroll] = React.useState(0);
   const [, redraw] = React.useReducer((n: number) => n + 1, 0);
   const sessions = React.useRef(new Map<string, PtySession>());
   const size = React.useRef({ cols: 100, rows: 20 });
@@ -41,6 +42,11 @@ export function useServices(review: Review, store: Store) {
     commands.find((command) => command.id === selectedId) ?? commands[0];
 
   return {
+    /** Columns the commands table is scrolled sideways; the pane clamps it. */
+    tableScroll,
+    scrollTable: (delta: number) =>
+      setTableScroll((x) => Math.max(0, x + delta)),
+    clampTable: (max: number) => setTableScroll((x) => Math.min(x, max)),
     commands,
     selected,
     select: setSelectedId,

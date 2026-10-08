@@ -12,16 +12,26 @@ const DIFF_ARGS = [
   '-M',
 ];
 
+/** Context lines either side of a change: git's default, or every line. */
+export type DiffContext = 'hunks' | 'full';
+const FULL_CONTEXT = 1_000_000;
+
+function contextArgs(context: DiffContext): string[] {
+  return context === 'full' ? [`-U${FULL_CONTEXT}`] : [];
+}
+
 /** Untracked files past this are listed but not read. */
 const MAX_UNTRACKED_BYTES = 512 * 1024;
 /** Bytes sniffed for a NUL to call a file binary — git's own rule. */
 const BINARY_SNIFF = 8000;
 
 /** Working tree against `HEAD`, untracked files included. */
-export async function worktreeDiff(root: string): Promise<FileDiff[]> {
-  const tracked = await git(root, ['diff', ...DIFF_ARGS, 'HEAD']).catch(
-    () => '',
-  );
+export async function worktreeDiff(
+  root: string,
+  context: DiffContext = 'hunks',
+): Promise<FileDiff[]> {
+  const args = ['diff', ...DIFF_ARGS, ...contextArgs(context), 'HEAD'];
+  const tracked = await git(root, args).catch(() => '');
   return withUntracked(root, tracked);
 }
 
@@ -29,19 +39,21 @@ export async function worktreeDiff(root: string): Promise<FileDiff[]> {
 export async function branchDiff(
   root: string,
   target: string,
+  context: DiffContext = 'hunks',
 ): Promise<FileDiff[]> {
   const base = (await git(root, ['merge-base', target, 'HEAD'])).trim();
-  return withUntracked(root, await git(root, ['diff', ...DIFF_ARGS, base]));
+  const args = ['diff', ...DIFF_ARGS, ...contextArgs(context), base];
+  return withUntracked(root, await git(root, args));
 }
 
 export async function commitDiff(
   root: string,
   sha: string,
+  context: DiffContext = 'hunks',
 ): Promise<FileDiff[]> {
+  const args = ['show', '--format=', '--patch', ...DIFF_ARGS];
   return sortByFolder(
-    parseDiff(
-      await git(root, ['show', '--format=', '--patch', ...DIFF_ARGS, sha]),
-    ),
+    parseDiff(await git(root, [...args, ...contextArgs(context), sha])),
   );
 }
 

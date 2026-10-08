@@ -10,16 +10,27 @@ import type { PickerOption } from './Picker';
 type BranchesOverlay = Extract<Overlay, { kind: 'branches' }>;
 
 const RECENT = 5;
+const CREATE = 'create';
 const WIDTH = 64;
 
 /**
  * The branch popover under the sidebar's branch chip: Recent, Local and
- * Remote. ⏎ checks out; tab or a right-click opens the branch's actions.
+ * Remote. ⏎ checks out; → (or tab, or a right-click) opens the branch's
+ * actions beside it, ← comes back;
+ * a name no branch has yet offers to create it.
  */
-export function BranchPicker({ overlay }: { overlay: BranchesOverlay }) {
+export function BranchPicker({
+  overlay,
+  inert = false,
+}: {
+  overlay: BranchesOverlay;
+  inert?: boolean;
+}) {
   const app = useAppContext();
   const { palette, review, actions, branches, now } = app;
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState(overlay.query ?? '');
+  const newName = query.trim().replace(/\s+/g, '-');
+  const current = review.repo?.branch;
   const byName = new Map(review.branches.map((b) => [b.name, b]));
   const compared =
     review.comparison.kind === 'branch' ? review.comparison.against : null;
@@ -32,11 +43,21 @@ export function BranchPicker({ overlay }: { overlay: BranchesOverlay }) {
     ...(query ? [] : locals.slice(0, RECENT).map((b) => option(b, 'Recent'))),
     ...sorted(locals).map((b) => option(b, 'Local')),
     ...sorted(remotes).map((b) => option(b, 'Remote')),
+    ...(newName && !byName.has(newName)
+      ? [
+          {
+            key: CREATE,
+            label: `+ Create branch ‘${newName}’`,
+            group: 'New',
+            hint: current ? `from ${current}` : '',
+            labelColor: palette.accent,
+          },
+        ]
+      : []),
   ];
-  const current = review.repo?.branch;
   const footer: Seg[] = [
     { text: ' + New branch…', fg: palette.accent },
-    { text: '   tab', fg: palette.muted },
+    { text: '   →', fg: palette.muted },
     { text: ' actions', fg: palette.faint },
   ];
 
@@ -46,23 +67,28 @@ export function BranchPicker({ overlay }: { overlay: BranchesOverlay }) {
       screen={app.screen}
       anchor={overlay.at}
       width={WIDTH}
+      inert={inert}
       title={current ? `⎇ ${current}` : 'Branches'}
       placeholder="Switch to a branch…"
       options={options}
-      initialKey={current ? `Recent:${current}` : undefined}
+      initialKey={
+        overlay.highlighted ?? (current ? `Recent:${current}` : undefined)
+      }
+      initialQuery={overlay.query}
       onQueryChange={setQuery}
       footer={footer}
       onFooterPress={() => actions.newBranch()}
-      onKey={(key, picked) => {
-        if (key !== 'tab' || !picked) return false;
-        openMenu(picked, overlay.at ?? { x: 4, y: 2 });
+      onKey={(key, picked, beside) => {
+        if ((key !== 'right' && key !== 'tab') || !picked) return false;
+        openMenu(picked, beside);
         return true;
       }}
       onContextMenu={openMenu}
       onClose={actions.closeOverlay}
       onPick={(picked) => {
-        const branch = branchOf(picked);
         actions.closeOverlay();
+        if (picked.key === CREATE) return void branches.create(newName);
+        const branch = branchOf(picked);
         if (branch && !branch.current) void branches.checkout(branch);
       }}
     />
@@ -100,6 +126,11 @@ export function BranchPicker({ overlay }: { overlay: BranchesOverlay }) {
 
   function openMenu(picked: PickerOption, at: { x: number; y: number }) {
     const branch = branchOf(picked);
-    if (branch) actions.branchMenu(branch, at);
+    if (branch)
+      actions.branchMenu(branch, at, {
+        ...overlay,
+        highlighted: picked.key,
+        query,
+      });
   }
 }

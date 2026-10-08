@@ -1,11 +1,15 @@
+import type { DevCommand } from '@reviewer/core/local-dev';
 import * as React from 'react';
 import {
+  SERVICE_NAME_COLUMN,
+  SERVICE_STATUS_COLUMN,
   processDot,
   serviceColumns,
   serviceItems,
   statusLabel,
 } from '../render/listItems';
 import { mix } from '../render/palette';
+import { sliceSegs } from '../render/styled';
 import { padEnd, truncate } from '../text/measure';
 import { useAppContext } from './AppContext';
 import { Button, Line } from './Line';
@@ -13,6 +17,7 @@ import { List } from './List';
 import { TerminalView } from './TerminalView';
 
 const TABLE_SHARE = 0.42;
+const GAPS = 8;
 
 /** Services: a table on the left, the selected one's live output on the right. */
 export function RunPane({
@@ -29,6 +34,13 @@ export function RunPane({
   const tableWidth = Math.max(36, Math.round(width * TABLE_SHARE));
   const detailWidth = width - tableWidth - 1;
   const anyRunning = services.running().length > 0;
+  const contentWidth = Math.max(tableWidth, naturalWidth(services.commands));
+  const maxScroll = contentWidth - tableWidth;
+  const scrollX = Math.min(services.tableScroll, maxScroll);
+
+  React.useEffect(() => {
+    services.clampTable(maxScroll);
+  }, [services, maxScroll]);
 
   React.useEffect(() => {
     services.setSize(detailWidth, height - 2);
@@ -68,7 +80,11 @@ export function RunPane({
       ) : (
         <box flexDirection="row" height={height - 1} width={width}>
           <box flexDirection="column" width={tableWidth} height={height - 1}>
-            <TableHeader width={tableWidth} />
+            <TableHeader
+              width={tableWidth}
+              contentWidth={contentWidth}
+              scrollX={scrollX}
+            />
             <List
               items={serviceItems(palette, services.commands, (id) => ({
                 status: services.statusOf(id),
@@ -79,6 +95,9 @@ export function RunPane({
               )}
               focused={focused && !app.captured}
               width={tableWidth}
+              contentWidth={contentWidth}
+              scrollX={scrollX}
+              onScrollX={services.scrollTable}
               height={height - 2}
               palette={palette}
               emptyText="No commands"
@@ -110,29 +129,42 @@ export function RunPane({
   );
 }
 
-function TableHeader({ width }: { width: number }) {
+function TableHeader({
+  width,
+  contentWidth,
+  scrollX,
+}: {
+  width: number;
+  contentWidth: number;
+  scrollX: number;
+}) {
   const { palette } = useAppContext();
-  const columns = serviceColumns(width);
+  const columns = serviceColumns(contentWidth);
   return (
     <Line
-      segs={[
-        {
-          text: `   ${padEnd('NAME', columns.name)} `,
-          fg: palette.faint,
-          bold: true,
-        },
-        {
-          text: `${padEnd('COMMAND', columns.command)} `,
-          fg: palette.faint,
-          bold: true,
-        },
-        {
-          text: padEnd('STATUS', columns.status),
-          fg: palette.faint,
-          bold: true,
-        },
-        { text: 'FOLDER', fg: palette.faint, bold: true },
-      ]}
+      segs={sliceSegs(
+        [
+          {
+            text: `   ${padEnd('NAME', columns.name)} `,
+            fg: palette.faint,
+            bold: true,
+          },
+          {
+            text: `${padEnd('COMMAND', columns.command)} `,
+            fg: palette.faint,
+            bold: true,
+          },
+          {
+            text: padEnd('STATUS', columns.status),
+            fg: palette.faint,
+            bold: true,
+          },
+          { text: 'FOLDER', fg: palette.faint, bold: true },
+        ],
+        scrollX,
+        width,
+        palette.frame,
+      )}
       width={width}
       fill={palette.frame}
     />
@@ -319,5 +351,18 @@ function ToolButton({
       />
       <Line segs={[{ text: ' ' }]} width={1} fill={palette.frame} />
     </box>
+  );
+}
+
+/** Wide enough that no command or folder is cut: the name column, status and gaps besides. */
+function naturalWidth(commands: DevCommand[]): number {
+  const longest = (pick: (command: DevCommand) => string) =>
+    Math.max(0, ...commands.map((command) => pick(command).length));
+  return (
+    longest((c) => c.command) +
+    SERVICE_NAME_COLUMN +
+    SERVICE_STATUS_COLUMN +
+    GAPS +
+    longest((c) => c.cwd || '.')
   );
 }

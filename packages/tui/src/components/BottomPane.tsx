@@ -6,14 +6,13 @@ import type { BottomTab } from '../app/useWorkspace';
 import { mix } from '../render/palette';
 import { useAppContext } from './AppContext';
 import { captureMouse } from './captureMouse';
+import { DragRule } from './DragRule';
 import { HistoryPane } from './HistoryPane';
 import { Button, Line } from './Line';
 import { RunPane } from './RunPane';
-import { TerminalPane } from './TerminalPane';
 
 const LABEL: Record<BottomTab, string> = {
   history: 'History',
-  terminal: 'Terminal',
   run: 'Run',
 };
 
@@ -25,7 +24,7 @@ export function BottomPane() {
   const { palette, layout, workspace, actions, services } = app;
   const bg = mix(palette.frame, palette.text, 0.04);
   const focused = app.focus === 'bottom' && !app.overlay;
-  const height = layout.bottomHeight - 1;
+  const height = layout.bottomHeight - 1 - DIVIDER_ROWS;
   const running = services.running().length;
 
   return (
@@ -35,6 +34,13 @@ export function BottomPane() {
       height={layout.bottomHeight}
       backgroundColor={palette.frame}
     >
+      <DragRule
+        direction="horizontal"
+        length={layout.mainWidth}
+        onDrag={(event) =>
+          workspace.resizeBottom(app.screen.height - 1 - event.y)
+        }
+      />
       <box
         ref={header}
         flexDirection="row"
@@ -85,7 +91,7 @@ export function BottomPane() {
           <Line
             segs={[
               {
-                text: ' typing into the terminal · ^o to leave ',
+                text: ' typing into the service · ^o to stop ',
                 fg: palette.warning,
               },
             ]}
@@ -103,12 +109,11 @@ export function BottomPane() {
       {workspace.bottomTab === 'history' ? (
         <HistoryPane height={height} focused={focused} />
       ) : null}
-      {workspace.bottomTab === 'terminal' ? (
-        <TerminalPane height={height} />
-      ) : null}
       {workspace.bottomTab === 'run' ? (
         <RunPane height={height} focused={focused} />
       ) : null}
     </box>
   );
 }
+
+const DIVIDER_ROWS = 1;

@@ -26,6 +26,8 @@ interface EditorOptions {
   themeName: string;
   focused: boolean;
   now: number;
+  wrap: boolean;
+  setWrap: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /** Open-file tabs and the viewer for the active one, with its comments. */

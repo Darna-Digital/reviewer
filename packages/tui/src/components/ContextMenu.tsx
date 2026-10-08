@@ -22,11 +22,12 @@ export function ContextMenu({ overlay }: { overlay: MenuOverlay }) {
 
   useKeyboard((event) => {
     const key = keyName(event);
-    if (key === 'escape') actions.closeOverlay();
+    if (key === 'escape' || (key === 'left' && overlay.under))
+      actions.dismissMenu();
     else if (key === 'down' || key === 'j')
       setIndex((i) => Math.min(enabled.length - 1, i + 1));
     else if (key === 'up' || key === 'k') setIndex((i) => Math.max(0, i - 1));
-    else if (key === 'return' && lit) run(lit);
+    else if ((key === 'return' || key === 'right') && lit) run(lit);
     else return;
     event.preventDefault();
   });
@@ -41,7 +42,7 @@ export function ContextMenu({ overlay }: { overlay: MenuOverlay }) {
 
   return (
     <>
-      <Backdrop onPress={actions.closeOverlay} zIndex={59} />
+      <Backdrop onPress={actions.dismissMenu} zIndex={59} />
       <box
         position="absolute"
         left={left}

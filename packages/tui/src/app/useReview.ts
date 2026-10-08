@@ -3,6 +3,7 @@ import type { FSWatcher } from 'node:fs';
 import * as React from 'react';
 import type { FileDiff } from '../diff/parseDiff';
 import { branchDiff, commitDiff, worktreeDiff } from '../git/diff';
+import type { DiffContext } from '../git/diff';
 import { listFiles, statusMap as readStatusMap } from '../git/files';
 import type { FileStatus } from '../git/files';
 import { readCommit } from '../git/log';
@@ -40,7 +41,12 @@ const IGNORED_PATHS =
  * Repository state — HEAD, the diff under review, branches, history and
  * comments — kept live by a file watcher, a status poll and a comment poll.
  */
-export function useReview(root: string, store: Store, initial: Comparison) {
+export function useReview(
+  root: string,
+  store: Store,
+  initial: Comparison,
+  context: DiffContext,
+) {
   const [repo, setRepo] = React.useState<RepoInfo | null>(null);
   const [status, setStatus] = React.useState<RepoStatus | null>(null);
   const [comparison, setComparisonState] = React.useState(initial);
@@ -79,7 +85,7 @@ export function useReview(root: string, store: Store, initial: Comparison) {
       if (!quiet) setLoading(true);
       try {
         const [next, detail] = await Promise.all([
-          readDiff(root, target),
+          readDiff(root, target, context),
           target.kind === 'commit' ? readCommit(root, target.sha) : null,
         ]);
         if (ticket !== sequence.current) return;
@@ -96,7 +102,7 @@ export function useReview(root: string, store: Store, initial: Comparison) {
         if (ticket === sequence.current) setLoading(false);
       }
     },
-    [root, fail],
+    [root, fail, context],
   );
 
   const loadRefs = React.useCallback(async () => {
@@ -276,13 +282,17 @@ export function useReview(root: string, store: Store, initial: Comparison) {
   };
 }
 
-function readDiff(root: string, comparison: Comparison): Promise<FileDiff[]> {
+function readDiff(
+  root: string,
+  comparison: Comparison,
+  context: DiffContext,
+): Promise<FileDiff[]> {
   switch (comparison.kind) {
     case 'worktree':
-      return worktreeDiff(root);
+      return worktreeDiff(root, context);
     case 'branch':
-      return branchDiff(root, comparison.against);
+      return branchDiff(root, comparison.against, context);
     case 'commit':
-      return commitDiff(root, comparison.sha);
+      return commitDiff(root, comparison.sha, context);
   }
 }

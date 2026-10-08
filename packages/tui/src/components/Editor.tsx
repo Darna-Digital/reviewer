@@ -1,5 +1,4 @@
-import { describeComparison } from '../app/comparison';
-import { Breadcrumbs } from './Breadcrumbs';
+import { COMMENTS_POPOVER_WIDTH } from './CommentsPopover';
 import { mix } from '../render/palette';
 import { segsWidth } from '../render/styled';
 import type { Seg } from '../render/styled';
@@ -12,7 +11,7 @@ import { useDoubleClick } from './useDoubleClick';
 /** The editor island: its header row, then the diff (Review) or the open file (Browse). */
 export function Editor() {
   const app = useAppContext();
-  const { palette, layout, workspace, banner } = app;
+  const { palette, layout, workspace } = app;
   const isReview = workspace.surface === 'review';
   return (
     <box
@@ -22,18 +21,7 @@ export function Editor() {
       backgroundColor={palette.island}
     >
       {isReview ? <ReviewHeader /> : <TabStrip />}
-      {isReview
-        ? banner.map((segs, i) => (
-            <Line
-              key={`banner-${i}`}
-              segs={segs}
-              width={layout.mainWidth}
-              fill={palette.control}
-            />
-          ))
-        : null}
       <Content />
-      {app.crumbs ? <Breadcrumbs /> : null}
     </box>
   );
 }
@@ -154,24 +142,15 @@ function Empty({ lines }: { lines: Seg[][] }) {
   );
 }
 
+/** What the diff holds and how it is drawn; the comparison is picked in the sidebar. */
 function ReviewHeader() {
-  const { palette, layout, review, diff, actions } = useAppContext();
+  const { palette, layout, review, diff, actions, workspace } = useAppContext();
   const bg = palette.frame;
   const additions = review.files.reduce((sum, file) => sum + file.additions, 0);
   const deletions = review.files.reduce((sum, file) => sum + file.deletions, 0);
-  const isAimed =
-    review.comparison.kind === 'branch' &&
-    review.comparison.against === review.aim;
   const summary: Seg[] = [
-    { text: ' ⇄ ', fg: palette.accent, bg },
     {
-      text: `${describeComparison(review.comparison)}${isAimed ? ' ◎' : ''}`,
-      fg: palette.text,
-      bg,
-      bold: true,
-    },
-    {
-      text: `   ${review.files.length} ${review.files.length === 1 ? 'file' : 'files'}  `,
+      text: ` ${review.files.length} ${review.files.length === 1 ? 'file' : 'files'}  `,
       fg: palette.faint,
       bg,
     },
@@ -186,15 +165,6 @@ function ReviewHeader() {
       fg: deletions ? palette.deleted : palette.faint,
       bg,
     },
-    ...(review.visibleComments.length
-      ? [
-          {
-            text: `  ◆ ${review.visibleComments.length}`,
-            fg: palette.accent,
-            bg,
-          },
-        ]
-      : []),
     ...(review.loading ? [{ text: '  ◌', fg: palette.faint, bg }] : []),
   ];
   return (
@@ -204,13 +174,19 @@ function ReviewHeader() {
       width={layout.mainWidth}
       backgroundColor={bg}
     >
-      <Button
-        segs={summary}
-        bg={bg}
-        hoverTint={palette.text}
-        onPress={() => actions.openTargets({ x: layout.mainLeft, y: 2 })}
-      />
+      <Line segs={summary} width={segsWidth(summary)} fill={bg} />
       <box flexGrow={1} height={1} backgroundColor={bg} />
+      <Toggle
+        label="hunks"
+        on={!workspace.fullFiles}
+        onPress={() => workspace.fullFiles && workspace.toggleFullFiles()}
+      />
+      <Toggle
+        label="full files"
+        on={workspace.fullFiles}
+        onPress={() => !workspace.fullFiles && workspace.toggleFullFiles()}
+      />
+      <Line segs={[{ text: ' │', fg: palette.rule }]} width={2} fill={bg} />
       <Toggle
         label="unified"
         on={diff.view === 'unified'}
@@ -228,9 +204,17 @@ function ReviewHeader() {
         onPress={() => diff.setWrap((w) => !w)}
       />
       <Toggle
-        label="comments"
+        label={`◆ ${review.visibleComments.length} comments ▾`}
         on={diff.showComments}
-        onPress={() => diff.setShowComments((s) => !s)}
+        onPress={() =>
+          actions.openOverlay({
+            kind: 'commentsHere',
+            at: {
+              x: layout.mainLeft + layout.mainWidth - COMMENTS_POPOVER_WIDTH,
+              y: 2,
+            },
+          })
+        }
       />
     </box>
   );
@@ -238,7 +222,7 @@ function ReviewHeader() {
 
 /** Open-file tabs; double-click keeps a preview (italic) tab open, as on the Mac. */
 function TabStrip() {
-  const { palette, layout, editor } = useAppContext();
+  const { palette, layout, editor, workspace } = useAppContext();
   const isDoubleClick = useDoubleClick();
   const bg = palette.frame;
   return (
@@ -299,6 +283,11 @@ function TabStrip() {
           fill={bg}
         />
       ) : null}
+      <Toggle
+        label="wrap"
+        on={workspace.wrap}
+        onPress={() => workspace.setWrap((on) => !on)}
+      />
     </box>
   );
 }

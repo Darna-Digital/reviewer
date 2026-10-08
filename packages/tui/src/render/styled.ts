@@ -49,6 +49,33 @@ export function spread(
   );
 }
 
+/** The `width` cells of `segs` starting at cell `from`: a row scrolled sideways. */
+export function sliceSegs(
+  segs: Seg[],
+  from: number,
+  width: number,
+  fill?: string,
+): Seg[] {
+  if (from <= 0) return fitSegs(segs, width, fill);
+  const out: Seg[] = [];
+  let skipped = 0;
+  for (const seg of segs) {
+    if (skipped >= from) {
+      out.push(seg);
+      continue;
+    }
+    const chars = [...seg.text];
+    let cut = 0;
+    while (cut < chars.length && skipped < from) {
+      skipped += cellWidth(chars[cut]!);
+      cut += 1;
+    }
+    if (cut < chars.length)
+      out.push({ ...seg, text: chars.slice(cut).join('') });
+  }
+  return fitSegs(out, width, fill);
+}
+
 export function segsWidth(segs: Seg[]): number {
   return segs.reduce((sum, seg) => sum + cellWidth(seg.text), 0);
 }
