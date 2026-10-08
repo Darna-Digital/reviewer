@@ -77,7 +77,11 @@ export function Sidebar() {
         onContextMenu={(item, at) =>
           item.value && actions.treeMenu(item.value, at)
         }
-        onScroll={(delta) => tree.step(delta)}
+        onScroll={(delta) => {
+          // the tree follows the open file until the sidebar has the keyboard
+          if (app.focus !== 'sidebar') actions.setFocus('sidebar');
+          tree.step(delta);
+        }}
       />
       {app.isCommitMode ? <CommitBox height={layout.commitBoxHeight} /> : null}
     </box>
