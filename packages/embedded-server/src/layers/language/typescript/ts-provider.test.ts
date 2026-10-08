@@ -32,6 +32,41 @@ const B_TS = [
   "",
 ].join("\n");
 
+const OUTLINE_TS = [
+  'import { greet } from "./a"',
+  "",
+  "export class Greeter {",
+  '  private name = "x"',
+  "  constructor(readonly prefix: string) {}",
+  "  greet(who: string) {",
+  "    const local = greet(who)",
+  "    return local",
+  "  }",
+  "  get size() {",
+  "    return 1",
+  "  }",
+  "}",
+  "",
+  "export function helper() {",
+  "  function inner() {}",
+  "  return inner",
+  "}",
+  "",
+  "export const LIMIT = 3",
+  "let counter = 0",
+  "export interface Shape {",
+  "  area(): number",
+  "}",
+  "export type Id = string",
+  "enum Color {",
+  "  Red,",
+  "}",
+  "(function () {",
+  "  const hoisted = counter",
+  "})()",
+  "",
+].join("\n");
+
 const TSCONFIG = JSON.stringify(
   {
     compilerOptions: {
@@ -309,11 +344,57 @@ describe("typescriptProvider", () => {
         })
       );
       expect(hover.contents).toBe("");
+      expect(await run(typescriptProvider.documentSymbols!(document))).toEqual({
+        providerId: null,
+        symbols: [],
+      });
     } finally {
       rmSync(bare, { recursive: true, force: true });
       if (previous === undefined) delete process.env[OVERRIDE_ENV];
       else process.env[OVERRIDE_ENV] = previous;
       resetTypeScriptCache();
     }
+  });
+
+  it("outlines a document parents first, with kinds and depths", async () => {
+    const result = await run(
+      typescriptProvider.documentSymbols!(request("src/outline.ts", OUTLINE_TS))
+    );
+    expect(result.providerId).toBe("typescript");
+    const outline = result.symbols.map(
+      (symbol) =>
+        `${"  ".repeat(symbol.depth)}${symbol.kind} ${symbol.name}<${symbol.containerName}`
+    );
+    // The anonymous function is no entry of its own; what it declares stands
+    // in its place, at the top level.
+    expect(outline).toEqual([
+      "alias greet<",
+      "class Greeter<",
+      "  property name<Greeter",
+      "  constructor constructor<Greeter",
+      "  property prefix<Greeter",
+      "  method greet<Greeter",
+      "    constant local<greet",
+      "  property size<Greeter",
+      "function helper<",
+      "  function inner<helper",
+      "constant LIMIT<",
+      "variable counter<",
+      "interface Shape<",
+      "  method area<Shape",
+      "type Id<",
+      "enum Color<",
+      "  enummember Red<Color",
+      "constant hoisted<",
+    ]);
+
+    const greeter = result.symbols.find((symbol) => symbol.name === "Greeter");
+    expect(greeter?.selectionRange.start).toEqual(
+      positionOf(OUTLINE_TS, "Greeter")
+    );
+    expect(greeter?.range.start).toEqual(
+      positionOf(OUTLINE_TS, "export class")
+    );
+    expect(greeter?.range.end).toEqual({ line: 12, character: 1 });
   });
 });

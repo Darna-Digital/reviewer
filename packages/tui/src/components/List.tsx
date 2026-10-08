@@ -36,8 +36,9 @@ const MARGIN = 2;
 const RIGHT_BUTTON = 2;
 
 /**
- * A virtualized list scrolled to keep its selection in view. Click selects,
- * double-click activates, right-click asks for a context menu.
+ * A virtualized list scrolled to keep its selection in view. Click selects;
+ * double-click or ⇧-click activates (a file opens as a kept tab, as on the
+ * Mac); right-click asks for a context menu.
  */
 export function List<TValue>(props: ListProps<TValue>) {
   const { items, selected, focused, width, height, palette } = props;
@@ -146,7 +147,7 @@ export function List<TValue>(props: ListProps<TValue>) {
             if (event.button === RIGHT_BUTTON) {
               props.onSelect(item, row.item);
               props.onContextMenu?.(item, { x: event.x, y: event.y });
-            } else if (isDoubleClick(item.key)) {
+            } else if (event.modifiers.shift || isDoubleClick(item.key)) {
               props.onActivate?.(item, row.item);
             } else {
               props.onSelect(item, row.item);

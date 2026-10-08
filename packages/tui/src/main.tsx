@@ -3,6 +3,7 @@ import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
 import { describeThemes, findTheme } from '@reviewer/core/themes';
 import { App } from './app/App';
+import { trackCommandKey } from './app/commandKey';
 import { WORKTREE } from './app/comparison';
 import type { Comparison } from './app/comparison';
 import { parseCli, USAGE } from './cli';
@@ -58,12 +59,16 @@ async function main(cli: CliOptions) {
     process.on(signal, () => process.exit(0));
   }
 
+  const commandKey = trackCommandKey();
   const renderer = await createCliRenderer({
     exitOnCtrlC: false,
     useMouse: true,
     targetFps: 60,
     backgroundColor: 'transparent',
+    useKittyKeyboard: { events: true, allKeysAsEscapes: true },
+    prependInputHandlers: [commandKey.handle],
   });
+  renderer.on('blur', commandKey.forget);
   const settings = loadSettings();
   const [system, terminal] = await Promise.all([
     readSystemScheme(),
@@ -79,6 +84,7 @@ async function main(cli: CliOptions) {
       themeStart={{ ...start, look }}
       initial={initial}
       startServer={cli.startServer}
+      commandKey={commandKey}
     />,
   );
 }

@@ -36,18 +36,20 @@ const send = (message) => {
 const RANGE = { start: { line: 0, character: 6 }, end: { line: 0, character: 14 } }
 const OTHER = { start: { line: 4, character: 2 }, end: { line: 4, character: 10 } }
 let root = ""
+const opened = new Set()
 
 const handle = (message) => {
   const { id, method, params } = message
   if (method === "initialize") {
     root = params.rootUri
-    send({ jsonrpc: "2.0", id, result: { capabilities: { hoverProvider: true, definitionProvider: true } } })
+    send({ jsonrpc: "2.0", id, result: { capabilities: { hoverProvider: true, definitionProvider: true, documentSymbolProvider: true } } })
     // Ask the client something back; a client that ignores this wedges here.
     send({ jsonrpc: "2.0", id: 9001, method: "workspace/configuration", params: { items: [{ section: "fake" }] } })
     return
   }
   if (method === "textDocument/didOpen") {
     const uri = params.textDocument.uri
+    opened.add(uri)
     const failing = params.textDocument.text.includes("BROKEN")
     send({
       jsonrpc: "2.0",
@@ -58,6 +60,27 @@ const handle = (message) => {
           ? [{ range: RANGE, severity: 2, code: "E1", source: "fake", message: "something is off", tags: [1] }]
           : [],
       },
+    })
+    return
+  }
+  if (method === "textDocument/documentSymbol") {
+    // Only a document the client opened first has an outline to give.
+    if (!opened.has(params.textDocument.uri)) {
+      send({ jsonrpc: "2.0", id, error: { code: -32602, message: "document not open" } })
+      return
+    }
+    send({
+      jsonrpc: "2.0",
+      id,
+      result: [
+        {
+          name: "greeting",
+          kind: 13,
+          range: { start: { line: 0, character: 0 }, end: { line: 0, character: 18 } },
+          selectionRange: RANGE,
+          children: [{ name: "value", kind: 16, range: RANGE, selectionRange: RANGE }],
+        },
+      ],
     })
     return
   }
@@ -347,6 +370,17 @@ describe("a server that is still indexing", () => {
     expect(result.targets[0]?.location.path).toBe("src/a.txt");
   });
 
+  it("is not asked for an outline it never offered", async () => {
+    const result = await run(
+      makeLspProvider(indexingConfig()).documentSymbols!({
+        root,
+        path: "src/a.txt",
+        contents: null,
+      })
+    );
+    expect(result).toEqual({ providerId: null, symbols: [] });
+  });
+
   it("does not hold up a server that announces no work of its own", async () => {
     const started = Date.now();
     await run(
@@ -472,6 +506,27 @@ describe("makeLspProvider", () => {
     });
   });
 
+  it("outlines the synced document", async () => {
+    const result = await run(
+      makeLspProvider(config).documentSymbols!({
+        root,
+        path: "src/a.txt",
+        contents: null,
+      })
+    );
+    expect(result.providerId).toBe("lsp:fake");
+    expect(
+      result.symbols.map((s) => [s.depth, s.kind, s.name, s.containerName])
+    ).toEqual([
+      [0, "variable", "greeting", ""],
+      [1, "number", "value", "greeting"],
+    ]);
+    expect(result.symbols[0]?.selectionRange).toEqual({
+      start: { line: 0, character: 6 },
+      end: { line: 0, character: 14 },
+    });
+  });
+
   it("stays quiet when the configured binary is missing", async () => {
     const missing = makeLspProvider({
       ...config,
@@ -488,5 +543,9 @@ describe("makeLspProvider", () => {
         missing.hover({ ...document, position: { line: 0, character: 0 } })
       )
     ).toEqual({ providerId: null, range: null, contents: "" });
+    expect(await run(missing.documentSymbols!(document))).toEqual({
+      providerId: null,
+      symbols: [],
+    });
   });
 });

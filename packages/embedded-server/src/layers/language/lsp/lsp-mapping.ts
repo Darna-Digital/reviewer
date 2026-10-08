@@ -13,12 +13,20 @@ import type {
   Diagnostic,
   DiagnosticSeverity,
   DiagnosticTag,
+  DocumentSymbol,
   FileEdits,
+  FlatSymbol,
   Position,
   Range,
+  SymbolNode,
   TextEdit,
 } from "@reviewer/core/language";
-import { mapMarkdownLinks, splitLinkTarget } from "@reviewer/core/language";
+import {
+  flattenSymbolTree,
+  mapMarkdownLinks,
+  nestFlatSymbols,
+  splitLinkTarget,
+} from "@reviewer/core/language";
 import { toRepoRelative } from "../typescript/ts-mapping.ts";
 
 const ORIGIN: Position = { line: 0, character: 0 };
@@ -290,4 +298,106 @@ export const toFileEdits = (
     edits.push({ range: toRange(entry["range"]), newText });
   }
   return edits.length === 0 ? [] : [{ path, edits }];
+};
+
+/**
+ * LSP `SymbolKind` 1–26 by number, named the way the outline carries them.
+ * Index 0 is unused; LSP numbers from 1.
+ */
+const SYMBOL_KINDS: ReadonlyArray<string> = [
+  "",
+  "file",
+  "module",
+  "namespace",
+  "package",
+  "class",
+  "method",
+  "property",
+  "field",
+  "constructor",
+  "enum",
+  "interface",
+  "function",
+  "variable",
+  "constant",
+  "string",
+  "number",
+  "boolean",
+  "array",
+  "object",
+  "key",
+  "null",
+  "enummember",
+  "struct",
+  "event",
+  "operator",
+  "typeparameter",
+];
+
+/** A kind outside 1–26 (a newer spec, a server's own) reads as a variable. */
+export const symbolKindOfLsp = (raw: unknown): string =>
+  typeof raw === "number" ? SYMBOL_KINDS[raw] || "variable" : "variable";
+
+const nameOf = (entry: Record<string, unknown>): string | null => {
+  const name = entry["name"];
+  return typeof name === "string" && name.length > 0 ? name : null;
+};
+
+const toSymbolNodes = (raw: unknown): ReadonlyArray<SymbolNode> => {
+  if (!Array.isArray(raw)) return [];
+  const nodes: Array<SymbolNode> = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const name = nameOf(entry);
+    if (name === null) continue;
+    const range = toRange(entry["range"]);
+    nodes.push({
+      name,
+      kind: symbolKindOfLsp(entry["kind"]),
+      range,
+      selectionRange: isRecord(entry["selectionRange"])
+        ? toRange(entry["selectionRange"])
+        : range,
+      children: toSymbolNodes(entry["children"]),
+    });
+  }
+  return nodes;
+};
+
+const toFlatSymbols = (
+  raw: ReadonlyArray<unknown>
+): ReadonlyArray<FlatSymbol> => {
+  const symbols: Array<FlatSymbol> = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const name = nameOf(entry);
+    const location = entry["location"];
+    if (name === null || !isRecord(location)) continue;
+    const range = toRange(location["range"]);
+    const containerName = entry["containerName"];
+    symbols.push({
+      name,
+      kind: symbolKindOfLsp(entry["kind"]),
+      containerName: typeof containerName === "string" ? containerName : "",
+      range,
+      selectionRange: range,
+    });
+  }
+  return symbols;
+};
+
+/**
+ * A `textDocument/documentSymbol` answer as the flat outline. LSP allows two
+ * shapes: the hierarchical `DocumentSymbol[]` (with a `selectionRange` naming
+ * the identifier), and the older flat `SymbolInformation[]`, recognised by its
+ * `location` and given the same span for both ranges since it has only one.
+ */
+export const toDocumentSymbols = (raw: unknown): Array<DocumentSymbol> => {
+  if (!Array.isArray(raw)) return [];
+  const isFlat = raw.some(
+    (entry) => isRecord(entry) && isRecord(entry["location"])
+  );
+  return isFlat
+    ? nestFlatSymbols(toFlatSymbols(raw))
+    : flattenSymbolTree(toSymbolNodes(raw));
 };

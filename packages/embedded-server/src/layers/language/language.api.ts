@@ -3,7 +3,9 @@
  *
  * Diagnostics are a POST because they carry the editor's unsaved buffer;
  * everything else is a GET keyed by path and position, so the SPA's query cache
- * can key on the URL and hovering the same token twice costs nothing.
+ * can key on the URL and hovering the same token twice costs nothing. The GETs
+ * also take `?repo=` to be answered against a repository other than the one
+ * the window has open (see `language.scope.ts`).
  */
 import {
   CodeActionsPayload,
@@ -15,6 +17,8 @@ import {
   DefinitionResult,
   DiagnosticsPayload,
   DiagnosticsResult,
+  DocumentQuery,
+  DocumentSymbolsResult,
   HoverResult,
   InstallPayload,
   LanguageProviderInfo,
@@ -23,10 +27,13 @@ import {
 } from "@reviewer/core/language";
 import { LanguageError } from "@reviewer/core/ports/language-provider";
 import { NoRepoSelected, Ok } from "@reviewer/core/shared";
+import { InvalidRepo } from "@reviewer/core/workspace";
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/http-api";
 
 const errors = [NoRepoSelected, LanguageError] as const;
+/** For the GETs that take `?repo=`, which a bad root fails with a 400. */
+const repoScopedErrors = [...errors, InvalidRepo] as const;
 
 export class LanguageApi extends HttpApiGroup.make("language")
   .add(
@@ -46,21 +53,28 @@ export class LanguageApi extends HttpApiGroup.make("language")
     HttpApiEndpoint.get("definition", "/language/definition", {
       query: PositionQuery,
       success: DefinitionResult,
-      error: errors,
+      error: repoScopedErrors,
     })
   )
   .add(
     HttpApiEndpoint.get("references", "/language/references", {
       query: PositionQuery,
       success: ReferencesResult,
-      error: errors,
+      error: repoScopedErrors,
     })
   )
   .add(
     HttpApiEndpoint.get("hover", "/language/hover", {
       query: PositionQuery,
       success: HoverResult,
-      error: errors,
+      error: repoScopedErrors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("symbols", "/language/symbols", {
+      query: DocumentQuery,
+      success: DocumentSymbolsResult,
+      error: repoScopedErrors,
     })
   )
   .add(

@@ -22,6 +22,7 @@ import type {
   CompletionResult,
   DefinitionResult,
   Diagnostic,
+  DocumentSymbolsResult,
   HoverResult,
   Position,
   Range,
@@ -50,6 +51,8 @@ export interface ProviderCapabilities {
   readonly hover: boolean;
   readonly completions: boolean;
   readonly codeActions: boolean;
+  /** Whether `documentSymbols` is implemented — the file outline. */
+  readonly documentSymbols: boolean;
 }
 
 /** Whether a provider can serve a given repository right now. */
@@ -132,6 +135,17 @@ export interface LanguageProvider {
   readonly codeActions: (
     request: RangeRequest
   ) => Effect.Effect<ReadonlyArray<CodeActionItem>, LanguageError>;
+  /**
+   * The document's outline, flattened parents-first with each entry's depth
+   * (see `flattenSymbolTree` and `nestFlatSymbols`). A provider that cannot
+   * serve this file after all — no compiler installed, a server without
+   * outline support — answers with a null `providerId`, as `hover` does.
+   * Optional because not every provider can produce one; the repository
+   * answers "no provider" for those, exactly as for a file nothing claims.
+   */
+  readonly documentSymbols?: (
+    request: DocumentRequest
+  ) => Effect.Effect<DocumentSymbolsResult, LanguageError>;
   /**
    * Start installing the server `probe` offered an installer for. Returns as
    * soon as the work is under way — a download takes longer than a request

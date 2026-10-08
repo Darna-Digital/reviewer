@@ -1,7 +1,14 @@
 import type { App } from './useApp';
 
 export type Scope =
-  'global' | 'tree' | 'commit' | 'diff' | 'viewer' | 'history' | 'run';
+  | 'global'
+  | 'tree'
+  | 'commit'
+  | 'diff'
+  | 'viewer'
+  | 'history'
+  | 'usages'
+  | 'run';
 
 export interface Command {
   id: string;
@@ -13,7 +20,8 @@ export interface Command {
   /** Offered in the command palette. */
   palette?: boolean;
   when?: (app: App) => boolean;
-  run: (app: App) => void;
+  /** `count` is the vim count typed before the key; 1 without one. */
+  run: (app: App, count: number) => void;
 }
 
 export const HELP_GROUPS: Array<{ title: string; scopes: Scope[] }> = [
@@ -27,6 +35,7 @@ const onCard = (app: App) => app.activeView.stop?.target.kind === 'comment';
 const onFileHeader = (app: App) => app.diff.stop?.target.kind === 'file';
 const inCommit = (app: App) => app.review.comparison.kind === 'commit';
 const isSplit = (app: App) => app.diff.view === 'split';
+const onCode = (app: App) => app.activeView.stop?.target.kind === 'line';
 const unwrapped = (app: App) => !app.activeView.wrap;
 const SIDEWAYS_KEY_STEP = 8;
 const cardComment = (app: App) => {
@@ -46,7 +55,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'palette',
     scope: 'global',
-    keys: ['cmd+k', 'ctrl+k', ':'],
+    keys: ['cmd+e', 'ctrl+k', ':'],
     title: 'command palette',
     run: (app) => app.actions.openPalette('commands'),
   },
@@ -73,9 +82,25 @@ export const COMMANDS: Command[] = [
     run: (app) => app.actions.focusNext(-1),
   },
   {
+    id: 'jump.back',
+    scope: 'global',
+    keys: ['ctrl+o', 'alt+left'],
+    title: 'back to where you jumped from',
+    palette: true,
+    run: (app) => app.actions.jumpBack(),
+  },
+  {
+    id: 'jump.forward',
+    scope: 'global',
+    keys: ['alt+right'],
+    title: 'forward again',
+    palette: true,
+    run: (app) => app.actions.jumpForward(),
+  },
+  {
     id: 'surface.browse',
     scope: 'global',
-    keys: ['alt+cmd+1', '1'],
+    keys: ['alt+cmd+1'],
     title: 'browse the project',
     palette: true,
     run: (app) => app.actions.setSurface('browse'),
@@ -83,15 +108,26 @@ export const COMMANDS: Command[] = [
   {
     id: 'surface.review',
     scope: 'global',
-    keys: ['alt+cmd+2', '2'],
+    keys: ['alt+cmd+2'],
     title: 'review changes',
     palette: true,
     run: (app) => app.actions.setSurface('review'),
   },
   {
+    id: 'surface.toggle',
+    scope: 'global',
+    keys: ['cmd+g'],
+    title: 'switch browse ⇄ review',
+    palette: true,
+    run: (app) =>
+      app.actions.setSurface(
+        app.workspace.surface === 'review' ? 'browse' : 'review',
+      ),
+  },
+  {
     id: 'branch.pick',
     scope: 'global',
-    keys: ['alt+cmd+4', '4'],
+    keys: ['alt+cmd+4'],
     title: 'switch branch…',
     palette: true,
     run: (app) => app.actions.openBranches(),
@@ -99,15 +135,31 @@ export const COMMANDS: Command[] = [
   {
     id: 'bottom.history',
     scope: 'global',
-    keys: ['alt+cmd+5', '5'],
+    keys: ['alt+cmd+5'],
     title: 'history pane',
     palette: true,
     run: (app) => app.actions.toggleBottomTab('history'),
   },
   {
+    id: 'bottom.usages',
+    scope: 'global',
+    keys: ['alt+cmd+6'],
+    title: 'usages pane',
+    palette: true,
+    run: (app) => app.actions.toggleBottomTab('usages'),
+  },
+  {
+    id: 'symbol.outline',
+    scope: 'global',
+    keys: ['@'],
+    title: 'go to symbol in file…',
+    palette: true,
+    run: (app) => void app.actions.outline(),
+  },
+  {
     id: 'bottom.run',
     scope: 'global',
-    keys: ['alt+cmd+7', '7'],
+    keys: ['alt+cmd+7'],
     title: 'run pane (services)',
     palette: true,
     run: (app) => app.actions.toggleBottomTab('run'),
@@ -190,7 +242,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'view.wrap',
     scope: 'global',
-    keys: ['w'],
+    keys: ['alt+z', 'W'],
     title: 'wrap long lines',
     palette: true,
     run: (app) => app.activeView.setWrap((w) => !w),
@@ -221,6 +273,17 @@ export const COMMANDS: Command[] = [
       const appearance = app.themes.cycleAppearance();
       app.review.notify('info', `Appearance: ${appearance}`);
     },
+  },
+  {
+    id: 'view.icons',
+    scope: 'global',
+    keys: [],
+    title: 'show / hide file icons (needs a Nerd Font)',
+    palette: true,
+    run: (app) =>
+      app.themes.updateSettings({
+        fileIcons: !app.themes.settings.fileIcons,
+      }),
   },
   {
     id: 'git.fetch',
@@ -293,14 +356,14 @@ export const COMMANDS: Command[] = [
     scope: 'tree',
     keys: ['j', 'down'],
     title: 'next row',
-    run: (app) => app.tree.step(1),
+    run: (app, count) => app.tree.step(count),
   },
   {
     id: 'tree.up',
     scope: 'tree',
     keys: ['k', 'up'],
     title: 'previous row',
-    run: (app) => app.tree.step(-1),
+    run: (app, count) => app.tree.step(-count),
   },
   {
     id: 'tree.pageDown',
@@ -443,6 +506,18 @@ export const COMMANDS: Command[] = [
     run: (app) => void app.commit.commit(),
   },
   {
+    id: 'commit.agent',
+    scope: 'commit',
+    keys: [],
+    title: 'commit message agent…',
+    palette: true,
+    run: (app) =>
+      app.actions.commitAgentMenu({
+        x: 1,
+        y: app.layout.bodyHeight - app.layout.commitBoxHeight,
+      }),
+  },
+  {
     id: 'commit.push',
     scope: 'commit',
     keys: [],
@@ -457,14 +532,14 @@ export const COMMANDS: Command[] = [
     scope: 'diff',
     keys: ['j', 'down'],
     title: 'next line',
-    run: (app) => app.diff.moveBy(1),
+    run: (app, count) => app.diff.moveBy(count),
   },
   {
     id: 'diff.up',
     scope: 'diff',
     keys: ['k', 'up'],
     title: 'previous line',
-    run: (app) => app.diff.moveBy(-1),
+    run: (app, count) => app.diff.moveBy(-count),
   },
   {
     id: 'diff.pageDown',
@@ -599,14 +674,14 @@ export const COMMANDS: Command[] = [
     scope: 'viewer',
     keys: ['j', 'down'],
     title: 'next line',
-    run: (app) => app.editor.viewer.moveBy(1),
+    run: (app, count) => app.editor.viewer.moveBy(count),
   },
   {
     id: 'viewer.up',
     scope: 'viewer',
     keys: ['k', 'up'],
     title: 'previous line',
-    run: (app) => app.editor.viewer.moveBy(-1),
+    run: (app, count) => app.editor.viewer.moveBy(-count),
   },
   {
     id: 'viewer.pageDown',
@@ -637,6 +712,20 @@ export const COMMANDS: Command[] = [
     run: (app) => app.editor.viewer.toBottom(),
   },
   {
+    id: 'viewer.nextSymbol',
+    scope: 'viewer',
+    keys: ['}'],
+    title: 'next definition (or paragraph)',
+    run: (app) => void app.actions.jumpSymbol(1),
+  },
+  {
+    id: 'viewer.prevSymbol',
+    scope: 'viewer',
+    keys: ['{'],
+    title: 'previous definition (or paragraph)',
+    run: (app) => void app.actions.jumpSymbol(-1),
+  },
+  {
     id: 'viewer.nextTab',
     scope: 'viewer',
     keys: ['cmd+shift+]', ']'],
@@ -664,6 +753,91 @@ export const COMMANDS: Command[] = [
 
   // comments, in the diff and the viewer alike
   ...(['diff', 'viewer'] as const).flatMap((scope): Command[] => [
+    {
+      id: `${scope}.wordNext`,
+      scope,
+      keys: ['w'],
+      title: 'next symbol',
+      run: (app) => app.activeView.wordStep(1),
+    },
+    {
+      id: `${scope}.wordPrev`,
+      scope,
+      keys: ['b'],
+      title: 'previous symbol',
+      run: (app) => app.activeView.wordStep(-1),
+    },
+    {
+      id: `${scope}.wordFirst`,
+      scope,
+      keys: ['0'],
+      title: 'first symbol on the line',
+      run: (app) => app.activeView.wordEdge('first'),
+    },
+    {
+      id: `${scope}.wordLast`,
+      scope,
+      keys: ['$'],
+      title: 'last symbol on the line',
+      run: (app) => app.activeView.wordEdge('last'),
+    },
+    {
+      id: `${scope}.occurrenceNext`,
+      scope,
+      keys: ['*'],
+      title: 'next use of the symbol',
+      run: (app) => app.actions.occurrence(1),
+    },
+    {
+      id: `${scope}.occurrencePrev`,
+      scope,
+      keys: ['#'],
+      title: 'previous use of the symbol',
+      run: (app) => app.actions.occurrence(-1),
+    },
+    {
+      id: `${scope}.definition`,
+      scope,
+      keys: ['return'],
+      title: 'go to definition',
+      hint: 'definition',
+      when: onCode,
+      run: (app) => {
+        const spot = app.actions.wordSpot();
+        if (spot) void app.actions.goToDefinition(spot);
+      },
+    },
+    {
+      id: `${scope}.info`,
+      scope,
+      keys: ['K'],
+      title: 'symbol info',
+      run: (app) => {
+        const spot = app.actions.wordSpot();
+        if (spot) app.actions.showInfo(spot);
+      },
+    },
+    {
+      id: `${scope}.usages`,
+      scope,
+      keys: ['u'],
+      title: 'find usages',
+      hint: 'usages',
+      when: onCode,
+      run: (app) => {
+        const spot = app.actions.wordSpot();
+        if (spot) app.actions.findUsages(spot);
+      },
+    },
+    {
+      id: `${scope}.symbol`,
+      scope,
+      keys: ['.'],
+      title: 'symbol on this line…',
+      hint: 'symbol',
+      palette: scope === 'diff',
+      run: (app) => app.actions.symbolsOnLine(),
+    },
     {
       id: `${scope}.comment`,
       scope,
@@ -715,20 +889,55 @@ export const COMMANDS: Command[] = [
     },
   ]),
 
+  // usages pane
+  {
+    id: 'usages.down',
+    scope: 'usages',
+    keys: ['j', 'down'],
+    title: 'next usage',
+    run: (app, count) => app.symbols.stepUsage(count),
+  },
+  {
+    id: 'usages.up',
+    scope: 'usages',
+    keys: ['k', 'up'],
+    title: 'previous usage',
+    run: (app, count) => app.symbols.stepUsage(-count),
+  },
+  {
+    id: 'usages.open',
+    scope: 'usages',
+    keys: ['return'],
+    title: 'open the usage',
+    hint: 'open',
+    run: (app) => {
+      if (app.symbols.selectedUsage)
+        app.actions.openUsage(app.symbols.selectedUsage);
+    },
+  },
+  {
+    id: 'usages.rerun',
+    scope: 'usages',
+    keys: ['r'],
+    title: 'search again',
+    hint: 'again',
+    run: (app) => void app.symbols.rerun(),
+  },
+
   // history pane
   {
     id: 'history.down',
     scope: 'history',
     keys: ['j', 'down'],
     title: 'older commit',
-    run: (app) => app.actions.stepHistory(1),
+    run: (app, count) => app.actions.stepHistory(count),
   },
   {
     id: 'history.up',
     scope: 'history',
     keys: ['k', 'up'],
     title: 'newer commit',
-    run: (app) => app.actions.stepHistory(-1),
+    run: (app, count) => app.actions.stepHistory(-count),
   },
   {
     id: 'history.show',

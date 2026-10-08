@@ -18,6 +18,7 @@ import {
 } from "@reviewer/core/ports/language-provider";
 import {
   filterCompletions,
+  flattenSymbolTree,
   identifierAt,
   offsetAt,
   positionAt,
@@ -28,6 +29,7 @@ import {
   type DefinitionResult,
   type Diagnostic,
   type DiagnosticRelated,
+  type DocumentSymbolsResult,
   type FileEdits,
   type HoverResult,
   type Range,
@@ -41,6 +43,7 @@ import { containerAt, usageKind, NO_CONTAINER } from "./ts-usages.ts";
 import {
   completionKind,
   hoverMarkdown,
+  outlineOfNavigationTree,
   referenceKind,
   spanPreview,
   spanToRange,
@@ -79,6 +82,7 @@ const unsupported: {
   readonly completions: CompletionResult;
   readonly resolution: CompletionResolution;
   readonly codeActions: ReadonlyArray<CodeActionItem>;
+  readonly symbols: DocumentSymbolsResult;
 } = {
   diagnostics: [],
   definition: { providerId: null, origin: null, targets: [] },
@@ -98,6 +102,7 @@ const unsupported: {
   },
   resolution: { detail: "", documentation: "", additionalEdits: [] },
   codeActions: [],
+  symbols: { providerId: null, symbols: [] },
 };
 
 interface OpenDocument {
@@ -355,6 +360,7 @@ export const typescriptProvider: LanguageProvider = {
     hover: true,
     completions: true,
     codeActions: true,
+    documentSymbols: true,
   },
 
   probe: (root) =>
@@ -436,6 +442,22 @@ export const typescriptProvider: LanguageProvider = {
             text: ts.displayPartsToString(tag.text),
           })),
         }),
+      };
+    }),
+
+  documentSymbols: (request) =>
+    attempt("typescript document symbols", (): DocumentSymbolsResult => {
+      const document = open(request);
+      if (document === null) return unsupported.symbols;
+      // The navigation tree is what editors draw their outline from: it is
+      // syntactic, so it needs no type-check, and it already folds merged
+      // declarations into one entry with several spans.
+      const tree = document.service.getNavigationTree(document.fileName);
+      return {
+        providerId: TYPESCRIPT_PROVIDER_ID,
+        symbols: flattenSymbolTree(
+          outlineOfNavigationTree(document.text, tree)
+        ),
       };
     }),
 

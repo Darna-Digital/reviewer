@@ -115,6 +115,8 @@ export function useTheme(renderer: CliRenderer, start: ThemeStart) {
       return themeScheme;
     },
     setAppearance: (appearance: Appearance) => update({ appearance }),
+    /** Saves any other preference kept beside the theme. */
+    updateSettings: (patch: Partial<Settings>) => void update(patch),
     cycleAppearance() {
       const index = APPEARANCES.indexOf(settings.appearance);
       return update({

@@ -5,8 +5,10 @@ import {
   originSelectionRange,
   pathToUri,
   severityOfLsp,
+  symbolKindOfLsp,
   tagsOfLsp,
   toDiagnostic,
+  toDocumentSymbols,
   toLocations,
   toPosition,
   toRange,
@@ -244,5 +246,136 @@ describe("localiseHoverLinks", () => {
   it("passes documentation with no links through untouched", () => {
     const markdown = "```ruby\nArticle\n```\n\nAn article (a model).";
     expect(localiseHoverLinks(markdown, root)).toBe(markdown);
+  });
+});
+
+describe("symbolKindOfLsp", () => {
+  it("names every SymbolKind from 1 to 26", () => {
+    expect(
+      Array.from({ length: 26 }, (_, index) => symbolKindOfLsp(index + 1))
+    ).toEqual([
+      "file",
+      "module",
+      "namespace",
+      "package",
+      "class",
+      "method",
+      "property",
+      "field",
+      "constructor",
+      "enum",
+      "interface",
+      "function",
+      "variable",
+      "constant",
+      "string",
+      "number",
+      "boolean",
+      "array",
+      "object",
+      "key",
+      "null",
+      "enummember",
+      "struct",
+      "event",
+      "operator",
+      "typeparameter",
+    ]);
+  });
+  it("reads an unknown or missing kind as a variable", () => {
+    expect(symbolKindOfLsp(0)).toBe("variable");
+    expect(symbolKindOfLsp(99)).toBe("variable");
+    expect(symbolKindOfLsp(undefined)).toBe("variable");
+  });
+});
+
+describe("toDocumentSymbols", () => {
+  const lines = (from: number, to: number) => ({
+    start: { line: from, character: 0 },
+    end: { line: to, character: 3 },
+  });
+  const name = (line: number) => ({
+    start: { line, character: 6 },
+    end: { line, character: 10 },
+  });
+
+  it("flattens a DocumentSymbol tree parents first", () => {
+    const symbols = toDocumentSymbols([
+      {
+        name: "Blog",
+        kind: 2,
+        range: lines(0, 20),
+        selectionRange: name(0),
+        children: [
+          {
+            name: "Post",
+            kind: 5,
+            range: lines(1, 10),
+            selectionRange: name(1),
+            children: [
+              {
+                name: "title",
+                kind: 6,
+                range: lines(5, 7),
+                selectionRange: name(5),
+              },
+              {
+                name: "initialize",
+                kind: 9,
+                range: lines(2, 4),
+                selectionRange: name(2),
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "VERSION",
+        kind: 14,
+        range: lines(21, 21),
+        selectionRange: name(21),
+      },
+      { kind: 12, range: lines(22, 22) },
+    ]);
+    expect(
+      symbols.map((s) => [s.depth, s.kind, s.name, s.containerName])
+    ).toEqual([
+      [0, "module", "Blog", ""],
+      [1, "class", "Post", "Blog"],
+      [2, "constructor", "initialize", "Post"],
+      [2, "method", "title", "Post"],
+      [0, "constant", "VERSION", ""],
+    ]);
+    expect(symbols[1].range).toEqual(lines(1, 10));
+    expect(symbols[1].selectionRange).toEqual(name(1));
+  });
+
+  it("nests a flat SymbolInformation list by its ranges", () => {
+    const uri = "file:///work/blog/app.rb";
+    const symbols = toDocumentSymbols([
+      {
+        name: "title",
+        kind: 6,
+        containerName: "Post",
+        location: { uri, range: lines(2, 4) },
+      },
+      { name: "Post", kind: 5, location: { uri, range: lines(1, 10) } },
+      { name: "helper", kind: 12, location: { uri, range: lines(11, 12) } },
+    ]);
+    expect(
+      symbols.map((s) => [s.depth, s.kind, s.name, s.containerName])
+    ).toEqual([
+      [0, "class", "Post", ""],
+      [1, "method", "title", "Post"],
+      [0, "function", "helper", ""],
+    ]);
+    // A flat answer has one range; it serves as both.
+    expect(symbols[1].selectionRange).toEqual(lines(2, 4));
+  });
+
+  it("answers nothing for an empty or malformed response", () => {
+    expect(toDocumentSymbols(null)).toEqual([]);
+    expect(toDocumentSymbols({})).toEqual([]);
+    expect(toDocumentSymbols([])).toEqual([]);
   });
 });

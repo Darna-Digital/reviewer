@@ -10,6 +10,7 @@ import {
   selectProvider,
   type CodeActionsResult,
   type DiagnosticsResult,
+  type DocumentSymbolsResult,
   type LanguageProviderInfo,
   type LanguageRepo,
   type Position,
@@ -196,6 +197,20 @@ export const makeLanguageRepository = (
               provider.codeActions({ ...requestOf(target, contents), range }),
               (actions) => ({ providerId: provider.id, actions })
             );
+          }
+        ),
+
+      documentSymbols: (path, contents) =>
+        Effect.flatMap(
+          resolve(path),
+          (target): Effect.Effect<DocumentSymbolsResult, LanguageFailure> => {
+            const outline = target.provider?.documentSymbols;
+            // A provider without an outline answers like a file nothing
+            // claims: an empty one, not an error the views would have to show.
+            if (outline === undefined) {
+              return Effect.succeed({ providerId: null, symbols: [] });
+            }
+            return outline(requestOf(target, contents));
           }
         ),
 

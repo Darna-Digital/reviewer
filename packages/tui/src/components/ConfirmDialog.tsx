@@ -1,19 +1,25 @@
 import { useKeyboard } from '@opentui/react';
 import { keyName } from '../app/keys';
 import type { Overlay } from '../app/useApp';
-import { truncate } from '../text/measure';
+import { wrapProse } from '../text/measure';
 import { useAppContext } from './AppContext';
 import { Backdrop, centered } from './Modal';
 import { Button, Line } from './Line';
 
 type ConfirmOverlay = Extract<Overlay, { kind: 'confirm' }>;
 
-const HEIGHT = 7;
+/** Border, the blank rows around the message, and the buttons. */
+const CHROME_ROWS = 6;
 
 export function ConfirmDialog({ overlay }: { overlay: ConfirmOverlay }) {
   const { palette, screen, actions } = useAppContext();
   const width = Math.min(60, screen.width - 4);
   const inner = width - 2;
+  const detail = wrapProse(overlay.detail, inner - 4).slice(
+    0,
+    Math.max(1, screen.height - CHROME_ROWS - 2),
+  );
+  const height = detail.length + CHROME_ROWS;
 
   useKeyboard((event) => {
     const key = keyName(event);
@@ -30,9 +36,9 @@ export function ConfirmDialog({ overlay }: { overlay: ConfirmOverlay }) {
       <box
         position="absolute"
         left={centered(screen.width, width)}
-        top={centered(screen.height, HEIGHT)}
+        top={centered(screen.height, height)}
         width={width}
-        height={HEIGHT}
+        height={height}
         zIndex={30}
         border
         borderStyle="rounded"
@@ -42,16 +48,14 @@ export function ConfirmDialog({ overlay }: { overlay: ConfirmOverlay }) {
         flexDirection="column"
       >
         <Line segs={[]} width={inner} fill={palette.popover} />
-        <Line
-          segs={[
-            {
-              text: `  ${truncate(overlay.detail, inner - 4)}`,
-              fg: palette.text,
-            },
-          ]}
-          width={inner}
-          fill={palette.popover}
-        />
+        {detail.map((line, index) => (
+          <Line
+            key={index}
+            segs={[{ text: `  ${line}`, fg: palette.text }]}
+            width={inner}
+            fill={palette.popover}
+          />
+        ))}
         <Line segs={[]} width={inner} fill={palette.popover} />
         <box flexDirection="row" height={1}>
           <Line segs={[{ text: '  ' }]} width={2} fill={palette.popover} />

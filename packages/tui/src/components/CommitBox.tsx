@@ -1,8 +1,13 @@
+import type { BoxRenderable } from '@opentui/core';
+import { useRenderer } from '@opentui/react';
+import * as React from 'react';
+import { COMMIT_BOX_CHROME } from '../app/useApp';
+import { agentLabel } from '../git/commitMessage';
 import { mix } from '../render/palette';
 import { useAppContext } from './AppContext';
+import { captureMouse } from './captureMouse';
 import { Button, Line } from './Line';
 
-const MESSAGE_ROWS = 4;
 /** Below this width the buttons drop their words. */
 const ROOMY = 34;
 
@@ -17,6 +22,7 @@ export function CommitBox({ height }: { height: number }) {
   const count = `${commit.included.length} of ${commit.paths.length} files `;
   const roomy = width >= ROOMY;
   const ruleWidth = Math.max(0, width - count.length - 10);
+  const rows = app.workspace.commitMessageRows;
 
   return (
     <box
@@ -25,18 +31,9 @@ export function CommitBox({ height }: { height: number }) {
       height={height}
       backgroundColor={bg}
     >
-      <Line
-        segs={[
-          { text: '─ ', fg: palette.rule },
-          { text: 'COMMIT ', fg: palette.faint, bold: true },
-          { text: '─'.repeat(ruleWidth), fg: palette.rule },
-          { text: ` ${count}`, fg: palette.faint },
-        ]}
-        width={width}
-        fill={bg}
-      />
+      <ResizeRule ruleWidth={ruleWidth} count={count} />
       <box
-        height={MESSAGE_ROWS}
+        height={rows}
         width={width}
         flexDirection="row"
         backgroundColor={bg}
@@ -60,7 +57,7 @@ export function CommitBox({ height }: { height: number }) {
               : 'Commit message'
           }
           width={width - 2}
-          height={MESSAGE_ROWS}
+          height={rows}
           backgroundColor={field}
           focusedBackgroundColor={mix(field, palette.accent, 0.06)}
           textColor={palette.text}
@@ -90,6 +87,20 @@ export function CommitBox({ height }: { height: number }) {
           bg={field}
           hoverTint={palette.accent}
           onPress={() => void commit.generate()}
+        />
+        <Button
+          segs={[
+            {
+              text: roomy ? ` ${agentLabel(app.commitAgent)} ▾ ` : ' ▾ ',
+              fg: palette.muted,
+              bg: field,
+            },
+          ]}
+          bg={field}
+          hoverTint={palette.text}
+          onPress={(event) =>
+            actions.commitAgentMenu({ x: event.x, y: event.y + 1 })
+          }
         />
         <box flexGrow={1} height={1} backgroundColor={bg} />
         <Button
@@ -123,3 +134,57 @@ export function CommitBox({ height }: { height: number }) {
     </box>
   );
 }
+
+/**
+ * The box's top rule, which is also its handle, as on the Mac: it lights up
+ * under the pointer and dragging it grows or shrinks the message field.
+ */
+function ResizeRule({
+  ruleWidth,
+  count,
+}: {
+  ruleWidth: number;
+  count: string;
+}) {
+  const app = useAppContext();
+  const { palette, layout, workspace } = app;
+  const renderer = useRenderer();
+  const ref = React.useRef<BoxRenderable | null>(null);
+  const [active, setActive] = React.useState(false);
+  const rule = active ? palette.accent : palette.rule;
+  const glyph = active ? '━' : '─';
+  return (
+    <box
+      ref={ref}
+      height={1}
+      width={layout.sidebarWidth}
+      onMouseDown={() => captureMouse(renderer, ref.current)}
+      onMouseDrag={(event) =>
+        workspace.resizeCommitMessage(
+          SIDEBAR_TOP + layout.bodyHeight - event.y - COMMIT_BOX_CHROME,
+        )
+      }
+      onMouseOver={() => setActive(true)}
+      onMouseOut={() => setActive(false)}
+      onMouseDragEnd={() => setActive(false)}
+    >
+      <Line
+        segs={[
+          { text: `${glyph} `, fg: rule },
+          {
+            text: 'COMMIT ',
+            fg: active ? palette.accent : palette.faint,
+            bold: true,
+          },
+          { text: glyph.repeat(ruleWidth), fg: rule },
+          { text: ` ${count}`, fg: palette.faint },
+        ]}
+        width={layout.sidebarWidth}
+        fill={palette.frame}
+      />
+    </box>
+  );
+}
+
+/** The sidebar starts under the top rail. */
+const SIDEBAR_TOP = 0;

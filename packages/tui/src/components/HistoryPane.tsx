@@ -186,7 +186,7 @@ function Details({ width, height }: { width: number; height: number }) {
         <Line key={i} segs={segs} width={width} fill={bg} />
       ))}
       <List
-        items={commitFileItems(palette, files)}
+        items={commitFileItems(palette, app.icons, files)}
         selected={-1}
         focused={false}
         width={width}

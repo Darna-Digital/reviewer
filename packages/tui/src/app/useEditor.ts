@@ -4,6 +4,7 @@ import type { Theme } from '../diff/highlight';
 import type { FileDiff } from '../diff/parseDiff';
 import { readFile } from '../git/files';
 import type { FileContent } from '../git/files';
+import type { FileIcons } from '../render/fileIcons';
 import type { Palette } from '../render/palette';
 import { printable } from '../text/measure';
 import { useDiffView } from './useDiffView';
@@ -22,6 +23,7 @@ interface EditorOptions {
   width: number;
   height: number;
   palette: Palette;
+  icons: FileIcons;
   theme: Theme;
   themeName: string;
   focused: boolean;

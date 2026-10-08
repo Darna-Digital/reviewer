@@ -12,6 +12,7 @@ import { Button, Line } from './Line';
 const NOTICE_GLYPH = { error: '✗ ', success: '✓ ', info: '· ' } as const;
 const PANES: Array<{ tab: BottomTab; label: string }> = [
   { tab: 'history', label: '◷ History' },
+  { tab: 'usages', label: '⌕ Usages' },
   { tab: 'run', label: '▶ Run' },
 ];
 const MAX_HINTS = 3;
@@ -121,7 +122,7 @@ function hints(app: App): Part[] {
     .slice(0, MAX_HINTS)
     .map(({ command, key }) => ({
       segs: keys(app.palette, keyLabel(key), `${command.hint}  `),
-      run: command.run,
+      run: (app: App) => command.run(app, 1),
     }));
 }
 

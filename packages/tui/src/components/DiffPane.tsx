@@ -1,6 +1,7 @@
 import type { MouseEvent } from '@opentui/core';
 import type { Row } from '../diff/buildLayout';
 import type { DiffView } from '../app/useDiffView';
+import { codeAt } from '../diff/codeAt';
 import { paintFileHeader, paintRow } from '../render/diffRows';
 import { useAppContext } from './AppContext';
 import { Line } from './Line';
@@ -13,14 +14,21 @@ export interface DiffPaneProps {
   height: number;
   /** Pin the current file's header once its own has scrolled away. */
   sticky: boolean;
+  /** Screen column the pane starts at; the editor's by default. */
+  left?: number;
+  /** Clicks give the editor the keyboard; off for a preview. */
+  takesFocus?: boolean;
 }
 
 const CHEVRON_CELLS = 4;
+const RIGHT_BUTTON = 2;
 
 /** A virtualized diff or file: only the rows in view are drawn. */
-export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
+export function DiffPane(props: DiffPaneProps) {
+  const { view, width, height, sticky, takesFocus = true } = props;
   const app = useAppContext();
   const { palette } = app;
+  const left = props.left ?? app.layout.mainLeft;
   const isDoubleClick = useDoubleClick();
   const wheel = useWheel(view.scrollBy, view.wrap ? undefined : view.scrollXBy);
   const { rows, stops } = view.layout;
@@ -61,6 +69,7 @@ export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
             width={width}
             fill={palette.island}
             onMouseDown={(event) => click(index, event)}
+            onMouseMove={(event) => hover(index, event)}
           />
         );
       })}
@@ -68,12 +77,41 @@ export function DiffPane({ view, width, height, sticky }: DiffPaneProps) {
     </box>
   );
 
+  /** The symbol under the pointer, when the server can be asked about it. */
+  function spotAt(rowIndex: number, event: MouseEvent) {
+    const point = codeAt({
+      row: rows[rowIndex],
+      files: view.paint.files,
+      geometry: view.layout.geometry,
+      scrollX: view.scrollX,
+      x: event.x - left,
+    });
+    return point ? app.actions.spotOf(view, point) : null;
+  }
+
+  function hover(rowIndex: number, event: MouseEvent) {
+    app.symbols.hoverAt(spotAt(rowIndex, event), {
+      x: event.x,
+      y: event.y + 1,
+    });
+  }
+
   function click(rowIndex: number, event: MouseEvent) {
-    app.actions.setFocus('main');
+    app.symbols.hideHover();
+    const spot = spotAt(rowIndex, event);
+    const at = { x: event.x, y: event.y + 1 };
+    if (spot && event.button === RIGHT_BUTTON)
+      return app.actions.symbolMenu(spot, at);
+    if (
+      spot &&
+      (event.modifiers.alt || event.modifiers.ctrl || app.commandHeld())
+    )
+      return void app.actions.goToDefinition(spot, at);
+    if (takesFocus) app.actions.setFocus('main');
     const index = view.stopAtRow(rowIndex);
     const stop = stops[index];
     if (!stop) return;
-    const x = event.x - app.layout.mainLeft;
+    const x = event.x - left;
     if (view.view === 'split')
       view.setSide(x > view.layout.geometry.half ? 'right' : 'left');
     view.moveTo(index);

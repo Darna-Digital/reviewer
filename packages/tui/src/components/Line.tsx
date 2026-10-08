@@ -11,6 +11,7 @@ export interface LineProps {
   onMouseDown?: (event: MouseEvent) => void;
   onMouseOver?: () => void;
   onMouseOut?: () => void;
+  onMouseMove?: (event: MouseEvent) => void;
 }
 
 /** One row of styled text, cut or padded to exactly `width`. */
@@ -30,7 +31,7 @@ export function Line(props: LineProps) {
 
 export interface ButtonProps {
   segs: Seg[];
-  onPress: () => void;
+  onPress: (event: MouseEvent) => void;
   /** Background the hover tint is mixed into. */
   bg: string;
   hoverTint: string;

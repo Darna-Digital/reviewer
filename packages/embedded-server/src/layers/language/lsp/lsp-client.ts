@@ -152,6 +152,12 @@ const clientCapabilities = {
     definition: { linkSupport: true },
     references: {},
     hover: { contentFormat: ["markdown", "plaintext"] },
+    documentSymbol: {
+      hierarchicalDocumentSymbolSupport: true,
+      symbolKind: {
+        valueSet: Array.from({ length: 26 }, (_, index) => index + 1),
+      },
+    },
   },
   workspace: { workspaceFolders: true, configuration: true },
   window: { workDoneProgress: true },

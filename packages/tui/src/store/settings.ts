@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
+import type { CommitAgent } from '../git/commitMessage';
 
 /** The theme that takes the terminal's own colours and background. */
 export const TERMINAL_THEME = 'terminal';
@@ -13,12 +14,18 @@ export interface Settings {
   /** A catalog theme name, or `terminal`. */
   lightTheme: string;
   darkTheme: string;
+  /** The agent that drafts commit messages; unset follows the Mac app's choice. */
+  commitAgent: CommitAgent | null;
+  /** File-type icons beside file names; they need a Nerd Font. */
+  fileIcons: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   appearance: 'system',
   lightTheme: TERMINAL_THEME,
   darkTheme: TERMINAL_THEME,
+  commitAgent: null,
+  fileIcons: true,
 };
 
 export function settingsPath(): string {

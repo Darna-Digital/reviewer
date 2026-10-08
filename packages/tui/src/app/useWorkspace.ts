@@ -6,7 +6,10 @@ export type Surface = UiState['surface'];
 export type BottomTab = UiState['bottomTab'];
 export type Workspace = ReturnType<typeof useWorkspace>;
 
-export const BOTTOM_TABS: BottomTab[] = ['history', 'run'];
+export const BOTTOM_TABS: BottomTab[] = ['history', 'usages', 'run'];
+
+/** Rows outside the body: the bottom rail. */
+export const CHROME_ROWS = 1;
 
 const DEFAULT_SIDEBAR_SHARE = 0.24;
 const MIN_SIDEBAR = 24;
@@ -14,6 +17,11 @@ const MIN_MAIN = 40;
 const MIN_BOTTOM = 6;
 const MIN_EDITOR = 6;
 const MIN_HISTORY_DETAILS = 24;
+const MIN_USAGES_LIST = 30;
+const DEFAULT_MESSAGE_ROWS = 4;
+const MIN_MESSAGE_ROWS = 2;
+/** Rows the changes tree keeps however tall the message grows. */
+const MIN_TREE_ROWS = 12;
 const SAVE_DELAY_MS = 400;
 
 /** Which surface is up, and where the panes sit; restored per repository. */
@@ -38,7 +46,7 @@ export function useWorkspace(
         screen.width - MIN_MAIN,
       )
     : 0;
-  const bodyHeight = screen.height - 2;
+  const bodyHeight = screen.height - CHROME_ROWS;
   const bottomHeight = state.bottomOpen
     ? clamp(
         state.bottomHeight ?? Math.round(bodyHeight * 0.4),
@@ -75,6 +83,22 @@ export function useWorkspace(
       ),
     openBottom: (tab: BottomTab) =>
       update({ bottomOpen: true, bottomTab: tab }),
+    commitMessageRows: clamp(
+      state.commitMessageRows ?? DEFAULT_MESSAGE_ROWS,
+      MIN_MESSAGE_ROWS,
+      Math.max(MIN_MESSAGE_ROWS, bodyHeight - MIN_TREE_ROWS),
+    ),
+    resizeCommitMessage: (rows: number) =>
+      update({
+        commitMessageRows: clamp(
+          rows,
+          MIN_MESSAGE_ROWS,
+          Math.max(MIN_MESSAGE_ROWS, bodyHeight - MIN_TREE_ROWS),
+        ),
+      }),
+    usagesListWidth: state.usagesListWidth,
+    resizeUsagesList: (width: number) =>
+      update({ usagesListWidth: Math.max(MIN_USAGES_LIST, width) }),
     historyDetailsWidth: state.historyDetailsWidth,
     resizeHistoryDetails: (width: number) =>
       update({ historyDetailsWidth: Math.max(MIN_HISTORY_DETAILS, width) }),

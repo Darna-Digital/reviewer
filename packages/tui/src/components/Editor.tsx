@@ -208,9 +208,12 @@ function ReviewHeader() {
   );
 }
 
-/** Open-file tabs; double-click keeps a preview (italic) tab open, as on the Mac. */
+/**
+ * Open-file tabs; double-click keeps a preview (italic) tab open, as on the
+ * Mac, and ⇧-click closes one.
+ */
 function TabStrip() {
-  const { palette, layout, editor, workspace } = useAppContext();
+  const { palette, icons, layout, editor, workspace } = useAppContext();
   const isDoubleClick = useDoubleClick();
   const bg = palette.frame;
   return (
@@ -236,8 +239,10 @@ function TabStrip() {
             <Button
               segs={[
                 { text: on ? '▎' : ' ', fg: palette.accent, bg: tabBg },
+                { text: ' ', bg: tabBg },
+                ...icons.file(tab.path, tabBg),
                 {
-                  text: ` ${name} `,
+                  text: name,
                   fg: on ? palette.text : palette.muted,
                   bg: tabBg,
                   italic: tab.preview,
@@ -246,14 +251,14 @@ function TabStrip() {
               ]}
               bg={tabBg}
               hoverTint={palette.text}
-              onPress={() =>
-                isDoubleClick(tab.path)
-                  ? editor.open(tab.path)
-                  : editor.activate(tab.path)
-              }
+              onPress={(event) => {
+                if (event.modifiers.shift) editor.close(tab.path);
+                else if (isDoubleClick(tab.path)) editor.open(tab.path);
+                else editor.activate(tab.path);
+              }}
             />
             <Button
-              segs={[{ text: '✕ ', fg: palette.faint, bg: tabBg }]}
+              segs={[{ text: ' ✕ ', fg: palette.faint, bg: tabBg }]}
               bg={tabBg}
               hoverTint={palette.deleted}
               onPress={() => editor.close(tab.path)}
@@ -294,7 +299,7 @@ function CommentsButton() {
           kind: 'commentsHere',
           at: {
             x: layout.mainLeft + layout.mainWidth - COMMENTS_POPOVER_WIDTH,
-            y: 2,
+            y: layout.contentTop,
           },
         })
       }

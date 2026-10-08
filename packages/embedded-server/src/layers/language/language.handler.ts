@@ -7,6 +7,10 @@ import {
 } from "@reviewer/core/language";
 import { LanguageError } from "@reviewer/core/ports/language-provider";
 import { Api } from "../../api.ts";
+import { makeLanguageScope } from "./language.scope.ts";
+import { makeLiveLanguageRepository } from "./language.repository.live.ts";
+
+const withLanguageOf = makeLanguageScope(makeLiveLanguageRepository);
 
 /**
  * Positions arrive as query strings. Rejecting bad ones here — rather than
@@ -43,24 +47,25 @@ export const LanguageHandler = HttpApiBuilder.group(
       )
       .handle("definition", ({ query }) =>
         Effect.flatMap(positionOf(query), (position) =>
-          Effect.flatMap(LanguageService, (s) =>
+          withLanguageOf(query.repo)((s) =>
             s.definition(query.path, position, null)
           )
         )
       )
       .handle("references", ({ query }) =>
         Effect.flatMap(positionOf(query), (position) =>
-          Effect.flatMap(LanguageService, (s) =>
+          withLanguageOf(query.repo)((s) =>
             s.references(query.path, position, null)
           )
         )
       )
       .handle("hover", ({ query }) =>
         Effect.flatMap(positionOf(query), (position) =>
-          Effect.flatMap(LanguageService, (s) =>
-            s.hover(query.path, position, null)
-          )
+          withLanguageOf(query.repo)((s) => s.hover(query.path, position, null))
         )
+      )
+      .handle("symbols", ({ query }) =>
+        withLanguageOf(query.repo)((s) => s.documentSymbols(query.path, null))
       )
       // The remaining three are POSTs because they carry the unsaved buffer.
       .handle("completions", ({ payload }) =>

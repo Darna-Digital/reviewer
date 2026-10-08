@@ -7,7 +7,11 @@ import {
   LanguageMemory,
 } from "../layer/language.layer.memory.ts";
 import type { LanguageRepo } from "../repository/language.repository.ts";
-import type { Diagnostic, SymbolReference } from "../schema/language.schema.ts";
+import type {
+  Diagnostic,
+  DocumentSymbol,
+  SymbolReference,
+} from "../schema/language.schema.ts";
 import { LanguageService } from "./language.service.ts";
 
 const span = (line: number) => ({
@@ -39,6 +43,15 @@ const reference = (
   containerKind: "",
 });
 
+const symbol = (name: string, line: number, depth: number): DocumentSymbol => ({
+  name,
+  kind: "function",
+  containerName: "",
+  range: span(line),
+  selectionRange: span(line),
+  depth,
+});
+
 const seeded = LanguageMemory({
   files: { "src/a.ts": "const a = 1\nconst b = 2\n" },
   diagnostics: {
@@ -50,6 +63,9 @@ const seeded = LanguageMemory({
   },
   references: {
     "src/a.ts": [reference(2, "read"), reference(2, "definition")],
+  },
+  symbols: {
+    "src/a.ts": [symbol("b", 1, 0), symbol("a", 0, 0), symbol("b", 1, 0)],
   },
 });
 
@@ -79,6 +95,7 @@ const inert: LanguageRepo = {
   resolveCompletion: () =>
     Effect.succeed({ detail: "", documentation: "", additionalEdits: [] }),
   codeActions: () => Effect.succeed({ providerId: null, actions: [] }),
+  documentSymbols: () => Effect.succeed({ providerId: null, symbols: [] }),
   install: () => Effect.void,
 };
 
@@ -124,6 +141,23 @@ describe("LanguageService", () => {
       );
       expect(result.references).toHaveLength(1);
       expect(result.references[0].kind).toBe("definition");
+    }).pipe(Effect.provide(seeded))
+  );
+
+  it.effect("normalizes a document outline into document order", () =>
+    Effect.gen(function* () {
+      const language = yield* LanguageService;
+      const result = yield* language.documentSymbols("src/a.ts", null);
+      expect(result.providerId).toBe("memory");
+      expect(result.symbols.map((entry) => entry.name)).toEqual(["a", "b"]);
+    }).pipe(Effect.provide(seeded))
+  );
+
+  it.effect("answers an unclaimed file with an empty outline", () =>
+    Effect.gen(function* () {
+      const language = yield* LanguageService;
+      const result = yield* language.documentSymbols("README.md", null);
+      expect(result).toEqual({ providerId: null, symbols: [] });
     }).pipe(Effect.provide(seeded))
   );
 

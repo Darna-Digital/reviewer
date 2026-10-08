@@ -47,6 +47,7 @@ const recordingProvider = (asked: Array<Asked>): LanguageProvider => {
       hover: true,
       completions: true,
       codeActions: true,
+      documentSymbols: true,
     },
     probe: () => Effect.succeed({ available: true, detail: "" }),
     diagnostics: (request) => {
@@ -124,6 +125,22 @@ const recordingProvider = (asked: Array<Asked>): LanguageProvider => {
         ],
       });
     },
+    documentSymbols: (request) => {
+      asked.push({ root: request.root, path: request.path });
+      return Effect.succeed({
+        providerId: "stub",
+        symbols: [
+          {
+            name: "thing",
+            kind: "function",
+            containerName: "",
+            range,
+            selectionRange: range,
+            depth: 0,
+          },
+        ],
+      });
+    },
     codeActions: (request) => {
       asked.push({ root: request.root, path: request.path });
       return Effect.succeed([
@@ -173,6 +190,32 @@ describe("the language repository", () => {
         ]);
       })
     )
+  );
+  it.effect("outlines a file in the open repository", () =>
+    withRepo((repo, asked) =>
+      Effect.map(repo.documentSymbols("src/app.ts", null), (result) => {
+        expect(asked).toEqual([{ root: REPO, path: "src/app.ts" }]);
+        expect(result.providerId).toBe("stub");
+        expect(result.symbols.map((symbol) => symbol.name)).toEqual(["thing"]);
+      })
+    )
+  );
+  it.effect("answers an empty outline where no provider offers one", () =>
+    Effect.gen(function* () {
+      const { documentSymbols: _, ...withoutOutline } = recordingProvider([]);
+      const repo = yield* makeLanguageRepository(() => ({
+        providers: [withoutOutline],
+        problems: [],
+      }));
+      expect(yield* repo.documentSymbols("src/app.ts", null)).toEqual({
+        providerId: null,
+        symbols: [],
+      });
+      expect(yield* repo.documentSymbols("README.md", null)).toEqual({
+        providerId: null,
+        symbols: [],
+      });
+    }).pipe(Effect.provide(memoryLayer(REPO)))
   );
   it.effect("fails with NoRepoSelected when nothing is open", () =>
     Effect.gen(function* () {

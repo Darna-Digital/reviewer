@@ -14,6 +14,7 @@ import type {
   CompletionItem,
   CompletionResolution,
   Diagnostic,
+  DocumentSymbol,
   LanguageProviderInfo,
   Position,
   SymbolReference,
@@ -38,6 +39,7 @@ export interface MemoryLanguageSeed {
   readonly codeActions?: Readonly<
     Record<string, ReadonlyArray<CodeActionItem>>
   >;
+  readonly symbols?: Readonly<Record<string, ReadonlyArray<DocumentSymbol>>>;
 }
 
 const DEFAULT_PROVIDER: LanguageProviderInfo = {
@@ -52,6 +54,7 @@ const DEFAULT_PROVIDER: LanguageProviderInfo = {
     hover: true,
     completions: true,
     codeActions: true,
+    documentSymbols: true,
   },
   available: true,
   detail: "",
@@ -131,6 +134,12 @@ export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
         Effect.succeed({
           providerId: providerFor(path),
           actions: seed.codeActions?.[path] ?? [],
+        }),
+
+      documentSymbols: (path) =>
+        Effect.succeed({
+          providerId: providerFor(path),
+          symbols: seed.symbols?.[path] ?? [],
         }),
 
       // Nothing here is ever missing, so there is nothing to fetch.

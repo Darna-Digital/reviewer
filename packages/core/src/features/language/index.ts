@@ -4,6 +4,7 @@ export * from "./functions/language.links.ts";
 export * from "./functions/language.positions.ts";
 export * from "./functions/language.registry.ts";
 export * from "./functions/language.results.ts";
+export * from "./functions/language.symbols.ts";
 export * from "./layer/language.layer.memory.ts";
 export * from "./repository/language.repository.memory.ts";
 export * from "./repository/language.repository.ts";

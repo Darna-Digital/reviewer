@@ -106,7 +106,9 @@ export function createPalette(
     accent: chrome.accent,
     accentInk: dark ? '#0b0b0d' : '#ffffff',
     selection: mix(frame, chrome.selection),
-    selectionIdle: mix(frame, chrome.hover),
+    // the focused selection's colour, softer: an unfocused list still shows
+    // its row (the open file, the shown commit) at a glance
+    selectionIdle: mix(frame, chrome.selection, 0.55),
     added: chrome.added,
     modified: chrome.modified,
     deleted: chrome.deleted,

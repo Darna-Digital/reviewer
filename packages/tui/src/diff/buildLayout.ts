@@ -103,6 +103,8 @@ export const stopKey = {
   line: (path: string, line: DiffLine) =>
     `L:${path}:${line.oldNo ?? '-'}:${line.newNo ?? '-'}`,
   comment: (id: string) => `C:${id}`,
+  /** A line of a whole file, where old and new numbers are the same. */
+  fileLine: (path: string, line: number) => `L:${path}:${line}:${line}`,
 };
 
 /**

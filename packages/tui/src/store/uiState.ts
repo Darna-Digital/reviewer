@@ -7,10 +7,14 @@ export interface UiState {
   surface: 'browse' | 'review';
   sidebarWidth: number | null;
   bottomOpen: boolean;
-  bottomTab: 'history' | 'run';
+  bottomTab: 'history' | 'usages' | 'run';
   bottomHeight: number | null;
   /** The commit details beside the history list. */
   historyDetailsWidth: number | null;
+  /** Rows of the commit message field. */
+  commitMessageRows: number | null;
+  /** The usages tree beside its preview. */
+  usagesListWidth: number | null;
   commitMessage: string;
   /** Long lines wrap; off, they scroll sideways. Shared by the diff and the viewer. */
   wrap: boolean;
@@ -18,7 +22,7 @@ export interface UiState {
   fullFiles: boolean;
 }
 
-const BOTTOM_TABS: string[] = ['history', 'run'];
+const BOTTOM_TABS: string[] = ['history', 'usages', 'run'];
 
 export const DEFAULT_UI_STATE: UiState = {
   surface: 'review',
@@ -27,6 +31,8 @@ export const DEFAULT_UI_STATE: UiState = {
   bottomTab: 'history',
   bottomHeight: null,
   historyDetailsWidth: null,
+  usagesListWidth: null,
+  commitMessageRows: null,
   commitMessage: '',
   wrap: true,
   fullFiles: false,

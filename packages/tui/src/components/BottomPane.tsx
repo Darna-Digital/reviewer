@@ -10,9 +10,11 @@ import { DragRule } from './DragRule';
 import { HistoryPane } from './HistoryPane';
 import { Button, Line } from './Line';
 import { RunPane } from './RunPane';
+import { UsagesPane } from './UsagesPane';
 
 const LABEL: Record<BottomTab, string> = {
   history: 'History',
+  usages: 'Usages',
   run: 'Run',
 };
 
@@ -108,6 +110,9 @@ export function BottomPane() {
       </box>
       {workspace.bottomTab === 'history' ? (
         <HistoryPane height={height} focused={focused} />
+      ) : null}
+      {workspace.bottomTab === 'usages' ? (
+        <UsagesPane height={height} focused={focused} />
       ) : null}
       {workspace.bottomTab === 'run' ? (
         <RunPane height={height} focused={focused} />

@@ -7,6 +7,7 @@ import type { Span } from '../diff/inlineChanges';
 import type { DiffLine, FileDiff, FileStatus } from '../diff/parseDiff';
 import { cellWidth, padStart, truncate, truncateStart } from '../text/measure';
 import { ago } from '../text/time';
+import type { FileIcons } from './fileIcons';
 import { mix } from './palette';
 import type { Palette } from './palette';
 import { fitSegs, segsWidth } from './styled';
@@ -16,6 +17,7 @@ export type CursorSide = 'left' | 'right';
 
 export interface PaintContext {
   palette: Palette;
+  icons: FileIcons;
   files: FileDiff[];
   geometry: Geometry;
   width: number;
@@ -26,6 +28,14 @@ export interface PaintContext {
   cursorSide: CursorSide;
   /** Columns the unwrapped code is scrolled sideways. */
   scrollX: number;
+  /** The word cursor: a symbol on one line, marked where it is drawn. */
+  cursorWord: {
+    file: number;
+    hunk: number;
+    line: number;
+    start: number;
+    end: number;
+  } | null;
   now: number;
   tokensOf: (file: number) => FileTokens | undefined;
   inlineOf: (file: number) => Map<string, Span>;
@@ -129,9 +139,11 @@ export function paintFileHeader(
     },
     { text: ' ', bg },
   ];
-  const room = width - segsWidth(left) - segsWidth(right) - 2;
+  const icon = ctx.icons.file(file.path, bg);
+  const room = width - segsWidth(left) - segsWidth(icon) - segsWidth(right) - 2;
   const shownName = truncate(name, Math.max(4, room));
   left.push(
+    ...icon,
     {
       text: truncateStart(dir, Math.max(0, room - cellWidth(shownName))),
       fg: palette.muted,
@@ -222,6 +234,16 @@ function codeSegs(
 ): Seg[] {
   const key = lineKey(hunk, index);
   const band = ctx.inlineOf(file).get(key);
+  const picked = ctx.cursorWord;
+  const word =
+    cursor &&
+    picked &&
+    picked.file === file &&
+    picked.hunk === hunk &&
+    picked.line === index
+      ? picked
+      : null;
+  const wordBg = mix(look.bg, ctx.palette.accent, 0.32);
   const bg = lit(ctx.palette, look.bg, cursor);
   const emphasis = lit(ctx.palette, look.emphasis, cursor);
   const tokens = ctx.tokensOf(file)?.get(key) ?? [{ text: line.text }];
@@ -238,18 +260,22 @@ function codeSegs(
     const cuts = [a, b];
     if (band && band.start > a && band.start < b) cuts.push(band.start);
     if (band && band.end > a && band.end < b) cuts.push(band.end);
+    if (word && word.start > a && word.start < b) cuts.push(word.start);
+    if (word && word.end > a && word.end < b) cuts.push(word.end);
     cuts.sort((x, y) => x - y);
     for (let i = 0; i < cuts.length - 1; i += 1) {
       const s = cuts[i]!;
       const e = cuts[i + 1]!;
       if (s === e) continue;
       const inBand = !!band && s >= band.start && e <= band.end;
+      const onWord = !!word && s >= word.start && e <= word.end;
       out.push({
         text: token.text.slice(s - from, e - from),
         fg: token.color ?? ctx.palette.text,
-        bg: inBand ? emphasis : bg,
-        bold: token.bold,
+        bg: onWord ? wordBg : inBand ? emphasis : bg,
+        bold: token.bold || onWord,
         italic: token.italic,
+        underline: onWord,
       });
     }
   }

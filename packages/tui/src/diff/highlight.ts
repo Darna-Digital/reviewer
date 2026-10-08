@@ -100,6 +100,16 @@ export async function highlightFile(
 
 const cache = new Map<string, Promise<LineTokens[]>>();
 
+/** A snippet's lines in syntax colours — a hover card's signature. */
+export function highlightSnippet(
+  text: string,
+  language: string,
+  theme: Theme,
+  themeName: string,
+): Promise<LineTokens[]> {
+  return highlightSide(text.split('\n'), language, theme, themeName);
+}
+
 function highlightSide(
   lines: string[],
   language: string,

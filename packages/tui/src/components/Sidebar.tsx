@@ -1,5 +1,5 @@
 import { describeComparison } from '../app/comparison';
-import { COMMIT_BOX_HEIGHT } from '../app/useApp';
+import { SIDEBAR_HEADER } from '../app/useApp';
 import type { Check } from '../render/listItems';
 import { treeItems } from '../render/listItems';
 import { mix } from '../render/palette';
@@ -11,9 +11,10 @@ import { useAppContext } from './AppContext';
 import { CommitBox } from './CommitBox';
 import { Button, Line } from './Line';
 import { List } from './List';
+import { SurfaceTabs } from './SurfaceTabs';
 import { TextField } from './TextField';
 
-/** Branch and compare chips, the project or changes tree, and the commit box. */
+/** Surface tabs, branch and compare chips, the project or changes tree, and the commit box. */
 export function Sidebar() {
   const app = useAppContext();
   const { palette, layout, workspace, tree, commit, review, actions } = app;
@@ -31,6 +32,7 @@ export function Sidebar() {
       height={layout.bodyHeight}
       backgroundColor={palette.frame}
     >
+      <SurfaceTabs />
       <Header />
       {isReview ? (
         <TextField
@@ -48,7 +50,7 @@ export function Sidebar() {
         />
       ) : null}
       <List
-        items={treeItems(palette, tree.rows, checkOf)}
+        items={treeItems(palette, app.icons, tree.rows, checkOf)}
         selected={tree.selected}
         focused={focused}
         width={width}
@@ -64,11 +66,12 @@ export function Sidebar() {
               : 'No files'
         }
         onSelect={(item) => {
-          actions.setFocus('sidebar');
-          if (!item.value) return;
+          if (!item.value) return actions.setFocus('sidebar');
           tree.select(item.value.path);
-          if (item.value.kind === 'file')
-            actions.openTreeNode(item.value, { preview: true });
+          if (item.value.kind !== 'file') return actions.setFocus('sidebar');
+          // a clicked file takes the keyboard, so its tab reads on at once
+          actions.openTreeNode(item.value, { preview: true });
+          actions.setFocus('main');
         }}
         onActivate={(item) => item.value && actions.openTreeNode(item.value)}
         onContextMenu={(item, at) =>
@@ -76,7 +79,7 @@ export function Sidebar() {
         }
         onScroll={(delta) => tree.step(delta)}
       />
-      {app.isCommitMode ? <CommitBox height={COMMIT_BOX_HEIGHT} /> : null}
+      {app.isCommitMode ? <CommitBox height={layout.commitBoxHeight} /> : null}
     </box>
   );
 }
@@ -124,7 +127,7 @@ function Header() {
         segs={branchSegs}
         bg={chip}
         hoverTint={palette.text}
-        onPress={() => actions.openBranches({ x: 0, y: 2 })}
+        onPress={() => actions.openBranches({ x: 0, y: SIDEBAR_HEADER })}
       />
       <box flexGrow={1} height={1} backgroundColor={bg} />
       {workspace.surface === 'review' ? (
@@ -135,7 +138,7 @@ function Header() {
           onPress={() =>
             actions.openTargets({
               x: layout.sidebarWidth - 1 - segsWidth(targetSegs),
-              y: 2,
+              y: SIDEBAR_HEADER,
             })
           }
         />

@@ -36,7 +36,7 @@ export function Composer({ overlay }: { overlay: ComposeOverlay }) {
         view: activeView.view,
         side: anchor.side,
         height: COMPOSER_HEIGHT,
-        screen: { top: 1, bottom: screen.height - 1 },
+        screen: { top: 0, bottom: screen.height - 1 },
         over: editing !== null,
       })
     : {

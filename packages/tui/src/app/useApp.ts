@@ -6,13 +6,24 @@ import { join } from 'node:path';
 import * as React from 'react';
 import { stopKey } from '../diff/buildLayout';
 import type { Anchor } from '../diff/buildLayout';
+import type { CodePoint } from '../diff/codeAt';
 import type { DiffLine } from '../diff/parseDiff';
 import { discard, fetchAll, pull, push, summarize } from '../git/actions';
+import { COMMIT_AGENTS, isCommitAgent } from '../git/commitMessage';
+import type { CommitAgent } from '../git/commitMessage';
 import type { GrepOptions } from '../git/files';
+import type {
+  DocumentSymbol,
+  SymbolReference,
+  SymbolTarget,
+} from '../language/client';
+import { identifiers } from '../language/identifier';
 import type { Branch } from '../git/refs';
 import { stopAllSessions } from '../process/ptySession';
+import { fileIcons } from '../render/fileIcons';
 import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
+import { readMacDefault } from '../store/macDefaults';
 import type { TreeNode } from '../tree/fileTree';
 import {
   comparisonOf,
@@ -20,19 +31,23 @@ import {
   targetKey,
   WORKTREE,
 } from './comparison';
+import type { CommandKey } from './commandKey';
 import type { Comparison } from './comparison';
 import { useBranches } from './useBranches';
 import { useCommit } from './useCommit';
 import { useDiffView } from './useDiffView';
-import { useEditor } from './useEditor';
+import { fileAsDiff, useEditor } from './useEditor';
+import type { DiffView } from './useDiffView';
 import { useHistory } from './useHistory';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
 import { useServices } from './useServices';
+import { useSymbols } from './useSymbols';
+import type { SymbolSpot } from './useSymbols';
 import { useTheme } from './useTheme';
 import type { ThemeStart } from './useTheme';
 import { useTree } from './useTree';
-import { useWorkspace } from './useWorkspace';
+import { CHROME_ROWS, useWorkspace } from './useWorkspace';
 import type { BottomTab, Surface } from './useWorkspace';
 
 export type Focus = 'sidebar' | 'main' | 'bottom';
@@ -70,6 +85,9 @@ export type Overlay =
   | { kind: 'theme' }
   | { kind: 'comments' }
   | { kind: 'commentsHere'; at: Cell }
+  | { kind: 'definitions'; at: Cell; symbol: string; targets: SymbolTarget[] }
+  | { kind: 'lineSymbols'; at: Cell; spots: SymbolSpot[] }
+  | { kind: 'outline'; path: string; symbols: DocumentSymbol[] }
   | {
       kind: 'compose';
       anchor: Anchor;
@@ -108,14 +126,18 @@ export interface AppProps {
   initial: Comparison;
   /** Start the Reviewer server when none answers (off in snapshots). */
   startServer?: boolean;
+  /** Whether ⌘ is held, for ⌘-click; absent in snapshots. */
+  commandKey?: CommandKey;
 }
 
 export type App = ReturnType<typeof useApp>;
 
 export const COMPOSER_HEIGHT = 6;
 export const NOTICE_MS = 4000;
-export const SIDEBAR_HEADER = 1;
-export const COMMIT_BOX_HEIGHT = 7;
+/** The surface tabs and the branch and compare chips. */
+export const SIDEBAR_HEADER = 2;
+/** The commit box's rule, blank row and buttons around its message field. */
+export const COMMIT_BOX_CHROME = 3;
 const CLOCK_MS = 30_000;
 /** How long history scrolling rests before the commit under it opens. */
 const HISTORY_SETTLE_MS = 120;
@@ -126,6 +148,10 @@ export function useApp(props: AppProps) {
   const renderer = useRenderer();
   const themes = useTheme(renderer, props.themeStart);
   const { palette, theme, themeName } = themes.look;
+  const icons = React.useMemo(
+    () => fileIcons(palette, themes.settings.fileIcons),
+    [palette, themes.settings.fileIcons],
+  );
   const screen = useTerminalDimensions();
   const workspace = useWorkspace(root, screen);
   const review = useReview(
@@ -167,7 +193,7 @@ export function useApp(props: AppProps) {
     review.files.length > 0;
 
   // geometry
-  const bodyHeight = Math.max(6, screen.height - 2);
+  const bodyHeight = Math.max(6, screen.height - CHROME_ROWS);
   const sidebarWidth = workspace.sidebarWidth;
   const mainLeft = workspace.sidebarVisible ? sidebarWidth + 1 : 0;
   const mainWidth = Math.max(20, screen.width - mainLeft);
@@ -175,14 +201,15 @@ export function useApp(props: AppProps) {
     ? Math.min(workspace.bottomHeight, bodyHeight - 4)
     : 0;
   const editorHeight = bodyHeight - bottomHeight;
-  const contentTop = 2;
+  const contentTop = 1;
   const contentHeight = Math.max(1, editorHeight - 1);
+  const commitBoxHeight = workspace.commitMessageRows + COMMIT_BOX_CHROME;
   const treeHeight = Math.max(
     1,
     bodyHeight -
       SIDEBAR_HEADER -
       (surface === 'review' ? 1 : 0) -
-      (isCommitMode ? COMMIT_BOX_HEIGHT : 0),
+      (isCommitMode ? commitBoxHeight : 0),
   );
 
   const mainFocused = focus === 'main' && !overlay;
@@ -192,6 +219,7 @@ export function useApp(props: AppProps) {
     width: mainWidth,
     height: contentHeight,
     palette,
+    icons,
     theme,
     themeName,
     focused: mainFocused && surface === 'review',
@@ -204,6 +232,7 @@ export function useApp(props: AppProps) {
     width: mainWidth,
     height: contentHeight,
     palette,
+    icons,
     theme,
     themeName,
     focused: mainFocused && surface === 'browse',
@@ -211,14 +240,62 @@ export function useApp(props: AppProps) {
     wrap: workspace.wrap,
     setWrap: workspace.setWrap,
   });
-  // the review tree follows the diff cursor unless the sidebar has the keyboard
+  const symbols = useSymbols(review);
+  const jumps = React.useRef<{ back: Place[]; forward: Place[] }>({
+    back: [],
+    forward: [],
+  });
+  const usagesListWidth = Math.max(
+    MIN_USAGES_PART,
+    Math.min(
+      workspace.usagesListWidth ?? Math.round(mainWidth * USAGES_LIST_SHARE),
+      mainWidth - MIN_USAGES_PART,
+    ),
+  );
+  const previewFiles = React.useMemo(
+    () =>
+      symbols.preview
+        ? [fileAsDiff(symbols.preview.path, symbols.preview.file)]
+        : [],
+    [symbols.preview],
+  );
+  const usagePreview = useDiffView({
+    files: previewFiles,
+    comments: [],
+    width: mainWidth - usagesListWidth - 1,
+    height: Math.max(1, bottomHeight - USAGES_CHROME_ROWS),
+    palette,
+    icons,
+    theme,
+    themeName,
+    focused: false,
+    now,
+    wrap: false,
+    setWrap: keepUnwrapped,
+    fixedView: 'file',
+  });
+  const previewLine = symbols.selectedUsage?.location;
+  React.useEffect(() => {
+    if (!previewLine) return;
+    const line = previewLine.range.start.line + 1;
+    usagePreview.landOn(stopKey.fileLine(previewLine.path, line));
+  }, [previewLine, previewFiles]); // again once the preview file arrives
   const diffFile = diff.stop ? review.files[diff.stop.file]?.path : undefined;
+  // the tree follows the diff cursor (Review) or the open tab (Browse)
+  // unless the sidebar has the keyboard
+  const shownFile =
+    surface === 'review' ? diffFile : (editor.active ?? undefined);
   const tree = useTree(
     surface,
     review,
-    focus === 'sidebar' ? undefined : diffFile,
+    focus === 'sidebar' ? undefined : shownFile,
   );
-  const commit = useCommit(review, workspace);
+  React.useEffect(() => {
+    if (surface === 'browse' && editor.active) tree.reveal(editor.active);
+    // reveal once per tab change, not on every tree re-render
+  }, [surface, editor.active]);
+  const commitAgent = themes.settings.commitAgent ?? macCommitAgent;
+  const commit = useCommit(review, workspace, commitAgent);
   const history = useHistory(
     review,
     workspace.bottomOpen && workspace.bottomTab === 'history',
@@ -231,8 +308,7 @@ export function useApp(props: AppProps) {
 
   /** Moving focus leaves any field being typed in and lets go of a service. */
   function setFocus(next: Focus) {
-    if (next === 'sidebar' && surface === 'review' && diffFile)
-      tree.select(diffFile);
+    if (next === 'sidebar' && shownFile) tree.select(shownFile);
     setFocusState(next);
     setTyping(null);
     if (next !== 'bottom') setCaptured(false);
@@ -260,7 +336,8 @@ export function useApp(props: AppProps) {
       if (next === 'browse' && review.comparison.kind === 'commit')
         showComparison(previous);
       workspace.setSurface(next);
-      setFocus('main');
+      // Browse with nothing open leaves the keyboard in the tree to pick a file
+      setFocus(next === 'browse' && !editor.active ? 'sidebar' : 'main');
     },
     toggleBottomTab(tab: BottomTab) {
       const closing = workspace.bottomOpen && workspace.bottomTab === tab;
@@ -322,6 +399,7 @@ export function useApp(props: AppProps) {
     },
 
     openFile(path: string, opts: { preview?: boolean; line?: number } = {}) {
+      if (!opts.preview) rememberPlace();
       workspace.setSurface('browse');
       editor.open(path, opts);
       tree.reveal(path);
@@ -329,6 +407,7 @@ export function useApp(props: AppProps) {
         editor.viewer.landOn(`L:${path}:${opts.line}:${opts.line}`);
     },
     showInDiff(path: string) {
+      rememberPlace();
       workspace.setSurface('review');
       const index = review.files.findIndex((file) => file.path === path);
       if (index !== -1) diff.jumpToFile(index);
@@ -394,6 +473,19 @@ export function useApp(props: AppProps) {
             () => discard(root, paths),
             () => `Discarded ${node.name}`,
           ),
+      );
+    },
+    /** The agent menu beside the commit box's Generate, as the Mac composer has it. */
+    commitAgentMenu(at: Cell) {
+      actions.openMenu(
+        at,
+        COMMIT_AGENTS.map(({ id, label }) => ({
+          label: `${id === commitAgent ? '✓' : ' '} ${label}`,
+          run: () => {
+            themes.updateSettings({ commitAgent: id });
+            notify('success', `Commit messages are drafted with ${label}`);
+          },
+        })),
       );
     },
     copy(text: string) {
@@ -468,6 +560,175 @@ export function useApp(props: AppProps) {
       setFocus('main');
     },
 
+    /** The symbol at a point in a pane's code, when the server can answer for it. */
+    spotOf(view: DiffView, point: CodePoint): SymbolSpot | null {
+      const path = view.paint.files[point.file]?.path;
+      if (!path || !canAskAbout(view, point.line)) return null;
+      return symbols.spotAt(
+        path,
+        point.line.newNo!,
+        point.line.text,
+        point.index,
+      );
+    },
+    /** Every symbol on the cursor's line, for the keyboard's symbol menu. */
+    symbolsOnLine() {
+      const stop = activeView.stop;
+      const file = stop ? activeView.paint.files[stop.file] : undefined;
+      if (!stop || !file || stop.target.kind !== 'line')
+        return notify('info', 'Move to a line of code');
+      const { hunk, left, right } = stop.target;
+      const line = file.hunks[hunk]?.lines[right ?? left ?? -1];
+      if (!line || !canAskAbout(activeView, line))
+        return notify(
+          'info',
+          'Symbols are read from the working tree — not this side',
+        );
+      const spots = identifiers(line.text).map((identifier) => ({
+        path: file.path,
+        line: line.newNo!,
+        text: line.text,
+        identifier,
+      }));
+      if (spots.length === 0) return notify('info', 'No symbols on this line');
+      setOverlay({ kind: 'lineSymbols', at: cursorCell(), spots });
+    },
+    async goToDefinition(spot: SymbolSpot, at: Cell = cursorCell()) {
+      const result = await symbols.definition(spot);
+      if (!result) return;
+      const targets = result.targets.filter((target) => !isSpot(target, spot));
+      if (targets.length === 0) return actions.findUsages(spot);
+      if (targets.length === 1)
+        return actions.openLocation(targets[0]!.location);
+      setOverlay({
+        kind: 'definitions',
+        at,
+        symbol: spot.identifier.name,
+        targets,
+      });
+    },
+    findUsages(spot: SymbolSpot) {
+      workspace.openBottom('usages');
+      setFocus('bottom');
+      void symbols.findUsages(spot);
+    },
+    openUsage(reference: SymbolReference) {
+      actions.openLocation(reference.location);
+    },
+    openLocation(location: SymbolTarget['location']) {
+      actions.openFile(location.path, { line: location.range.start.line + 1 });
+      setFocus('main');
+    },
+    showInfo(spot: SymbolSpot, at: Cell = cursorCell()) {
+      symbols.hoverAt(spot, at, { now: true });
+    },
+    symbolMenu(spot: SymbolSpot, at: Cell, under?: Overlay) {
+      const name = spot.identifier.name;
+      actions.openMenu(
+        at,
+        [
+          {
+            label: 'Go to definition',
+            run: () => void actions.goToDefinition(spot, at),
+          },
+          {
+            label: `Find usages of ${name}`,
+            run: () => actions.findUsages(spot),
+          },
+          { label: 'Show info', run: () => actions.showInfo(spot, at) },
+          { separator: true },
+          { label: 'Comment on this line', run: () => actions.compose() },
+          { label: `Copy ${name}`, run: () => actions.copy(name) },
+        ],
+        under,
+      );
+    },
+    /** The symbols of the file in view, to jump to one. */
+    async outline() {
+      const path =
+        surface === 'browse'
+          ? editor.active
+          : diff.stop
+            ? review.files[diff.stop.file]?.path
+            : undefined;
+      if (!path) return notify('info', 'Open a file first');
+      const found = await symbols.outline(path);
+      if (!found) return;
+      if (found.length === 0) return notify('info', `No symbols in ${path}`);
+      setOverlay({ kind: 'outline', path, symbols: found });
+    },
+    goToSymbol(path: string, symbol: DocumentSymbol) {
+      rememberPlace();
+      const line = symbol.selectionRange.start.line + 1;
+      if (surface === 'browse')
+        editor.viewer.landOnWord(stopKey.fileLine(path, line), symbol.name);
+      else if (!diff.landOnLine(path, line)) actions.openFile(path, { line });
+      setFocus('main');
+    },
+    /**
+     * The symbol under the word cursor — or, with none picked, the line's
+     * first, which is then picked — or `null` with a hint why not.
+     */
+    wordSpot(): SymbolSpot | null {
+      const stop = activeView.stop;
+      const picked = activeView.cursorWord ?? activeView.firstWord();
+      if (!picked || !stop) {
+        notify('info', 'Move to a line with a symbol on it');
+        return null;
+      }
+      if (!activeView.cursorWord) activeView.wordEdge('first');
+      const spot = actions.spotOf(activeView, {
+        file: stop.file,
+        line: picked.line,
+        index: picked.identifier.start,
+      });
+      if (!spot)
+        notify(
+          'info',
+          'Symbols are read from the working tree — not this side',
+        );
+      return spot;
+    },
+    /** `{` / `}` in a file: the previous or next definition in its outline. */
+    async jumpSymbol(step: 1 | -1) {
+      const path = editor.active;
+      const line = activeView.cursorLine();
+      if (!path || line === null) return activeView.paragraph(step);
+      const outline = await symbols.outline(path, { quiet: true });
+      const starts = (outline ?? []).map((symbol) => ({
+        symbol,
+        line: symbol.selectionRange.start.line + 1,
+      }));
+      const next =
+        step > 0
+          ? starts.find((entry) => entry.line > line)
+          : starts.findLast((entry) => entry.line < line);
+      if (!next) return activeView.paragraph(step);
+      editor.viewer.landOnWord(
+        stopKey.fileLine(path, next.line),
+        next.symbol.name,
+      );
+    },
+    /** `*` / `#`, remembered so ⌃O comes back. */
+    occurrence(step: 1 | -1) {
+      rememberPlace();
+      if (!activeView.occurrence(step))
+        notify('info', 'No other use of it in view');
+    },
+    /** ⌃O / ⌥←: back to where the last jump left from. */
+    jumpBack() {
+      const place = jumps.current.back.pop();
+      if (!place) return notify('info', 'Nowhere to go back to');
+      jumps.current.forward.push(placeNow());
+      goTo(place);
+    },
+    /** ⌥→: forward again. */
+    jumpForward() {
+      const place = jumps.current.forward.pop();
+      if (!place) return notify('info', 'Nowhere to go forward to');
+      jumps.current.back.push(placeNow());
+      goTo(place);
+    },
     compose() {
       const at = activeView.anchorAtCursor();
       if (!at) return notify('info', 'Move to a line to comment on it');
@@ -703,6 +964,7 @@ export function useApp(props: AppProps) {
 
   return {
     palette,
+    icons,
     themes,
     screen,
     now,
@@ -722,8 +984,12 @@ export function useApp(props: AppProps) {
     overlay,
     commentBox,
     searchMemory,
+    commitAgent,
+    symbols,
+    usagePreview,
     /** The terminal reports ⌘ (kitty keyboard protocol). */
     chords,
+    commandHeld: () => props.commandKey?.isHeld() ?? false,
     isCommitMode,
     layout: {
       bodyHeight,
@@ -735,15 +1001,66 @@ export function useApp(props: AppProps) {
       bottomHeight,
       treeHeight,
       sidebarWidth,
+      usagesListWidth,
+      commitBoxHeight,
     },
     actions,
   };
 
   /** Under the sidebar's chips, or the editor's header when the sidebar is hidden. */
   function chipAnchor(chip: 'branch' | 'target'): Cell {
-    if (!workspace.sidebarVisible) return { x: mainLeft, y: 2 };
+    if (!workspace.sidebarVisible) return { x: mainLeft, y: contentTop };
     const half = chip === 'target' ? Math.floor(sidebarWidth / 2) : 0;
-    return { x: half, y: 2 };
+    return { x: half, y: SIDEBAR_HEADER };
+  }
+
+  /** Where the cursor is, to come back to after a jump. */
+  function placeNow(): Place {
+    return {
+      surface,
+      path: surface === 'browse' ? editor.active : null,
+      key: activeView.stop?.key ?? null,
+    };
+  }
+
+  /** Records the place a jump leaves from; a new jump drops the forward trail. */
+  function rememberPlace() {
+    const { back } = jumps.current;
+    back.push(placeNow());
+    if (back.length > MAX_JUMPS) back.shift();
+    jumps.current.forward = [];
+  }
+
+  function goTo(place: Place) {
+    workspace.setSurface(place.surface);
+    if (place.surface === 'browse' && place.path) {
+      editor.open(place.path);
+      tree.reveal(place.path);
+      if (place.key) editor.viewer.landOn(place.key);
+    } else if (place.key) {
+      diff.landOn(place.key);
+    }
+    setFocus('main');
+  }
+
+  /** Under the cursor's line, where a menu for it opens. */
+  function cursorCell(): Cell {
+    const stop = activeView.stop;
+    const row = stop ? stop.row - activeView.top + stop.height : 0;
+    return {
+      x: mainLeft + activeView.layout.geometry.gutter,
+      y: contentTop + Math.max(0, row),
+    };
+  }
+
+  /**
+   * The server reads the working tree, so a diff answers for its new side
+   * of uncommitted or branch changes, and a whole file (the viewer, the
+   * usages preview) for any line.
+   */
+  function canAskAbout(view: DiffView, line: DiffLine): boolean {
+    if (line.kind === 'del' || line.newNo === null) return false;
+    return view.view === 'file' || review.comparison.kind !== 'commit';
   }
 
   function showComparison(next: Comparison, landOn?: string) {
@@ -757,4 +1074,32 @@ export function useApp(props: AppProps) {
     diff.moveTo(0);
     review.setComparison(next);
   }
+}
+
+/** A place to come back to: the surface, the open file (Browse) and the cursor's stop. */
+interface Place {
+  surface: Surface;
+  path: string | null;
+  key: string | null;
+}
+
+const MAX_JUMPS = 100;
+const USAGES_LIST_SHARE = 0.42;
+const MIN_USAGES_PART = 30;
+/** The divider, the tab strip and the usages header above the preview. */
+const USAGES_CHROME_ROWS = 3;
+
+function keepUnwrapped() {}
+
+function isSpot(target: SymbolTarget, spot: SymbolSpot): boolean {
+  const { path, range } = target.location;
+  return path === spot.path && range.start.line === spot.line - 1;
+}
+
+/** The agent the Mac app drafts with, until one is chosen here. */
+const macCommitAgent = macAgentOrClaude();
+
+function macAgentOrClaude(): CommitAgent {
+  const agent = readMacDefault('commit-agent');
+  return isCommitAgent(agent) ? agent : 'claude';
 }

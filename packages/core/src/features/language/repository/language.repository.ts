@@ -7,6 +7,7 @@ import type {
   CompletionResult,
   DefinitionResult,
   DiagnosticsResult,
+  DocumentSymbolsResult,
   HoverResult,
   LanguageProviderInfo,
   Position,
@@ -65,6 +66,11 @@ export interface LanguageRepo {
     range: Range,
     contents: string | null
   ) => Effect.Effect<CodeActionsResult, LanguageFailure>;
+  /** The file's outline; empty with a null provider when nothing serves it. */
+  readonly documentSymbols: (
+    path: string,
+    contents: string | null
+  ) => Effect.Effect<DocumentSymbolsResult, LanguageFailure>;
   /** Start installing the server a provider offered to install. */
   readonly install: (
     providerId: string

@@ -1,7 +1,8 @@
 import type { TextareaRenderable } from '@opentui/core';
 import * as React from 'react';
 import { commit, push, summarize } from '../git/actions';
-import { draftCommitMessage } from '../git/commitMessage';
+import { agentLabel, draftCommitMessage } from '../git/commitMessage';
+import type { CommitAgent } from '../git/commitMessage';
 import type { Review } from './useReview';
 import type { Workspace } from './useWorkspace';
 
@@ -9,9 +10,14 @@ export type Commit = ReturnType<typeof useCommit>;
 
 /**
  * The commit composer: which changed files go in (all, until unticked), the
- * message (kept per repository across launches), and drafting it with Claude.
+ * message (kept per repository across launches), and drafting it with the
+ * chosen agent.
  */
-export function useCommit(review: Review, workspace: Workspace) {
+export function useCommit(
+  review: Review,
+  workspace: Workspace,
+  agent: CommitAgent,
+) {
   const [excluded, setExcluded] = React.useState<ReadonlySet<string>>(
     new Set(),
   );
@@ -65,9 +71,9 @@ export function useCommit(review: Review, workspace: Workspace) {
     async generate() {
       if (busy || included.length === 0) return;
       setBusy('generating');
-      review.notify('info', 'Drafting a message with Claude…');
+      review.notify('info', `Drafting a message with ${agentLabel(agent)}…`);
       try {
-        setMessage(await draftCommitMessage(review.root, included));
+        setMessage(await draftCommitMessage(review.root, included, agent));
         review.notify('success', 'Message drafted');
       } catch (error) {
         review.notify(

@@ -11,7 +11,10 @@ import type { Anchor, Stop, ViewMode } from '../diff/buildLayout';
 import type { Theme } from '../diff/highlight';
 import { inlineChangesOf } from '../diff/inlineChanges';
 import type { DiffLine, FileDiff } from '../diff/parseDiff';
+import { identifiers } from '../language/identifier';
+import type { Identifier } from '../language/identifier';
 import type { CursorSide, PaintContext } from '../render/diffRows';
+import type { FileIcons } from '../render/fileIcons';
 import type { Palette } from '../render/palette';
 import { useHighlights } from './useHighlights';
 
@@ -24,6 +27,7 @@ interface DiffViewOptions {
   /** Rows available to the scrolling part of the pane. */
   height: number;
   palette: Palette;
+  icons: FileIcons;
   theme: Theme;
   themeName: string;
   focused: boolean;
@@ -36,6 +40,8 @@ interface DiffViewOptions {
 
 /** Rows kept between the cursor and the pane's edge. */
 const MARGIN = 3;
+/** Columns kept beside a symbol the word cursor scrolls to. */
+const WORD_MARGIN = 4;
 /** Room left after the longest line when scrolled all the way. */
 const EDGE_ROOM = 4;
 const FOLD_LINES = 1500;
@@ -58,6 +64,11 @@ export function useDiffView(opts: DiffViewOptions) {
   const [cursor, setCursor] = React.useState(0);
   const [side, setSide] = React.useState<CursorSide>('right');
   const [scrollX, setScrollX] = React.useState(0);
+  /** The symbol picked on the cursor's line, by the line's stop key and start. */
+  const [word, setWord] = React.useState<{ key: string; start: number } | null>(
+    null,
+  );
+  const pendingWord = React.useRef<{ key: string; name: string } | null>(null);
   const [, redraw] = React.useReducer((n: number) => n + 1, 0);
   const top = React.useRef(0);
   const pendingKey = React.useRef<string | null>(null);
@@ -130,8 +141,27 @@ export function useDiffView(opts: DiffViewOptions) {
     themeName: opts.themeName,
   });
 
+  const here = stop ? lineOf(stop) : null;
+  const cursorWord =
+    here && stop && word?.key === stop.key
+      ? (identifiers(here.line.text).find((w) => w.start === word.start) ??
+        null)
+      : null;
+
+  React.useEffect(() => {
+    const wanted = pendingWord.current;
+    if (!wanted || !stop || stop.key !== wanted.key) return;
+    pendingWord.current = null;
+    const line = lineOf(stop);
+    const found = line
+      ? identifiers(line.line.text).find((w) => w.name === wanted.name)
+      : undefined;
+    if (found) selectWord(stop.key, found);
+  });
+
   const paint: PaintContext = {
     palette: opts.palette,
+    icons: opts.icons,
     files,
     geometry: layout.geometry,
     width,
@@ -140,6 +170,16 @@ export function useDiffView(opts: DiffViewOptions) {
     focused: opts.focused,
     cursorSide: side,
     scrollX: shiftX,
+    cursorWord:
+      cursorWord && here && stop
+        ? {
+            file: stop.file,
+            hunk: here.hunk,
+            line: here.index,
+            start: cursorWord.start,
+            end: cursorWord.end,
+          }
+        : null,
     now: opts.now,
     tokensOf,
     inlineOf: (index) => inlineChangesOf(files[index]!),
@@ -190,7 +230,96 @@ export function useDiffView(opts: DiffViewOptions) {
       if (collapsed.has(path)) setFolds((map) => new Map(map).set(path, false));
     },
     landOn,
+    /** Moves to new-side line `line` of `path` if the diff shows it. */
+    landOnLine(path: string, line: number): boolean {
+      const index = stops.findIndex((candidate) => {
+        if (candidate.target.kind !== 'line') return false;
+        const file = files[candidate.file];
+        if (file?.path !== path) return false;
+        const { hunk, left, right } = candidate.target;
+        return file.hunks[hunk]?.lines[right ?? left ?? -1]?.newNo === line;
+      });
+      if (index === -1) return false;
+      landOn(stops[index]!.key);
+      return true;
+    },
     anchorAtCursor,
+    /** The symbol under the word cursor, with its line. */
+    cursorWord: cursorWord && here ? { ...here, identifier: cursorWord } : null,
+    /** `w` / `b`: the next or previous symbol, on to the next line with one. */
+    wordStep(step: 1 | -1) {
+      if (here && stop) {
+        const words = identifiers(here.line.text);
+        const from = cursorWord?.start ?? (step > 0 ? -1 : Infinity);
+        const next =
+          step > 0
+            ? words.find((w) => w.start > from)
+            : words.findLast((w) => w.start < from);
+        if (next) return selectWord(stop.key, next);
+      }
+      const index = findStop(step, (candidate) => {
+        const line = lineOf(candidate);
+        return !!line && identifiers(line.line.text).length > 0;
+      });
+      if (index === -1) return;
+      const line = lineOf(stops[index]!)!;
+      const words = identifiers(line.line.text);
+      moveTo(index);
+      selectWord(stops[index]!.key, step > 0 ? words[0]! : words.at(-1)!);
+    },
+    /** `0` / `$`: the first or last symbol on the line. */
+    wordEdge(edge: 'first' | 'last') {
+      if (!here || !stop) return;
+      const words = identifiers(here.line.text);
+      const pick = edge === 'first' ? words[0] : words.at(-1);
+      if (pick) selectWord(stop.key, pick);
+    },
+    /** `*` / `#`: the next or previous line using the symbol under the cursor. */
+    occurrence(step: 1 | -1): boolean {
+      const name =
+        cursorWord?.name ??
+        (here ? identifiers(here.line.text)[0]?.name : undefined);
+      if (!name) return false;
+      const index = findStop(step, (candidate) => {
+        const line = lineOf(candidate);
+        return (
+          !!line && identifiers(line.line.text).some((w) => w.name === name)
+        );
+      });
+      if (index === -1) return false;
+      const found = identifiers(lineOf(stops[index]!)!.line.text).find(
+        (w) => w.name === name,
+      )!;
+      moveTo(index);
+      selectWord(stops[index]!.key, found);
+      return true;
+    },
+    /** `{` / `}` without an outline: the next or previous blank line. */
+    paragraph(step: 1 | -1) {
+      let index = current;
+      let seenText = false;
+      for (let i = current + step; i >= 0 && i < stops.length; i += step) {
+        const line = lineOf(stops[i]!);
+        if (!line) continue;
+        const blank = line.line.text.trim() === '';
+        if (!blank) seenText = true;
+        index = i;
+        if (blank && seenText) break;
+      }
+      moveTo(index);
+    },
+    /** The cursor line's first symbol, for acting before one is picked. */
+    firstWord() {
+      const first = here ? identifiers(here.line.text)[0] : undefined;
+      return here && first ? { ...here, identifier: first } : null;
+    },
+    /** The new-side line number under the cursor, or `null` off code. */
+    cursorLine: () => here?.line.newNo ?? null,
+    /** Lands on `key` and picks the symbol called `name` there. */
+    landOnWord(key: string, name: string) {
+      pendingWord.current = { key, name };
+      landOn(key);
+    },
     stopAtRow: (row: number) => stopAtRow(stops, row),
   };
 
@@ -244,10 +373,10 @@ export function useDiffView(opts: DiffViewOptions) {
 
   function moveToHunk(step: 1 | -1) {
     if (!stop) return;
-    const here = hunkOf(stop);
+    const fromHunk = hunkOf(stop);
     let index = findStop(step, (candidate) => {
       const hunk = hunkOf(candidate);
-      return hunk !== null && hunk !== here;
+      return hunk !== null && hunk !== fromHunk;
     });
     if (index === -1) return;
     if (step === -1) {
@@ -287,6 +416,32 @@ export function useDiffView(opts: DiffViewOptions) {
     }
     top.current = Math.max(0, stops[index]!.row - MARGIN);
     moveTo(index);
+  }
+
+  /** The line a stop shows on the cursor's side, with where it sits in the diff. */
+  function lineOf(
+    at: Stop,
+  ): { line: DiffLine; hunk: number; index: number } | null {
+    if (at.target.kind !== 'line') return null;
+    const { hunk, left, right } = at.target;
+    const index =
+      view === 'split' && side === 'left' && left !== null
+        ? left
+        : (right ?? left);
+    const line =
+      index === null ? undefined : files[at.file]?.hunks[hunk]?.lines[index];
+    return line && index !== null ? { line, hunk, index } : null;
+  }
+
+  /** Picks `identifier` on stop `key`'s line, scrolling sideways to show it. */
+  function selectWord(key: string, identifier: Identifier) {
+    setWord({ key, start: identifier.start });
+    if (wrap) return;
+    const room = layout.geometry.codeWidth;
+    if (identifier.start < shiftX)
+      setScrollX(Math.max(0, identifier.start - WORD_MARGIN));
+    else if (identifier.end > shiftX + room)
+      setScrollX(Math.min(maxScrollX, identifier.end - room + WORD_MARGIN));
   }
 
   function anchorAtCursor(): { anchor: Anchor; line: DiffLine | null } | null {

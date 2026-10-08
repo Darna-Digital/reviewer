@@ -76,7 +76,7 @@ export function CommandPalette({ overlay }: { overlay: PaletteOverlay }) {
     else if (key === 'end') setIndex(items.length - 1);
     else if (key === 'backspace' && query === '' && parent) enter(parent);
     else if (toggle && mode === 'text') flip(toggle.key);
-    else if (key === 'cmd+k' || key === 'ctrl+k') {
+    else if (key === 'cmd+e' || key === 'ctrl+k') {
       if (mode === 'commands') actions.closeOverlay();
       else enter('commands');
     } else return;
@@ -335,8 +335,13 @@ function layoutRows(
       rows.push({
         item: null,
         segs: [
+          { text: ' ' },
+          ...(item.groupIcon ?? []),
           {
-            text: ` ${truncateStart(group, width - 2)}`,
+            text: truncateStart(
+              group,
+              width - 2 - segsWidth(item.groupIcon ?? []),
+            ),
             fg: palette.muted,
             bold: true,
           },
@@ -360,6 +365,7 @@ function layoutRows(
       item.label.map((part) => ({
         ...part,
         ...toneStyle(palette, part.tone, bg),
+        ...(part.fg ? { fg: part.fg } : {}),
       })),
       room,
       bg,

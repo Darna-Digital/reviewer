@@ -5,6 +5,7 @@ import { fileAsDiff } from '../app/useEditor';
 import { buildLayout } from '../diff/buildLayout';
 import type { ViewMode } from '../diff/buildLayout';
 import { paintRow } from './diffRows';
+import { NO_ICONS } from './fileIcons';
 import { createPalette } from './palette';
 
 const files = [
@@ -38,6 +39,7 @@ function paintedCard(view: ViewMode, width: number): string {
   const segs = paintRow(
     {
       palette: createPalette(deriveChromeTokens({ type: 'dark' })),
+      icons: NO_ICONS,
       files,
       geometry: layout.geometry,
       width,
@@ -46,6 +48,7 @@ function paintedCard(view: ViewMode, width: number): string {
       focused: true,
       cursorSide: 'right',
       scrollX: 0,
+      cursorWord: null,
       now: Date.now(),
       tokensOf: () => undefined,
       inlineOf: () => new Map(),

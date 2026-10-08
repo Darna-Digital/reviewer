@@ -22,6 +22,7 @@ import {
   type CompletionResult,
   type DefinitionResult,
   type Diagnostic,
+  type DocumentSymbolsResult,
   type HoverResult,
   type FileEdits,
   type Location,
@@ -43,6 +44,7 @@ import {
   originSelectionRange,
   toCompletionItems,
   toDiagnostic,
+  toDocumentSymbols,
   toFileEdits,
   toLocations,
   toRange,
@@ -75,6 +77,7 @@ const EMPTY_COMPLETIONS: CompletionResult = {
   items: [],
   incomplete: false,
 };
+const EMPTY_SYMBOLS: DocumentSymbolsResult = { providerId: null, symbols: [] };
 const EMPTY_RESOLUTION: CompletionResolution = {
   detail: "",
   documentation: "",
@@ -125,6 +128,18 @@ const documentText = (
 /** Whether the server answers `textDocument/diagnostic` (LSP 3.17 pull mode). */
 const hasPullDiagnostics = (capabilities: Record<string, unknown>) =>
   capabilities["diagnosticProvider"] !== undefined;
+
+/**
+ * Whether the server answers `textDocument/documentSymbol`. It is advertised as
+ * `true` or as an options object; asking one that did not advertise it would
+ * only earn a MethodNotFound error.
+ */
+const hasDocumentSymbols = (capabilities: Record<string, unknown>) => {
+  const advertised = capabilities["documentSymbolProvider"];
+  return (
+    advertised !== undefined && advertised !== null && advertised !== false
+  );
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -213,6 +228,7 @@ export const makeLspProvider = (
       hover: true,
       completions: true,
       codeActions: true,
+      documentSymbols: true,
     },
 
     probe: () =>
@@ -401,6 +417,22 @@ export const makeLspProvider = (
           ),
         };
       }),
+
+    documentSymbols: (request) =>
+      attempt(
+        `${providerId} document symbols`,
+        async (): Promise<DocumentSymbolsResult> => {
+          const open = await openDocument(request);
+          if (open === null) return EMPTY_SYMBOLS;
+          if (!hasDocumentSymbols(open.connection.capabilities))
+            return EMPTY_SYMBOLS;
+          const result = await open.connection.request(
+            "textDocument/documentSymbol",
+            { textDocument: { uri: open.uri } }
+          );
+          return { providerId, symbols: toDocumentSymbols(result) };
+        }
+      ),
 
     completions: (request) =>
       attempt(

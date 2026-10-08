@@ -1,5 +1,6 @@
 import type { GrepOptions } from '../git/files';
 import { STATUS_LETTER } from '../render/listItems';
+import type { Seg } from '../render/styled';
 import { fuzzyFilter, matchRange } from '../search/fuzzy';
 import type { PaletteMode } from '../search/paletteModes';
 import { COMMANDS, shownKey } from './commands';
@@ -14,7 +15,10 @@ export interface PaletteItem {
   key: string;
   /** Items are listed under their group's heading. */
   group?: string;
-  label: Array<{ text: string; tone?: Tone }>;
+  /** Drawn before the group's heading: its file's icon. */
+  groupIcon?: Seg[];
+  /** `fg` overrides the tone's colour. */
+  label: Array<{ text: string; tone?: Tone; fg?: string }>;
   /** Right-aligned before the label: a match's line number. */
   lead?: string;
   hint?: string;
@@ -78,7 +82,7 @@ function commandItem(app: App, command: Command): PaletteItem {
     key: command.id,
     label: [{ text: capitalize(command.title) }],
     hint: key ? keyLabel(key) : undefined,
-    run: () => command.run(app),
+    run: () => command.run(app, 1),
   };
 }
 
@@ -92,6 +96,7 @@ function fileItems({ app, query }: ItemsInput): PaletteItem[] {
       return {
         key: path,
         label: [
+          ...app.icons.file(path).map(({ text, fg }) => ({ text, fg })),
           { text: path.slice(slash), tone: 'strong' },
           { text: slash ? `  ${path.slice(0, slash - 1)}` : '', tone: 'dim' },
         ],
@@ -112,7 +117,7 @@ function matchItems({
   search,
   options,
 }: ItemsInput): PaletteItem[] {
-  const { actions } = app;
+  const { actions, icons } = app;
   return (search.result?.matches ?? []).map((match) => {
     const text = match.text.trimStart();
     const range = matchRange(text, query, options);
@@ -126,6 +131,7 @@ function matchItems({
     return {
       key: `${match.path}:${match.line}`,
       group: match.path,
+      groupIcon: icons.file(match.path),
       lead: String(match.line),
       label,
       run: () => {

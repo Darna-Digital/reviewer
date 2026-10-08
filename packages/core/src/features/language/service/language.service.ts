@@ -6,6 +6,7 @@ import {
   normalizeReferences,
   normalizeTargets,
 } from "../functions/language.results.ts";
+import { normalizeDocumentSymbols } from "../functions/language.symbols.ts";
 import {
   LanguageRepository,
   type LanguageRepo,
@@ -94,6 +95,15 @@ export const makeLanguageService = Effect.gen(function* () {
     codeActions: (path, range, contents) =>
       requirePath(path).pipe(
         Effect.flatMap((valid) => repo.codeActions(valid, range, contents))
+      ),
+
+    documentSymbols: (path, contents) =>
+      requirePath(path).pipe(
+        Effect.flatMap((valid) => repo.documentSymbols(valid, contents)),
+        Effect.map((result) => ({
+          ...result,
+          symbols: normalizeDocumentSymbols(result.symbols),
+        }))
       ),
 
     install: repo.install,

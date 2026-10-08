@@ -5,7 +5,9 @@ import type { GraphRow } from '../git/graph';
 import type { CommitFile, LogCommit } from '../git/log';
 import type { SessionStatus } from '../process/ptySession';
 import type { TreeNode, TreeRow } from '../tree/fileTree';
-import { padEnd, truncate } from '../text/measure';
+import type { UsageRow } from '../language/usageRows';
+import { padEnd, padStart, truncate } from '../text/measure';
+import type { FileIcons } from './fileIcons';
 import { mix } from './palette';
 import type { Palette } from './palette';
 import { fitSegs, spread } from './styled';
@@ -43,6 +45,7 @@ const CHECK_GLYPH: Record<Check, string> = { all: '☑', some: '◩', none: '☐
 /** Sidebar tree rows; `checkOf` adds the commit composer's checkboxes. */
 export function treeItems(
   palette: Palette,
+  icons: FileIcons,
   rows: TreeRow[],
   checkOf: ((node: TreeNode) => Check) | null,
 ): Array<ListItem<TreeNode>> {
@@ -71,6 +74,11 @@ export function treeItems(
           bg,
         });
       }
+      left.push(
+        ...(node.kind === 'dir'
+          ? icons.folder(expanded, bg)
+          : icons.file(node.path, bg, color)),
+      );
       left.push({
         text: node.name,
         fg:
@@ -159,6 +167,7 @@ export function historyItems(
 
 export function commitFileItems(
   palette: Palette,
+  icons: FileIcons,
   files: CommitFile[],
 ): Array<ListItem<CommitFile>> {
   return files.map((file) => ({
@@ -174,6 +183,7 @@ export function commitFileItems(
           [
             bar(palette, look, bg),
             { text: ' ', bg },
+            ...icons.file(file.path, bg),
             {
               text: file.path.slice(slash + 1),
               fg: palette.text,
@@ -322,7 +332,7 @@ export function rowBg(palette: Palette, look: ItemLook): string {
     : palette.frame;
 }
 
-function bar(palette: Palette, look: ItemLook, bg: string): Seg {
+export function bar(palette: Palette, look: ItemLook, bg: string): Seg {
   return {
     text: look.selected ? (look.focused ? '▌' : '▏') : ' ',
     fg: palette.accent,
@@ -374,4 +384,108 @@ function refChip(palette: Palette, ref: string, bg: string): Seg[] {
       bold: head,
     },
   ];
+}
+
+/**
+ * The find-usages tree: category headings, files with their folder dimmed,
+ * and usages as a line number and the line with every `symbol` marked.
+ */
+export function usageItems(
+  palette: Palette,
+  icons: FileIcons,
+  rows: UsageRow[],
+  symbol: string,
+): Array<ListItem<number>> {
+  return rows.map((row, index): ListItem<number> => {
+    if (row.kind === 'category') {
+      return {
+        key: `category:${index}`,
+        selectable: false,
+        height: 1,
+        rows: ({ width }) => [
+          fitSegs(
+            [
+              { text: ' ' },
+              { text: row.label, fg: palette.text, bold: true },
+              { text: `  ${row.count}`, fg: palette.faint },
+            ],
+            width,
+            palette.frame,
+          ),
+        ],
+      };
+    }
+    if (row.kind === 'file') {
+      const slash = row.path.lastIndexOf('/') + 1;
+      return {
+        key: `file:${index}`,
+        selectable: false,
+        height: 1,
+        rows: ({ width }) => [
+          fitSegs(
+            [
+              { text: '   ' },
+              ...icons.file(row.path),
+              { text: row.path.slice(slash), fg: palette.text },
+              {
+                text: slash ? `  ${row.path.slice(0, slash - 1)}` : '',
+                fg: palette.faint,
+              },
+              { text: `  ${row.count}`, fg: palette.faint },
+            ],
+            width,
+            palette.frame,
+          ),
+        ],
+      };
+    }
+    const { location, preview } = row.reference;
+    return {
+      key: `usage:${index}`,
+      selectable: true,
+      height: 1,
+      value: index,
+      rows: (look) => {
+        const bg = rowBg(palette, look);
+        return [
+          fitSegs(
+            [
+              bar(palette, look, bg),
+              {
+                text: `${padStart(String(location.range.start.line + 1), 7)}  `,
+                fg: palette.faint,
+                bg,
+              },
+              ...marked(palette, preview, symbol, bg),
+            ],
+            look.width,
+            bg,
+          ),
+        ];
+      },
+    };
+  });
+}
+
+/** `text` with each whole-word `symbol` set off by an accent wash. */
+function marked(
+  palette: Palette,
+  text: string,
+  symbol: string,
+  bg: string,
+): Seg[] {
+  if (!symbol) return [{ text, fg: palette.text, bg }];
+  const mark = mix(bg, palette.accent, 0.3);
+  return text
+    .split(new RegExp(`(\\b${escapeRegExp(symbol)}\\b)`))
+    .map((part) => ({
+      text: part,
+      fg: palette.text,
+      bg: part === symbol ? mark : bg,
+      bold: part === symbol,
+    }));
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -73,8 +73,7 @@ export function useTree(surface: Surface, review: Review, follow?: string) {
     [nodes, query, surface, isOpen],
   );
 
-  const selectedPath =
-    (surface === 'review' ? follow : undefined) ?? selection[surface];
+  const selectedPath = follow ?? selection[surface];
   const selected = Math.max(
     0,
     rows.findIndex((row) => row.node.path === selectedPath),

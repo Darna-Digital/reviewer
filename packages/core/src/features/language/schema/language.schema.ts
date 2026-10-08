@@ -150,6 +150,44 @@ export const HoverResult = Schema.Struct({
 });
 export type HoverResult = typeof HoverResult.Type;
 
+/**
+ * One entry of a document's outline.
+ *
+ * LSP answers `textDocument/documentSymbol` with a tree (or, from older servers,
+ * a flat list naming each entry's container). The wire flattens it: entries come
+ * parents first, in document order, and `depth` says how far each is nested, so
+ * a client can render an outline, a breadcrumb or a "go to symbol" picker from
+ * one array without walking a tree.
+ */
+export const DocumentSymbol = Schema.Struct({
+  name: Schema.String,
+  /**
+   * Lowercase word for what the symbol is — LSP's `SymbolKind` names: `file`,
+   * `module`, `namespace`, `package`, `class`, `method`, `property`, `field`,
+   * `constructor`, `enum`, `interface`, `function`, `variable`, `constant`,
+   * `string`, `number`, `boolean`, `array`, `object`, `key`, `null`,
+   * `enummember`, `struct`, `event`, `operator`, `typeparameter` — plus `type`
+   * and `alias`, which TypeScript distinguishes and LSP does not.
+   */
+  kind: Schema.String,
+  /** Name of the enclosing symbol, empty at the top level. */
+  containerName: Schema.String,
+  /** The whole declaration, body included. */
+  range: Range,
+  /** The part to highlight and jump to — usually the name. */
+  selectionRange: Range,
+  /** Nesting level: 0 at the top of the file, 1 inside that, and so on. */
+  depth: Schema.Int,
+});
+export type DocumentSymbol = typeof DocumentSymbol.Type;
+
+export const DocumentSymbolsResult = Schema.Struct({
+  /** Null when no installed provider claims this file — not an error. */
+  providerId: Schema.NullOr(Schema.String),
+  symbols: Schema.Array(DocumentSymbol),
+});
+export type DocumentSymbolsResult = typeof DocumentSymbolsResult.Type;
+
 export const ProviderTransport = Schema.Literals(["in-process", "lsp-stdio"]);
 export type ProviderTransport = typeof ProviderTransport.Type;
 
@@ -160,6 +198,11 @@ export const ProviderCapabilitiesInfo = Schema.Struct({
   hover: Schema.Boolean,
   completions: Schema.Boolean,
   codeActions: Schema.Boolean,
+  /**
+   * Optional on the wire because it arrived after the rest: a client decoding
+   * an older server's answer reads its absence as "no outline".
+   */
+  documentSymbols: Schema.optionalKey(Schema.Boolean),
 });
 export type ProviderCapabilitiesInfo = typeof ProviderCapabilitiesInfo.Type;
 
@@ -206,14 +249,24 @@ export type LanguageProviderInfo = typeof LanguageProviderInfo.Type;
  * Query params. Numbers arrive as strings over HTTP and are validated by
  * `parsePositionQuery`, which reports bad input as a domain failure rather
  * than a schema decode error.
+ *
+ * `repo` names the repository a GET is about — the absolute path of a git
+ * work-tree root — when it is not the one the window has open. The request is
+ * answered against that root and the window's open project is left alone, so a
+ * client working in its own checkout (a terminal UI, an agent) can ask about
+ * its files through whichever server answers. Absent, the open project is used.
  */
-export const DocumentQuery = Schema.Struct({ path: Schema.String });
+export const DocumentQuery = Schema.Struct({
+  path: Schema.String,
+  repo: Schema.optionalKey(Schema.String),
+});
 export type DocumentQuery = typeof DocumentQuery.Type;
 
 export const PositionQuery = Schema.Struct({
   path: Schema.String,
   line: Schema.String,
   character: Schema.String,
+  repo: Schema.optionalKey(Schema.String),
 });
 export type PositionQuery = typeof PositionQuery.Type;
 

@@ -54,6 +54,13 @@ Mac app's settings (a light theme and a dark theme). With System it follows
 the OS appearance as it changes, and terminals that report colour-scheme
 changes repaint at once. Saved in `~/.reviewer/tui-settings.json`.
 
+### File icons
+
+Files wear type icons in the tree, tabs, diff headers, palette, history and
+usages, which need a [Nerd Font](https://www.nerdfonts.com) (3.0 or later) in
+the terminal. Turn them off with **show / hide file icons** in the command
+palette.
+
 ## Shared with the app
 
 - **Comments** are read from and written to `~/.reviewer/reviewer.db` — the
@@ -66,15 +73,17 @@ changes repaint at once. Saved in `~/.reviewer/tui-settings.json`.
   untracked files, a branch from its merge base through to the working tree.
 - **Colours** come from core's theme catalog and highlighter, so code is
   coloured exactly as in the app.
+- **File icons** are picked by the Mac tree's rules and painted in its hues
+  (`render/fileIconRules.generated.ts`, from `bun scripts/importFileIcons.ts`).
 - **The server**: started when it is not running (see above).
 
 ## Layout
 
 It is the Mac app's IDE, in a terminal:
 
-- **Top rail** — Browse · Review · Search (Search opens text search in the
-  palette).
-- **Sidebar** — the branch chip (with ↑ahead ↓behind) and the compare chip,
+- **Sidebar** — at its head the surface tabs, Browse · Review · Search
+  (Search opens text search in the palette), so the editor beside it keeps
+  the full height. Under them the branch chip (with ↑ahead ↓behind) and the compare chip,
   each opening a popover under it: the branch picker (Recent / Local /
   Remote; `⏎` checks out, `→` (or right-click) opens every branch action
   beside it and `←` comes back,
@@ -83,7 +92,7 @@ It is the Mac app's IDE, in a terminal:
   files, write or ✦ generate the message, Commit or Commit & push.
 - **Editor** — open-file tabs and the viewer (Browse), or the diff with its
   file stats and view toggles — changed hunks or full files (`E`), unified
-  or split (Review). Comments work in both. Wrap (`w`, or
+  or split (Review). Comments work in both. Wrap (`W` or `⌥Z`, or
   the `wrap` toggle in either header) is one setting for both; with it off,
   long lines scroll sideways: `←` `→`, a sideways swipe, or ⇧+wheel (the TUI
   asks the terminal to pass ⇧ through, which Ghostty and xterm honour).
@@ -107,37 +116,79 @@ It is the Mac app's IDE, in a terminal:
 Services are the Mac app's Run commands, shared through the database; the TUI
 runs its own processes and stops them when it quits.
 
+## Symbols
+
+Go to definition, find usages, hover info and a file's outline come from the
+Reviewer server's language providers — the ones the Mac app uses (TypeScript
+in-process; Ruby, PHP and Swift language servers). They answer for the
+working tree: any line of a file in Browse or the usages preview, and the new
+side of uncommitted or branch diffs.
+
+- **Hover** a symbol for its signature and docs.
+- **Right-click** a symbol: Go to definition · Find usages · Show info ·
+  Comment · Copy. ⌘-click goes straight to the definition, as on the Mac;
+  mouse reports carry no ⌘, so it is read off the kitty keyboard protocol's
+  own ⌘ events (Ghostty, kitty, WezTerm). ⌥- or ⌃-click does the same in any
+  terminal.
+- **The keyboard, vim-style** (diff and file view): `w` / `b` move a word
+  cursor over the symbols, across lines; `0` / `$` the line's first / last;
+  `*` / `#` the next / previous line using it. Then `⏎` goes to its
+  definition, `K` shows its info, `u` finds its usages. In a file, `{` / `}`
+  step through its definitions (by the outline, or blank lines without one).
+  `⌃O` or `⌥←` returns from any jump — definition, usage, symbol, file —
+  and `⌥→` goes forward again.
+- **`.`** on a line lists its symbols: `⏎` definition, `⌃U` usages, `→` the
+  full menu.
+- **`@`** lists the symbols in the open file to jump to one.
+- **Usages** (`6`, bottom pane): the symbol's usages by category and file,
+  beside a preview of the selected one scrolled to its line; `j`/`k` move,
+  `⏎` opens, `r` searches again. Drag the rule between them to resize.
+
+A definition that is only the symbol itself opens its usages instead; more
+than one opens a picker. The server is asked about this repository whatever
+project it has open (`?repo=`); an older server is only asked when its open
+project is this one.
+
 ## Keys
 
 The Mac app's shortcuts, where the terminal passes ⌘ through — that needs the
 kitty keyboard protocol (Ghostty, kitty, WezTerm, iTerm2 with CSI u) and ⌘
 not bound by the terminal itself. Each has a ⌃ or plain-key twin for
 terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay.
+Digits are vim counts — `10k` moves ten up — so the surfaces and panes have
+no plain-digit keys; a lone `0` still goes to the line's first symbol.
 `?` lists every key; the status bar shows the ones that work in yours.
 
-| Mac       | Also           | Does                                         |
-| --------- | -------------- | -------------------------------------------- |
-| `⌘K`      | `⌃K` `:`       | Command palette                              |
-| `⇧⌘O`     | `⌃⇧O` `⌃P` `p` | Go to file                                   |
-| `⇧⌘F`     | `⌃⇧F` `/`      | Search in files                              |
-| `⌥⌘1` `2` | `1` `2`        | Browse · Review                              |
-| `⌥⌘4`     | `4`            | Switch branch (popover)                      |
-| `⌥⌘5` `7` | `5` `7`        | History · Run                                |
-| `⌘B`      | `⌃B`           | Bottom pane                                  |
-| `⌃⌘S`     | `\`            | Sidebar                                      |
-| `⌘R`      | `⌃R` `r`       | Refresh                                      |
-| `⌘,`      | `⌃,` `⌃T`      | Theme & appearance                           |
-|           | `E`            | Changed hunks ⇄ full files                   |
-| `⇧⌘]` `[` | `]` `[`        | Next · previous tab                          |
-| `⌘W`      | `⌃W`           | Close tab                                    |
-| `⌘⏎`      | `⌃S`           | Commit (in the message box)                  |
-|           | `tab`          | Sidebar → editor → bottom pane               |
-|           | `t` · `T`      | Compare against… · uncommitted ⇄ last branch |
-|           | `c` `e` `x`    | Comment on a line · edit · delete            |
-|           | `space` `i`    | Commit box: include file · message           |
-|           | `esc`          | Back from a commit                           |
-|           | `^o`           | Stop typing into a service                   |
-|           | `q`            | Quit                                         |
+| Mac       | Also            | Does                                               |
+| --------- | --------------- | -------------------------------------------------- |
+| `⌘E`      | `⌃K` `:`        | Command palette                                    |
+| `⇧⌘O`     | `⌃⇧O` `⌃P` `p`  | Go to file                                         |
+| `⇧⌘F`     | `⌃⇧F` `/`       | Search in files                                    |
+| `⌥⌘1` `2` |                 | Browse · Review                                    |
+| `⌘G`      |                 | Switch Browse ⇄ Review                             |
+| `⌥⌘4`     |                 | Switch branch (popover)                            |
+| `⌥⌘5` `7` |                 | History · Run                                      |
+| `⌘B`      | `⌃B`            | Bottom pane                                        |
+| `⌃⌘S`     | `\`             | Sidebar                                            |
+| `⌘R`      | `⌃R` `r`        | Refresh                                            |
+| `⌘,`      | `⌃,` `⌃T`       | Theme & appearance                                 |
+|           | `E`             | Changed hunks ⇄ full files                         |
+| `⇧⌘]` `[` | `]` `[`         | Next · previous tab                                |
+| `⌘W`      | `⌃W`            | Close tab                                          |
+| `⌘⏎`      | `⌃S`            | Commit (in the message box)                        |
+|           | `tab`           | Sidebar → editor → bottom pane                     |
+|           | `t` · `T`       | Compare against… · uncommitted ⇄ last branch       |
+|           | `c` `e` `x`     | Comment on a line · edit · delete                  |
+|           | `space` `i`     | Commit box: include file · message                 |
+|           | `esc`           | Back from a commit                                 |
+|           | `^o`            | Stop typing into a service                         |
+|           | `w` `b` `0` `$` | Word cursor: next · previous · first · last symbol |
+|           | `*` `#`         | Next · previous use of the symbol                  |
+|           | `⏎` `K` `u`     | Definition · info · usages of the symbol           |
+|           | `{` `}`         | Previous · next definition in the file             |
+|           | `⌃O` `⌥←` `⌥→`  | Back · back · forward through jumps                |
+|           | `W` `⌥Z`        | Wrap long lines                                    |
+|           | `q`             | Quit                                               |
 
 ## Mouse
 

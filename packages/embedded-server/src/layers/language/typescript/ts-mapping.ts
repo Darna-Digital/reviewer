@@ -18,6 +18,7 @@ import {
   type FileEdits,
   type Range,
   type ReferenceKind,
+  type SymbolNode,
 } from "@reviewer/core/language";
 
 /**
@@ -184,3 +185,105 @@ export const toFileEdits = (
  * ("var", "let") trimmed off.
  */
 export const completionKind = (kind: string): string => kind.trim();
+
+/**
+ * `ScriptElementKind` to the outline's kind words. TypeScript prefixes a kind
+ * declared inside a function with `local ` and calls accessors `getter` and
+ * `setter`; the outline drops the one and files the other as properties.
+ * Anything not listed passes through lowercased with its spaces removed.
+ */
+const OUTLINE_KINDS: Readonly<Record<string, string>> = {
+  script: "file",
+  module: "module",
+  class: "class",
+  "local class": "class",
+  interface: "interface",
+  type: "type",
+  enum: "enum",
+  "enum member": "enummember",
+  var: "variable",
+  "local var": "variable",
+  let: "variable",
+  using: "variable",
+  "await using": "variable",
+  parameter: "variable",
+  const: "constant",
+  function: "function",
+  "local function": "function",
+  method: "method",
+  getter: "property",
+  setter: "property",
+  accessor: "property",
+  property: "property",
+  "JSX attribute": "property",
+  constructor: "constructor",
+  call: "method",
+  construct: "constructor",
+  index: "property",
+  "type parameter": "typeparameter",
+  alias: "alias",
+  string: "string",
+};
+
+export const outlineKind = (kind: string): string => {
+  const trimmed = kind.trim();
+  return OUTLINE_KINDS[trimmed] ?? trimmed.replace(/\s+/g, "").toLowerCase();
+};
+
+/** The parts of a `ts.NavigationTree` node the outline reads. */
+export interface NavigationNode {
+  readonly text: string;
+  readonly kind: string;
+  readonly spans: ReadonlyArray<{
+    readonly start: number;
+    readonly length: number;
+  }>;
+  readonly nameSpan?:
+    { readonly start: number; readonly length: number } | undefined;
+  readonly childItems?: ReadonlyArray<NavigationNode> | undefined;
+}
+
+/**
+ * TypeScript's stand-in names for things that have none — `<function>`,
+ * `<class>`, the `<global>` of a script.
+ */
+const isPlaceholderName = (text: string): boolean =>
+  text.length === 0 || (text.startsWith("<") && text.endsWith(">"));
+
+/** A node's whole extent: a merged declaration spans several places. */
+const extentOf = (node: NavigationNode): { start: number; length: number } => {
+  if (node.spans.length === 0) return { start: 0, length: 0 };
+  const start = Math.min(...node.spans.map((span) => span.start));
+  const end = Math.max(...node.spans.map((span) => span.start + span.length));
+  return { start, length: end - start };
+};
+
+/**
+ * A navigation tree as outline nodes. The root is the file itself, so its
+ * children are the top level. A nameless node (an anonymous function passed as
+ * an argument) is noise in an outline, but what it declares is not: its
+ * children take its place, so a `const` inside `describe(() => …)` still shows.
+ */
+export const outlineOfNavigationTree = (
+  text: string,
+  root: NavigationNode
+): ReadonlyArray<SymbolNode> => {
+  const convert = (
+    nodes: ReadonlyArray<NavigationNode>
+  ): ReadonlyArray<SymbolNode> =>
+    nodes.flatMap((node): ReadonlyArray<SymbolNode> => {
+      const children = convert(node.childItems ?? []);
+      if (isPlaceholderName(node.text)) return children;
+      const extent = extentOf(node);
+      return [
+        {
+          name: node.text,
+          kind: outlineKind(node.kind),
+          range: spanToRange(text, extent),
+          selectionRange: spanToRange(text, node.nameSpan ?? extent),
+          children,
+        },
+      ];
+    });
+  return convert(root.childItems ?? []);
+};

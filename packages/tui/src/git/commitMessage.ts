@@ -8,6 +8,22 @@ import { git } from './exec';
 
 export type CommitAgent = 'claude' | 'codex' | 'opencode' | 'cursor';
 
+/** The agents that can draft a message, as the Mac app's composer lists them. */
+export const COMMIT_AGENTS: Array<{ id: CommitAgent; label: string }> = [
+  { id: 'claude', label: 'Claude' },
+  { id: 'codex', label: 'Codex' },
+  { id: 'opencode', label: 'OpenCode' },
+  { id: 'cursor', label: 'Cursor' },
+];
+
+export function agentLabel(agent: CommitAgent): string {
+  return COMMIT_AGENTS.find((entry) => entry.id === agent)?.label ?? agent;
+}
+
+export function isCommitAgent(value: unknown): value is CommitAgent {
+  return COMMIT_AGENTS.some((entry) => entry.id === value);
+}
+
 /** The app's agent invocations (core `agentCommand`), prompt shell-quoted. */
 function agentCommand(agent: CommitAgent, prompt: string): string {
   const quoted = `'${prompt.replace(/\0/g, '').replace(/'/g, "'\\''")}'`;
