@@ -132,7 +132,7 @@ side of uncommitted or branch diffs.
   terminal.
 - **The keyboard, vim-style** (diff and file view): `w` / `b` move a word
   cursor over the symbols, across lines; `0` / `$` the line's first / last;
-  `*` / `#` the next / previous line using it. Then `⏎` goes to its
+  `*` / `#` the next / previous line using it. Then `⏎` (or `⌃]`) goes to its
   definition, `K` shows its info, `u` finds its usages. In a file, `{` / `}`
   step through its definitions (by the outline, or blank lines without one).
   `⌃O` or `⌥←` returns from any jump — definition, usage, symbol, file —
@@ -266,7 +266,7 @@ stops typing. In a filter field `⏎` or `esc` stops typing.
 | `w` `b`              | Next · previous symbol            |
 | `0` `$`              | First · last symbol on the line   |
 | `*` `#`              | Next · previous use of the symbol |
-| `⏎`                  | Go to definition                  |
+| `⏎` `⌃]`             | Go to definition                  |
 | `K`                  | Symbol info                       |
 | `u`                  | Find usages                       |
 | `.`                  | Symbols on this line…             |

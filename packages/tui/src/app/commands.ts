@@ -798,7 +798,7 @@ export const COMMANDS: Command[] = [
     {
       id: `${scope}.definition`,
       scope,
-      keys: ['return'],
+      keys: ['return', 'ctrl+]'],
       title: 'go to definition',
       hint: 'definition',
       when: onCode,
