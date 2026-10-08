@@ -117,6 +117,8 @@ export const NOTICE_MS = 4000;
 export const SIDEBAR_HEADER = 1;
 export const COMMIT_BOX_HEIGHT = 7;
 const CLOCK_MS = 30_000;
+/** How long history scrolling rests before the commit under it opens. */
+const HISTORY_SETTLE_MS = 120;
 
 /** Composes every part of the screen and owns the actions that span them. */
 export function useApp(props: AppProps) {
@@ -140,6 +142,7 @@ export function useApp(props: AppProps) {
   const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
   const [previous, setPrevious] = React.useState<Comparison>(WORKTREE);
   const commentBox = React.useRef<TextareaRenderable | null>(null);
+  const historySettle = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const [searchMemory, setSearchMemory] = React.useState({
     files: '',
     text: '',
@@ -439,7 +442,12 @@ export function useApp(props: AppProps) {
     /** Moves through history and opens the commit, as the Mac list does. */
     stepHistory(delta: number) {
       const sha = history.step(delta);
-      if (sha) actions.showCommit(sha);
+      if (!sha) return;
+      clearTimeout(historySettle.current);
+      historySettle.current = setTimeout(
+        () => latestActions.current.showCommit(sha),
+        HISTORY_SETTLE_MS,
+      );
     },
     openComment(comment: ReviewComment) {
       if (
@@ -690,6 +698,8 @@ export function useApp(props: AppProps) {
       process.exit(0);
     },
   };
+  const latestActions = React.useRef(actions);
+  latestActions.current = actions;
 
   return {
     palette,

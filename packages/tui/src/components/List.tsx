@@ -47,28 +47,65 @@ export function List<TValue>(props: ListProps<TValue>) {
   const isDoubleClick = useDoubleClick();
   const wheel = useWheel((rows) => props.onScroll?.(rows), props.onScrollX);
 
-  const rows: Array<{ segs: Seg[]; item: number }> = [];
-  let selectedStart = 0;
-  let selectedEnd = 0;
-  items.forEach((item, index) => {
-    const isSelected = index === selected;
-    if (isSelected) selectedStart = rows.length;
-    const look = {
-      selected: isSelected,
-      focused,
-      hovered: index === hovered,
-      width: props.contentWidth ?? width,
-    };
-    for (const segs of item.rows(look)) rows.push({ segs, item: index });
-    if (isSelected) selectedEnd = rows.length;
+  const lookOf = (index: number) => ({
+    selected: index === selected,
+    focused,
+    hovered: index === hovered,
+    width: props.contentWidth ?? width,
   });
+  const drawn = new Map<number, Seg[][]>();
+  const draw = (index: number) => {
+    let rows = drawn.get(index);
+    if (!rows) {
+      rows = items[index]!.rows(lookOf(index));
+      drawn.set(index, rows);
+    }
+    return rows;
+  };
+
+  const starts: number[] = [];
+  let total = 0;
+  items.forEach((item, index) => {
+    starts.push(total);
+    total += item.height ?? draw(index).length;
+  });
+  const hasSelection = selected >= 0 && selected < items.length;
+  const selectedStart = hasSelection ? starts[selected]! : 0;
+  const selectedEnd = hasSelection ? selectedStart + rowsOf(selected) : 0;
 
   const margin = Math.min(MARGIN, Math.floor((height - 1) / 2));
   if (selectedStart - margin < top.current)
     top.current = selectedStart - margin;
   else if (selectedEnd + margin > top.current + height)
     top.current = selectedEnd + margin - height;
-  top.current = Math.max(0, Math.min(top.current, rows.length - height));
+  top.current = Math.max(0, Math.min(top.current, total - height));
+
+  const rows: Array<{ segs: Seg[]; item: number }> = [];
+  for (
+    let index = firstItemAt(top.current);
+    index < items.length && starts[index]! < top.current + height;
+    index += 1
+  ) {
+    const skip = Math.max(0, top.current - starts[index]!);
+    for (const segs of draw(index).slice(skip))
+      rows.push({ segs, item: index });
+  }
+
+  function rowsOf(index: number) {
+    return (starts[index + 1] ?? total) - starts[index]!;
+  }
+
+  /** The item covering `row`, found by bisecting the row starts. */
+  function firstItemAt(row: number) {
+    let low = 0;
+    let high = items.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if (starts[mid]! <= row) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  }
 
   if (items.length === 0) {
     return (
@@ -93,7 +130,7 @@ export function List<TValue>(props: ListProps<TValue>) {
       onMouseScroll={wheel}
       onMouseOut={() => setHovered(null)}
     >
-      {rows.slice(top.current, top.current + height).map((row, i) => (
+      {rows.slice(0, height).map((row, i) => (
         <Line
           key={top.current + i}
           segs={sliceSegs(row.segs, props.scrollX ?? 0, width, bg)}

@@ -22,6 +22,8 @@ export interface ItemLook {
 export interface ListItem<TValue = unknown> {
   key: string;
   selectable: boolean;
+  /** Rows `rows` draws, when known up front — lets a list skip drawing it off screen. */
+  height?: number;
   rows: (look: ItemLook) => Seg[][];
   value?: TValue;
 }
@@ -47,6 +49,7 @@ export function treeItems(
   return rows.map(({ node, depth, expanded }) => ({
     key: node.path,
     selectable: true,
+    height: 1,
     value: node,
     rows: (look) => {
       const bg = rowBg(palette, look);
@@ -110,6 +113,7 @@ export function historyItems(
   return commits.map((commit, index) => ({
     key: commit.sha,
     selectable: true,
+    height: 1,
     value: commit,
     rows: (look) => {
       const bg = rowBg(palette, look);
@@ -160,6 +164,7 @@ export function commitFileItems(
   return files.map((file) => ({
     key: file.path,
     selectable: true,
+    height: 1,
     value: file,
     rows: (look) => {
       const bg = rowBg(palette, look);
@@ -224,6 +229,7 @@ export function serviceItems(
   return commands.map((command) => ({
     key: command.id,
     selectable: true,
+    height: 1,
     value: command,
     rows: (look) => {
       const bg = rowBg(palette, look);

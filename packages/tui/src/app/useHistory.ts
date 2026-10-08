@@ -12,6 +12,8 @@ import type { Review } from './useReview';
 export type History = ReturnType<typeof useHistory>;
 
 const PAGE = 300;
+/** How long the selection rests before its details are read. */
+const DETAIL_SETTLE_MS = 120;
 
 /** The History pane: the log under its filters, and the selected commit. */
 export function useHistory(review: Review, visible: boolean) {
@@ -25,6 +27,7 @@ export function useHistory(review: Review, visible: boolean) {
     files: CommitFile[];
   } | null>(null);
   const head = review.repo?.head;
+  const latestSelected = React.useRef(selectedSha);
 
   React.useEffect(() => {
     if (!visible) return;
@@ -41,15 +44,18 @@ export function useHistory(review: Review, visible: boolean) {
   React.useEffect(() => {
     if (!selectedSha) return setDetail(null);
     let cancelled = false;
-    void Promise.all([
-      readCommit(review.root, selectedSha),
-      readCommitFiles(review.root, selectedSha),
-    ]).then(
-      ([commit, files]) => !cancelled && setDetail({ commit, files }),
-      () => !cancelled && setDetail(null),
-    );
+    const settle = setTimeout(() => {
+      void Promise.all([
+        readCommit(review.root, selectedSha),
+        readCommitFiles(review.root, selectedSha),
+      ]).then(
+        ([commit, files]) => !cancelled && setDetail({ commit, files }),
+        () => !cancelled && setDetail(null),
+      );
+    }, DETAIL_SETTLE_MS);
     return () => {
       cancelled = true;
+      clearTimeout(settle);
     };
   }, [review.root, selectedSha]);
 
@@ -58,6 +64,11 @@ export function useHistory(review: Review, visible: boolean) {
     () => (filtered ? null : layoutGraph(commits)),
     [commits, filtered],
   );
+  function select(sha: string | null) {
+    latestSelected.current = sha;
+    setSelectedSha(sha);
+  }
+
   const selectedIndex = commits.findIndex(
     (commit) => commit.sha === selectedSha,
   );
@@ -76,15 +87,16 @@ export function useHistory(review: Review, visible: boolean) {
     selectedSha,
     selectedIndex,
     detail,
-    select: setSelectedSha,
+    select,
     /** Selects the commit `delta` away and returns its sha. */
     step(delta: number): string | null {
+      const at = commits.findIndex(
+        (commit) => commit.sha === latestSelected.current,
+      );
       const next =
-        commits[
-          Math.max(0, Math.min(commits.length - 1, selectedIndex + delta))
-        ];
+        commits[Math.max(0, Math.min(commits.length - 1, at + delta))];
       if (!next) return null;
-      setSelectedSha(next.sha);
+      select(next.sha);
       return next.sha;
     },
   };
