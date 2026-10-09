@@ -9,6 +9,7 @@ import type { Anchor } from '../diff/buildLayout';
 import type { CodePoint } from '../diff/codeAt';
 import type { DiffLine } from '../diff/parseDiff';
 import { discard, fetchAll, pull, push, summarize } from '../git/actions';
+import { branchName } from '../git/branchName';
 import { COMMIT_AGENTS, isCommitAgent } from '../git/commitMessage';
 import type { CommitAgent } from '../git/commitMessage';
 import type { GrepOptions } from '../git/files';
@@ -819,8 +820,9 @@ export function useApp(props: AppProps) {
         [{ key: 'name', label: 'Branch name' }],
         'Create',
         ({ name }) => {
-          if (!name?.trim()) return 'Name the branch';
-          void branches.create(name.trim(), from?.name);
+          const slug = branchName(name ?? '');
+          if (!slug) return 'Name the branch';
+          void branches.create(slug, from?.name);
         },
       );
     },
@@ -830,8 +832,9 @@ export function useApp(props: AppProps) {
         [{ key: 'name', label: 'New name', initial: branch.name }],
         'Rename',
         ({ name }) => {
-          if (!name?.trim()) return 'Name the branch';
-          void branches.rename(branch, name.trim());
+          const slug = branchName(name ?? '');
+          if (!slug) return 'Name the branch';
+          void branches.rename(branch, slug);
         },
       );
     },
