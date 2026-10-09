@@ -467,7 +467,9 @@ function paintCard(
     ? palette.accent
     : row.outdated
       ? mix(palette.control, palette.warning, 0.55)
-      : mix(palette.control, palette.muted, 0.4);
+      : row.comment.resolved
+        ? mix(palette.control, palette.muted, 0.2)
+        : mix(palette.control, palette.muted, 0.4);
   const inner = width - 2;
 
   const lead: Seg[] = [
@@ -510,6 +512,9 @@ function paintCard(
         fg: palette.warning,
         bg: card,
       });
+    }
+    if (row.comment.resolved) {
+      meta.push({ text: ' · ✓ resolved', fg: palette.added, bg: card });
     }
     meta.push({ text: ' ', bg: card });
     const fill = Math.max(0, inner - segsWidth(meta));

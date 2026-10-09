@@ -9,6 +9,7 @@ import { captureMouse } from './captureMouse';
 import { DragRule } from './DragRule';
 import { HistoryPane } from './HistoryPane';
 import { Button, Line } from './Line';
+import { PullPane } from './PullPane';
 import { RunPane } from './RunPane';
 import { UsagesPane } from './UsagesPane';
 
@@ -16,9 +17,10 @@ const LABEL: Record<BottomTab, string> = {
   history: 'History',
   usages: 'Usages',
   run: 'Run',
+  pull: 'Pull request',
 };
 
-/** Branches, History, Terminal and Run; drag the header to resize. */
+/** History, Usages, Run and the pull request under review; drag the header to resize. */
 export function BottomPane() {
   const app = useAppContext();
   const renderer = useRenderer();
@@ -116,6 +118,9 @@ export function BottomPane() {
       ) : null}
       {workspace.bottomTab === 'run' ? (
         <RunPane height={height} focused={focused} />
+      ) : null}
+      {workspace.bottomTab === 'pull' ? (
+        <PullPane height={height} focused={focused} />
       ) : null}
     </box>
   );

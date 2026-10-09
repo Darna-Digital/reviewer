@@ -20,6 +20,7 @@ import { FormDialog } from '../components/FormDialog';
 import { HelpOverlay } from '../components/HelpOverlay';
 import { CommandPalette } from '../components/CommandPalette';
 import { CommentsPicker, ThemePicker } from '../components/Pickers';
+import { PullsPicker } from '../components/PullsPicker';
 import { Sidebar } from '../components/Sidebar';
 import { TargetPicker } from '../components/TargetPicker';
 import { findCommand } from './commands';
@@ -99,6 +100,7 @@ export function App(props: AppProps) {
         ) : null}
         {overlay?.kind === 'theme' ? <ThemePicker /> : null}
         {overlay?.kind === 'comments' ? <CommentsPicker /> : null}
+        {overlay?.kind === 'pulls' ? <PullsPicker /> : null}
         {overlay?.kind === 'commentsHere' ? (
           <CommentsPopover overlay={overlay} />
         ) : null}

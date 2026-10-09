@@ -14,6 +14,8 @@ import { Picker } from './Picker';
 import type { PickerOption } from './Picker';
 
 const UNCOMMITTED = 'uncommitted';
+/** No ref holds a space, so this key cannot clash with a branch. */
+const PULL_REQUESTS = ' pull requests';
 
 /**
  * Picks what the diff is read against. Likely targets come first with how far
@@ -71,7 +73,7 @@ export function TargetPicker({
 
   const showing =
     review.comparison.kind === 'branch' ? review.comparison.against : null;
-  const options = targets.map((target): PickerOption => ({
+  const branchOptions = targets.map((target): PickerOption => ({
     key: target.ref ?? UNCOMMITTED,
     label: target.ref ?? 'Uncommitted changes',
     group: target.group,
@@ -81,6 +83,15 @@ export function TargetPicker({
       : palette.faint,
     labelColor: target.ref === null ? palette.text : undefined,
   }));
+  const options: PickerOption[] = [
+    ...branchOptions,
+    {
+      key: PULL_REQUESTS,
+      label: 'Pull requests…',
+      group: 'GitHub',
+      hint: review.comparison.kind === 'pull' ? '● showing · M' : 'M',
+    },
+  ];
 
   const footer: Seg[] = current
     ? [
@@ -113,6 +124,7 @@ export function TargetPicker({
       }}
       onClose={actions.closeOverlay}
       onPick={(option) => {
+        if (option.key === PULL_REQUESTS) return actions.openPulls();
         actions.closeOverlay();
         actions.pickTarget(
           option.key === UNCOMMITTED ? null : option.key,

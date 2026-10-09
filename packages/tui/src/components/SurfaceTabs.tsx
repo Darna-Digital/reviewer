@@ -17,10 +17,27 @@ const SURFACES: Tab[] = [
   },
   {
     label: ' ± Review ',
-    isOn: (app) => app.workspace.surface === 'review' && !isSearching(app),
+    isOn: (app) =>
+      app.workspace.surface === 'review' &&
+      app.workspace.sidebarList === 'files' &&
+      !isSearching(app),
     run: (app) => app.actions.setSurface('review'),
   },
 ];
+
+/** The open pull requests in the sidebar; the count once they are read. */
+const PULLS: Tab = {
+  label: ' ⇅ PRs ',
+  isOn: (app) =>
+    app.workspace.surface === 'review' &&
+    app.workspace.sidebarList === 'pulls' &&
+    !isSearching(app),
+  run: (app) => app.actions.showPullList(),
+};
+
+const PULLS_NARROW: Tab = { ...PULLS, label: ' ⇅ ' };
+/** Below this the tab drops its word so Search still fits. */
+const ROOM_FOR_PULLS_WORD = 38;
 
 const SEARCH: Tab = {
   label: ' ⌕ ',
@@ -28,7 +45,7 @@ const SEARCH: Tab = {
   run: (app) => app.actions.openPalette('text'),
 };
 
-/** Browse and Review, and Search at the far end — the head of the sidebar. */
+/** Browse, Review and pull requests, and Search at the far end — the head of the sidebar. */
 export function SurfaceTabs() {
   const app = useAppContext();
   const { palette, layout } = app;
@@ -44,6 +61,10 @@ export function SurfaceTabs() {
       {SURFACES.map((tab) => (
         <TabButton key={tab.label} tab={tab} />
       ))}
+      <TabButton
+        tab={layout.sidebarWidth < ROOM_FOR_PULLS_WORD ? PULLS_NARROW : PULLS}
+        badge={pullCount(app)}
+      />
       <box flexGrow={1} height={1} backgroundColor={bg} />
       <TabButton tab={SEARCH} />
       <Line segs={[]} width={1} fill={bg} />
@@ -51,7 +72,7 @@ export function SurfaceTabs() {
   );
 }
 
-function TabButton({ tab }: { tab: Tab }) {
+function TabButton({ tab, badge }: { tab: Tab; badge?: string }) {
   const app = useAppContext();
   const { palette } = app;
   const on = tab.isOn(app);
@@ -67,12 +88,20 @@ function TabButton({ tab }: { tab: Tab }) {
           bg: tabBg,
           bold: on,
         },
+        ...(badge
+          ? [{ text: `${badge} `, fg: palette.accent, bg: tabBg }]
+          : []),
       ]}
       bg={tabBg}
       hoverTint={palette.text}
       onPress={() => tab.run(app)}
     />
   );
+}
+
+function pullCount(app: App): string | undefined {
+  const count = app.pulls.list.length;
+  return app.pulls.error || count === 0 ? undefined : String(count);
 }
 
 function isSearching(app: App): boolean {

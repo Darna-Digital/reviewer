@@ -9,7 +9,8 @@ import { Picker } from './Picker';
 
 type CommentsOverlay = Extract<Overlay, { kind: 'commentsHere' }>;
 
-export const COMMENTS_POPOVER_WIDTH = 72;
+export const COMMENTS_POPOVER_WIDTH = 88;
+const COMMENTS_POPOVER_ROWS = 24;
 
 /**
  * Comments by file, each with its line of code: the change under review
@@ -45,12 +46,16 @@ export function CommentsPopover({ overlay }: { overlay: CommentsOverlay }) {
       anchor={overlay.at}
       width={COMMENTS_POPOVER_WIDTH}
       pathGroups
+      proseLabels
+      maxRows={COMMENTS_POPOVER_ROWS}
       title={`Comments · ${comments.length}`}
       placeholder="Search comments…"
       emptyText="No comments yet — press c on a line"
       options={comments.map((comment) => ({
         key: comment.id,
-        label: `${comment.lineNumber}${comment.side === 'deletions' ? ' (old)' : ''}  ${firstLine(comment.body)}`,
+        lead: `${comment.side === 'deletions' ? 'old ' : ''}L${comment.lineNumber}`,
+        label: commentTitle(comment.body),
+        search: `${comment.filePath} ${comment.body} ${comment.author}`,
         group: comment.filePath,
         hint: `${comment.author.split(' ')[0] ?? ''} · ${ago(comment.createdAt, now)}`,
         detail:
@@ -84,8 +89,16 @@ export function commentsToList(app: App): ReviewComment[] {
   return [...change.sort(byPlace), ...codebase.sort(byPlace)];
 }
 
-function firstLine(text: string): string {
-  return text.split('\n')[0] ?? '';
+/** The comment's first line as plain text — its markdown marks would only be noise in a list. */
+function commentTitle(body: string): string {
+  const line = body.split('\n').find((text) => text.trim() !== '') ?? '';
+  return line
+    .trim()
+    .replace(/^(#+|>|[-*+]|\d+\.)\s+/, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/(\*\*|__|~~)(.+?)\1/g, '$2')
+    .replace(/\*(\S(?:.*?\S)?)\*/g, '$1')
+    .replace(/`([^`]*)`/g, '$1');
 }
 
 /** The code a comment was left on, as the diff shows it now. */

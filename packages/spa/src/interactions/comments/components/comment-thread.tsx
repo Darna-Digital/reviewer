@@ -51,7 +51,10 @@ const REPLY_INDENT = "ml-10";
  * pane: a comment anchored to one line reads as a note pinned beside that
  * line, and a card that runs the width of the diff stops looking pinned to
  * anything. It also keeps the prose to a measure you can actually scan — the
- * same cap opencode puts on its line comments.
+ * same cap opencode puts on its line comments. A thread with more to say than
+ * a note — a review's write-up, paragraphs and code — runs the width of the
+ * pane instead (see `WIDE_THREAD_CHARS`): at 400px it stood as a column taller
+ * than the screen.
  *
  * `comment-card` is the hook `styles.css` hangs the caret and selection colours
  * on: the file view slots this card inside the editor's `contenteditable`,
@@ -64,6 +67,10 @@ const REPLY_INDENT = "ml-10";
  */
 const COMMENT_CARD =
   "comment-card group/thread my-2 mx-3 w-full max-w-100 min-w-0 overflow-hidden rounded-2xl bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
+/** The pane's width, less the card's margin either side. */
+const WIDE_CARD = "max-w-[calc(100%-1.5rem)]";
+/** Past this much written in a thread, its card runs the pane's width. */
+const WIDE_THREAD_CHARS = 280;
 
 /**
  * The composer's pill. The radius is half the height of a one-line composer —
@@ -378,8 +385,11 @@ export function CommentThread({
     );
   }
 
+  const wide =
+    comments.reduce((chars, c) => chars + c.body.length, 0) > WIDE_THREAD_CHARS;
+
   return (
-    <div className={COMMENT_CARD}>
+    <div className={cn(COMMENT_CARD, wide && WIDE_CARD)}>
       {resolved && (
         <ResolvedHeader className="mb-3" onFold={() => setUnfolded(false)} />
       )}

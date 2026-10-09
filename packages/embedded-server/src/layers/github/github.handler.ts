@@ -6,6 +6,7 @@ import {
   GitProvider,
 } from "@reviewer/core/ports/git-provider";
 import { GitHubLogin } from "./github-login.ts";
+import { withGitHubOf } from "./github.scope.ts";
 
 const ok = { ok: true } as const;
 
@@ -22,37 +23,35 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
     .handle("startLogin", () => Effect.flatMap(GitHubLogin, (s) => s.start))
     .handle("loginStatus", () => Effect.flatMap(GitHubLogin, (s) => s.status))
     .handle("cancelLogin", () => Effect.flatMap(GitHubLogin, (s) => s.cancel))
-    .handle("pulls", () => Effect.flatMap(GitProvider, (s) => s.pulls))
-    .handle("mergePull", ({ params, payload }) =>
+    .handle("pulls", ({ query }) => withGitHubOf(query.repo)((s) => s.pulls))
+    .handle("mergePull", ({ params, query, payload }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
-          Effect.flatMap(GitProvider, (s) => s.mergePull(n, payload.method))
+          withGitHubOf(query.repo)((s) => s.mergePull(n, payload.method))
         )
       )
     )
-    .handle("closePull", ({ params }) =>
+    .handle("closePull", ({ params, query }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) => withGitHubOf(query.repo)((s) => s.closePull(n)))
+      )
+    )
+    .handle("pullDiff", ({ params, query }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) => withGitHubOf(query.repo)((s) => s.pullDiff(n)))
+      )
+    )
+    .handle("pullComments", ({ params, query }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
-          Effect.flatMap(GitProvider, (s) => s.closePull(n))
+          withGitHubOf(query.repo)((s) => s.pullComments(n))
         )
       )
     )
-    .handle("pullDiff", ({ params }) =>
-      pullNumber(params.number).pipe(
-        Effect.flatMap((n) => Effect.flatMap(GitProvider, (s) => s.pullDiff(n)))
-      )
-    )
-    .handle("pullComments", ({ params }) =>
+    .handle("createPullComment", ({ params, query, payload }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
-          Effect.flatMap(GitProvider, (s) => s.pullComments(n))
-        )
-      )
-    )
-    .handle("createPullComment", ({ params, payload }) =>
-      pullNumber(params.number).pipe(
-        Effect.flatMap((n) =>
-          Effect.flatMap(GitProvider, (s) =>
+          withGitHubOf(query.repo)((s) =>
             s.createPullComment({
               pullNumber: n,
               filePath: payload.filePath,
@@ -64,12 +63,12 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
-    .handle("deletePullComment", ({ params }) =>
+    .handle("deletePullComment", ({ params, query }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
           pullNumber(params.commentId).pipe(
             Effect.flatMap((commentId) =>
-              Effect.flatMap(GitProvider, (s) =>
+              withGitHubOf(query.repo)((s) =>
                 s.deletePullComment({ pullNumber: n, commentId })
               )
             )
@@ -78,12 +77,12 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         Effect.as(ok)
       )
     )
-    .handle("replyPullComment", ({ params, payload }) =>
+    .handle("replyPullComment", ({ params, query, payload }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
           pullNumber(params.commentId).pipe(
             Effect.flatMap((commentId) =>
-              Effect.flatMap(GitProvider, (s) =>
+              withGitHubOf(query.repo)((s) =>
                 s.replyToPullComment({
                   pullNumber: n,
                   commentId,
@@ -95,10 +94,10 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
-    .handle("setPullThreadResolved", ({ params, payload }) =>
+    .handle("setPullThreadResolved", ({ params, query, payload }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap(() =>
-          Effect.flatMap(GitProvider, (s) =>
+          withGitHubOf(query.repo)((s) =>
             s.setThreadResolved({
               threadId: params.threadId,
               resolved: payload.resolved,

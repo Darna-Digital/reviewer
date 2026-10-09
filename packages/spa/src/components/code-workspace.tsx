@@ -55,6 +55,7 @@ import {
 } from "@/components/review-assign-bar.shell";
 import {
   DiffPane,
+  type DiffRevealTarget,
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane";
 import { CodeView } from "@/components/editor/code-view";
@@ -589,6 +590,10 @@ export function CodeWorkspace() {
       revealLine(path, lineNumber);
     });
   };
+  // A comment followed from the bar while the diff is on screen, scrolled to
+  // where it stands in the diff — see `openComment`.
+  const [diffReveal, setDiffReveal] = useState<DiffRevealTarget | null>(null);
+
   /**
    * A comment picked out of the bar's list: a permanent tab, since picking a
    * comment is deliberate, and the line revealed outright so following the same
@@ -596,11 +601,33 @@ export function CodeWorkspace() {
    *
    * It stays in the mode it was left in — a comment belongs to the changes on
    * screen, so pulling the window out to the browser would leave the review
-   * the comment came from.
+   * the comment came from. A comment on a file in the diff is shown in the
+   * diff, where its thread is drawn: the file viewer reads the checkout, which
+   * holds neither a pull request's code nor its comments.
    */
   const openComment = (id: string) => {
     const comment = visibleComments.find((c) => c.id === id);
     if (comment === undefined) return;
+    if (readingDiff && diffFiles.some((f) => f.name === comment.filePath)) {
+      // The router's scroll restoration would put the diff back where it
+      // stood before the jump once the new `path` lands.
+      void navigate({
+        to: ".",
+        search: (prev: Search) => ({
+          ...prev,
+          path: comment.filePath,
+          file: undefined,
+        }),
+        resetScroll: false,
+      });
+      setDiffReveal((previous) => ({
+        path: comment.filePath,
+        line: comment.lineNumber,
+        side: comment.side,
+        key: (previous?.key ?? 0) + 1,
+      }));
+      return;
+    }
     if (tabbed)
       updateTabs((state) => openTab(state, comment.filePath, "permanent"));
     setSearch({
@@ -1097,6 +1124,7 @@ export function CodeWorkspace() {
         comments={visibleComments}
         draft={draft}
         selectedFile={search.path ?? null}
+        reveal={diffReveal}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
         onEditFile={openInBrowse}

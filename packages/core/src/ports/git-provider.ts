@@ -188,6 +188,16 @@ export const GitHubLoginState = Schema.Struct({
 });
 export type GitHubLoginState = typeof GitHubLoginState.Type;
 
+/**
+ * The repository a pull-request request is about: the root of a git work
+ * tree, or absent for the one the window has open — the way
+ * `CommentsRepoQuery` scopes comments.
+ */
+export const GitHubRepoQuery = Schema.Struct({
+  repo: Schema.optionalKey(Schema.String),
+});
+export type GitHubRepoQuery = typeof GitHubRepoQuery.Type;
+
 export const PullNumberParam = Schema.Struct({ number: Schema.String });
 export const PullCommentParams = Schema.Struct({
   number: Schema.String,

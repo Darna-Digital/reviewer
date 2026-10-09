@@ -2,7 +2,7 @@ import { useKeyboard } from '@opentui/react';
 import * as React from 'react';
 import { keyName } from '../app/keys';
 import type { Palette } from '../render/palette';
-import { cellWidth, truncateStart } from '../text/measure';
+import { cellWidth, truncate, truncateStart } from '../text/measure';
 import { fitSegs } from '../render/styled';
 import type { Seg } from '../render/styled';
 import { Backdrop, centered } from './Modal';
@@ -13,6 +13,10 @@ import { useWheel } from './useWheel';
 export interface PickerOption {
   key: string;
   label: string;
+  /** Kept whole before the label, in a column of its own: a comment's line number. */
+  lead?: string;
+  /** Matched against the query in place of the label. */
+  search?: string;
   /** Options are listed under their group's heading. */
   group?: string;
   hint?: string;
@@ -53,6 +57,10 @@ export interface PickerProps {
   inert?: boolean;
   /** Group headings are file paths: shown as written, not as captions. */
   pathGroups?: boolean;
+  /** Labels are prose, cut at the end; by default they are paths, cut at the start. */
+  proseLabels?: boolean;
+  /** List rows when the screen has room; defaults to a short list. */
+  maxRows?: number;
   /** `false` when the caller filters (async search); defaults to fuzzy matching here. */
   filter?: boolean;
   onQueryChange?: (query: string) => void;
@@ -120,7 +128,7 @@ export function Picker(props: PickerProps) {
   const room = anchor
     ? screen.height - anchor.y - 1 - chrome
     : screen.height - 12;
-  const listRows = Math.max(3, Math.min(MAX_ROWS, room));
+  const listRows = Math.max(3, Math.min(props.maxRows ?? MAX_ROWS, room));
   const height = listRows + chrome;
   const left = anchor
     ? Math.max(0, Math.min(anchor.x, screen.width - width))
@@ -128,7 +136,14 @@ export function Picker(props: PickerProps) {
   const boxTop = anchor
     ? Math.max(1, Math.min(anchor.y, screen.height - height))
     : Math.max(1, centered(screen.height, height) - 2);
-  const rows = layoutRows(palette, options, selected, inner, props.pathGroups);
+  const rows = layoutRows(
+    palette,
+    options,
+    selected,
+    inner,
+    props.pathGroups,
+    props.proseLabels,
+  );
   const selectedRow = rows.findIndex((row) => row.option === selected);
   const view = useScrollWindow(selectedRow, rows.length, listRows);
   const wheel = useWheel(view.scrollBy);
@@ -264,7 +279,7 @@ export function filterOptions(
       option,
       index,
       group: groups.indexOf(option.group ?? ''),
-      score: matchScore(option.label, query),
+      score: matchScore(option.search ?? option.label, query),
     }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => a.group - b.group || b.score - a.score || a.index - b.index)
@@ -289,40 +304,56 @@ function layoutRows(
   selected: number,
   width: number,
   pathGroups = false,
+  proseLabels = false,
 ): Array<{ segs: Seg[]; option: number | null }> {
   const rows: Array<{ segs: Seg[]; option: number | null }> = [];
+  const leadWidth = Math.max(
+    0,
+    ...options.map((option) => cellWidth(option.lead ?? '')),
+  );
+  const leadColumn = leadWidth > 0 ? leadWidth + 2 : 0;
   let group: string | undefined;
   options.forEach((option, index) => {
     if (option.group && option.group !== group) {
+      if (pathGroups && group !== undefined)
+        rows.push({ option: null, segs: [] });
       group = option.group;
       rows.push({
         option: null,
-        segs: [
-          pathGroups
-            ? {
-                text: ` ${truncateStart(group, width - 2)}`,
-                fg: palette.muted,
-                bold: true,
-              }
-            : {
+        segs: pathGroups
+          ? pathHeading(palette, group, width)
+          : [
+              {
                 text: ` ${group.toUpperCase()}`,
                 fg: palette.faint,
                 bold: true,
               },
-        ],
+            ],
       });
     }
     const lit = index === selected;
     const bg = lit ? palette.selection : palette.popover;
     const hint = option.hint ?? '';
-    const room = Math.max(4, width - 4 - cellWidth(hint));
-    const label = truncateStart(option.label, room);
+    const room = Math.max(4, width - 4 - leadColumn - cellWidth(hint));
+    const label = proseLabels
+      ? truncate(option.label, room)
+      : truncateStart(option.label, room);
+    const lead = option.lead ?? '';
     rows.push({
       option: index,
       segs: fitSegs(
         [
           { text: lit ? '▌' : ' ', fg: palette.accent, bg },
           { text: '  ', bg },
+          ...(leadColumn > 0
+            ? [
+                {
+                  text: `${' '.repeat(leadWidth - cellWidth(lead))}${lead}  `,
+                  fg: lit ? palette.accent : palette.muted,
+                  bg,
+                },
+              ]
+            : []),
           { text: label, fg: option.labelColor ?? palette.text, bg, bold: lit },
           { text: ' '.repeat(Math.max(1, room - cellWidth(label) + 1)), bg },
           { text: hint, fg: option.hintColor ?? palette.faint, bg },
@@ -338,7 +369,11 @@ function layoutRows(
           [
             { text: lit ? '▌' : ' ', fg: palette.accent, bg },
             {
-              text: `      ${option.detail}`,
+              text: leadColumn > 0 ? ' '.repeat(2 + leadColumn) : '      ',
+              bg,
+            },
+            {
+              text: option.detail,
               fg: option.detailColor ?? palette.faint,
               bg,
             },
@@ -350,4 +385,18 @@ function layoutRows(
     }
   });
   return rows;
+}
+
+/** A file path heading: the name stands out, its folder stays quiet. */
+function pathHeading(palette: Palette, path: string, width: number): Seg[] {
+  const slash = path.lastIndexOf('/') + 1;
+  const name = path.slice(slash);
+  const folder = truncateStart(
+    path.slice(0, slash),
+    Math.max(0, width - 2 - cellWidth(name)),
+  );
+  return [
+    { text: ` ${folder}`, fg: palette.faint },
+    { text: name, fg: palette.text, bold: true },
+  ];
 }

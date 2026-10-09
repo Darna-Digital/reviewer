@@ -78,6 +78,15 @@ import type { DiffStyle, Theme } from "@/lib/ui-prefs";
 
 export type { DraftLocation };
 
+/** A line on one side of a file in the diff, to be brought to the middle of the pane. */
+export interface DiffRevealTarget {
+  readonly path: string;
+  readonly line: number;
+  readonly side: CommentSide;
+  /** Bumped on every request, so revealing the same line twice scrolls both times. */
+  readonly key: number;
+}
+
 type AnnotationMeta =
   | {
       readonly kind: "comments";
@@ -105,6 +114,9 @@ type ViewerScrollListener = NonNullable<
  */
 const READING_LINE = 1 / 3;
 
+/** The room left over a revealed line, for the code that leads into it. */
+const REVEAL_CONTEXT = 96;
+
 interface DiffPaneProps {
   files: ReadonlyArray<FileDiffMetadata>;
   theme: Theme;
@@ -116,6 +128,8 @@ interface DiffPaneProps {
   comments: ReadonlyArray<ReviewComment>;
   draft: DraftLocation | null;
   selectedFile: string | null;
+  /** A line to scroll to — a comment followed from the assign bar's list. */
+  reveal?: DiffRevealTarget | null;
   onDraftOpen: (draft: DraftLocation) => void;
   onDraftCancel: () => void;
   onEditFile: (path: string) => void;
@@ -400,6 +414,7 @@ export function DiffPane({
   comments,
   draft,
   selectedFile,
+  reveal = null,
   onDraftOpen: rawOnDraftOpen,
   onDraftCancel: rawOnDraftCancel,
   onEditFile: rawOnEditFile,
@@ -758,6 +773,29 @@ export function DiffPane({
   // selection that has already been scrolled to — the first file, chosen for
   // the review as it opens — must not drag the pane back up each time.
   const scrolledTo = useRef<string | null>(null);
+
+  // A revealed line, a few lines down from the top so its thread — often
+  // longer than the pane is tall — opens under it in view. It runs before the selection's jump and claims the file, so the selection that
+  // follows it in the URL does not pull the pane back to the file's top. Once
+  // per request, as soon as the file is in the list.
+  const revealed = useRef(0);
+  useEffect(() => {
+    if (reveal === null || revealed.current === reveal.key) return;
+    const id = itemIdByFileRef.current.get(reveal.path);
+    if (id === undefined) return;
+    revealed.current = reveal.key;
+    scrolledTo.current = reveal.path;
+    viewerRef.current?.scrollTo({
+      type: "line",
+      id,
+      lineNumber: reveal.line,
+      side: reveal.side,
+      align: "start",
+      offset: REVEAL_CONTEXT,
+      behavior: "instant",
+    });
+  }, [reveal, files]);
+
   useEffect(() => {
     if (selectedFile === null) return;
     if (scrolledTo.current === selectedFile) return;

@@ -13,7 +13,7 @@ import {
   GitProviderError,
   type GitHubAuthSource,
 } from "@reviewer/core/ports/git-provider";
-import { GitExec } from "../git/git-exec.ts";
+import { GitExec, type GitExecShape } from "../git/git-exec.ts";
 
 const API = "https://api.github.com";
 
@@ -118,6 +118,20 @@ const parseGitHubRemote = (url: string): GitHubRepo | null => {
   return owner !== undefined && repo !== undefined ? { owner, repo } : null;
 };
 
+/** owner/repo for the `origin` of the repository `git` runs in. */
+export const remoteOf = (git: GitExecShape): GitHubClientShape["repo"] =>
+  git.run("remote", "get-url", "origin").pipe(
+    Effect.mapError((error) => new GitProviderError({ reason: error.message })),
+    Effect.flatMap((out) => {
+      const parsed = parseGitHubRemote(out.trim());
+      return parsed === null
+        ? Effect.fail(
+            new GitProviderError({ reason: "origin is not a GitHub remote" })
+          )
+        : Effect.succeed(parsed);
+    })
+  );
+
 export const make = Effect.gen(function* () {
   const git = yield* GitExec;
   const client = yield* HttpClient.HttpClient;
@@ -154,21 +168,7 @@ export const make = Effect.gen(function* () {
 
   const resolveToken = Effect.map(token, (found) => found?.value ?? null);
 
-  const repo: GitHubClientShape["repo"] = git
-    .run("remote", "get-url", "origin")
-    .pipe(
-      Effect.mapError(
-        (error) => new GitProviderError({ reason: error.message })
-      ),
-      Effect.flatMap((out) => {
-        const parsed = parseGitHubRemote(out.trim());
-        return parsed === null
-          ? Effect.fail(
-              new GitProviderError({ reason: "origin is not a GitHub remote" })
-            )
-          : Effect.succeed(parsed);
-      })
-    );
+  const repo = remoteOf(git);
 
   const headers = (accept: string, token: string | null) => ({
     accept,

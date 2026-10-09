@@ -7,6 +7,7 @@ export const USAGE = `Usage: reviewer [path] [options]
 Options:
   --against <ref>   review the branch against <ref> (its merge base)
   --commit <sha>    review one commit
+  --pr <number>     review a GitHub pull request
   --theme <name>    this run only: \`terminal\` or any theme in Reviewer's catalog
                     (saved default: the terminal's own colours; ⌘, or ⌃T changes it)
   --light           this run only: the light default theme
@@ -19,6 +20,7 @@ export interface CliOptions {
   path: string;
   against?: string;
   commit?: string;
+  pr?: string;
   /** Set only when asked for; otherwise the saved settings decide. */
   themeName?: string;
   listThemes: boolean;
@@ -33,6 +35,7 @@ export function parseCli(argv: string[], env = process.env): CliOptions {
     options: {
       against: { type: 'string' },
       commit: { type: 'string' },
+      pr: { type: 'string' },
       theme: { type: 'string' },
       light: { type: 'boolean' },
       themes: { type: 'boolean' },
@@ -47,6 +50,7 @@ export function parseCli(argv: string[], env = process.env): CliOptions {
     path: resolve(positionals[0] ?? invokedFrom ?? '.'),
     against: values.against,
     commit: values.commit,
+    pr: values.pr?.replace(/^#/, ''),
     themeName: values.theme ?? (values.light ? DEFAULT_LIGHT_THEME : undefined),
     listThemes: values.themes ?? false,
     startServer: !values['no-server'],

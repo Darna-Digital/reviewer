@@ -65,6 +65,10 @@ final class AppModel {
     /// diff on its page (see `PullRequestPage`); the rule beside them
     /// resizes it.
     var pullTreeWidth: CGFloat = 280
+    /// Bumped each time a comment is followed from the assign bar, for a
+    /// pull request's page to scroll its overview away and show the diff
+    /// the page is scrolling to the comment in.
+    private(set) var commentJumps = 0
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true
@@ -842,6 +846,7 @@ final class AppModel {
     /// of it is the page's to carry out: the hand-off, the jump to a
     /// comment, a comment taken off the review.
     func act(onReview action: ReviewAction) {
+        if case .open = action { commentJumps += 1 }
         page.send(action)
     }
 

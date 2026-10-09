@@ -119,3 +119,25 @@ export function summarize(output: string, fallback: string): string {
     return 'Nothing to push';
   return fallback;
 }
+
+/**
+ * Fetches pull request `number` onto `branch`. An existing branch of that
+ * name is only fast-forwarded, never reset — it may hold work of your own.
+ */
+export async function checkoutPull(
+  root: string,
+  number: number,
+  branch: string,
+): Promise<string> {
+  await git(root, ['fetch', 'origin', `refs/pull/${number}/head`]);
+  const head = (await git(root, ['rev-parse', 'FETCH_HEAD'])).trim();
+  const existing = await git(
+    root,
+    ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`],
+    [0, 1],
+  );
+  if (!existing.trim())
+    return gitOutput(root, ['checkout', '-b', branch, head]);
+  await gitOutput(root, ['checkout', branch]);
+  return gitOutput(root, ['merge', '--ff-only', head]);
+}

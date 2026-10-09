@@ -96,6 +96,12 @@ async function initialComparison(opts: {
   cli: CliOptions;
 }): Promise<Comparison> {
   const { root, store, cli } = opts;
+  if (cli.pr !== undefined) {
+    const number = Number(cli.pr);
+    if (!Number.isInteger(number) || number <= 0)
+      fail(`--pr takes a pull request number, not ${cli.pr}`);
+    return { kind: 'pull', number };
+  }
   if (cli.commit) {
     if (!(await resolves(root, cli.commit))) fail(`no commit ${cli.commit}`);
     const sha = (await git(root, ['rev-parse', cli.commit])).trim();

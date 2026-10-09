@@ -43,6 +43,7 @@ struct PullRequestPage<Diff: View>: View {
             handoff.pageAtTop = { [page = model.page] in page.scrolledToTop }
         }
         .onChange(of: pull.number) { handoff.resetToTop() }
+        .onChange(of: model.commentJumps) { handoff.scrollToWorkbench() }
     }
 
     private var workbench: some View {

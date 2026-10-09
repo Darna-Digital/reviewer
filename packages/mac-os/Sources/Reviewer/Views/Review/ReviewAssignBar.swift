@@ -235,7 +235,7 @@ private struct CommentRow: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 28, alignment: .trailing)
-            Text(comment.body)
+            Text(preview)
                 .lineLimit(3)
                 .lineSpacing(2)
                 .multilineTextAlignment(.leading)
@@ -245,6 +245,22 @@ private struct CommentRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .contentShape(Rectangle())
+    }
+
+    /// What the comment says, run together for a row of three lines: a
+    /// comment's markdown leads with a bold title and a blank line, which
+    /// left the row the title and two empty lines under it. Its lines are
+    /// joined, block marks — headings, quotes, bullets, fences — dropped,
+    /// and the inline marks read, so the title shows bold rather than in
+    /// its asterisks.
+    private var preview: AttributedString {
+        let flattened = comment.body
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces).replacing(/^(#{1,6}|>|[-*+]|\d+\.)\s+/, with: "") }
+            .filter { !$0.isEmpty && !$0.hasPrefix("```") }
+            .joined(separator: " ")
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: flattened, options: options)) ?? AttributedString(flattened)
     }
 }
 

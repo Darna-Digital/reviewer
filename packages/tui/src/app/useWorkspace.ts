@@ -6,7 +6,7 @@ export type Surface = UiState['surface'];
 export type BottomTab = UiState['bottomTab'];
 export type Workspace = ReturnType<typeof useWorkspace>;
 
-export const BOTTOM_TABS: BottomTab[] = ['history', 'usages', 'run'];
+export const BOTTOM_TABS: BottomTab[] = ['history', 'usages', 'run', 'pull'];
 
 /** Rows outside the body: the bottom rail. */
 export const CHROME_ROWS = 1;
@@ -18,6 +18,7 @@ const MIN_BOTTOM = 6;
 const MIN_EDITOR = 6;
 const MIN_HISTORY_DETAILS = 24;
 const MIN_USAGES_LIST = 30;
+const MIN_PULL_LIST_ROWS = 2;
 const DEFAULT_MESSAGE_ROWS = 4;
 const MIN_MESSAGE_ROWS = 2;
 /** Rows the changes tree keeps however tall the message grows. */
@@ -58,6 +59,9 @@ export function useWorkspace(
   return {
     surface: state.surface,
     setSurface: (surface: Surface) => update({ surface }),
+    sidebarList: state.sidebarList,
+    setSidebarList: (sidebarList: UiState['sidebarList']) =>
+      update({ sidebarList }),
     sidebarVisible,
     toggleSidebar: () => setSidebarVisible((visible) => !visible),
     showSidebar: () => setSidebarVisible(true),
@@ -99,6 +103,9 @@ export function useWorkspace(
     usagesListWidth: state.usagesListWidth,
     resizeUsagesList: (width: number) =>
       update({ usagesListWidth: Math.max(MIN_USAGES_LIST, width) }),
+    pullListRows: state.pullListRows,
+    resizePullList: (rows: number) =>
+      update({ pullListRows: Math.max(MIN_PULL_LIST_ROWS, rows) }),
     historyDetailsWidth: state.historyDetailsWidth,
     resizeHistoryDetails: (width: number) =>
       update({ historyDetailsWidth: Math.max(MIN_HISTORY_DETAILS, width) }),

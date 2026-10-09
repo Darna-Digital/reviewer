@@ -1,8 +1,15 @@
+import type { ReviewComment } from '@reviewer/core/comments';
 import { watch } from 'node:fs';
 import type { FSWatcher } from 'node:fs';
 import * as React from 'react';
+import { parseDiff } from '../diff/parseDiff';
 import type { FileDiff } from '../diff/parseDiff';
-import { branchDiff, commitDiff, worktreeDiff } from '../git/diff';
+import {
+  branchDiff,
+  commitDiff,
+  sortByFolder,
+  worktreeDiff,
+} from '../git/diff';
 import type { DiffContext } from '../git/diff';
 import { listFiles, statusMap as readStatusMap } from '../git/files';
 import type { FileStatus } from '../git/files';
@@ -16,6 +23,8 @@ import {
 import type { Branch } from '../git/refs';
 import { repoInfo, repoStatus, worktreeFingerprint } from '../git/repo';
 import type { RepoInfo, RepoStatus } from '../git/repo';
+import { githubClient, githubCommentId } from '../github/client';
+import type { GitHubClient } from '../github/client';
 import type { NewComment, Store } from '../store/createStore';
 import { targetKey, WORKTREE } from './comparison';
 import type { Comparison } from './comparison';
@@ -29,6 +38,8 @@ export interface Notice {
 export type Review = ReturnType<typeof useReview>;
 
 const COMMENT_POLL_MS = 1500;
+/** GitHub's rate limit is shared with everything else the token does. */
+const PULL_COMMENT_POLL_MS = 30_000;
 const STATUS_POLL_MS = 4000;
 const WATCH_DEBOUNCE_MS = 250;
 const RECENT_LIMIT = 4;
@@ -59,7 +70,11 @@ export function useReview(
   const [statusMap, setStatusMap] = React.useState<Map<string, FileStatus>>(
     new Map(),
   );
-  const [comments, setComments] = React.useState(() => store.comments(root));
+  const [storeComments, setComments] = React.useState(() =>
+    store.comments(root),
+  );
+  const [pullComments, setPullComments] = React.useState<ReviewComment[]>([]);
+  const github = React.useMemo(() => githubClient(root), [root]);
   const [recent, setRecent] = React.useState<string[]>([]);
   const [, bumpAim] = React.useReducer((n: number) => n + 1, 0);
   const [notice, setNotice] = React.useState<Notice | null>(null);
@@ -85,7 +100,7 @@ export function useReview(
       if (!quiet) setLoading(true);
       try {
         const [next, detail] = await Promise.all([
-          readDiff(root, target, context),
+          readDiff(root, target, context, github),
           target.kind === 'commit' ? readCommit(root, target.sha) : null,
         ]);
         if (ticket !== sequence.current) return;
@@ -102,7 +117,7 @@ export function useReview(
         if (ticket === sequence.current) setLoading(false);
       }
     },
-    [root, fail, context],
+    [root, fail, context, github],
   );
 
   const loadRefs = React.useCallback(async () => {
@@ -136,17 +151,36 @@ export function useReview(
     }
   }, [root, store]);
 
+  const loadPullComments = React.useCallback(
+    async (number: number, quiet = false) => {
+      try {
+        const next = await github.comments(number);
+        const shown = latest.current.comparison;
+        if (shown.kind !== 'pull' || shown.number !== number) return;
+        setPullComments((prev) =>
+          JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
+        );
+      } catch (error) {
+        if (!quiet) fail(error);
+      }
+    },
+    [github, fail],
+  );
+
+  /** A pull request lives on GitHub: local edits never change it, a forced refresh does. */
   const refresh = React.useCallback(
     async (force = false) => {
       const next = await worktreeFingerprint(root).catch(() => '');
       if (!force && next === fingerprint.current) return;
       fingerprint.current = next;
+      const shown = latest.current.comparison;
       await Promise.all([
         loadRefs(),
-        loadDiff(latest.current.comparison, true),
+        shown.kind !== 'pull' || force ? loadDiff(shown, true) : null,
+        shown.kind === 'pull' && force ? loadPullComments(shown.number) : null,
       ]);
     },
-    [root, loadRefs, loadDiff],
+    [root, loadRefs, loadDiff, loadPullComments],
   );
 
   React.useEffect(() => {
@@ -175,6 +209,22 @@ export function useReview(
     };
   }, [root, refresh, reloadComments]);
 
+  const pullNumber = comparison.kind === 'pull' ? comparison.number : null;
+  React.useEffect(() => {
+    setPullComments([]);
+    if (pullNumber === null) return;
+    void loadPullComments(pullNumber);
+    const poll = setInterval(
+      () => void loadPullComments(pullNumber, true),
+      PULL_COMMENT_POLL_MS,
+    );
+    return () => clearInterval(poll);
+  }, [pullNumber, loadPullComments]);
+
+  const comments = React.useMemo(
+    () => [...storeComments, ...pullComments],
+    [storeComments, pullComments],
+  );
   const key = targetKey(comparison);
   const visibleComments = React.useMemo(
     () => comments.filter((comment) => comment.target === key),
@@ -202,6 +252,23 @@ export function useReview(
     if (!repo?.branch) return;
     store.setBranchAim(root, repo.branch, target);
     bumpAim();
+  }
+
+  /** Runs a GitHub call on the pull request on screen, then re-reads its comments. */
+  async function onPull(
+    run: (number: number) => Promise<unknown>,
+    done: string,
+  ): Promise<boolean> {
+    if (pullNumber === null) return false;
+    try {
+      await run(pullNumber);
+      await loadPullComments(pullNumber);
+      notify('success', done);
+      return true;
+    } catch (error) {
+      fail(error);
+      return false;
+    }
   }
 
   function mutate(run: () => void, done: string) {
@@ -235,8 +302,14 @@ export function useReview(
     notice,
     notify,
     refresh: () => refresh(true),
-    /** Files under the comparison on screen unless `target` names another. */
+    github,
+    /** Files under the comparison on screen unless `target` names another; a pull request's go to GitHub. */
     addComment(input: Omit<NewComment, 'author' | 'target'>, target = key) {
+      if (target.startsWith('pr-') && target === key)
+        return void onPull(
+          (number) => github.comment(number, input),
+          'Commented on GitHub',
+        );
       mutate(
         () =>
           store.addComment(root, {
@@ -270,6 +343,30 @@ export function useReview(
     removeComment(id: string) {
       mutate(() => store.removeComment(root, id), 'Comment deleted');
     },
+    replyToComment(comment: ReviewComment, body: string) {
+      const id = githubCommentId(comment);
+      if (id !== null)
+        void onPull(
+          (number) => github.reply(number, id, body),
+          'Replied on GitHub',
+        );
+    },
+    deletePullComment(comment: ReviewComment) {
+      const id = githubCommentId(comment);
+      if (id !== null)
+        void onPull(
+          (number) => github.deleteComment(number, id),
+          'Comment deleted on GitHub',
+        );
+    },
+    setThreadResolved(comment: ReviewComment, resolved: boolean) {
+      const thread = comment.thread;
+      if (thread)
+        void onPull(
+          (number) => github.resolveThread(number, thread, resolved),
+          resolved ? 'Thread resolved' : 'Thread reopened',
+        );
+    },
     async checkout(branch: Branch) {
       try {
         const name = await gitCheckout(root, branch, branches);
@@ -282,10 +379,11 @@ export function useReview(
   };
 }
 
-function readDiff(
+async function readDiff(
   root: string,
   comparison: Comparison,
   context: DiffContext,
+  github: GitHubClient,
 ): Promise<FileDiff[]> {
   switch (comparison.kind) {
     case 'worktree':
@@ -294,5 +392,7 @@ function readDiff(
       return branchDiff(root, comparison.against, context);
     case 'commit':
       return commitDiff(root, comparison.sha, context);
+    case 'pull':
+      return sortByFolder(parseDiff(await github.diff(comparison.number)));
   }
 }

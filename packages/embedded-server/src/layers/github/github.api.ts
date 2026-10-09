@@ -4,6 +4,7 @@ import {
   CloseResult,
   GitHubAuth,
   GitHubLoginState,
+  GitHubRepoQuery,
   GitProviderError,
   MergePullRequest,
   MergeResult,
@@ -43,6 +44,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   )
   .add(
     HttpApiEndpoint.get("pulls", "/github/pulls", {
+      query: GitHubRepoQuery,
       success: Schema.Array(PullRequestInfo),
       error: GitProviderError,
     })
@@ -50,6 +52,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.post("mergePull", "/github/pulls/:number/merge", {
       params: PullNumberParam,
+      query: GitHubRepoQuery,
       payload: MergePullRequest,
       success: MergeResult,
       error: GitProviderError,
@@ -58,6 +61,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.post("closePull", "/github/pulls/:number/close", {
       params: PullNumberParam,
+      query: GitHubRepoQuery,
       success: CloseResult,
       error: GitProviderError,
     })
@@ -65,6 +69,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.get("pullDiff", "/github/pulls/:number/diff", {
       params: PullNumberParam,
+      query: GitHubRepoQuery,
       success: DiffText,
       error: GitProviderError,
     })
@@ -72,6 +77,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.get("pullComments", "/github/pulls/:number/comments", {
       params: PullNumberParam,
+      query: GitHubRepoQuery,
       success: Schema.Array(ReviewComment),
       error: GitProviderError,
     })
@@ -82,6 +88,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "/github/pulls/:number/comments",
       {
         params: PullNumberParam,
+        query: GitHubRepoQuery,
         payload: PrComment,
         success: ReviewComment,
         error: GitProviderError,
@@ -94,6 +101,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "/github/pulls/:number/comments/:commentId/replies",
       {
         params: PullCommentParams,
+        query: GitHubRepoQuery,
         payload: PrReply,
         success: ReviewComment,
         error: GitProviderError,
@@ -106,6 +114,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "/github/pulls/:number/comments/:commentId",
       {
         params: PullCommentParams,
+        query: GitHubRepoQuery,
         success: Ok,
         error: GitProviderError,
       }
@@ -117,6 +126,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "/github/pulls/:number/threads/:threadId",
       {
         params: PullThreadParams,
+        query: GitHubRepoQuery,
         payload: ThreadResolution,
         success: Ok,
         error: GitProviderError,

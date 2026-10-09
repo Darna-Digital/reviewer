@@ -13,6 +13,11 @@ describe('parseCli', () => {
     ).toBe('/explicit');
   });
 
+  test('takes a pull request number, with or without #', () => {
+    expect(parseCli(['--pr', '42'], {}).pr).toBe('42');
+    expect(parseCli(['--pr', '#42'], {}).pr).toBe('42');
+  });
+
   test('picks the light default theme', () => {
     expect(parseCli(['--light'], {}).themeName).toBe('reviewer-light');
   });

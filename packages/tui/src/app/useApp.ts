@@ -20,6 +20,8 @@ import type {
 } from '../language/client';
 import { identifiers } from '../language/identifier';
 import type { Branch } from '../git/refs';
+import type { MergeMethod, PullRequestInfo } from '../github/client';
+import { mergeBlockedReason, mergeCaution } from '../github/pullStatus';
 import { stopAllSessions } from '../process/ptySession';
 import { fileIcons } from '../render/fileIcons';
 import type { PaletteMode } from '../search/paletteModes';
@@ -40,6 +42,7 @@ import { useDiffView } from './useDiffView';
 import { fileAsDiff, useEditor } from './useEditor';
 import type { DiffView } from './useDiffView';
 import { useHistory } from './useHistory';
+import { usePulls } from './usePulls';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
 import { useServices } from './useServices';
@@ -52,7 +55,10 @@ import { CHROME_ROWS, useWorkspace } from './useWorkspace';
 import type { BottomTab, Surface } from './useWorkspace';
 
 export type Focus = 'sidebar' | 'main' | 'bottom';
-export type Typing = 'message' | 'treeFilter' | 'historyFilter' | null;
+/** The pull request sidebar's two lists: the pull requests, and the files of the one under review. */
+export type PullPart = 'list' | 'files';
+export type Typing =
+  'message' | 'treeFilter' | 'historyFilter' | 'pullFilter' | null;
 export type Cell = { x: number; y: number };
 
 export type MenuEntry =
@@ -85,6 +91,7 @@ export type Overlay =
   | { kind: 'palette'; mode: PaletteMode }
   | { kind: 'theme' }
   | { kind: 'comments' }
+  | { kind: 'pulls' }
   | { kind: 'commentsHere'; at: Cell }
   | { kind: 'definitions'; at: Cell; symbol: string; targets: SymbolTarget[] }
   | { kind: 'lineSymbols'; at: Cell; spots: SymbolSpot[] }
@@ -94,6 +101,8 @@ export type Overlay =
       anchor: Anchor;
       line: DiffLine | null;
       editing: ReviewComment | null;
+      /** A GitHub comment the text answers, in its thread. */
+      replyTo: ReviewComment | null;
       /** The comparison key the comment is filed under. */
       target: string;
     }
@@ -140,6 +149,12 @@ export const SIDEBAR_HEADER = 2;
 /** The commit box's rule, blank row and buttons around its message field. */
 export const COMMIT_BOX_CHROME = 3;
 const CLOCK_MS = 30_000;
+/** The pull request list's share of the sidebar when the files of one are under it. */
+const PULL_LIST_SHARE = 0.4;
+/** The rule and filter field above a pull request's files. */
+const PULL_FILES_CHROME = 2;
+/** Rows a pull request's files keep however far the list is dragged down. */
+const MIN_PULL_FILES_ROWS = 3;
 /** How long history scrolling rests before the commit under it opens. */
 const HISTORY_SETTLE_MS = 120;
 
@@ -162,8 +177,10 @@ export function useApp(props: AppProps) {
     workspace.fullFiles ? 'full' : 'hunks',
   );
   useServer(review, props.startServer ?? false);
+  const pulls = usePulls(review);
   const [now, setNow] = React.useState(Date.now);
   const [focus, setFocusState] = React.useState<Focus>('main');
+  const [chosenPullPart, setPullPart] = React.useState<PullPart>('list');
   const [typing, setTyping] = React.useState<Typing>(null);
   const [captured, setCaptured] = React.useState(false);
   const [overlay, setOverlayState] = React.useState<Overlay | null>(null);
@@ -192,6 +209,11 @@ export function useApp(props: AppProps) {
     surface === 'review' &&
     review.comparison.kind === 'worktree' &&
     review.files.length > 0;
+  const showsPullFiles =
+    surface === 'review' &&
+    workspace.sidebarList === 'pulls' &&
+    review.comparison.kind === 'pull';
+  const pullPart = showsPullFiles ? chosenPullPart : 'list';
 
   // geometry
   const bodyHeight = Math.max(6, screen.height - CHROME_ROWS);
@@ -212,6 +234,17 @@ export function useApp(props: AppProps) {
       (surface === 'review' ? 1 : 0) -
       (isCommitMode ? commitBoxHeight : 0),
   );
+  const pullRoom = treeHeight - PULL_FILES_CHROME;
+  const pullListHeight = showsPullFiles
+    ? Math.max(
+        1,
+        Math.min(
+          workspace.pullListRows ?? Math.round(pullRoom * PULL_LIST_SHARE),
+          pullRoom - MIN_PULL_FILES_ROWS,
+        ),
+      )
+    : treeHeight;
+  const pullFilesHeight = Math.max(1, pullRoom - pullListHeight);
 
   const mainFocused = focus === 'main' && !overlay;
   const diff = useDiffView({
@@ -283,13 +316,15 @@ export function useApp(props: AppProps) {
   }, [previewLine, previewFiles]); // again once the preview file arrives
   const diffFile = diff.stop ? review.files[diff.stop.file]?.path : undefined;
   // the tree follows the diff cursor (Review) or the open tab (Browse)
-  // unless the sidebar has the keyboard
+  // unless the tree has the keyboard
   const shownFile =
     surface === 'review' ? diffFile : (editor.active ?? undefined);
+  const treeHasKeyboard =
+    focus === 'sidebar' && (!showsPullFiles || pullPart === 'files');
   const tree = useTree(
     surface,
     review,
-    focus === 'sidebar' ? undefined : shownFile,
+    treeHasKeyboard ? undefined : shownFile,
   );
   React.useEffect(() => {
     if (surface === 'browse' && editor.active) tree.reveal(editor.active);
@@ -324,19 +359,30 @@ export function useApp(props: AppProps) {
   const actions = {
     setFocus,
     focusNext(step: 1 | -1) {
-      const order: Focus[] = [
-        ...(workspace.sidebarVisible ? (['sidebar'] as const) : []),
+      const sidebarParts: Array<Focus | PullPart> = showsPullFiles
+        ? ['list', 'files']
+        : ['sidebar'];
+      const order: Array<Focus | PullPart> = [
+        ...(workspace.sidebarVisible ? sidebarParts : []),
         'main',
         ...(workspace.bottomOpen ? (['bottom'] as const) : []),
       ];
-      const index = order.indexOf(focus);
-      setFocus(order[(index + step + order.length) % order.length]!);
+      const here = focus === 'sidebar' && showsPullFiles ? pullPart : focus;
+      const index = order.indexOf(here);
+      const next = order[(index + step + order.length) % order.length]!;
+      if (next === 'list' || next === 'files') actions.focusPullPart(next);
+      else setFocus(next);
+    },
+    focusPullPart(part: PullPart) {
+      setPullPart(part);
+      setFocus('sidebar');
     },
     /** Browse leaves a commit opened from history, as the Mac trail does. */
     setSurface(next: Surface) {
       if (next === 'browse' && review.comparison.kind === 'commit')
         showComparison(previous);
       workspace.setSurface(next);
+      workspace.setSidebarList('files');
       // Browse with nothing open leaves the keyboard in the tree to pick a file
       setFocus(next === 'browse' && !editor.active ? 'sidebar' : 'main');
     },
@@ -500,6 +546,106 @@ export function useApp(props: AppProps) {
       renderer.copyToClipboardOSC52(text);
       notify('success', `Copied ${text}`);
     },
+    openUrl(url: string) {
+      if (!url) return notify('info', 'No link for this one');
+      const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+      Bun.spawn([opener, url], { stdout: 'ignore', stderr: 'ignore' });
+    },
+
+    /** The list as last read, re-read underneath — the read at launch can beat the server up. */
+    openPulls() {
+      void pulls.reload();
+      setOverlay({ kind: 'pulls' });
+    },
+    /**
+     * The open pull requests in the sidebar, as the Mac app's Merge requests:
+     * the keyboard in the list, the first one opened when none is yet.
+     */
+    showPullList() {
+      if (!workspace.sidebarVisible) return actions.openPulls();
+      void pulls.reload();
+      workspace.setSurface('review');
+      workspace.setSidebarList('pulls');
+      actions.focusPullPart('list');
+      const first = pulls.ordered[0];
+      if (review.comparison.kind !== 'pull' && first)
+        actions.reviewPull(first.number, { stay: true });
+    },
+    /** Reviews a pull request: its diff and GitHub threads, with its overview below. */
+    reviewPull(number: number, { stay = false } = {}) {
+      setOverlay(null);
+      if (!stay) rememberPlace();
+      workspace.setSurface('review');
+      showComparison({ kind: 'pull', number });
+      if (!workspace.bottomOpen) workspace.openBottom('pull');
+      if (!stay) setFocus('main');
+    },
+    /** j/k in the list: the highlight moves at once, the diff once it rests. */
+    stepPulls(delta: number) {
+      const next = pulls.step(delta);
+      if (!next) return;
+      clearTimeout(historySettle.current);
+      historySettle.current = setTimeout(
+        () => latestActions.current.reviewPull(next.number, { stay: true }),
+        HISTORY_SETTLE_MS,
+      );
+    },
+    /** The pull request under review, or why there is none to act on. */
+    shownPull(): PullRequestInfo | null {
+      if (review.comparison.kind !== 'pull') {
+        notify('info', 'No pull request under review — press M to pick one');
+        return null;
+      }
+      const pr = pulls.shown;
+      if (!pr)
+        notify(
+          'info',
+          pulls.loading ? 'Still loading' : 'It is no longer open',
+        );
+      return pr;
+    },
+    checkoutPull(pr: PullRequestInfo) {
+      void pulls.checkout(pr);
+    },
+    /** The merge method, then a confirmation — as the Mac app's merge alert. */
+    mergePull(pr: PullRequestInfo) {
+      const blocked = mergeBlockedReason(pr);
+      if (blocked) return notify('info', blocked);
+      const confirmMerge = (method: MergeMethod, how: string) =>
+        actions.confirm(
+          `Merge #${pr.number} into ${pr.baseRef}?`,
+          [
+            `${how} — GitHub lands ${pr.headRef} on ${pr.baseRef}.`,
+            mergeCaution(pr),
+          ]
+            .filter(Boolean)
+            .join(' '),
+          how.toLowerCase(),
+          () => void pulls.merge(pr, method).then((ok) => ok && leavePull()),
+        );
+      actions.openMenu(cursorCell(), [
+        {
+          label: 'Create a merge commit',
+          run: () => confirmMerge('merge', 'Merge commit'),
+        },
+        {
+          label: 'Squash and merge',
+          run: () => confirmMerge('squash', 'Squash and merge'),
+        },
+        {
+          label: 'Rebase and merge',
+          run: () => confirmMerge('rebase', 'Rebase and merge'),
+        },
+      ]);
+    },
+    closePull(pr: PullRequestInfo) {
+      actions.confirm(
+        `Close #${pr.number} without merging?`,
+        `${pr.headRef} keeps its commits; reopening is done on GitHub.`,
+        'close',
+        () => void pulls.close(pr).then((ok) => ok && leavePull()),
+      );
+    },
     showHistoryFor(path: string | null) {
       history.setPath(path);
       workspace.openBottom('history');
@@ -535,9 +681,10 @@ export function useApp(props: AppProps) {
         path ? stopKey.file(path) : undefined,
       );
     },
-    /** Leaves a commit for the change it was opened from. */
+    /** Leaves a commit or pull request for the change it was opened from. */
     back() {
-      if (review.comparison.kind === 'commit') showComparison(previous);
+      const { kind } = review.comparison;
+      if (kind === 'commit' || kind === 'pull') showComparison(previous);
     },
     /** Moves through history and opens the commit, as the Mac list does. */
     stepHistory(delta: number) {
@@ -560,7 +707,7 @@ export function useApp(props: AppProps) {
       }
       const target = comparisonOf(comment.target);
       if (!target)
-        return notify('info', 'Pull request comments open in the Reviewer app');
+        return notify('info', `Nothing here shows ${comment.target}`);
       workspace.setSurface('review');
       diff.setShowComments(true);
       diff.unfold(comment.filePath);
@@ -748,8 +895,31 @@ export function useApp(props: AppProps) {
         anchor: at.anchor,
         line: at.line,
         editing: null,
+        replyTo: null,
         target,
       });
+    },
+    /** Answers a GitHub comment in its thread. */
+    reply(comment: ReviewComment) {
+      if (comment.source !== 'github')
+        return notify(
+          'info',
+          'Replies are for GitHub threads — e edits a note',
+        );
+      const { filePath, side, lineNumber } = comment;
+      setOverlay({
+        kind: 'compose',
+        anchor: { filePath, side, lineNumber },
+        line: null,
+        editing: null,
+        replyTo: comment,
+        target: comment.target,
+      });
+    },
+    toggleResolved(comment: ReviewComment) {
+      if (comment.source !== 'github' || !comment.thread)
+        return notify('info', 'Only GitHub threads resolve');
+      review.setThreadResolved(comment, !comment.resolved);
     },
     editComment(comment: ReviewComment) {
       if (comment.source !== 'local')
@@ -760,23 +930,28 @@ export function useApp(props: AppProps) {
         anchor: { filePath, side, lineNumber },
         line: null,
         editing: comment,
+        replyTo: null,
         target: comment.target,
       });
     },
     deleteComment(comment: ReviewComment) {
-      if (comment.source !== 'local')
-        return notify('info', 'GitHub comments are resolved on GitHub');
+      const onGitHub = comment.source === 'github';
       actions.confirm(
-        'Delete comment',
+        onGitHub ? 'Delete comment on GitHub' : 'Delete comment',
         `“${comment.body.split('\n')[0] ?? ''}”`,
         'delete',
-        () => review.removeComment(comment.id),
+        () =>
+          onGitHub
+            ? review.deletePullComment(comment)
+            : review.removeComment(comment.id),
       );
     },
     submitComposer() {
       if (overlay?.kind !== 'compose') return;
       const body = (commentBox.current?.plainText ?? '').trim();
-      if (body && overlay.editing) {
+      if (body && overlay.replyTo) {
+        review.replyToComment(overlay.replyTo, body);
+      } else if (body && overlay.editing) {
         review.updateComment(overlay.editing.id, body);
         activeView.landOn(stopKey.comment(overlay.editing.id));
       } else if (body) {
@@ -961,6 +1136,7 @@ export function useApp(props: AppProps) {
     refresh() {
       notify('info', 'Refreshing…');
       void review.refresh();
+      if (pulls.loaded) void pulls.reload();
     },
     quit() {
       stopAllSessions();
@@ -987,6 +1163,7 @@ export function useApp(props: AppProps) {
     history,
     branches,
     services,
+    pulls,
     activeView,
     focus,
     typing,
@@ -1001,6 +1178,9 @@ export function useApp(props: AppProps) {
     chords,
     commandHeld: () => props.commandKey?.isHeld() ?? false,
     isCommitMode,
+    /** The pull request sidebar has the files of the one under review below its list. */
+    showsPullFiles,
+    pullPart,
     layout: {
       bodyHeight,
       mainLeft,
@@ -1010,6 +1190,8 @@ export function useApp(props: AppProps) {
       contentHeight,
       bottomHeight,
       treeHeight,
+      pullListHeight,
+      pullFilesHeight,
       sidebarWidth,
       usagesListWidth,
       commitBoxHeight,
@@ -1070,7 +1252,13 @@ export function useApp(props: AppProps) {
    */
   function canAskAbout(view: DiffView, line: DiffLine): boolean {
     if (line.kind === 'del' || line.newNo === null) return false;
-    return view.view === 'file' || review.comparison.kind !== 'commit';
+    const { kind } = review.comparison;
+    return view.view === 'file' || (kind !== 'commit' && kind !== 'pull');
+  }
+
+  /** Off a pull request that is merged or closed, to where it was opened from. */
+  function leavePull() {
+    if (review.comparison.kind === 'pull') showComparison(previous);
   }
 
   function showComparison(next: Comparison, landOn?: string) {
@@ -1078,7 +1266,7 @@ export function useApp(props: AppProps) {
       if (landOn) diff.landOn(landOn);
       return;
     }
-    if (next.kind === 'commit' && review.comparison.kind !== 'commit')
+    if (isVisit(next) && !isVisit(review.comparison))
       setPrevious(review.comparison);
     if (landOn) diff.landOn(landOn);
     diff.moveTo(0);
@@ -1100,6 +1288,11 @@ const MIN_USAGES_PART = 30;
 const USAGES_CHROME_ROWS = 3;
 
 function keepUnwrapped() {}
+
+/** A commit or pull request opened from elsewhere, which `esc` leaves. */
+function isVisit(comparison: Comparison): boolean {
+  return comparison.kind === 'commit' || comparison.kind === 'pull';
+}
 
 function isSpot(target: SymbolTarget, spot: SymbolSpot): boolean {
   const { path, range } = target.location;

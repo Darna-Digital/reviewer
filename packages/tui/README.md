@@ -14,6 +14,7 @@ bun packages/tui/src/main.tsx ~/code/app --against main
 | `[path]`          | Any path inside the repository (default: here)            |
 | `--against <ref>` | Read the branch against `<ref>`'s merge base              |
 | `--commit <sha>`  | Read one commit                                           |
+| `--pr <number>`   | Review a GitHub pull request                              |
 | `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`) |
 | `--light`         | This run only: the light default theme                    |
 | `--no-server`     | Leave the Reviewer server alone                           |
@@ -76,6 +77,12 @@ palette.
 - **File icons** are picked by the Mac tree's rules and painted in its hues
   (`render/fileIconRules.generated.ts`, from `bun scripts/importFileIcons.ts`).
 - **The server**: started when it is not running (see above).
+- **Pull requests** come through the server's GitHub API, as on the Mac app's
+  Merge requests: the open list, each one's diff, overview and checks, and its
+  review threads (filed under `pr-<number>`). Commenting, replying, resolving
+  a thread, deleting a comment, merging and closing happen on GitHub; checking
+  one out fetches `refs/pull/<n>/head` here. Requests name this repository
+  (`?repo=`), so it works whatever project the Mac app has open.
 
 ## Layout
 
@@ -215,6 +222,8 @@ passes ⌘ through (see Keys).
 | `⌘G`                 | Switch Browse ⇄ Review          |
 | `⌥⌘4`                | Switch branch                   |
 | `⌥⌘5` `⌥⌘6` `⌥⌘7`    | History · Usages · Run pane     |
+| `⌥⌘8`                | Pull request pane               |
+| `M` `⌥⌘3`            | Pull requests (sidebar)         |
 | `⌘B` `⌃B`            | Show / hide the bottom pane     |
 | `⌃⌘S` `\`            | Show / hide the sidebar         |
 | `t`                  | Compare against…                |
@@ -274,6 +283,8 @@ stops typing. In a filter field `⏎` or `esc` stops typing.
 | `n` `N`              | Next · previous comment           |
 | `e` `⏎`              | Edit the comment (on a comment)   |
 | `x`                  | Delete the comment (on a comment) |
+| `r`                  | Reply on GitHub (on a PR comment) |
+| `R`                  | Resolve · reopen its thread       |
 
 In the diff (Review):
 
@@ -284,7 +295,7 @@ In the diff (Review):
 | `h` `l` | Old · new side (split; `←` `→` too while wrap is on) |
 | `z`     | Fold the file                                        |
 | `⏎`     | Fold the file (on its header)                        |
-| `esc`   | Back from a commit                                   |
+| `esc`   | Back from a commit or pull request                   |
 
 In a file (Browse):
 
@@ -296,26 +307,43 @@ In a file (Browse):
 
 ### Bottom pane
 
-| Pane    | Key             | Does                         |
-| ------- | --------------- | ---------------------------- |
-| Usages  | `j` `k` `↓` `↑` | Next · previous usage        |
-|         | `⏎`             | Open the usage               |
-|         | `r`             | Search again                 |
-| History | `j` `k` `↓` `↑` | Older · newer commit         |
-|         | `⏎`             | Show the commit              |
-|         | `a`             | All branches ⇄ HEAD          |
-|         | `f`             | Filter by text or hash       |
-|         | `esc`           | Clear the filters            |
-|         | `y`             | Copy the hash                |
-| Run     | `j` `k` `↓` `↑` | Next · previous service      |
-|         | `←` `→`         | Scroll the commands sideways |
-|         | `⏎` `space`     | Start / stop                 |
-|         | `R`             | Restart                      |
-|         | `a` `+`         | Add a service…               |
-|         | `d` `-`         | Remove the service…          |
-|         | `A` `X`         | Start all · stop all         |
-|         | `i`             | Type into its output         |
-|         | `⌃O`            | Stop typing into it          |
+| Pane    | Key             | Does                          |
+| ------- | --------------- | ----------------------------- |
+| Usages  | `j` `k` `↓` `↑` | Next · previous usage         |
+|         | `⏎`             | Open the usage                |
+|         | `r`             | Search again                  |
+| History | `j` `k` `↓` `↑` | Older · newer commit          |
+|         | `⏎`             | Show the commit               |
+|         | `a`             | All branches ⇄ HEAD           |
+|         | `f`             | Filter by text or hash        |
+|         | `esc`           | Clear the filters             |
+|         | `y`             | Copy the hash                 |
+| Run     | `j` `k` `↓` `↑` | Next · previous service       |
+|         | `←` `→`         | Scroll the commands sideways  |
+|         | `⏎` `space`     | Start / stop                  |
+|         | `R`             | Restart                       |
+|         | `a` `+`         | Add a service…                |
+|         | `d` `-`         | Remove the service…           |
+|         | `A` `X`         | Start all · stop all          |
+|         | `i`             | Type into its output          |
+|         | `⌃O`            | Stop typing into it           |
+| Pull    | `j` `k` `↓` `↑` | Scroll the overview           |
+| request | `⏎`             | Review the diff               |
+|         | `c`             | Check out                     |
+|         | `m`             | Merge… (method, then confirm) |
+|         | `x`             | Close…                        |
+|         | `o`             | Open on GitHub                |
+|         | `y` `Y`         | Copy the link · branch name   |
+|         | `r`             | Reload from GitHub            |
+
+The **⇅ PRs** tab (`M`) lists the open pull requests in the sidebar, by
+target branch, with their CI mark and age. `j` `k` open each in turn (the diff
+follows), `⏎` moves to its diff, `f` `/` searches number, title, author and
+branch, and `c` `m` `x` `o` `y` `Y` `r` act on it as in the pane. Under the
+list sits the file tree of the pull request under review, keys as the Review
+tree; `tab` moves from the list to its files and on to the diff. The same list
+opens as a popover from the compare chip (`t`) or when the sidebar is hidden:
+`⏎` reviews, `⌃X` checks out, `⌃G` opens on GitHub, `⌃R` reloads.
 
 ### Popovers
 

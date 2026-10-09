@@ -64,10 +64,22 @@ final class ScrollHandoff {
     /// The page back to its top, eased, as the bar's button asks.
     func scrollToTop() {
         guard let page else { return }
+        ease(page, toOffsetFromTop: 0)
+    }
+
+    /// The overview scrolled away, eased, so the files and the diff fill
+    /// the page — a comment followed from the assign bar is shown in the
+    /// diff, and the diff must be on screen for it to be seen.
+    func scrollToWorkbench() {
+        guard let page else { return }
+        ease(page, toOffsetFromTop: page.maximumOffsetFromTop)
+    }
+
+    private func ease(_ page: NSScrollView, toOffsetFromTop offset: CGFloat) {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.3
             context.allowsImplicitAnimation = true
-            page.contentView.animator().setBoundsOrigin(NSPoint(x: 0, y: -page.contentInsets.top))
+            page.contentView.animator().setBoundsOrigin(page.origin(atOffsetFromTop: offset))
         }
         page.reflectScrolledClipView(page.contentView)
     }
@@ -191,12 +203,18 @@ extension NSScrollView {
     }
 
     fileprivate func setOffsetFromTop(_ offset: CGFloat) {
-        guard let document = documentView else { return }
-        let clamped = min(max(offset, 0), maximumOffsetFromTop)
-        var origin = contentView.bounds.origin
-        origin.y = document.isFlipped ? clamped - contentInsets.top : document.frame.height - contentView.bounds.height - clamped
-        contentView.scroll(to: origin)
+        contentView.scroll(to: origin(atOffsetFromTop: offset))
         reflectScrolledClipView(contentView)
+    }
+
+    /// The clip's origin with the page `offset` down from its top, kept to
+    /// the page.
+    fileprivate func origin(atOffsetFromTop offset: CGFloat) -> NSPoint {
+        var origin = contentView.bounds.origin
+        guard let document = documentView else { return origin }
+        let clamped = min(max(offset, 0), maximumOffsetFromTop)
+        origin.y = document.isFlipped ? clamped - contentInsets.top : document.frame.height - contentView.bounds.height - clamped
+        return origin
     }
 
     /// Moves the document by one wheel event and answers with what of the

@@ -1,3 +1,4 @@
+import type { PullRequestInfo } from '../github/client';
 import type { App } from './useApp';
 
 export type Scope =
@@ -8,7 +9,9 @@ export type Scope =
   | 'viewer'
   | 'history'
   | 'usages'
-  | 'run';
+  | 'run'
+  | 'pull'
+  | 'pulls';
 
 export interface Command {
   id: string;
@@ -26,14 +29,17 @@ export interface Command {
 
 export const HELP_GROUPS: Array<{ title: string; scopes: Scope[] }> = [
   { title: 'Anywhere', scopes: ['global'] },
-  { title: 'Sidebar', scopes: ['tree', 'commit'] },
+  { title: 'Sidebar', scopes: ['tree', 'commit', 'pulls'] },
   { title: 'Diff & file', scopes: ['diff', 'viewer'] },
-  { title: 'Bottom pane', scopes: ['history', 'run'] },
+  { title: 'Bottom pane', scopes: ['history', 'run', 'pull'] },
 ];
 
 const onCard = (app: App) => app.activeView.stop?.target.kind === 'comment';
 const onFileHeader = (app: App) => app.diff.stop?.target.kind === 'file';
-const inCommit = (app: App) => app.review.comparison.kind === 'commit';
+const isVisit = (app: App) =>
+  app.review.comparison.kind === 'commit' ||
+  app.review.comparison.kind === 'pull';
+const inPull = (app: App) => app.review.comparison.kind === 'pull';
 const isSplit = (app: App) => app.diff.view === 'split';
 const onCode = (app: App) => app.activeView.stop?.target.kind === 'line';
 const unwrapped = (app: App) => !app.activeView.wrap;
@@ -42,6 +48,67 @@ const cardComment = (app: App) => {
   const stop = app.activeView.stop;
   return stop?.target.kind === 'comment' ? stop.target.comment : undefined;
 };
+const onGitHubCard = (app: App) => cardComment(app)?.source === 'github';
+/** Runs `act` on the pull request under review, if there is one. */
+const withPull =
+  (act: (app: App, pull: PullRequestInfo) => void) => (app: App) => {
+    const pull = app.actions.shownPull();
+    if (pull) act(app, pull);
+  };
+
+/** What can be done to the pull request under review: pane keys and palette entries. */
+const PULL_ACTIONS: Array<
+  Pick<Command, 'id' | 'keys' | 'title' | 'hint' | 'run'>
+> = [
+  {
+    id: 'checkout',
+    keys: ['c'],
+    title: 'check out',
+    hint: 'check out',
+    run: withPull((app, pull) => app.actions.checkoutPull(pull)),
+  },
+  {
+    id: 'merge',
+    keys: ['m'],
+    title: 'merge…',
+    hint: 'merge',
+    run: withPull((app, pull) => app.actions.mergePull(pull)),
+  },
+  {
+    id: 'close',
+    keys: ['x'],
+    title: 'close…',
+    run: withPull((app, pull) => app.actions.closePull(pull)),
+  },
+  {
+    id: 'open',
+    keys: ['o'],
+    title: 'open on GitHub',
+    hint: 'GitHub',
+    run: withPull((app, pull) => app.actions.openUrl(pull.url)),
+  },
+  {
+    id: 'copyLink',
+    keys: ['y'],
+    title: 'copy link',
+    run: withPull((app, pull) => app.actions.copy(pull.url)),
+  },
+  {
+    id: 'copyBranch',
+    keys: ['Y'],
+    title: 'copy branch name',
+    run: withPull((app, pull) => app.actions.copy(pull.headRef)),
+  },
+  {
+    id: 'reload',
+    keys: ['r'],
+    title: 'reload from GitHub',
+    run: (app) => {
+      void app.pulls.reload();
+      void app.review.refresh();
+    },
+  },
+];
 
 export const COMMANDS: Command[] = [
   // anywhere
@@ -164,6 +231,32 @@ export const COMMANDS: Command[] = [
     palette: true,
     run: (app) => app.actions.toggleBottomTab('run'),
   },
+  {
+    id: 'bottom.pull',
+    scope: 'global',
+    keys: ['alt+cmd+8'],
+    title: 'pull request pane',
+    palette: true,
+    run: (app) => app.actions.toggleBottomTab('pull'),
+  },
+  {
+    id: 'pulls.pick',
+    scope: 'global',
+    keys: ['M', 'alt+cmd+3'],
+    title: 'pull requests',
+    hint: 'pulls',
+    palette: true,
+    run: (app) => app.actions.showPullList(),
+  },
+  ...PULL_ACTIONS.map((action): Command => ({
+    id: `pull.palette.${action.id}`,
+    scope: 'global',
+    keys: [],
+    title: `pull request: ${action.title}`,
+    palette: true,
+    when: inPull,
+    run: action.run,
+  })),
   {
     id: 'bottom.toggle',
     scope: 'global',
@@ -678,9 +771,9 @@ export const COMMANDS: Command[] = [
     id: 'diff.back',
     scope: 'diff',
     keys: ['escape'],
-    title: 'back from a commit',
+    title: 'back from a commit or pull request',
     hint: 'back',
-    when: inCommit,
+    when: isVisit,
     run: (app) => app.actions.back(),
   },
 
@@ -905,6 +998,149 @@ export const COMMANDS: Command[] = [
     },
   ]),
 
+  {
+    id: 'diff.reply',
+    scope: 'diff',
+    keys: ['r'],
+    title: 'reply on GitHub',
+    hint: 'reply',
+    when: onGitHubCard,
+    run: (app) => {
+      const comment = cardComment(app);
+      if (comment) app.actions.reply(comment);
+    },
+  },
+  {
+    id: 'diff.resolve',
+    scope: 'diff',
+    keys: ['R'],
+    title: 'resolve / reopen the thread',
+    hint: 'resolve',
+    when: onGitHubCard,
+    run: (app) => {
+      const comment = cardComment(app);
+      if (comment) app.actions.toggleResolved(comment);
+    },
+  },
+
+  // the sidebar's pull requests
+  {
+    id: 'pulls.down',
+    scope: 'pulls',
+    keys: ['j', 'down'],
+    title: 'next pull request',
+    run: (app, count) => app.actions.stepPulls(count),
+  },
+  {
+    id: 'pulls.up',
+    scope: 'pulls',
+    keys: ['k', 'up'],
+    title: 'previous pull request',
+    run: (app, count) => app.actions.stepPulls(-count),
+  },
+  {
+    id: 'pulls.top',
+    scope: 'pulls',
+    keys: ['g', 'home'],
+    title: 'first',
+    run: (app) => app.actions.stepPulls(-Infinity),
+  },
+  {
+    id: 'pulls.bottom',
+    scope: 'pulls',
+    keys: ['G', 'end'],
+    title: 'last',
+    run: (app) => app.actions.stepPulls(Infinity),
+  },
+  {
+    id: 'pulls.diff',
+    scope: 'pulls',
+    keys: ['return', 'l', 'right'],
+    title: 'review its diff',
+    hint: 'diff',
+    run: (app) => {
+      const pull = app.pulls.byNumber(app.pulls.cursor ?? -1);
+      if (pull) app.actions.reviewPull(pull.number);
+    },
+  },
+  {
+    id: 'pulls.filter',
+    scope: 'pulls',
+    keys: ['f', '/'],
+    title: 'search pull requests',
+    run: (app) => app.actions.setTyping('pullFilter'),
+  },
+  ...PULL_ACTIONS.map((action): Command => ({
+    id: `pulls.${action.id}`,
+    scope: 'pulls',
+    keys: action.keys,
+    title: action.title,
+    hint: action.hint,
+    run: action.run,
+  })),
+
+  // pull request pane
+  {
+    id: 'pull.down',
+    scope: 'pull',
+    keys: ['j', 'down'],
+    title: 'scroll down',
+    run: (app, count) => app.pulls.scrollPane(count),
+  },
+  {
+    id: 'pull.up',
+    scope: 'pull',
+    keys: ['k', 'up'],
+    title: 'scroll up',
+    run: (app, count) => app.pulls.scrollPane(-count),
+  },
+  {
+    id: 'pull.pageDown',
+    scope: 'pull',
+    keys: ['ctrl+d', 'pagedown', 'space'],
+    title: 'half a page down',
+    run: (app) => app.pulls.scrollPane(Math.floor(app.layout.bottomHeight / 2)),
+  },
+  {
+    id: 'pull.pageUp',
+    scope: 'pull',
+    keys: ['ctrl+u', 'pageup'],
+    title: 'half a page up',
+    run: (app) =>
+      app.pulls.scrollPane(-Math.floor(app.layout.bottomHeight / 2)),
+  },
+  {
+    id: 'pull.top',
+    scope: 'pull',
+    keys: ['g', 'home'],
+    title: 'top',
+    run: (app) => app.pulls.scrollPane(-Infinity),
+  },
+  {
+    id: 'pull.bottom',
+    scope: 'pull',
+    keys: ['end', 'G'],
+    title: 'bottom',
+    run: (app) => app.pulls.scrollPane(Infinity),
+  },
+  {
+    id: 'pull.diff',
+    scope: 'pull',
+    keys: ['return'],
+    title: 'review the diff',
+    hint: 'diff',
+    when: inPull,
+    run: (app) => app.actions.setFocus('main'),
+  },
+  ...PULL_ACTIONS.map((action): Command => ({
+    id: `pull.${action.id}`,
+    scope: 'pull',
+    keys: action.keys,
+    title: action.title,
+    hint: action.hint,
+    run: action.run,
+  })),
+
   // usages pane
   {
     id: 'usages.down',
@@ -1124,6 +1360,13 @@ export function findCommand(app: App, key: string): Command | undefined {
 function scopesFor(app: App): Scope[] {
   switch (app.focus) {
     case 'sidebar':
+      if (
+        app.workspace.surface === 'review' &&
+        app.workspace.sidebarList === 'pulls'
+      )
+        return app.pullPart === 'files'
+          ? ['tree', 'global']
+          : ['pulls', 'global'];
       return app.isCommitMode
         ? ['commit', 'tree', 'global']
         : ['tree', 'global'];

@@ -5,7 +5,8 @@
 export type Comparison =
   | { kind: 'worktree' }
   | { kind: 'branch'; against: string }
-  | { kind: 'commit'; sha: string };
+  | { kind: 'commit'; sha: string }
+  | { kind: 'pull'; number: number };
 
 export const WORKTREE: Comparison = { kind: 'worktree' };
 
@@ -17,16 +18,20 @@ export function targetKey(comparison: Comparison): string {
       return `branch-${comparison.against}`;
     case 'commit':
       return `commit-${comparison.sha}`;
+    case 'pull':
+      return `pr-${comparison.number}`;
   }
 }
 
-/** The comparison a comment was filed under; `null` for pull requests. */
+/** The comparison a comment was filed under. */
 export function comparisonOf(target: string): Comparison | null {
   if (target === 'worktree') return WORKTREE;
   if (target.startsWith('branch-'))
     return { kind: 'branch', against: target.slice(7) };
   if (target.startsWith('commit-'))
     return { kind: 'commit', sha: target.slice(7) };
+  if (/^pr-\d+$/.test(target))
+    return { kind: 'pull', number: Number(target.slice(3)) };
   return null;
 }
 
@@ -42,12 +47,13 @@ export function describeComparison(comparison: Comparison): string {
       return `vs ${comparison.against}`;
     case 'commit':
       return `Commit ${comparison.sha.slice(0, 7)}`;
+    case 'pull':
+      return `Pull request #${comparison.number}`;
   }
 }
 
 export function describeTarget(target: string): string {
   const comparison = comparisonOf(target);
   if (comparison?.kind === 'branch') return `Branch vs ${comparison.against}`;
-  if (comparison) return describeComparison(comparison);
-  return target.startsWith('pr-') ? `Pull request #${target.slice(3)}` : target;
+  return comparison ? describeComparison(comparison) : target;
 }

@@ -16,7 +16,8 @@ type ComposeOverlay = Extract<Overlay, { kind: 'compose' }>;
 export function Composer({ overlay }: { overlay: ComposeOverlay }) {
   const app = useAppContext();
   const { palette, screen, actions, layout, activeView } = app;
-  const { anchor, editing } = overlay;
+  const { anchor, editing, replyTo } = overlay;
+  const onGitHub = replyTo !== null || overlay.target.startsWith('pr-');
 
   useKeyboard((event) => {
     if (keyName(event) !== 'escape') return;
@@ -72,7 +73,13 @@ export function Composer({ overlay }: { overlay: ComposeOverlay }) {
           ref={app.commentBox}
           focused
           initialValue={editing?.body ?? ''}
-          placeholder="Leave a comment…"
+          placeholder={
+            replyTo
+              ? `Reply to ${replyTo.author} on GitHub…`
+              : onGitHub
+                ? 'Comment on GitHub…'
+                : 'Leave a comment…'
+          }
           height={COMPOSER_HEIGHT - 3}
           backgroundColor={bg}
           focusedBackgroundColor={bg}
@@ -94,7 +101,11 @@ export function Composer({ overlay }: { overlay: ComposeOverlay }) {
           <Button
             segs={[
               {
-                text: editing ? ' ⏎ save ' : ' ⏎ comment ',
+                text: editing
+                  ? ' ⏎ save '
+                  : replyTo
+                    ? ' ⏎ reply '
+                    : ' ⏎ comment ',
                 fg: palette.accentInk,
                 bg: palette.accent,
                 bold: true,
