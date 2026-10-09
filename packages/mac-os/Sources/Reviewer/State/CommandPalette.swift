@@ -1,4 +1,4 @@
-// The palette's model: the web app's search dialog — ⌘K for the commands
+// The palette's model: the web app's search dialog — ⌘E for the commands
 // it opens on, a double tap of Shift to find a file by name, ⌘⇧F to grep
 // the working tree — done natively, since inside the shell the dialog
 // itself is not mounted (it belongs to the web app's window frame, which
@@ -248,7 +248,7 @@ final class CommandPalette {
         isShown = true
     }
 
-    /// ⌘K: a second press closes the command list, but from another list it
+    /// ⌘E: a second press closes the command list, but from another list it
     /// brings the commands back first rather than closing what you were
     /// doing.
     func toggleCommands() {

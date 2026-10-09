@@ -108,13 +108,13 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
-        // Into the Edit menu, under the pasteboard: the web app's ⌘K and
-        // ⌘⇧F, and the IDEs' chord for the file search — the web app's ⇧⇧
-        // is heard too, but a double tap is no menu equivalent.
+        // Into the Edit menu, under the pasteboard: the TUI's ⌘E, the web
+        // app's ⌘⇧F, and the IDEs' chord for the file search — the web
+        // app's ⇧⇧ is heard too, but a double tap is no menu equivalent.
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Commands…") { model.showCommands() }
-                .keyboardShortcut("k", modifiers: .command)
+                .keyboardShortcut("e", modifiers: .command)
                 .disabled(!model.hasProject)
             SearchMenuItems(model: model)
                 .disabled(!model.hasProject)

@@ -40,7 +40,7 @@ export type ShellRoute =
        * narrow which of them are shown — so beside a conversation that has the
        * window to itself the column is three buttons for a surface that is not
        * there. The window bar carries the ones still worth having here: ✛ mints
-       * a session, ⌘K finds anything, and the trail leads back to the list.
+       * a session, ⌘E finds anything, and the trail leads back to the list.
        *
        * Not something the path can say: which tab is holding the window is the
        * strip's business, and the same URL is the list's conversation on the

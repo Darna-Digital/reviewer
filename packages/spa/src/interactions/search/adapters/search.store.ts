@@ -80,7 +80,7 @@ export const setSearchMode = (mode: SearchMode): void =>
   setState({ ...state, mode });
 
 /**
- * ⌘K. A second press closes the command list, but from another mode it brings
+ * ⌘E. A second press closes the command list, but from another mode it brings
  * the commands back first rather than closing what you were doing.
  */
 export const toggleCommandSearch = (): void =>

@@ -1,5 +1,5 @@
 /**
- * SearchDialog — one box, a stack of lists. It opens on **commands** (⌘K), and
+ * SearchDialog — one box, a stack of lists. It opens on **commands** (⌘E), and
  * some of those commands lead deeper rather than acting: **files** (also a
  * double-tap of Shift) searches paths, **text** (also ⌘⇧F) greps file contents,
  * **git** holds the git actions and leads on to **branches**, which checks one
@@ -266,7 +266,7 @@ export function SearchDialog({
   ]);
 
   // The menus are not searches, so they never resume: every way into one — and
-  // ⌘K in particular, from however deep you had walked — starts on an empty box.
+  // ⌘E in particular, from however deep you had walked — starts on an empty box.
   useEffect(() => {
     setQueries((current) => ({ ...current, ...FRESH_QUERIES }));
     setActive(0);

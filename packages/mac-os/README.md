@@ -132,7 +132,7 @@ What it does today:
   play/stop/restart.
 - **Palette** — the web app's search dialog as a Liquid Glass pane over
   the page, the same stack of lists under one box with a breadcrumb over
-  it: ⌘K opens on the commands — where to go, the git actions behind
+  it: ⌘E opens on the commands — where to go, the git actions behind
   their own list (fetch, pull, push, a new branch, and Switch branch…
   behind that), the window's own (the diff style, asked of the page; the
   bottom pane and its surfaces; the sidebar), the opener, a new session — the ways into the two searches among them. ⇧⇧ or

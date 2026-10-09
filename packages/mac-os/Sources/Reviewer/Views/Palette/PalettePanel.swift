@@ -1,7 +1,7 @@
 // The palette: the web app's search dialog drawn natively, as a Liquid
 // Glass pane hung near the top of the window over the page — a breadcrumb
 // naming the list that is up, one box, one list. It opens on Commands
-// (⌘K), and some of those rows lead deeper rather than acting: Files (also
+// (⌘E), and some of those rows lead deeper rather than acting: Files (also
 // ⇧⇧) is a name search over every path, Text (also ⌘⇧F) greps the working
 // tree with the match modifiers (case, whole word, regex) on the box's
 // trailing edge, Git holds the git actions and leads on to Branches, which

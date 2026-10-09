@@ -86,7 +86,7 @@ final class AppModel {
     /// The bottom pane's History: the commit log, its filters and the
     /// commit picked out of it.
     let history: CommitHistory
-    /// The palette — ⌘K's commands, a file by name, a grep of the working
+    /// The palette — ⌘E's commands, a file by name, a grep of the working
     /// tree, the git actions and the branches.
     let palette: CommandPalette
     /// The repositories the machine holds, for the opener to list.
@@ -312,7 +312,7 @@ final class AppModel {
 
     // MARK: palette
 
-    /// ⌘K: the command list, or with it already up, away again.
+    /// ⌘E: the command list, or with it already up, away again.
     func showCommands() {
         guard hasProject else { return }
         palette.toggleCommands()
