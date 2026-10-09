@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.16 — 2026-10-09
+
+### Changed
+
+- The command palette now opens with ⌘E instead of ⌘K, matching the terminal app.
+- Long comments in the diff now span the full width of the diff instead of a narrow 400px card. Short notes still sit beside their line.
+- The comment list in the bottom bar shows each comment as a compact preview with its title in bold, instead of raw Markdown with blank gaps.
+
+### Fixed
+
+- Clicking a comment in the bottom bar takes you to it in the pull request's diff, with the line near the top and the thread open under it, every time. It used to open the file without its pull request comments, or not move the diff at all after the first jump.
+- Opening a comment from the bottom bar scrolls the pull request's overview out of the way so the diff is in view.
+
 ## v0.0.15 — 2026-10-07
 
 ### Fixed
