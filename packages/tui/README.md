@@ -280,7 +280,7 @@ In the diff (Review):
 | Key     | Does                                                 |
 | ------- | ---------------------------------------------------- |
 | `]` `[` | Next · previous file                                 |
-| `}` `{` | Next · previous hunk                                 |
+| `}` `{` | Next · previous paragraph (or hunk)                  |
 | `h` `l` | Old · new side (split; `←` `→` too while wrap is on) |
 | `z`     | Fold the file                                        |
 | `⏎`     | Fold the file (on its header)                        |

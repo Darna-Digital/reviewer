@@ -294,16 +294,21 @@ export function useDiffView(opts: DiffViewOptions) {
       selectWord(stops[index]!.key, found);
       return true;
     },
-    /** `{` / `}` without an outline: the next or previous blank line. */
+    /**
+     * `{` / `}`: the next or previous blank line. The unchanged lines hidden
+     * between hunks count as a gap too, so it stops on entering another hunk.
+     */
     paragraph(step: 1 | -1) {
       let index = current;
       let seenText = false;
+      const fromHunk = stop ? hunkOf(stop) : null;
       for (let i = current + step; i >= 0 && i < stops.length; i += step) {
         const line = lineOf(stops[i]!);
         if (!line) continue;
+        index = i;
+        if (fromHunk !== null && hunkOf(stops[i]!) !== fromHunk) break;
         const blank = line.line.text.trim() === '';
         if (!blank) seenText = true;
-        index = i;
         if (blank && seenText) break;
       }
       moveTo(index);

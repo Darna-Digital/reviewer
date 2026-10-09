@@ -412,6 +412,13 @@ export function useApp(props: AppProps) {
       const index = review.files.findIndex((file) => file.path === path);
       if (index !== -1) diff.jumpToFile(index);
     },
+    /** Moves the tree selection; on Review the diff follows to the file. */
+    stepTree(delta: number) {
+      const node = tree.step(delta);
+      if (surface !== 'review' || node?.kind !== 'file') return;
+      const index = review.files.findIndex((file) => file.path === node.path);
+      if (index !== -1) diff.jumpToFile(index);
+    },
     openTreeNode(node: TreeNode, { preview = false } = {}) {
       if (node.kind === 'dir') return tree.setOpen(node, !tree.isOpen(node));
       if (surface === 'browse') actions.openFile(node.path, { preview });

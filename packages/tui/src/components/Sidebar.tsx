@@ -80,7 +80,7 @@ export function Sidebar() {
         onScroll={(delta) => {
           // the tree follows the open file until the sidebar has the keyboard
           if (app.focus !== 'sidebar') actions.setFocus('sidebar');
-          tree.step(delta);
+          actions.stepTree(delta);
         }}
       />
       {app.isCommitMode ? <CommitBox height={layout.commitBoxHeight} /> : null}
