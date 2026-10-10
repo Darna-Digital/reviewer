@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.17 — 2026-10-10
+
+### Added
+
+- You can now edit your own comments on a pull request. Hover a comment you wrote and click Edit, and the change is saved to GitHub. As on GitHub, other people's comments can't be edited.
+
+### Changed
+
+- Edit now appears on each of your comments instead of once at the bottom of a thread, so you can edit any of your comments in a conversation, not only the first.
+
 ## v0.0.16 — 2026-10-09
 
 ### Changed
