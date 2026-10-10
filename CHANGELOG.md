@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.18 — 2026-10-10
+
+### Added
+
+- ⌘F now finds on the page you're on: on a diff it jumps to the changed-files filter, and with a file open it opens that file's find bar. Text you have selected is used as the search.
+- On a pull request, the comment bar now has an Open on GitHub button that takes you to the pull request, where its comments are answered.
+
+### Fixed
+
+- Pull requests whose branch hadn't been fetched into your checkout now open their diff, instead of failing to load it.
+
 ## v0.0.17 — 2026-10-10
 
 ### Added
