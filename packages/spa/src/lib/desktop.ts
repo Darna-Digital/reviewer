@@ -31,6 +31,13 @@ interface ReviewerBridge {
   /** "dark" or "light" — the appearance the shell's window is in. */
   appearance?: string;
   shell?: ShellChannel;
+  /**
+   * The one member the page fills in rather than the shell: what is
+   * highlighted in the code, for the shell's searches to start from — see
+   * `selectedCodeText`, which knows the editor's own selection and the code
+   * views' shadow roots.
+   */
+  selectedText?: () => string;
 }
 
 type ReviewerWindow = Window & {

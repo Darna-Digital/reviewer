@@ -156,7 +156,7 @@ private struct FilesLayout: View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
             if changes {
-                ChangesHeader(query: $tree.query)
+                ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             FileTreeOutline()
@@ -192,9 +192,10 @@ private struct FilesLayout: View {
 /// so the two columns search alike.
 struct ChangesHeader: View {
     @Binding var query: String
+    @Binding var wantsKeyboard: Bool
 
     var body: some View {
-        PaneSearchField(prompt: "Filter changed files", text: $query)
+        PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
             .sidebarSearchBand()
     }
 }

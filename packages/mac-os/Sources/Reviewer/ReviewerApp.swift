@@ -111,6 +111,10 @@ struct ReviewerCommands: Commands {
         // Into the Edit menu, under the pasteboard: the TUI's ⌘E, the web
         // app's ⌘⇧F, and the IDEs' chord for the file search — the web
         // app's ⇧⇧ is heard too, but a double tap is no menu equivalent.
+        // Then ⌘F, which finds on the page the window is on — the files of
+        // a diff, or the open file — so it answers with the keyboard
+        // anywhere in the window, not only while the page has it (see
+        // `AppModel.find`).
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Commands…") { model.showCommands() }
@@ -118,6 +122,9 @@ struct ReviewerCommands: Commands {
                 .disabled(!model.hasProject)
             SearchMenuItems(model: model)
                 .disabled(!model.hasProject)
+            Button(model.findTarget == .changedFiles ? "Filter changed files" : "Find…") { model.find() }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(model.findTarget == nil)
         }
         // The View menu: the sidebar on the system's own chord for it,
         // ⌃⌘S, but moved through the model rather than by the split view,

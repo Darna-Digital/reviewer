@@ -2349,6 +2349,7 @@ export interface operations {
                 base?: string;
                 head?: string;
                 target?: string;
+                pull?: string;
             };
             header?: never;
             path?: never;

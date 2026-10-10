@@ -169,6 +169,13 @@ final class SidebarTree {
         didSet { if query != oldValue { refilter() } }
     }
 
+    /// Set to hand the keyboard to the search over the changed files — ⌘F
+    /// over a diff (see `AppModel.find`) — and cleared by the field that
+    /// takes it. A flag rather than a call, since the field may not be in
+    /// the window yet: the sidebar put away, the pull request's files on
+    /// their way in. Whichever field stands up first answers it.
+    var filterWantsKeyboard = false
+
     /// The folds that differ from the mode's default — closed for the
     /// project, open for a diff — so a fresh listing keeps how each was left.
     private var toggled: Set<String> = []

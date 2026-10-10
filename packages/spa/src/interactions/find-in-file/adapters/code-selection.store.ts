@@ -7,7 +7,12 @@
  * the editable view is not a DOM selection at all but the editor's own. So the
  * open view leaves a way to ask, for as long as it is open, and the gesture
  * asks. One view is open at a time, so one reader is all this holds.
+ *
+ * Inside the macOS shell the gestures are the window's own — ⌘⇧F the native
+ * palette, ⌘F the native filter over a diff's files — and the shell asks the
+ * same question over the bridge (see `lib/shell`).
  */
+import { selectedTextInCode } from "@/lib/code-root";
 
 let read: (() => string) | null = null;
 
@@ -22,13 +27,16 @@ export const registerCodeSelection = (reader: () => string): (() => void) => {
 
 /**
  * The phrase highlighted in the open file, or "" when nothing is. Falls back to
- * the page's own selection, so highlighting something in a list or a diff and
- * asking to search for it works too.
+ * whatever code view the page shows — a diff renders one per file, each in its
+ * own shadow root — and then to the page's own selection, so highlighting
+ * something in a list or a diff and asking to search for it works too.
  */
 export const selectedCodeText = (): string => {
   const inCode = read?.() ?? "";
   if (inCode !== "") return inCode;
   if (typeof document === "undefined") return "";
+  const inView = selectedTextInCode(document);
+  if (inView !== "") return inView;
   return document.getSelection()?.toString() ?? "";
 };
 

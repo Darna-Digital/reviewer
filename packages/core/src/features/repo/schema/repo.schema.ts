@@ -234,6 +234,8 @@ export const DiffFileQuery = Schema.Struct({
   base: Schema.optionalKey(Schema.String),
   head: Schema.optionalKey(Schema.String),
   target: Schema.optionalKey(Schema.String),
+  /** The pull request a `base`…`head` range is the diff of — see `DiffFileTarget`. */
+  pull: Schema.optionalKey(Schema.String),
 });
 export type DiffFileQuery = typeof DiffFileQuery.Type;
 export const DiffFileContents = Schema.Struct({
@@ -304,7 +306,18 @@ export type DeleteBranch = typeof DeleteBranch.Type;
 export type DiffFileTarget =
   | { readonly kind: "worktree" }
   | { readonly kind: "commit"; readonly sha: string }
-  | { readonly kind: "range"; readonly base: string; readonly head: string }
+  /**
+   * Two commits, read three-dot. With `pull`, the range is that pull request's
+   * diff, which comes from GitHub rather than from this clone: its head may be
+   * a commit the clone has never fetched — pushed since, or from a fork — so
+   * the pull request's own ref on `origin` is where it is fetched from.
+   */
+  | {
+      readonly kind: "range";
+      readonly base: string;
+      readonly head: string;
+      readonly pull?: number;
+    }
   /**
    * The branch as a whole, against what it is aimed at: the merge base on the
    * old side and the working tree on the new one, so work that is written but

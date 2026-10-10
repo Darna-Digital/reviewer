@@ -69,8 +69,7 @@ export const caretRect = (container: ParentNode): DOMRect | null => {
  */
 export const selectedTextInCode = (container: ParentNode): string => {
   for (const root of codeRootsWithin(container)) {
-    const selection = selectionIn(root);
-    const text = selection === null ? "" : selection.toString();
+    const text = selectedTextIn(root);
     if (text !== "") return text;
   }
   return "";
@@ -84,6 +83,37 @@ const selectionIn = (root: ParentNode): Selection | null =>
         root as unknown as { getSelection: () => Selection | null }
       ).getSelection()
     : null;
+
+const selectedTextIn = (root: ParentNode): string => {
+  const own = selectionIn(root);
+  if (own !== null) return own.toString();
+  return root instanceof ShadowRoot ? composedSelectedText(root) : "";
+};
+
+/**
+ * WebKit — the macOS shell's web view — has no `ShadowRoot.getSelection`, and
+ * its document selection reads as empty while the highlight is inside a shadow
+ * root. `getComposedRanges` is the standard way back in: told about the root,
+ * it hands over the range as it really is, which a live range can then read.
+ */
+const composedSelectedText = (root: ShadowRoot): string => {
+  const selection = document.getSelection();
+  if (selection === null || typeof selection.getComposedRanges !== "function")
+    return "";
+  try {
+    const [composed] = selection.getComposedRanges({ shadowRoots: [root] });
+    if (composed === undefined || composed.collapsed) return "";
+    if (!root.contains(composed.startContainer)) return "";
+    const range = document.createRange();
+    range.setStart(composed.startContainer, composed.startOffset);
+    range.setEnd(composed.endContainer, composed.endOffset);
+    return range.toString();
+  } catch {
+    // An engine still on the draft's `getComposedRanges(...roots)` rejects the
+    // options object; it simply has nothing to offer here.
+    return "";
+  }
+};
 
 const rectOfSelection = (selection: Selection | null): DOMRect | null => {
   if (selection === null || selection.rangeCount === 0) return null;

@@ -458,20 +458,30 @@ export function CodeWorkspace() {
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
-  /** The hand-off as the bar reads it: the comments on the diff in front of you. */
+  /**
+   * The comments still asking for something. A GitHub thread resolved on the
+   * pull request is settled: it stays drawn in the diff, folded, but it is no
+   * longer work to hand anyone, so the bar neither lists nor assigns it.
+   */
+  const openComments = useMemo(
+    () => visibleComments.filter((comment) => comment.resolved !== true),
+    [visibleComments]
+  );
+
+  /** The hand-off as the bar reads it: the open comments on the diff in front of you. */
   const handoffComments = useMemo(
     () =>
-      visibleComments.map((comment) => ({
+      openComments.map((comment) => ({
         id: comment.id,
         file: comment.filePath,
         line: comment.lineNumber,
         body: comment.body,
       })),
-    [visibleComments]
+    [openComments]
   );
 
   const assignReview = async (dest: AssignTarget) => {
-    const count = visibleComments.length;
+    const count = openComments.length;
     if (count === 0) return;
     const plural = count === 1 ? "" : "s";
     try {
@@ -479,8 +489,8 @@ export function CodeWorkspace() {
         target: dest,
         catalog: chatModels.data,
         place: assignPlace,
-        title: buildReviewAssignmentTitle(visibleComments),
-        prompt: buildReviewAssignmentPrompt(visibleComments),
+        title: buildReviewAssignmentTitle(openComments),
+        prompt: buildReviewAssignmentPrompt(openComments),
       });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
@@ -488,7 +498,7 @@ export function CodeWorkspace() {
       // No pull request is passed, which is how the GitHub ones are spared —
       // they belong to the pull request rather than to this hand-off.
       await Promise.all(
-        visibleComments.map((comment) => comments.remove(null, comment))
+        openComments.map((comment) => comments.remove(null, comment))
       );
       toast.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });

@@ -127,6 +127,23 @@ final class IslandHost: NSObject {
         view.load(URLRequest(url: source.url(for: href)))
     }
 
+    /// ⌘F on a page whose find is its own — the open file's bar — handed
+    /// back, since the menu takes the chord before the page sees it.
+    func find() {
+        guard isReady else { return }
+        dispatch(["type": "find"])
+    }
+
+    /// What is highlighted on the page, for a search to start from. Asked
+    /// of the page (`selectedText` in the SPA's bridge), which knows what no
+    /// document selection holds — the editor's own selection in a file
+    /// being edited — and reads into the code views' shadow roots. The
+    /// document's own is the fallback for a page that has not said.
+    func selectedText() async -> String {
+        let script = "(window.reviewer.selectedText?.() || window.getSelection().toString())"
+        return (try? await view.evaluateJavaScript(script) as? String) ?? ""
+    }
+
     /// A menu item claimed one of the strip's chords — see `WindowTabAction`.
     func send(_ action: WindowTabAction) {
         guard isReady else { return }

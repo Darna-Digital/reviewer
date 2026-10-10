@@ -221,6 +221,9 @@ struct PaneSearchField: View {
     var submit: (() -> Void)? = nil
     var focusesOnAppear = false
     var command: ((Selector) -> Bool)? = nil
+    /// Raised to hand the field the keyboard, with what it holds selected so
+    /// a keystroke replaces it; the field lowers it again once it has them.
+    var takesKeyboard: Binding<Bool> = .constant(false)
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var editing = false
@@ -232,7 +235,7 @@ struct PaneSearchField: View {
     var body: some View {
         SearchFieldBox(prompt: prompt, text: $text, submit: submit,
                        focusesOnAppear: focusesOnAppear, command: command,
-                       ringsItself: themed, editing: $editing)
+                       ringsItself: themed, editing: $editing, takesKeyboard: takesKeyboard)
             .overlay {
                 if themed && editing {
                     Capsule().strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
@@ -269,6 +272,7 @@ private struct SearchFieldBox: NSViewRepresentable {
     var command: ((Selector) -> Bool)? = nil
     var ringsItself = false
     @Binding var editing: Bool
+    @Binding var takesKeyboard: Bool
 
     func makeNSView(context: Context) -> ReleasingSearchField {
         let field = ReleasingSearchField()
@@ -294,6 +298,12 @@ private struct SearchFieldBox: NSViewRepresentable {
         field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
         field.focusRingType = ringsItself ? .none : .default
         if field.stringValue != text { field.stringValue = text }
+        if takesKeyboard {
+            field.takeKeyboard()
+            // Lowered after this update rather than during it, which SwiftUI
+            // does not allow a view's state to be changed in.
+            Task { @MainActor [flag = $takesKeyboard] in flag.wrappedValue = false }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -342,10 +352,30 @@ private struct SearchFieldBox: NSViewRepresentable {
 /// on, whether or not a letter was ever typed.
 final class ReleasingSearchField: NSSearchField {
     var onFocus: ((Bool) -> Void)?
+    /// Asked for the keyboard before it was in a window to take it from.
+    private var takesKeyboardOnArrival = false
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         if newWindow == nil { PaneSearchField.releaseKeyboard(from: window) }
         super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if takesKeyboardOnArrival, window != nil {
+            takesKeyboardOnArrival = false
+            selectText(nil)
+        }
+    }
+
+    /// The keys, with the text selected — `selectText` makes the field
+    /// first responder as it selects — now, or once the field is in a window.
+    func takeKeyboard() {
+        if window == nil {
+            takesKeyboardOnArrival = true
+        } else {
+            selectText(nil)
+        }
     }
 
     override func becomeFirstResponder() -> Bool {

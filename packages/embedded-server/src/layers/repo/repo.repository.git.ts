@@ -699,6 +699,32 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       Effect.catchTag("GitError", () => Effect.succeed(null))
     );
 
+  /**
+   * A pull request's head, in this clone. The pull request's diff is GitHub's,
+   * so its head can be a commit never fetched here — pushed since the last
+   * fetch, or from a fork — and without it neither side of a file resolves.
+   * It is fetched by `refs/pull/<n>/head`, which `origin` keeps for every pull
+   * request, and only when it is missing. `--no-write-fetch-head` because a
+   * diff expands many files at once, and each fetch would otherwise race the
+   * others to write `FETCH_HEAD`; the objects are what is wanted, not a ref.
+   */
+  const ensurePullHead = (head: string, pull: number) =>
+    Effect.gen(function* () {
+      const present = (yield* runTolerant(
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        `${head}^{commit}`
+      )).trim();
+      if (present.length > 0) return;
+      yield* run(
+        "fetch",
+        "--no-write-fetch-head",
+        "origin",
+        `refs/pull/${pull}/head`
+      );
+    });
+
   const diffFileContents: RepoRepo["diffFileContents"] = (
     target,
     path,
@@ -734,6 +760,8 @@ export const makeGitRepoRepository = Effect.gen(function* () {
           return { oldContents, newContents };
         }
         case "range": {
+          if (target.pull !== undefined)
+            yield* ensurePullHead(target.head, target.pull);
           // `rangeDiff` uses the three-dot form, whose old side is the merge
           // base — resolve the same commit so line numbers line up.
           const mergeBase = (yield* run(

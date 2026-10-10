@@ -339,8 +339,41 @@ final class AppModel {
     func findInFiles() {
         guard hasProject else { return }
         Task {
-            let selected = try? await page.webView.evaluateJavaScript("window.getSelection().toString()") as? String
-            palette.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
+            palette.open(.text, seed: Self.seed(fromSelection: await page.selectedText()))
+        }
+    }
+
+    /// What ⌘F finds on the page the window is on: over a diff — your own
+    /// changes, or a pull request's — the files it touches, by the filter
+    /// over them; on the browse page, the open file, by the page's own find
+    /// bar. Elsewhere there is nothing for it to find.
+    var findTarget: FindTarget? {
+        guard hasProject else { return nil }
+        if reviewingPull != nil { return .changedFiles }
+        switch sidebarLayout {
+        case .files(changes: true): return .changedFiles
+        case .files(changes: false): return .openFile
+        case .pulls, .sessions, .nothing: return nil
+        }
+    }
+
+    /// ⌘F. Over a diff the filter takes the keyboard, starting from whatever
+    /// the page has highlighted, the way ⌘⇧F seeds its box — the sidebar
+    /// brought out first if it was put away. A pull request's files stand
+    /// beside its diff rather than in the sidebar, so they need no column.
+    func find() {
+        switch findTarget {
+        case .changedFiles:
+            Task {
+                let seed = Self.seed(fromSelection: await page.selectedText())
+                if !seed.isEmpty { sidebar.query = seed }
+                if reviewingPull == nil && !sidebarShown { toggleSidebar() }
+                sidebar.filterWantsKeyboard = true
+            }
+        case .openFile:
+            page.find()
+        case nil:
+            return
         }
     }
 
@@ -850,4 +883,12 @@ final class AppModel {
         page.send(action)
     }
 
+}
+
+/// What ⌘F reaches for — see `AppModel.findTarget`.
+enum FindTarget {
+    /// The filter over the files a diff touches.
+    case changedFiles
+    /// The find bar over the file the browse page has open.
+    case openFile
 }

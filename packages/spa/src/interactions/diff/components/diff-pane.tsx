@@ -186,9 +186,9 @@ const WHOLE_REGION = 1_000_000_000;
 /**
  * The `/api/diff-file` params that pin both sides of `target`, so expanded
  * context comes from the same refs the diff was generated from. A pull is
- * served best-effort from the local clone: GitHub's PR diff is
- * merge-base(base, head) → head, which resolves once the PR's commits have
- * been fetched (and fails harmlessly — see loader below — when they haven't).
+ * served from the local clone: GitHub's PR diff is merge-base(base, head) →
+ * head, and the pull's number lets the server fetch the head first when the
+ * clone has not seen it yet.
  */
 const diffFileTargetQuery = (
   target: DiffTarget
@@ -197,6 +197,7 @@ const diffFileTargetQuery = (
   base?: string;
   head?: string;
   target?: string;
+  pull?: string;
 } => {
   switch (target.kind) {
     case "worktree":
@@ -211,6 +212,7 @@ const diffFileTargetQuery = (
       return {
         base: `origin/${target.pull.baseRef}`,
         head: target.pull.headSha,
+        pull: String(target.pull.number),
       };
   }
 };
@@ -552,7 +554,7 @@ export function DiffPane({
   // hunks-only rendering — so on failure we also toast (a silent no-op click
   // reads as a broken button) and flip the file back to collapsed, keeping the
   // header toggle truthful. Typical failures: a server build without
-  // /api/diff-file, or a PR whose commits haven't been fetched yet.
+  // /api/diff-file, or a PR whose head could not be fetched from origin.
   const loadDiffFiles = useCallback(
     async (file: FileDiffMetadata): Promise<FileDiffLoadedFiles> => {
       try {
@@ -587,7 +589,7 @@ export function DiffPane({
         toast.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
-              ? "The merge request's commits may not be fetched locally yet — try Fetch, then expand again."
+              ? "Its commits couldn't be fetched from origin — check the connection, then expand again."
               : "The server couldn't provide this file's full contents.",
         });
         collapseFile(file.name);

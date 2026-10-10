@@ -13,6 +13,11 @@ const ok = { ok: true } as const;
 const MAX_SEARCH_MATCHES = 2000;
 const trimmed = (value: string | undefined): string | null =>
   value !== undefined && value.trim().length > 0 ? value.trim() : null;
+/** A pull request number off the query, when it is one. */
+const pullOf = (value: string | undefined): { pull?: number } => {
+  const pull = Number(value);
+  return Number.isInteger(pull) && pull > 0 ? { pull } : {};
+};
 
 export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
   handlers
@@ -71,7 +76,12 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
             : query.target !== undefined
               ? { kind: "branch", target: query.target }
               : query.base !== undefined && query.head !== undefined
-                ? { kind: "range", base: query.base, head: query.head }
+                ? {
+                    kind: "range",
+                    base: query.base,
+                    head: query.head,
+                    ...pullOf(query.pull),
+                  }
                 : { kind: "worktree" };
         return s.diffFileContents(target, query.path, query.prevPath ?? null);
       })

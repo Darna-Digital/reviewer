@@ -23,6 +23,7 @@
  * island renders in a plain browser tab exactly as it does in the window — the
  * way every island is developed.
  */
+import { selectedCodeText } from "@/interactions/find-in-file/adapters/code-selection.store";
 import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import type { DateFilter } from "@/lib/date-filter";
@@ -50,7 +51,11 @@ export type ShellEvent =
   | { readonly type: "review"; readonly action: ShellReviewAction }
   /** The shell's palette asked for a view preference the page keeps — see
    * `ShellViewAction`. */
-  | { readonly type: "view"; readonly action: ShellViewAction };
+  | { readonly type: "view"; readonly action: ShellViewAction }
+  /** ⌘F, which the shell's menu takes before the page sees it, handed back
+   * on the page where finding is the page's own: the open file's find bar.
+   * Over a diff the shell answers it itself, with its filter over the files. */
+  | { readonly type: "find" };
 
 /** Island → shell. */
 export type ShellIntent =
@@ -355,3 +360,5 @@ const unhosted: ShellChannel = {
 };
 
 export const shell: ShellChannel = islandBridge?.shell ?? unhosted;
+
+if (islandBridge !== undefined) islandBridge.selectedText = selectedCodeText;

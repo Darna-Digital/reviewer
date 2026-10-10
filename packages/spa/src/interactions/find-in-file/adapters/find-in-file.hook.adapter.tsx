@@ -20,6 +20,7 @@ import {
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { selectedTextInCode } from "@/lib/code-root";
+import { shell } from "@/lib/shell";
 import { FindBar } from "../components/find-bar";
 import {
   DEFAULT_FIND_OPTIONS,
@@ -294,6 +295,16 @@ export function useFindInFile({
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [openBar, step]);
+
+  // Inside the macOS shell the menu bar holds ⌘F, so the keystroke above never
+  // arrives; the shell hands the chord over instead.
+  useEffect(
+    () =>
+      shell.subscribe((event) => {
+        if (event.type === "find") openBar();
+      }),
+    [openBar]
+  );
 
   const bar = open ? (
     <FindBar

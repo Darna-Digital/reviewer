@@ -9,6 +9,11 @@
 // the bar as a count chip at the page's trailing edge until it is pressed
 // or a comment is added. What the bar does crosses back to the page, whose
 // comments and hand-off these are.
+//
+// On a pull request the comments are GitHub's, left on somebody's branch
+// for its author: handing them to an agent working in your checkout reads
+// them against the wrong code. There the bar is the count and its list,
+// and the way out to the pull request on GitHub, where they are answered.
 import SwiftUI
 
 /// The bar over the page: the capsule, centred near the foot, or the chip
@@ -30,6 +35,9 @@ struct ReviewAssignBarLayer: View {
                     CollapsedChip(count: review.comments.count) { handoff.collapsed = false }
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else if let pull = model.reviewingPull {
+                    PullCommentsBar(review: review, pull: pull)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     ReviewAssignBar(review: review)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -53,7 +61,6 @@ enum ReviewBarMotion {
 private struct ReviewAssignBar: View {
     let review: ShellReview
     @Environment(AppModel.self) private var model
-    @State private var listOpen = false
     @State private var pickerOpen = false
 
     private var handoff: ReviewHandoff { model.reviewHandoff }
@@ -61,21 +68,7 @@ private struct ReviewAssignBar: View {
     var body: some View {
         let target = handoff.target
         HStack(spacing: 4) {
-            Button { listOpen.toggle() } label: {
-                HStack(spacing: 5) {
-                    Text("\(review.comments.count)")
-                        .monospacedDigit()
-                    Text(review.comments.count == 1 ? "comment" : "comments")
-                        .fontWeight(.regular)
-                        .foregroundStyle(.secondary)
-                    Chevron()
-                }
-            }
-            .buttonStyle(ComposerChipStyle())
-            .help("Show the comments")
-            .popover(isPresented: $listOpen, arrowEdge: .top) {
-                CommentList(review: review) { listOpen = false }
-            }
+            CommentsButton(review: review)
             BarDivider()
             Button { pickerOpen.toggle() } label: {
                 HStack(spacing: 6) {
@@ -106,20 +99,9 @@ private struct ReviewAssignBar: View {
             .buttonStyle(AssignButtonStyle())
             .disabled(review.assigning)
             .keyboardShortcut(.defaultAction)
-            Button { handoff.collapsed = true } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 26)
-            }
-            .buttonStyle(ComposerChipStyle())
-            .help("Hide")
+            FoldButton()
         }
-        .padding(8)
-        .environment(\.chipShape, .capsule)
-        .environment(\.chipSize, .large)
-        .glassEffect(.regular, in: .capsule)
-        .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
+        .modifier(BarCapsule())
     }
 
     private func targetAgent(_ target: ReviewTarget) -> ChatProviderKind {
@@ -134,6 +116,90 @@ private struct ReviewAssignBar: View {
         case .new(let agent, _): return "New \(agent.label) chat"
         case .existing: return handoff.targetSession?.title ?? "Session"
         }
+    }
+}
+
+/// The bar on a pull request: the comments, and the pull request on
+/// GitHub — nothing to assign them with.
+private struct PullCommentsBar: View {
+    let review: ShellReview
+    let pull: PullRequestInfo
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        HStack(spacing: 4) {
+            CommentsButton(review: review)
+            BarDivider()
+            Button { model.open(pull: pull) } label: {
+                HStack(spacing: 6) {
+                    GitHubMark(size: 15)
+                    Text("#\(pull.number)")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Text("Open on GitHub")
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(ComposerChipStyle())
+            .disabled(pull.url.isEmpty)
+            .help("Answer the comments on the pull request on GitHub")
+            FoldButton()
+        }
+        .modifier(BarCapsule())
+    }
+}
+
+/// The count, opening the comments as a list to jump around the diff from.
+private struct CommentsButton: View {
+    let review: ShellReview
+    @State private var listOpen = false
+
+    var body: some View {
+        Button { listOpen.toggle() } label: {
+            HStack(spacing: 5) {
+                Text("\(review.comments.count)")
+                    .monospacedDigit()
+                Text(review.comments.count == 1 ? "comment" : "comments")
+                    .fontWeight(.regular)
+                    .foregroundStyle(.secondary)
+                Chevron()
+            }
+        }
+        .buttonStyle(ComposerChipStyle())
+        .help("Show the comments")
+        .popover(isPresented: $listOpen, arrowEdge: .top) {
+            CommentList(review: review) { listOpen = false }
+        }
+    }
+}
+
+/// Parks the bar as the count chip at the page's trailing edge.
+private struct FoldButton: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Button { model.reviewHandoff.collapsed = true } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 26)
+        }
+        .buttonStyle(ComposerChipStyle())
+        .help("Hide")
+    }
+}
+
+/// The glass both bars stand on, with the large capsule chips on it.
+private struct BarCapsule: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(8)
+            .environment(\.chipShape, .capsule)
+            .environment(\.chipSize, .large)
+            .glassEffect(.regular, in: .capsule)
+            .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
     }
 }
 

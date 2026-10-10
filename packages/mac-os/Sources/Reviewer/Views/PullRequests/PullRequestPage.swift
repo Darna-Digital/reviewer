@@ -44,6 +44,11 @@ struct PullRequestPage<Diff: View>: View {
         }
         .onChange(of: pull.number) { handoff.resetToTop() }
         .onChange(of: model.commentJumps) { handoff.scrollToWorkbench() }
+        // ⌘F reaches for the filter over the files, which stands under the
+        // overview: the overview goes by so the field taking the keys is seen.
+        .onChange(of: model.sidebar.filterWantsKeyboard) { _, wants in
+            if wants { handoff.scrollToWorkbench() }
+        }
     }
 
     private var workbench: some View {
@@ -151,7 +156,7 @@ private struct PullFiles: View {
     var body: some View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
-            ChangesHeader(query: $tree.query)
+            ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard)
             if tree.mode == .review {
                 FileTreeOutline()
                     .overlay {
