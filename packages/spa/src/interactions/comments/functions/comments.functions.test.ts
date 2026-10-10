@@ -107,6 +107,7 @@ describe("update", () => {
     const deps = createCommentsDependenciesMock();
     const fns = createCommentsFunctions(deps);
     const updated = await fns.update(
+      null,
       { id: "c-1", source: "local" } as ReviewComment,
       "revised"
     );
@@ -118,16 +119,39 @@ describe("update", () => {
     );
   });
 
-  it("refuses to update GitHub comments", async () => {
+  it("updates a GitHub comment on the pull request being reviewed", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    const original = {
+      id: "gh-42",
+      source: "github",
+      filePath: "src/a.ts",
+      lineNumber: 12,
+      thread: "T_1",
+      resolved: false,
+      body: "before",
+    } as ReviewComment;
+    const updated = await fns.update(pull, original, "after");
+    expect(deps.sideEffects.updatePullComment).toHaveBeenCalledWith(
+      5,
+      42,
+      "after"
+    );
+    expect(updated).toEqual({ ...original, body: "after" });
+  });
+
+  it("leaves a GitHub comment alone with no pull request in hand", async () => {
     const deps = createCommentsDependenciesMock();
     const fns = createCommentsFunctions(deps);
     expect(
       await fns.update(
+        null,
         { id: "gh-1", source: "github" } as ReviewComment,
         "nope"
       )
     ).toBeNull();
     expect(deps.sideEffects.updateLocalComment).not.toHaveBeenCalled();
+    expect(deps.sideEffects.updatePullComment).not.toHaveBeenCalled();
   });
 });
 

@@ -215,11 +215,14 @@ export function CommentComposer({
 function CommentCard({
   comment,
   editing,
+  onStartEdit,
   onEdit,
   onCancelEdit,
 }: {
   comment: ReviewComment;
   editing: boolean;
+  /** Offered only on a comment the reader may rewrite. */
+  onStartEdit?: () => void;
   onEdit?: (body: string) => Promise<void>;
   onCancelEdit?: () => void;
 }) {
@@ -227,6 +230,7 @@ function CommentCard({
     return (
       <CommentComposer
         author={comment.author}
+        source={comment.source}
         initialBody={comment.body}
         placeholder="Edit comment…"
         onCancel={onCancelEdit}
@@ -247,6 +251,18 @@ function CommentCard({
           <span className="type-meta text-muted-foreground/70 tabular-nums">
             {timeAgo(comment.createdAt)}
           </span>
+          {onStartEdit !== undefined && (
+            // On the comment it rewrites rather than in the thread's footer,
+            // so any of the reader's comments in a conversation can be
+            // reached, and faint until the comment is — like the footer.
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className="ml-auto rounded-sm type-meta text-muted-foreground opacity-0 outline-offset-2 outline-ring transition-[color,opacity] group-hover/comment:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-2"
+            >
+              Edit
+            </button>
+          )}
         </div>
         <div className="markdown mt-0.5 min-w-0 type-body">
           <Markdown
@@ -318,6 +334,7 @@ export function CommentThread({
   const [resolving, setResolving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [unfolded, setUnfolded] = useState(false);
+  const githubLogin = useGitHubAuth().data?.login ?? null;
 
   // Actions target a comment by id, and a comment still in flight does not have
   // its real one yet — replying to a pending GitHub comment would address a
@@ -335,18 +352,20 @@ export function CommentThread({
       ? undefined
       : settled.find((c) => c.source === "github" && c.thread !== undefined);
   const resolved = githubThread?.resolved === true;
-  const editableComment =
-    onEdit === undefined
-      ? undefined
-      : (localComments.find((c) => c.id === editingId) ?? localComments[0]);
-  const canEdit = editableComment !== undefined && onEdit !== undefined;
+  // GitHub lets only a comment's author rewrite it, so of a pull request's
+  // comments only the signed-in login's are offered.
+  const canEdit = (c: ReviewComment) =>
+    onEdit !== undefined &&
+    !replying &&
+    editingId === null &&
+    !isOptimisticId(c.id) &&
+    (c.source === "local" ||
+      (githubLogin !== null && c.author === githubLogin));
   const canReply = onReply !== undefined && lastGithub !== undefined;
   const canResolve =
     localComments.length > 0 || (githubThread !== undefined && !resolved);
   const showActions =
-    !replying &&
-    editingId === null &&
-    (canEdit || canReply || canResolve || resolved);
+    !replying && editingId === null && (canReply || canResolve || resolved);
 
   const resolve = async () => {
     if (resolving) return;
@@ -399,6 +418,9 @@ export function CommentThread({
             <CommentCard
               comment={comment}
               editing={editingId === comment.id}
+              onStartEdit={
+                canEdit(comment) ? () => setEditingId(comment.id) : undefined
+              }
               onCancelEdit={() => setEditingId(null)}
               onEdit={
                 onEdit === undefined
@@ -429,11 +451,6 @@ export function CommentThread({
             // answers it before it is asked. Focus reveals them too, so they
             // stay reachable from the keyboard.
             <div className="flex items-center gap-4 opacity-0 transition-opacity group-focus-within/thread:opacity-100 group-hover/thread:opacity-100">
-              {canEdit && editableComment !== undefined && (
-                <ThreadAction onClick={() => setEditingId(editableComment.id)}>
-                  Edit
-                </ThreadAction>
-              )}
               {canReply && (
                 <ThreadAction
                   onClick={() => setReplying(true)}

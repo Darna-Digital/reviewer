@@ -215,6 +215,9 @@ export type PrComment = typeof PrComment.Type;
 export const PrReply = Schema.Struct({ body: Schema.String });
 export type PrReply = typeof PrReply.Type;
 
+export const PrCommentEdit = Schema.Struct({ body: Schema.String });
+export type PrCommentEdit = typeof PrCommentEdit.Type;
+
 /**
  * One review thread on a pull request, by GitHub's node id for it. The
  * number is what the caller is looking at; GitHub finds a thread by its id
@@ -251,6 +254,9 @@ export interface PrCommentRef {
 export interface PrReplyInput extends PrCommentRef {
   readonly body: string;
 }
+export interface PrCommentEditInput extends PrCommentRef {
+  readonly body: string;
+}
 
 export interface GitProviderShape {
   /** Who requests go out as. Never needs a repository: the login is the user's. */
@@ -270,6 +276,10 @@ export interface GitProviderShape {
   ) => Effect.Effect<ReviewComment, GitProviderError>;
   readonly replyToPullComment: (
     input: PrReplyInput
+  ) => Effect.Effect<ReviewComment, GitProviderError>;
+  /** Rewrite a comment's body. GitHub only lets its author do it. */
+  readonly updatePullComment: (
+    input: PrCommentEditInput
   ) => Effect.Effect<ReviewComment, GitProviderError>;
   readonly deletePullComment: (
     input: PrCommentRef
@@ -329,6 +339,18 @@ export const GitProviderMemory = (
         }),
       closePull: (pullNumber) =>
         Effect.succeed({ message: `Closed #${pullNumber}` }),
+      updatePullComment: (input) =>
+        Effect.succeed({
+          id: `gh-${input.commentId}`,
+          filePath: "",
+          side: "additions",
+          lineNumber: 0,
+          body: input.body,
+          author: "tester",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          target: `pr-${input.pullNumber}`,
+          source: "github",
+        }),
       deletePullComment: () => Effect.void,
       setThreadResolved: () => Effect.void,
       replyToPullComment: (input) =>

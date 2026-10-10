@@ -63,6 +63,23 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
+    .handle("updatePullComment", ({ params, query, payload }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          pullNumber(params.commentId).pipe(
+            Effect.flatMap((commentId) =>
+              withGitHubOf(query.repo)((s) =>
+                s.updatePullComment({
+                  pullNumber: n,
+                  commentId,
+                  body: payload.body,
+                })
+              )
+            )
+          )
+        )
+      )
+    )
     .handle("deletePullComment", ({ params, query }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>

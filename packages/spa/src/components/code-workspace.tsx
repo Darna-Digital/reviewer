@@ -992,7 +992,7 @@ export function CodeWorkspace() {
     }
   };
   const editComment = async (comment: ReviewComment, body: string) => {
-    await comments.update(comment, body);
+    await comments.update(selectedPull, comment, body);
   };
   const replyComment = async (comment: ReviewComment, body: string) => {
     await comments.reply(selectedPull, comment, body);

@@ -10,6 +10,7 @@ import {
   MergeResult,
   PullRequestInfo,
   PrComment,
+  PrCommentEdit,
   PrReply,
   PullNumberParam,
   PullCommentParams,
@@ -103,6 +104,19 @@ export class GitHubApi extends HttpApiGroup.make("github")
         params: PullCommentParams,
         query: GitHubRepoQuery,
         payload: PrReply,
+        success: ReviewComment,
+        error: GitProviderError,
+      }
+    )
+  )
+  .add(
+    HttpApiEndpoint.make("PATCH")(
+      "updatePullComment",
+      "/github/pulls/:number/comments/:commentId",
+      {
+        params: PullCommentParams,
+        query: GitHubRepoQuery,
+        payload: PrCommentEdit,
         success: ReviewComment,
         error: GitProviderError,
       }

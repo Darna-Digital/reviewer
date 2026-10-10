@@ -52,6 +52,11 @@ export interface CommentsDependencies {
       body: string
     ) => Promise<ReviewComment>;
     readonly deleteComment: (id: string) => Promise<void>;
+    readonly updatePullComment: (
+      pullNumber: number,
+      commentId: number,
+      body: string
+    ) => Promise<ReviewComment>;
     readonly deletePullComment: (
       pullNumber: number,
       commentId: number
@@ -76,8 +81,13 @@ export interface CommentsFunctions {
     location: DraftLocation,
     body: string
   ) => Promise<ReviewComment>;
-  /** Update a local comment's body; returns the updated comment, or null if not local. */
+  /**
+   * Rewrite a comment's body in whichever store holds it. Answers null when
+   * there is nowhere to write it: a GitHub comment reached with no pull
+   * request in hand.
+   */
   readonly update: (
+    selectedPull: PullRequestInfo | null,
     comment: ReviewComment,
     body: string
   ) => Promise<ReviewComment | null>;

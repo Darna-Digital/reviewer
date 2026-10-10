@@ -75,6 +75,28 @@ export function useCommentsActions() {
               params: { path: { id } },
             });
           },
+          updatePullComment: async (pullNumber, commentId, body) => {
+            const { data, error } = await fetchClient.PATCH(
+              "/api/github/pulls/{number}/comments/{commentId}",
+              {
+                params: {
+                  path: {
+                    number: String(pullNumber),
+                    commentId: String(commentId),
+                  },
+                },
+                body: { body },
+              }
+            );
+            // A server without the route answers 404 with no body, which
+            // openapi-fetch reports as neither data nor error.
+            if (error !== undefined || data === undefined)
+              throw new Error(
+                (error as { reason?: string } | undefined)?.reason ??
+                  "failed to update"
+              );
+            return data;
+          },
           deletePullComment: async (pullNumber, commentId) => {
             const { error } = await fetchClient.DELETE(
               "/api/github/pulls/{number}/comments/{commentId}",
@@ -271,26 +293,36 @@ export function useCommentsActions() {
       }
     },
 
-    update: async (comment: ReviewComment, body: string) => {
-      if (comment.source !== "local") return fns.update(comment, body);
-      holdRefetches(localCommentsKey);
-      const before = edit(localCommentsKey, (list) =>
+    update: async (
+      selectedPull: SubmitContext["selectedPull"],
+      comment: ReviewComment,
+      body: string
+    ) => {
+      const pull = comment.source === "github" ? selectedPull : null;
+      if (comment.source === "github" && pull === null)
+        return fns.update(selectedPull, comment, body);
+      const key =
+        pull === null ? localCommentsKey : pullCommentsKey(pull.number);
+      holdRefetches(key);
+      const before = edit(key, (list) =>
         withEditedBody(list, comment.id, body)
       );
       try {
-        const updated = await fns.update(comment, body);
+        const updated = await fns.update(selectedPull, comment, body);
         if (updated !== null) {
-          edit(localCommentsKey, (list) =>
-            withConfirmed(list, comment.id, updated)
-          );
+          edit(key, (list) => withConfirmed(list, comment.id, updated));
         }
         return updated;
       } catch (error) {
         // Put it back, then reconcile: concurrent edits (assigning a review
         // removes every comment at once) can interleave, and only the server
         // knows what actually survived.
-        restore(localCommentsKey, before);
-        void invalidate("/api/comments");
+        restore(key, before);
+        void invalidate(
+          pull === null
+            ? "/api/comments"
+            : "/api/github/pulls/{number}/comments"
+        );
         throw error;
       }
     },

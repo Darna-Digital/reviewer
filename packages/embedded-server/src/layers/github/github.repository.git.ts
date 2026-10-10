@@ -280,6 +280,31 @@ export const makeGitHubProvider = Effect.gen(function* () {
     });
 
   /**
+   * Rewrite one review comment's body. Like a delete, GitHub keys it to the
+   * repository rather than the pull request, and refuses anybody but its
+   * author with a 403 whose sentence reaches the reviewer as the reason.
+   */
+  const updatePullComment: GitProviderShape["updatePullComment"] = (input) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      const updated = (yield* gh.patchJson(
+        `/repos/${owner}/${repo}/pulls/comments/${input.commentId}`,
+        { body: input.body }
+      )) as any;
+      return {
+        id: `gh-${updated.id ?? input.commentId}`,
+        filePath: updated.path ?? "",
+        side: updated.side === "LEFT" ? "deletions" : "additions",
+        lineNumber: typeof updated.line === "number" ? updated.line : 0,
+        body: updated.body ?? input.body,
+        author: updated.user?.login ?? "",
+        createdAt: updated.created_at ?? "",
+        target: `pr-${input.pullNumber}`,
+        source: "github",
+      } satisfies ReviewComment;
+    });
+
+  /**
    * Remove one review comment from the pull request.
    *
    * GitHub keys a review comment to the repository rather than to the pull
@@ -360,6 +385,7 @@ export const makeGitHubProvider = Effect.gen(function* () {
     pullComments,
     createPullComment,
     replyToPullComment,
+    updatePullComment,
     deletePullComment,
     setThreadResolved,
   } satisfies GitProviderShape;

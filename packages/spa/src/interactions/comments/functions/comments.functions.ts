@@ -32,9 +32,23 @@ export function createCommentsFunctions(
     });
   };
 
-  const update: CommentsFunctions["update"] = async (comment, body) => {
-    if (comment.source !== "local") return null;
-    return d.sideEffects.updateLocalComment(comment.id, body);
+  const update: CommentsFunctions["update"] = async (
+    selectedPull,
+    comment,
+    body
+  ) => {
+    if (comment.source === "local")
+      return d.sideEffects.updateLocalComment(comment.id, body);
+    const commentId = githubCommentId(comment);
+    if (selectedPull === null || commentId === null) return null;
+    const updated = await d.sideEffects.updatePullComment(
+      selectedPull.number,
+      commentId,
+      body
+    );
+    // GitHub's answer knows nothing of review threads, so only the body is
+    // taken from it — the comment keeps its anchor and its thread.
+    return { ...comment, body: updated.body };
   };
 
   const remove: CommentsFunctions["remove"] = async (selectedPull, comment) => {
