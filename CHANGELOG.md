@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.0.19 — 2026-10-14
+
+### Added
+
+- Pickers and menus that pop up now work from the keyboard: ↑/↓ move through the list, Return picks, and Escape closes. This covers the branch picker, the model picker, the effort, mode and access selectors, the commit message agent picker, the review target picker, the review comments list and the sessions filter.
+- In the branch picker, → opens the highlighted branch's actions and ← goes back to the list.
+- In the model picker, ← moves to the agent rail, where ↑/↓ switch agents; → or Return goes back to the models.
+- In the review comments list, Delete removes the highlighted comment.
+
 ## v0.0.18 — 2026-10-10
 
 ### Added
