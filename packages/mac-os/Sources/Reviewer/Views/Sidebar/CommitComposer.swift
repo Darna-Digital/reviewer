@@ -149,16 +149,10 @@ struct CommitComposer: View {
         .disabled(drafting)
         .help("Draft with \(agent.label)")
         .popover(isPresented: $agentPickerOpen, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 1) {
-                ForEach(CommitAgent.allCases) { candidate in
-                    CommitAgentRow(agent: candidate, chosen: candidate == agent) {
-                        agent = candidate
-                        agentPickerOpen = false
-                    }
-                }
+            CommitAgentList(agent: agent) { candidate in
+                agent = candidate
+                agentPickerOpen = false
             }
-            .padding(4)
-            .frame(width: 160)
         }
     }
 
@@ -262,11 +256,38 @@ private struct GenerateButton: View {
     }
 }
 
+/// The agents a draft can be written by, walked from the keys or the
+/// pointer as one highlight, opening on the one that is chosen.
+private struct CommitAgentList: View {
+    let agent: CommitAgent
+    let pick: (CommitAgent) -> Void
+    @State private var active: Int?
+
+    private var agents: [CommitAgent] { CommitAgent.allCases }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(agents.enumerated()), id: \.element.id) { index, candidate in
+                CommitAgentRow(agent: candidate, chosen: candidate == agent, lit: active == index) { inside in
+                    if inside { active = index } else if active == index { active = nil }
+                } action: {
+                    pick(candidate)
+                }
+            }
+        }
+        .padding(4)
+        .frame(width: 160)
+        .popoverListKeys(active: $active, count: agents.count) { pick(agents[$0]) }
+        .onAppear { active = agents.firstIndex(of: agent) }
+    }
+}
+
 private struct CommitAgentRow: View {
     let agent: CommitAgent
     let chosen: Bool
+    let lit: Bool
+    let hover: (Bool) -> Void
     let action: () -> Void
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
@@ -285,12 +306,12 @@ private struct CommitAgentRow: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                Color.primary.opacity(chosen ? 0.06 : isHovering ? 0.08 : 0),
+                Color.primary.opacity(lit ? 0.08 : chosen ? 0.06 : 0),
                 in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .onHover(perform: hover)
     }
 }
 

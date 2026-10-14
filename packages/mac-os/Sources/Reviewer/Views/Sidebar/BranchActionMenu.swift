@@ -13,22 +13,30 @@ import SwiftUI
 
 struct BranchActionMenu: View {
     let actions: [BranchAction]
+    /// Opened from the keys, so its first item is lit for them to start on.
+    let litFirst: Bool
+    /// Puts the submenu away and nothing else — ←, back to the list.
+    let close: () -> Void
     /// Called once an item has run, for the popovers to put themselves away.
     let ran: () -> Void
-    @State private var hovered: Int?
+    /// The item lit, by the pointer or the keys alike, as a menu's is.
+    @State private var lit: Int?
 
     private static var width: CGFloat { 288 }
 
+    /// The items the keys walk, the rules between them stepped over.
+    private var items: [BranchAction] { actions.filter(\.isItem) }
+
     var body: some View {
+        let items = items
         VStack(alignment: .leading, spacing: 1) {
             ForEach(actions) { action in
                 switch action.kind {
-                case .item(let title, let destructive, let run):
-                    ActionRow(title: title, destructive: destructive, hovered: hovered == action.id) { inside in
-                        if inside { hovered = action.id } else if hovered == action.id { hovered = nil }
+                case .item(let title, let destructive, _):
+                    ActionRow(title: title, destructive: destructive, lit: lit == action.id) { inside in
+                        if inside { lit = action.id } else if lit == action.id { lit = nil }
                     } run: {
-                        run()
-                        ran()
+                        run(action)
                     }
                 case .divider:
                     ThemedDivider()
@@ -39,6 +47,26 @@ struct BranchActionMenu: View {
         }
         .padding(4)
         .frame(width: Self.width)
+        .popoverListKeys(active: litPosition(in: items), count: items.count, pick: { run(items[$0]) }) { press in
+            guard press.key == .left else { return false }
+            close()
+            return true
+        }
+        .onAppear { if litFirst { lit = items.first?.id } }
+    }
+
+    /// The lit item as a place among the items alone, which is what the
+    /// keys step through.
+    private func litPosition(in items: [BranchAction]) -> Binding<Int?> {
+        Binding(
+            get: { items.firstIndex { $0.id == lit } },
+            set: { position in lit = position.map { items[$0].id } })
+    }
+
+    private func run(_ action: BranchAction) {
+        guard case .item(_, _, let run) = action.kind else { return }
+        run()
+        ran()
     }
 }
 
@@ -49,7 +77,7 @@ private var itemFont: NSFont { .systemFont(ofSize: 12) }
 private struct ActionRow: View {
     let title: String
     let destructive: Bool
-    let hovered: Bool
+    let lit: Bool
     let hover: (Bool) -> Void
     let run: () -> Void
     @State private var clipped = false
@@ -64,8 +92,8 @@ private struct ActionRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(hovered ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 5))
-            .rowTooltip(clipped ? title : nil, active: hovered)
+            .background(Color.primary.opacity(lit ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 5))
+            .rowTooltip(clipped ? title : nil, active: lit)
             .contentShape(Rectangle())
             .onTapGesture(perform: run)
             .onHover(perform: hover)

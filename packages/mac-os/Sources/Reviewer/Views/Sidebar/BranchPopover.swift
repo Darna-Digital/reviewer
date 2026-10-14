@@ -3,13 +3,14 @@
 // bar's strip — as a popover: a field over the rows, the rows in their
 // sections, and the keys the web app's pickers answer. Typing never
 // leaves the field; ↑/↓ walk the rows under it, wrapping at the ends,
-// Home and End jump, Return picks the lit row, Escape clears the search
-// and then puts the popover away. A row picked is the picker's own
-// answer — a checkout, a comparison, a log to follow; what else can be
-// done to a branch is the row's menu, at the ellipsis and on a right
-// click. A name too long for its row says the whole of itself in a
-// tooltip at the row's trailing edge, and only then — for the row the
-// pointer is on, or the one the keys walked to (see `RowTooltip`).
+// Home and End jump, Return picks the lit row, → opens the lit row's
+// submenu and ← in it comes back, Escape clears the search and then puts
+// the popover away. A row picked is the picker's own answer — a checkout,
+// a comparison, a log to follow; what else can be done to a branch is the
+// row's menu, at the ellipsis and on a right click. A name too long for
+// its row says the whole of itself in a tooltip at the row's trailing
+// edge, and only then — for the row the pointer is on, or the one the
+// keys walked to (see `RowTooltip`).
 import SwiftUI
 
 /// A row the popover offers: a branch, or one of the answers that needs
@@ -73,6 +74,13 @@ private struct ShownSection: Identifiable {
     let lines: [Line]
 }
 
+/// The submenu open, and on which row — one at a time across the list —
+/// and whether the keys opened it, which lights its first item.
+private struct Submenu: Equatable {
+    let key: String
+    let fromKeys: Bool
+}
+
 /// Which row is being read — the one under the pointer, or the one the
 /// keys walked to since the pointer last moved over the list — kept out of
 /// the popover's own state, so the pointer crossing rows as the list
@@ -98,6 +106,7 @@ struct BranchPopover<Footer: View>: View {
     @State private var query = ""
     @State private var active = 0
     @State private var reading = RowReading()
+    @State private var submenu: Submenu?
     @FocusState private var fieldFocused: Bool
 
     private static var width: CGFloat { 320 }
@@ -139,19 +148,17 @@ struct BranchPopover<Footer: View>: View {
             footer
         }
         .frame(width: Self.width)
-        .onKeyPress(.upArrow) { step(-1, in: lines) }
-        .onKeyPress(.downArrow) { step(1, in: lines) }
-        .onKeyPress(.home) { walk(to: 0, in: lines) }
-        .onKeyPress(.end) { walk(to: lines.count - 1, in: lines) }
-        .onKeyPress(.escape) {
-            if searching { query = "" } else { dismiss() }
-            return .handled
-        }
+        .popoverKeys { press in take(press, in: lines) }
         .onChange(of: query) {
             active = 0
             reading.walked = nil
         }
         .onChange(of: lines.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
+        // A submenu put away hands the keys back to the search, so ↑/↓ go
+        // on walking the branches from where they were.
+        .onChange(of: submenu) { _, open in
+            if open == nil { Task { @MainActor in fieldFocused = true } }
+        }
         // The field is focused only once it is on screen, a turn of the
         // run loop after the popover comes up.
         .onAppear { Task { @MainActor in fieldFocused = true } }
@@ -167,7 +174,6 @@ struct BranchPopover<Footer: View>: View {
                 .font(.system(size: 12))
                 .focused($fieldFocused)
                 .autocorrectionDisabled()
-                .onSubmit { pick(at: active, in: lines) }
         }
         .padding(.horizontal, 10)
         .frame(height: 32)
@@ -185,6 +191,7 @@ struct BranchPopover<Footer: View>: View {
                             ChoiceRow(
                                 line: line, lit: line.index == active, reading: reading,
                                 actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
+                                submenu: submenuBinding(for: line.key),
                                 ran: dismiss
                             ) {
                                 pick(at: line.index, in: lines)
@@ -203,16 +210,49 @@ struct BranchPopover<Footer: View>: View {
         }
     }
 
-    private func step(_ offset: Int, in lines: [Line]) -> KeyPress.Result {
-        guard !lines.isEmpty else { return .handled }
-        return walk(to: (active + offset + lines.count) % lines.count, in: lines)
+    /// The list's keys (see `popoverKeys`). While a submenu is open it is
+    /// the topmost popover and hears them instead.
+    private func take(_ press: PopoverKeyPress, in lines: [Line]) -> Bool {
+        switch press.key {
+        case .up: step(-1, in: lines)
+        case .down: step(1, in: lines)
+        case .home: walk(to: 0, in: lines)
+        case .end: walk(to: lines.count - 1, in: lines)
+        case .enter: pick(at: active, in: lines)
+        case .right: return openSubmenu(in: lines, caretAtEnd: press.caretAtEnd)
+        case .escape: if searching { query = "" } else { dismiss() }
+        case .left, .delete: return false
+        }
+        return true
     }
 
-    private func walk(to index: Int, in lines: [Line]) -> KeyPress.Result {
-        guard lines.indices.contains(index) else { return .handled }
+    /// → opens the lit row's submenu, its first item lit, as a menu's
+    /// submenu opens — once the caret has nowhere further right to go.
+    private func openSubmenu(in lines: [Line], caretAtEnd: Bool) -> Bool {
+        guard actions != nil, caretAtEnd, lines.indices.contains(active), lines[active].choice.branch != nil else {
+            return false
+        }
+        submenu = Submenu(key: lines[active].key, fromKeys: true)
+        return true
+    }
+
+    private func submenuBinding(for key: String) -> Binding<Submenu?> {
+        Binding(
+            get: { submenu?.key == key ? submenu : nil },
+            set: { open in
+                if let open { submenu = open } else if submenu?.key == key { submenu = nil }
+            })
+    }
+
+    private func step(_ offset: Int, in lines: [Line]) {
+        guard let index = walkedRow(from: active, by: offset, in: lines.count) else { return }
+        walk(to: index, in: lines)
+    }
+
+    private func walk(to index: Int, in lines: [Line]) {
+        guard lines.indices.contains(index) else { return }
         active = index
         reading.walked = lines[index].key
-        return .handled
     }
 
     private func pick(at index: Int, in lines: [Line]) {
@@ -268,12 +308,21 @@ private struct ChoiceRow: View {
     let reading: RowReading
     /// The branch's submenu, built only once it opens.
     let actions: (() -> [BranchAction])?
+    @Binding var submenu: Submenu?
     let ran: () -> Void
     let pick: () -> Void
     @State private var clipped = false
-    @State private var submenuOpen = false
 
     private var choice: BranchChoice { line.choice }
+    private var submenuOpen: Bool { submenu != nil }
+
+    private var submenuShown: Binding<Bool> {
+        Binding(get: { submenu != nil }, set: { if !$0 { submenu = nil } })
+    }
+
+    private func toggleSubmenu() {
+        submenu = submenuOpen ? nil : Submenu(key: line.key, fromKeys: false)
+    }
 
     var body: some View {
         let hovered = reading.hovered == line.key
@@ -304,7 +353,7 @@ private struct ChoiceRow: View {
                     .hidden()
                     .overlay {
                         if hovered || lit || submenuOpen {
-                            Button { submenuOpen.toggle() } label: { Image(systemName: "ellipsis.circle") }
+                            Button(action: toggleSubmenu) { Image(systemName: "ellipsis.circle") }
                                 .buttonStyle(.borderless)
                         }
                     }
@@ -331,12 +380,12 @@ private struct ChoiceRow: View {
             }
         }
         .overlay {
-            if actions != nil { SecondaryClick { submenuOpen = true } }
+            if actions != nil { SecondaryClick { submenu = Submenu(key: line.key, fromKeys: false) } }
         }
-        .popover(isPresented: $submenuOpen, arrowEdge: .trailing) {
+        .popover(isPresented: submenuShown, arrowEdge: .trailing) {
             if let actions {
-                BranchActionMenu(actions: actions()) {
-                    submenuOpen = false
+                BranchActionMenu(actions: actions(), litFirst: submenu?.fromKeys ?? false, close: { submenu = nil }) {
+                    submenu = nil
                     ran()
                 }
             }

@@ -4,7 +4,10 @@
 // runs on, with a star that keeps it among the favourites. The models are
 // whatever each agent's own CLI reported, so a provider's rail is only ever
 // that agent's; the favourites rail, empty, falls back to everything so
-// the picker never opens onto a blank list.
+// the picker never opens onto a blank list. The keys walk it as two
+// columns: ↑/↓ walk the models and Return picks; ← — once the caret is at
+// the start of the search — crosses to the rail, where ↑/↓ walk the
+// agents, the list following, and → or Return cross back.
 import SwiftUI
 
 struct ModelPicker: View {
@@ -12,16 +15,10 @@ struct ModelPicker: View {
     let model: String
     let provider: ChatProviderKind
     let onSelect: (CatalogModel) -> Void
-    @Environment(AppModel.self) private var appModel
     @Environment(\.chipSize) private var chipSize
     @State private var open = false
-    @State private var rail: Rail = .favorites
+    @State private var rail: ModelRail = .favorites
     @State private var query = ""
-
-    private enum Rail: Hashable {
-        case favorites
-        case provider(ChatProviderKind)
-    }
 
     var body: some View {
         let models = catalog?.models ?? []
@@ -39,23 +36,101 @@ struct ModelPicker: View {
         .buttonStyle(ComposerChipStyle())
         .help("Choose model")
         .popover(isPresented: $open, arrowEdge: .bottom) {
-            HStack(spacing: 0) {
-                providerRail
-                ThemedDivider()
-                modelList(models)
+            ModelPopover(catalog: catalog, model: model, provider: provider, rail: $rail, query: $query) { chosen in
+                onSelect(chosen)
+                open = false
             }
-            .frame(width: 400, height: 340)
         }
+    }
+}
+
+private enum ModelRail: Hashable {
+    case favorites
+    case provider(ChatProviderKind)
+}
+
+/// The column the keys are in.
+private enum ModelColumn {
+    case rail
+    case list
+}
+
+/// The popover's content, a view of its own so the focus it asks for is
+/// asked from inside the popover: a `@FocusState` held by the chip, out in
+/// the composer, cannot move the keyboard into the popover's window, and
+/// the composer's prompt kept it — and the arrows with it. The rail and
+/// the search are the chip's, so the picker opens where it was left.
+private struct ModelPopover: View {
+    let catalog: ChatModelCatalog?
+    let model: String
+    let provider: ChatProviderKind
+    @Binding var rail: ModelRail
+    @Binding var query: String
+    let pick: (CatalogModel) -> Void
+    @Environment(AppModel.self) private var appModel
+    @State private var active: Int? = 0
+    @State private var column: ModelColumn = .list
+    @FocusState private var fieldFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            providerRail
+            ThemedDivider()
+            modelList(catalog?.models ?? [])
+        }
+        .frame(width: 400, height: 340)
+        .onChange(of: query) {
+            active = 0
+            column = .list
+        }
+        .onChange(of: rail) { active = 0 }
+        .onAppear { Task { @MainActor in fieldFocused = true } }
+    }
+
+    private var rails: [ModelRail] {
+        [.favorites] + (catalog?.providers ?? []).map { .provider($0.id) }
+    }
+
+    /// The keys beyond the list's own: in the rail, ↑/↓ walk the agents and
+    /// → or Return go back to the models; in the list, ← at the start of
+    /// the search crosses to the rail.
+    private func take(_ press: PopoverKeyPress) -> Bool {
+        switch column {
+        case .list:
+            guard press.key == .left, press.caretAtStart else { return false }
+            column = .rail
+        case .rail:
+            switch press.key {
+            case .up: stepRail(by: -1)
+            case .down: stepRail(by: 1)
+            case .home: rail = .favorites
+            case .end: rail = rails.last ?? .favorites
+            case .right, .enter:
+                column = .list
+                active = 0
+            case .left: break
+            case .escape, .delete: return false
+            }
+        }
+        return true
+    }
+
+    private func stepRail(by offset: Int) {
+        let rails = rails
+        guard let index = walkedRow(from: rails.firstIndex(of: rail), by: offset, in: rails.count) else { return }
+        rail = rails[index]
     }
 
     private var providerRail: some View {
         VStack(spacing: 4) {
-            RailButton(selected: rail == .favorites, help: "Favorites") { rail = .favorites } label: {
+            RailButton(selected: rail == .favorites, keyed: column == .rail, help: "Favorites") { rail = .favorites } label: {
                 Image(systemName: "star.fill")
                     .font(.system(size: 13))
             }
             ForEach(catalog?.providers ?? [], id: \.id) { entry in
-                RailButton(selected: rail == .provider(entry.id), help: entry.label) { rail = .provider(entry.id) } label: {
+                RailButton(selected: rail == .provider(entry.id), keyed: column == .rail, help: entry.label) {
+                    rail = .provider(entry.id)
+                } label: {
                     AgentGlyph(kind: entry.id, size: 16)
                 }
             }
@@ -84,6 +159,8 @@ struct ModelPicker: View {
                 TextField("Search models…", text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
+                    .focused($fieldFocused)
+                    .autocorrectionDisabled()
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
@@ -97,31 +174,43 @@ struct ModelPicker: View {
                     .padding(.horizontal, 16)
                 Spacer()
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 1) {
-                        ForEach(Array(visible.enumerated()), id: \.element.key) { index, entry in
-                            if let group = entry.group, index == 0 || visible[index - 1].group != group {
-                                Text(group)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 8)
-                                    .padding(.top, index == 0 ? 4 : 8)
-                                    .padding(.bottom, 2)
-                            }
-                            ModelRow(
-                                entry: entry, chosen: entry.id == model && entry.provider == provider,
-                                starred: favorites.contains(entry.id),
-                                onStar: { appModel.chats.toggleFavorite(entry.id) }
-                            ) {
-                                onSelect(entry)
-                                open = false
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 1) {
+                            ForEach(Array(visible.enumerated()), id: \.element.key) { index, entry in
+                                if let group = entry.group, index == 0 || visible[index - 1].group != group {
+                                    Text(group)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.top, index == 0 ? 4 : 8)
+                                        .padding(.bottom, 2)
+                                }
+                                ModelRow(
+                                    entry: entry, chosen: entry.id == model && entry.provider == provider,
+                                    lit: column == .list && active == index, starred: favorites.contains(entry.id),
+                                    onStar: { appModel.chats.toggleFavorite(entry.id) }
+                                ) {
+                                    pick(at: index, in: visible)
+                                }
+                                .id(entry.key)
                             }
                         }
+                        .padding(4)
                     }
-                    .padding(4)
+                    .onChange(of: active) { _, index in
+                        guard let index, visible.indices.contains(index) else { return }
+                        proxy.scrollTo(visible[index].key)
+                    }
                 }
             }
         }
+        .popoverListKeys(active: $active, count: visible.count, pick: { pick(at: $0, in: visible) }, also: take)
+    }
+
+    private func pick(at index: Int?, in visible: [CatalogModel]) {
+        guard let index, visible.indices.contains(index) else { return }
+        pick(visible[index])
     }
 
     private func emptyMessage(searching: Bool) -> String {
@@ -133,8 +222,11 @@ struct ModelPicker: View {
     }
 }
 
+/// One agent on the rail. While the keys are in the rail the selected one
+/// wears the accent's ring, so it is plain which column ↑/↓ will walk.
 private struct RailButton<Label: View>: View {
     let selected: Bool
+    let keyed: Bool
     let help: String
     let action: () -> Void
     @ViewBuilder let label: Label
@@ -148,6 +240,12 @@ private struct RailButton<Label: View>: View {
                 .background(
                     Color.primary.opacity(selected ? 0.1 : isHovering ? 0.06 : 0),
                     in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    if selected && keyed {
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 1.5)
+                    }
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -159,6 +257,7 @@ private struct RailButton<Label: View>: View {
 private struct ModelRow: View {
     let entry: CatalogModel
     let chosen: Bool
+    let lit: Bool
     let starred: Bool
     let onStar: () -> Void
     let action: () -> Void
@@ -201,7 +300,7 @@ private struct ModelRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
-            Color.primary.opacity(chosen ? 0.06 : isHovering ? 0.08 : 0),
+            Color.primary.opacity(lit ? 0.1 : isHovering ? 0.08 : chosen ? 0.06 : 0),
             in: RoundedRectangle(cornerRadius: 6))
         .onHover { isHovering = $0 }
     }

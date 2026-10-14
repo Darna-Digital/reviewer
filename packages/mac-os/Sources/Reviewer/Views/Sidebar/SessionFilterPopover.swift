@@ -8,9 +8,10 @@
 // The dates stand under a rule of their own, plain — a range needs no
 // mark — and a pick on either axis puts the popover away.
 //
-// The field is the pane bars' own search field, and takes the keys the
-// branch popover's does: ↑/↓ walk the rows under it, wrapping at the ends,
-// Return picks the lit one, Escape clears the search and then closes.
+// The keys are the branch popover's (see `popoverListKeys`): ↑/↓ walk the
+// rows, wrapping at the ends, Return picks the lit one, Escape clears the
+// search and then closes — with or without the field, which a single
+// project goes without.
 import SwiftUI
 
 struct SessionFilterPopover: View {
@@ -62,31 +63,22 @@ struct SessionFilterPopover: View {
             dates(lines)
         }
         .frame(width: Self.width)
+        .popoverListKeys(active: activeOrNone, count: lines.count, pick: { pick(at: $0, in: lines) }) { press in
+            guard press.key == .escape, searching else { return false }
+            query = ""
+            return true
+        }
         .onChange(of: query) { active = 0 }
         .onChange(of: lines.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
     }
 
-    private var field: some View {
-        PaneSearchField(prompt: "Search projects", text: $query, focusesOnAppear: true, command: take(command:))
-            .padding(8)
+    private var activeOrNone: Binding<Int?> {
+        Binding(get: { active }, set: { active = $0 ?? 0 })
     }
 
-    /// The keys the field hands over: the arrows walk the rows, Return
-    /// picks, Escape clears the search and then closes.
-    private func take(command selector: Selector) -> Bool {
-        switch selector {
-        case #selector(NSResponder.moveUp(_:)):
-            step(-1, in: lines.count)
-        case #selector(NSResponder.moveDown(_:)):
-            step(1, in: lines.count)
-        case #selector(NSResponder.insertNewline(_:)):
-            pick(at: active, in: lines)
-        case #selector(NSResponder.cancelOperation(_:)):
-            if searching { query = "" } else { dismiss() }
-        default:
-            return false
-        }
-        return true
+    private var field: some View {
+        PaneSearchField(prompt: "Search projects", text: $query, focusesOnAppear: true)
+            .padding(8)
     }
 
     private func projects(_ lines: [Line]) -> some View {
@@ -145,11 +137,6 @@ struct SessionFilterPopover: View {
             }
         }
         .padding(4)
-    }
-
-    private func step(_ offset: Int, in count: Int) {
-        guard count > 0 else { return }
-        active = (active + offset + count) % count
     }
 
     private func pick(at index: Int, in lines: [Line]) {

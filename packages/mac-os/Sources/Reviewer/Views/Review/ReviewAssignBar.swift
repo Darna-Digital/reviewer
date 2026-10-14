@@ -233,13 +233,35 @@ private struct CollapsedChip: View {
 /// The comments as a review reads them: each file's name once, its notes
 /// under it — the line in a gutter, then what it says. A note on the code
 /// is a way to it; one on the running UI sits on no line and only reads
-/// back. The delete stays dark until the row is under the pointer.
+/// back. The delete stays dark until the row is under the pointer, or the
+/// keys: ↑/↓ walk the comments, Return opens the lit one and Delete
+/// deletes it.
 private struct CommentList: View {
     let review: ShellReview
     let dismiss: () -> Void
     @Environment(AppModel.self) private var model
+    /// Held by id rather than place, so a deletion above it leaves the
+    /// same comment lit.
+    @State private var lit: ShellReviewComment.ID?
+
+    private var comments: [ShellReviewComment] { review.byFile.flatMap(\.comments) }
 
     var body: some View {
+        let comments = comments
+        ScrollViewReader { proxy in
+            list
+                .popoverListKeys(active: litPosition(in: comments), count: comments.count, pick: { open(comments[$0]) }) { press in
+                    guard press.key == .delete else { return false }
+                    deleteLit(in: comments)
+                    return true
+                }
+                .onChange(of: lit) { _, id in
+                    if let id { proxy.scrollTo(id) }
+                }
+        }
+    }
+
+    private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(review.byFile, id: \.file) { group in
@@ -252,12 +274,10 @@ private struct CommentList: View {
                             .padding(.bottom, 4)
                         ForEach(group.comments) { comment in
                             CommentRow(
-                                comment: comment,
-                                onOpen: {
-                                    dismiss()
-                                    model.act(onReview: .open(comment.id))
-                                },
+                                comment: comment, lit: lit == comment.id,
+                                onOpen: { open(comment) },
                                 onDelete: { model.act(onReview: .delete(comment.id)) })
+                            .id(comment.id)
                         }
                     }
                 }
@@ -267,10 +287,30 @@ private struct CommentList: View {
         .frame(width: 360)
         .frame(maxHeight: 320)
     }
+
+    private func litPosition(in comments: [ShellReviewComment]) -> Binding<Int?> {
+        Binding(
+            get: { comments.firstIndex { $0.id == lit } },
+            set: { position in lit = position.map { comments[$0].id } })
+    }
+
+    private func open(_ comment: ShellReviewComment) {
+        dismiss()
+        model.act(onReview: .open(comment.id))
+    }
+
+    /// Deletes the lit comment and lights the one that takes its place.
+    private func deleteLit(in comments: [ShellReviewComment]) {
+        guard let index = comments.firstIndex(where: { $0.id == lit }) else { return }
+        let rest = comments.filter { $0.id != lit }
+        model.act(onReview: .delete(comments[index].id))
+        lit = rest.isEmpty ? nil : rest[min(index, rest.count - 1)].id
+    }
 }
 
 private struct CommentRow: View {
     let comment: ShellReviewComment
+    let lit: Bool
     let onOpen: () -> Void
     let onDelete: () -> Void
     @State private var isHovering = false
@@ -286,12 +326,12 @@ private struct CommentRow: View {
                     .frame(width: 20, height: 20)
             }
             .buttonStyle(.plain)
-            .opacity(isHovering ? 1 : 0)
+            .opacity(lit || isHovering ? 1 : 0)
             .padding(.top, 6)
             .padding(.trailing, 6)
             .help("Delete comment")
         }
-        .background(Color.primary.opacity(isHovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.primary.opacity(lit ? 0.1 : isHovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 6))
         .onHover { isHovering = $0 }
     }
 
@@ -339,9 +379,16 @@ private struct TargetPicker: View {
     let dismiss: () -> Void
     @Environment(AppModel.self) private var model
     @State private var query = ""
+    @State private var active: Int? = 0
     @FocusState private var fieldFocused: Bool
 
     private var handoff: ReviewHandoff { model.reviewHandoff }
+
+    /// Every row the keys can land on, in the order they stand.
+    private enum Line: Hashable {
+        case agent(ChatProviderKind)
+        case session(ChatSummary.ID)
+    }
 
     var body: some View {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -352,6 +399,8 @@ private struct TargetPicker: View {
         let here = handoff.sessions(onBranch: review.branch).filter(matches)
         let hereIds = Set(here.map(\.id))
         let elsewhere = handoff.sessions.filter { !hereIds.contains($0.id) && matches($0) }
+        let lines = agents.map(Line.agent) + (here + elsewhere).map { Line.session($0.id) }
+        let lit = active.flatMap { lines.indices.contains($0) ? lines[$0] : nil }
         VStack(spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
@@ -361,6 +410,7 @@ private struct TargetPicker: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .focused($fieldFocused)
+                    .autocorrectionDisabled()
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
@@ -372,33 +422,41 @@ private struct TargetPicker: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
             } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 1) {
-                        if !agents.isEmpty {
-                            Heading("New chat")
-                            ForEach(agents, id: \.self) { agent in
-                                PickerRow(chosen: isNew(agent)) { handoff.pick(agent: agent); dismiss() } label: {
-                                    AgentGlyph(kind: agent, size: 14)
-                                    Text(agent.label)
-                                        .lineLimit(1)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 1) {
+                            if !agents.isEmpty {
+                                Heading("New chat")
+                                ForEach(agents, id: \.self) { agent in
+                                    PickerRow(chosen: isNew(agent), lit: lit == .agent(agent)) { pick(.agent(agent)) } label: {
+                                        AgentGlyph(kind: agent, size: 14)
+                                        Text(agent.label)
+                                            .lineLimit(1)
+                                    }
+                                    .id(Line.agent(agent))
                                 }
                             }
+                            if !here.isEmpty {
+                                Heading("On ‘\(review.branch)’")
+                                ForEach(here) { chat in sessionRow(chat, showBranch: false, lit: lit) }
+                            }
+                            if !elsewhere.isEmpty {
+                                Heading(here.isEmpty ? "Sessions" : "Other sessions")
+                                ForEach(elsewhere) { chat in sessionRow(chat, showBranch: true, lit: lit) }
+                            }
                         }
-                        if !here.isEmpty {
-                            Heading("On ‘\(review.branch)’")
-                            ForEach(here) { chat in sessionRow(chat, showBranch: false) }
-                        }
-                        if !elsewhere.isEmpty {
-                            Heading(here.isEmpty ? "Sessions" : "Other sessions")
-                            ForEach(elsewhere) { chat in sessionRow(chat, showBranch: true) }
-                        }
+                        .padding(4)
                     }
-                    .padding(4)
+                    .frame(maxHeight: 280)
+                    .onChange(of: lit) { _, line in
+                        if let line { proxy.scrollTo(line) }
+                    }
                 }
-                .frame(maxHeight: 280)
             }
         }
         .frame(width: 320)
+        .popoverListKeys(active: $active, count: lines.count) { pick(lines[$0]) }
+        .onChange(of: query) { active = 0 }
         .onAppear {
             Task { @MainActor in fieldFocused = true }
             Task { await handoff.reloadSessions() }
@@ -410,10 +468,17 @@ private struct TargetPicker: View {
         return false
     }
 
-    private func sessionRow(_ chat: ChatSummary, showBranch: Bool) -> some View {
-        PickerRow(chosen: handoff.target == .existing(chatId: chat.id)) {
-            handoff.pick(.existing(chatId: chat.id))
-            dismiss()
+    private func pick(_ line: Line) {
+        switch line {
+        case .agent(let agent): handoff.pick(agent: agent)
+        case .session(let id): handoff.pick(.existing(chatId: id))
+        }
+        dismiss()
+    }
+
+    private func sessionRow(_ chat: ChatSummary, showBranch: Bool, lit: Line?) -> some View {
+        PickerRow(chosen: handoff.target == .existing(chatId: chat.id), lit: lit == .session(chat.id)) {
+            pick(.session(chat.id))
         } label: {
             AgentGlyph(kind: chat.provider, size: 14)
             Text(chat.title)
@@ -428,6 +493,7 @@ private struct TargetPicker: View {
             }
         }
         .help(sessionHint(chat))
+        .id(Line.session(chat.id))
     }
 
     /// What the row cannot show: the last thing said, and when.
@@ -456,6 +522,7 @@ private struct Heading: View {
 
 private struct PickerRow<Label: View>: View {
     let chosen: Bool
+    let lit: Bool
     let action: () -> Void
     @ViewBuilder let label: Label
     @State private var isHovering = false
@@ -470,7 +537,7 @@ private struct PickerRow<Label: View>: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                Color.primary.opacity(chosen ? 0.06 : isHovering ? 0.08 : 0),
+                Color.primary.opacity(lit ? 0.1 : isHovering ? 0.08 : chosen ? 0.06 : 0),
                 in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }

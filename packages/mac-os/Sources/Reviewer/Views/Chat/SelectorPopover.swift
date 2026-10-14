@@ -33,25 +33,45 @@ struct SelectorPopover<Value: Hashable>: View {
         .buttonStyle(ComposerChipStyle())
         .help(help)
         .popover(isPresented: $open, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 1) {
-                ForEach(options) { option in
-                    SelectorRow(option: option, chosen: option.value == value) {
-                        onSelect(option.value)
-                        open = false
-                    }
+            SelectorList(options: options, value: value) { chosen in
+                onSelect(chosen)
+                open = false
+            }
+        }
+    }
+}
+
+/// The options, walked from the keys or the pointer as one highlight, the
+/// way a menu's is — opening on the option that is on.
+private struct SelectorList<Value: Hashable>: View {
+    let options: [SelectorOption<Value>]
+    let value: Value
+    let pick: (Value) -> Void
+    @State private var active: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
+                SelectorRow(option: option, chosen: option.value == value, lit: active == index) { inside in
+                    if inside { active = index } else if active == index { active = nil }
+                } action: {
+                    pick(option.value)
                 }
             }
-            .padding(4)
-            .frame(width: 280)
         }
+        .padding(4)
+        .frame(width: 280)
+        .popoverListKeys(active: $active, count: options.count) { pick(options[$0].value) }
+        .onAppear { active = options.firstIndex { $0.value == value } }
     }
 }
 
 private struct SelectorRow<Value: Hashable>: View {
     let option: SelectorOption<Value>
     let chosen: Bool
+    let lit: Bool
+    let hover: (Bool) -> Void
     let action: () -> Void
-    @State private var isHovering = false
 
     var body: some View {
         Button(action: action) {
@@ -83,12 +103,12 @@ private struct SelectorRow<Value: Hashable>: View {
             .padding(.vertical, 7)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                (chosen || isHovering ? Color.primary.opacity(isHovering ? 0.08 : 0.05) : Color.clear),
+                (chosen || lit ? Color.primary.opacity(lit ? 0.08 : 0.05) : Color.clear),
                 in: RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .onHover(perform: hover)
     }
 }
 
