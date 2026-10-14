@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.20 — 2026-10-14
+
+### Changed
+
+- The sessions list in the sidebar now scrolls smoothly however many sessions you have, even with several agents working at once.
+- The project filter in the sessions list now shows each project's folder under its name, so two copies of the same repository are easy to tell apart. Searching the filter matches folder paths too, and a path too long for its row shows in full when you point at it.
+
 ## v0.0.19 — 2026-10-14
 
 ### Added
