@@ -46,6 +46,12 @@ final class ChatSession {
     @ObservationIgnored private var seenMark: String?
 
     private static let staleAfter: TimeInterval = 45
+    /// The whole conversation arrives as one snapshot frame on every
+    /// connect, and a long session's runs past a megabyte — the socket's
+    /// own limit, which fails the receive outright. Over it, the socket
+    /// dropped on its first frame and reconnected into the same snapshot
+    /// for good, so nothing said after the session was opened ever showed.
+    private static let largestFrame = 256 * 1024 * 1024
     private static let watchdogEvery: Duration = .seconds(5)
 
     init(id: String, client: ReviewerClient, seed: Chat? = nil) {
@@ -72,8 +78,13 @@ final class ChatSession {
 
     /// A send while a turn is running is accepted, not blocked: the server
     /// queues the message and the agent picks it up when the turn settles.
+    /// The server answers with the conversation as it stands, message
+    /// included. A live socket delivers the same and more besides, so the
+    /// answer is only adopted while the socket is down — the message shows
+    /// either way rather than waiting on the reconnect.
     func send(text: String, images: [ChatImageUpload]) async throws {
-        _ = try await client.sendMessage(chatId: id, text: text, images: images)
+        let answered = try await client.sendMessage(chatId: id, text: text, images: images)
+        if status != .live { chat = answered }
         onListChanged?()
     }
 
@@ -96,6 +107,7 @@ final class ChatSession {
         generation += 1
         let generation = generation
         let task = URLSession.shared.webSocketTask(with: client.chatStreamURL(chatId: id))
+        task.maximumMessageSize = Self.largestFrame
         socket = task
         task.resume()
         Task { await receive(from: task, generation: generation) }
