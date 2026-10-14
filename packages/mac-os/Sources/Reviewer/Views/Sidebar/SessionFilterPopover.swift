@@ -5,6 +5,12 @@
 // radio items is a list you scroll to find the one you meant. Each stands
 // under the avatar it is known by everywhere else (see `RepoAvatar`), and
 // "All projects" keeps the badge's shape so the names stay in one column.
+// Under each name stands the folder it lives in, the home folder folded to
+// `~` — two checkouts of one repository share a name, and the path is what
+// tells them apart — and the search reads the path as well as the name. A
+// path too long for its row is cut at its end and says the whole of itself
+// in a tooltip off the row's trailing edge, as a branch name does in the
+// branch picker (see `RowTooltip`).
 // The dates stand under a rule of their own, plain — a range needs no
 // mark — and a pick on either axis puts the popover away.
 //
@@ -23,7 +29,8 @@ struct SessionFilterPopover: View {
     @State private var active = 0
 
     private static let width: CGFloat = 288
-    private static let listHeight: CGFloat = 224
+    private static let listHeight: CGFloat = 264
+    private static let home = NSHomeDirectory()
 
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
     private var searching: Bool { !needle.isEmpty }
@@ -31,7 +38,10 @@ struct SessionFilterPopover: View {
     private var hasProjects: Bool { filters.projects.count > 1 }
 
     private var shown: [ShellProjectTally] {
-        searching ? filters.projects.filter { $0.name.localizedCaseInsensitiveContains(needle) } : filters.projects
+        guard searching else { return filters.projects }
+        return filters.projects.filter {
+            $0.name.localizedCaseInsensitiveContains(needle) || folded($0.path).localizedCaseInsensitiveContains(needle)
+        }
     }
 
     /// Every row the keys can land on, in order: the projects, then the dates.
@@ -72,6 +82,10 @@ struct SessionFilterPopover: View {
         .onChange(of: lines.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
     }
 
+    private func folded(_ path: String) -> String {
+        RepoRow.fold(path, home: Self.home)
+    }
+
     private var activeOrNone: Binding<Int?> {
         Binding(get: { active }, set: { active = $0 ?? 0 })
     }
@@ -96,15 +110,12 @@ struct SessionFilterPopover: View {
                         .id(Line.allProjects)
                     }
                     ForEach(shown) { project in
-                        FilterRow(lit: lines[safe: active] == .project(project.path), checked: filters.project == project.path) {
-                            RepoAvatar(name: project.name, size: 20)
-                            Text(project.name)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        } pick: {
+                        ProjectFilterRow(
+                            name: project.name, path: folded(project.path),
+                            lit: lines[safe: active] == .project(project.path), checked: filters.project == project.path
+                        ) {
                             take(.project(project.path))
                         }
-                        .help(project.path)
                         .id(Line.project(project.path))
                     }
                     if shown.isEmpty {
@@ -166,6 +177,39 @@ private struct AllProjectsMark: View {
     }
 }
 
+/// A project's row: its avatar, its name, and the folder it lives in
+/// beneath, cut at the end when the row is too narrow for it.
+private struct ProjectFilterRow: View {
+    let name: String
+    let path: String
+    let lit: Bool
+    let checked: Bool
+    let pick: () -> Void
+    @State private var pathClipped = false
+
+    private static let height: CGFloat = 42
+    private static let pathFont = NSFont.systemFont(ofSize: 11)
+
+    var body: some View {
+        FilterRow(lit: lit, checked: checked, height: Self.height, tooltip: pathClipped ? path : nil) {
+            RepoAvatar(name: name, size: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(path)
+                    .font(Font(Self.pathFont))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .measuringClip(path, font: Self.pathFont, into: $pathClipped)
+            }
+        } pick: {
+            pick()
+        }
+    }
+}
+
 /// One row: what it is, and a tick at the trailing edge for the one the
 /// list is narrowed to. Lit by the keys in one wash and by the pointer in
 /// a fainter one, kept apart so a list walked under a still pointer is not
@@ -173,6 +217,10 @@ private struct AllProjectsMark: View {
 private struct FilterRow<Content: View>: View {
     let lit: Bool
     let checked: Bool
+    var height: CGFloat = 32
+    /// What the row says off its trailing edge while it is lit or pointed
+    /// at — the whole of what it had to cut.
+    var tooltip: String? = nil
     @ViewBuilder let content: Content
     let pick: () -> Void
     @State private var isHovering = false
@@ -188,11 +236,12 @@ private struct FilterRow<Content: View>: View {
         }
         .font(.system(size: 13))
         .padding(.horizontal, 6)
-        .frame(height: 32)
+        .frame(height: height)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Color.primary.opacity(lit ? 0.1 : isHovering ? 0.06 : 0),
             in: RoundedRectangle(cornerRadius: 6))
+        .rowTooltip(tooltip, active: isHovering || lit)
         .contentShape(Rectangle())
         .onTapGesture(perform: pick)
         .onHover { isHovering = $0 }

@@ -150,7 +150,10 @@ final class AppModel {
             self?.treeReported()
         }
         page.onSessionsReported = { [weak self] list in
-            if let list { self?.sessions = list }
+            // The page reports on every change to what it holds, and most
+            // reports carry the list as it already stands; the sidebar is
+            // only invalidated by one that moved something.
+            if let list, list != self?.sessions { self?.sessions = list }
         }
         page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
         page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }

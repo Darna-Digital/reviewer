@@ -43,12 +43,18 @@ struct Orb: View {
     /// Held still, the resting opacity is too faint to read as anything at
     /// all, so a lattice that cannot move shows itself plainly instead.
     private func opacity(_ swell: Double?) -> Double {
-        guard let swell else { return 0.5 }
-        let rest = colorScheme == .dark ? 0.2 : 0.14
+        guard let swell else { return Self.stillOpacity }
+        return Self.opacity(swell, dark: colorScheme == .dark)
+    }
+
+    static let stillOpacity = 0.5
+
+    static func opacity(_ swell: Double, dark: Bool) -> Double {
+        let rest = dark ? 0.2 : 0.14
         return rest + (1 - rest) * swell
     }
 
-    private struct Cell {
+    struct Cell {
         let x: Int
         let y: Int
         /// How far into the wave this dot already is, as a fraction of a period.
@@ -59,19 +65,19 @@ struct Orb: View {
     private static let pitch: CGFloat = 6
     private static let diameter: CGFloat = 3
     private static let stage: CGFloat = 28
-    private static let period: Double = 1.7
+    static let period: Double = 1.7
     /// The share of the period the swell occupies. A dot held at rest for the
     /// back half of the cycle reads as a step rather than a sweep, so the
     /// crest is wide enough that three diagonals are always in motion at once.
     private static let crest = 0.72
-    private static let peakScale = 1.18
+    static let peakScale = 1.18
     private static let diagonals = 2 * (grid - 1) + 1
 
     /// The lattice occupies 15 of the 28pt stage, so it is inset by the 6.5
     /// that centres it — the web's `translate(6.5px, 6.5px)`.
     private static let inset = (stage - (CGFloat(grid - 1) * pitch + diameter)) / 2
 
-    private static let cells: [Cell] = (0..<(grid * grid)).map { at in
+    static let cells: [Cell] = (0..<(grid * grid)).map { at in
         let x = at % grid
         let y = at / grid
         let diagonal = x + y
@@ -80,13 +86,13 @@ struct Orb: View {
 
     /// A raised cosine over the crest, flat at rest for what is left of the
     /// period: 0 at either end of the swell and 1 at its peak.
-    private static func swell(at seconds: TimeInterval, shift: Double) -> Double {
+    static func swell(at seconds: TimeInterval, shift: Double) -> Double {
         let phase = (seconds / period + shift).truncatingRemainder(dividingBy: 1)
         guard phase < crest else { return 0 }
         return (1 - cos(2 * .pi * phase / crest)) / 2
     }
 
-    private static func dot(_ cell: Cell, swell: Double?, size: CGFloat) -> Path {
+    static func dot(_ cell: Cell, swell: Double?, size: CGFloat) -> Path {
         let scale = size / stage
         let centre = CGPoint(
             x: (inset + CGFloat(cell.x) * pitch + diameter / 2) * scale,
