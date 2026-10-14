@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.21 — 2026-10-14
+
+### Fixed
+
+- In long sessions, messages you send and the agent's replies now show up as they happen. Before, a long conversation stopped updating once it was open, and you had to leave and reopen it to see anything new.
+
 ## v0.0.20 — 2026-10-14
 
 ### Changed
