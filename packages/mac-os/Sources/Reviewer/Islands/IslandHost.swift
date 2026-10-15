@@ -122,6 +122,14 @@ final class IslandHost: NSObject {
         dispatch(["type": "refresh"])
     }
 
+    /// The working tree moved under the page — a file written, a ref
+    /// moved — so what it holds of git is asked for again, and nothing
+    /// else: the sessions and the merge requests are not the tree's.
+    func worktreeChanged() {
+        guard isReady else { return }
+        dispatch(["type": "worktreeChanged"])
+    }
+
     func reload() {
         isReady = false
         view.load(URLRequest(url: source.url(for: href)))

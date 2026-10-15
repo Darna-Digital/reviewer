@@ -75,7 +75,7 @@ final class HeadWatcher {
 
     /// Where the repository keeps HEAD: its `.git` folder — or, for a
     /// linked worktree, whose `.git` is a file, the folder that file names.
-    private static func gitDirectory(of project: String) -> URL? {
+    static func gitDirectory(of project: String) -> URL? {
         let dotGit = URL(fileURLWithPath: project).appendingPathComponent(".git")
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: dotGit.path, isDirectory: &isDirectory) else { return nil }

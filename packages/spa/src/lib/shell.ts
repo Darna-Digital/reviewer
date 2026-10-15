@@ -41,6 +41,10 @@ export type ShellEvent =
   /** Something changed behind the island's back — a save, an agent turn ending,
    * a project switch — so everything it holds is re-asked for. */
   | { readonly type: "refresh" }
+  /** The working tree moved on disk — a file written by an agent or another
+   * editor, a ref moved — so what the island holds of git is re-asked for,
+   * and nothing else. */
+  | { readonly type: "worktreeChanged" }
   /** A menu chord for the window tabs — see `ShellWindowTabAction`. */
   | { readonly type: "windowTabs"; readonly action: ShellWindowTabAction }
   /** The shell's own file tree was acted on — see `ShellTree`. */

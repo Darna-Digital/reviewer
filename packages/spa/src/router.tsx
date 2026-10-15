@@ -8,25 +8,35 @@ import { routeTree } from "./routeTree.gen";
 // which never fires when you OS-switch between apps (the document stays
 // "visible" the whole time). In the desktop wrapper that means returning to the
 // window after editing files elsewhere never refetched git/diff data — you had
-// to reload the whole app. Chromium *does* fire a `focus` event on the window
-// when the BrowserWindow regains OS focus, so listen for that too.
+// to reload the whole app. The web view *does* fire `focus` and `blur` on the
+// window as its window gains and loses OS focus, so listen for those too.
+//
+// Leaving is reported as well as coming back. The focus manager only tells its
+// listeners when the state it holds changes, so a focus reported while it
+// still held the last one was dropped: the first return to the window
+// refetched, and none after it did.
 if (typeof window !== "undefined") {
   // Only a focus the app actually left counts: `hasFocus()` is true for the
   // whole document tree, so a focus that never left it refetches nothing.
   let away = !document.hasFocus();
 
   focusManager.setEventListener((handleFocus) => {
-    const onFocus = () => {
+    const leave = () => {
+      away = true;
+      handleFocus(false);
+    };
+    const comeBack = () => {
       if (!away) return;
       away = false;
       handleFocus(true);
     };
+    const onFocus = comeBack;
     const onBlur = () => {
-      away = !document.hasFocus();
+      if (!document.hasFocus()) leave();
     };
     const onVisibility = () => {
-      away = document.hidden;
-      handleFocus();
+      if (document.hidden) leave();
+      else comeBack();
     };
     window.addEventListener("focus", onFocus, false);
     window.addEventListener("blur", onBlur, false);

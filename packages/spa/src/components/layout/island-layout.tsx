@@ -33,7 +33,7 @@ import { useEffect, useRef } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { IslandBar } from "@/components/layout/island-bar";
-import { useWorkspace } from "@/lib/queries";
+import { isGitData, useWorkspace } from "@/lib/queries";
 import { type Island, type ShellViewAction, shell } from "@/lib/shell";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
 import { readUiPrefs, setUiPrefs } from "@/lib/ui-prefs";
@@ -125,6 +125,9 @@ function useShellNavigation(island: Island): void {
             return;
           case "refresh":
             void queryClient.invalidateQueries();
+            return;
+          case "worktreeChanged":
+            void queryClient.invalidateQueries({ predicate: isGitData });
             return;
           case "view":
             applyViewAction(event.action);

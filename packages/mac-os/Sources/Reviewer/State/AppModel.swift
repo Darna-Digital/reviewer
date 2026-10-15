@@ -95,6 +95,7 @@ final class AppModel {
     let settings: AppSettings
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
     @ObservationIgnored private var headWatcher: HeadWatcher?
+    @ObservationIgnored private var worktreeWatcher: WorktreeWatcher?
     /// The app's own actions that move HEAD and re-read the project once
     /// they are through — while any is running, the watcher's word that
     /// HEAD moved is already answered for.
@@ -134,6 +135,9 @@ final class AppModel {
         }
         headWatcher = HeadWatcher { [weak self] in
             Task { await self?.followHead() }
+        }
+        worktreeWatcher = WorktreeWatcher { [weak self] in
+            self?.page.worktreeChanged()
         }
         page.onNavigated = { [weak self] href in
             self?.chats.follow(href: href)
@@ -283,6 +287,7 @@ final class AppModel {
     private func refreshProjectState() async {
         palette.projectChanged()
         headWatcher?.watch(project: workspace?.project)
+        worktreeWatcher?.watch(project: workspace?.project)
         guard hasProject else {
             status = nil
             branches = []

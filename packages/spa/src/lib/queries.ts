@@ -3,7 +3,7 @@
  * `api.queryOptions(...)`; components use these hooks. Centralising them keeps
  * query keys consistent so mutations/invalidation hit the right caches.
  */
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { type Query, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
 import { island } from "@/lib/shell";
@@ -27,7 +27,17 @@ const GIT_DATA = {
   // However fresh git's answer is, it was true of a tree that anything else on
   // the machine can have changed since — so returning to the window asks again.
   refetchOnWindowFocus: "always",
+  // And so does the shell, when it sees the tree move (see `isGitData`).
+  meta: { gitData: true },
 } as const;
+
+/**
+ * Whether a query reads the working tree — what the shell's word that the tree
+ * moved on disk makes stale, while the sessions and the merge requests, which
+ * a file written changes nothing of, are left alone.
+ */
+export const isGitData = (query: Query): boolean =>
+  query.meta?.gitData === true;
 
 /** Written only through this app, and invalidated by whatever writes it. */
 const OWN_DATA = { staleTime: 30_000 } as const;
