@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.0.22 — 2026-10-15
+
+### Changed
+
+- Switching between Files, Changes, Merge requests and Sessions in the sidebar is smoother. A page you have already visited comes back at once instead of being rebuilt, and the sidebar no longer stutters as the rail and the search bar slide in and out.
+- Coming back to a session, or switching back to Sessions, is quicker when the conversation has long replies in it.
+
+### Fixed
+
+- Diffs now update on their own when files change — an agent editing them, a save from another editor, or a commit on the branch. Before, a diff on screen could keep showing old changes until you refreshed with ⌘R.
+- Coming back to the window now refreshes the diff and the file status every time, not only the first time.
+- Long conversations no longer come back as a blank page: returning to a session with a very long reply in it now shows the reply.
+
 ## v0.0.21 — 2026-10-14
 
 ### Fixed
