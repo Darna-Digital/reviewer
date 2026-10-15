@@ -19,6 +19,9 @@ struct AppRail: View {
     static let width: CGFloat = 36
     var inset: CGFloat = IslandMetrics.gap
 
+    /// The room the rail takes beside what stands next to it.
+    var footprint: CGFloat { Self.width + inset }
+
     var body: some View {
         VStack(spacing: 4) {
             ForEach(CodeSurface.allCases) { surface in

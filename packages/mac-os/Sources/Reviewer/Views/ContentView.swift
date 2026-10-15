@@ -118,21 +118,27 @@ private struct ServerErrorAlert: ViewModifier {
 /// The rail down the sidebar's leading edge, and the tree beside it. On
 /// the sessions surface the rail collapses and the list takes its column
 /// (see `AppModel.railShown`), sliding out and back at the sidebar's own
-/// tempo.
+/// tempo. The list takes its new width at once and is drawn sliding over
+/// from where it stood (see `SidebarMotion`), and the rail is only drawn
+/// moving: neither is laid out again frame by frame.
 private struct SidebarColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        HStack(spacing: 0) {
-            if model.railShown {
-                AppRail()
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-            }
+        let rail = AppRail()
+        let railShown = model.railShown
+        ZStack(alignment: .leading) {
             SidebarView()
-                .frame(maxWidth: .infinity)
+                .padding(.leading, railShown ? rail.footprint : 0)
+                .slid(railShown, by: CGSize(width: rail.footprint, height: 0))
+            rail
+                .animation(SidebarMotion.change) {
+                    $0.offset(x: railShown ? 0 : -rail.footprint).opacity(railShown ? 1 : 0)
+                }
+                .allowsHitTesting(railShown)
+                .accessibilityHidden(!railShown)
         }
         .clipped()
-        .animation(SidebarMotion.change, value: model.railShown)
         // The theme's ink over the column's content, and not over the bar
         // above it (see `ThemeInk`).
         .themeInk()

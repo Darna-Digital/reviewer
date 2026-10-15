@@ -35,13 +35,10 @@ struct ReplyText: View {
     @State private var highlights: [CodeHighlightRequest: HighlightedCode] = [:]
 
     var body: some View {
-        let metrics = MarkdownMetrics(size: size)
-        let blocks = MarkdownBlock.parse(text, code: metrics.codeFont)
         let theme = ChromePalette.shared.themeName(for: colorScheme == .dark ? .dark : .light)
-        let snippets = ReplySnippet.all(in: blocks, theme: theme)
-        let document = ReplyDocument(metrics: metrics, theme: theme, highlights: highlights).build(blocks)
-        SelectableText(document: document, openURL: openURL)
-            .task(id: snippets) { await paint(snippets) }
+        let reply = ReadReply.of(text, size: size, theme: theme)
+        SelectableText(document: reply.document(highlights: highlights), openURL: openURL)
+            .task(id: reply.snippets) { await paint(reply.snippets) }
     }
 
     /// Colours every snippet the reply holds, one at a time, each landing
@@ -65,6 +62,66 @@ struct ReplyText: View {
                 highlights[snippet.request] = read
             }
         }
+    }
+}
+
+/// A reply as it was read and written out, kept for the next time it is
+/// drawn. A conversation drawn again — opened anew, or brought back with
+/// its column — would otherwise parse every reply in it and set each out
+/// again on the main thread, all in the frame it appears: the frame the
+/// motion bringing it in lost. A reply is written out once per set of
+/// snippets coloured in it, since that is all that changes the result.
+@MainActor
+private final class ReadReply {
+    private struct Key: Hashable {
+        let text: String
+        let size: CGFloat
+        let theme: String
+    }
+
+    /// `NSCache` wants objects for keys.
+    private final class BoxedKey: NSObject {
+        let key: Key
+        init(_ key: Key) { self.key = key }
+        override var hash: Int { key.hashValue }
+        override func isEqual(_ object: Any?) -> Bool { (object as? BoxedKey)?.key == key }
+    }
+
+    /// Every reply a few long conversations hold, and the streaming tail
+    /// of one, whose every token is a reply of its own.
+    private static let cache: NSCache<BoxedKey, ReadReply> = {
+        let cache = NSCache<BoxedKey, ReadReply>()
+        cache.countLimit = 400
+        return cache
+    }()
+
+    let snippets: [ReplySnippet]
+    private let blocks: [MarkdownBlock]
+    private let metrics: MarkdownMetrics
+    private let theme: String
+    private var documents: [Set<CodeHighlightRequest>: NSAttributedString] = [:]
+
+    private init(text: String, size: CGFloat, theme: String) {
+        metrics = MarkdownMetrics(size: size)
+        blocks = MarkdownBlock.parse(text, code: metrics.codeFont)
+        snippets = ReplySnippet.all(in: blocks, theme: theme)
+        self.theme = theme
+    }
+
+    static func of(_ text: String, size: CGFloat, theme: String) -> ReadReply {
+        let key = BoxedKey(Key(text: text, size: size, theme: theme))
+        if let read = cache.object(forKey: key) { return read }
+        let read = ReadReply(text: text, size: size, theme: theme)
+        cache.setObject(read, forKey: key)
+        return read
+    }
+
+    func document(highlights: [CodeHighlightRequest: HighlightedCode]) -> NSAttributedString {
+        let painted = Set(highlights.keys)
+        if let document = documents[painted] { return document }
+        let document = ReplyDocument(metrics: metrics, theme: theme, highlights: highlights).build(blocks)
+        documents[painted] = document
+        return document
     }
 }
 

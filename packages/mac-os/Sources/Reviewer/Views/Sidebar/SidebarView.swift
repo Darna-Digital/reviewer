@@ -22,19 +22,14 @@ struct SidebarView: View {
 
     var body: some View {
         let layout = model.sidebarLayout
-        VStack(spacing: 0) {
-            if model.hasProject && layout != .sessions {
-                SidebarHeader()
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
+        Group {
             if model.hasProject {
                 TreeColumn(layout: layout)
-                    .frame(maxWidth: .infinity)
             } else {
-                Spacer()
+                Color.clear
             }
         }
-        .animation(SidebarMotion.change, value: layout)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         // The surface changing takes the keyboard off whichever search the
         // column held, at once: the outgoing field is on screen for the
         // length of the crossfade, and would otherwise keep the strokes
@@ -78,9 +73,52 @@ enum SidebarWidths {
 /// the project's tree to the diff's changes and back: a short ease, the
 /// system sidebar's own tempo, and none at all when the user asked for
 /// less motion.
+///
+/// Nothing in the column is resized under it. The column is native lists
+/// and an outline, and resizing one re-tiles its rows: a band sliding in
+/// over the tree, or the rail sliding out beside the list, had the system
+/// lay the whole column out again every frame of the move, a frame's worth
+/// of work each, and the motion stuttered. So a move is laid out once, at
+/// its end, and only drawn — a fade, a band's own slide, and a slide back
+/// from where the layout's last change left things (see `slid(_:by:)`) —
+/// and a page the column has shown is kept up behind the one in front
+/// (see `TreeColumn`), so going back to it builds nothing.
 enum SidebarMotion {
     static var change: Animation? {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeOut(duration: 0.22)
+    }
+}
+
+/// A view laid out where a change has already put it, drawn from where it
+/// stood before, easing over: `progress` is what animates, `settled` is
+/// where the layout already is, and `distance` is how far the layout moves
+/// the view as the change goes on. The view is laid out once, at the end,
+/// and only its drawing moves.
+private struct LayoutSlide: GeometryEffect {
+    var progress: CGFloat
+    let settled: CGFloat
+    let distance: CGSize
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let lag = progress - settled
+        return ProjectionTransform(CGAffineTransform(translationX: lag * distance.width, y: lag * distance.height))
+    }
+}
+
+extension View {
+    /// The view slid back from where it stood before `on` last changed —
+    /// `distance` being how far turning it on moves it in the layout — at
+    /// the sidebar's tempo, and only drawn there: nothing is laid out again
+    /// as it goes.
+    func slid(_ on: Bool, by distance: CGSize) -> some View {
+        animation(SidebarMotion.change) {
+            $0.modifier(LayoutSlide(progress: on ? 1 : 0, settled: on ? 1 : 0, distance: distance))
+        }
     }
 }
 
@@ -112,29 +150,97 @@ private struct SidebarHeader: View {
 
 /// The layout for the surface the page is on — the merge requests, its
 /// tree, or its sessions — or nothing while the page is on neither: a dock
-/// surface with the window to itself. One layout crossfades to the next in
-/// place: stacked, so the one going keeps its frame under the one coming
-/// rather than sharing a column with it and shoving it down for the length
-/// of the fade. The file tree is the one layout in both of its forms — the
+/// surface with the window to itself. The branch picker heads the tree and
+/// the merge requests, and not the sessions list, which is not one
+/// branch's.
+///
+/// A page once shown is kept up behind the one in front rather than put
+/// away, and going back to it is a crossfade of what is already drawn. A
+/// page made afresh is a native list or outline built, filled and tiled
+/// row by row, in the very frame its fade starts — the frame the motion
+/// lost. The file tree is the one page in both of its forms — the
 /// project's and the changes — since it swaps its bands around the same
 /// outline (see `FilesLayout`) rather than being another view.
 private struct TreeColumn: View {
     let layout: SidebarLayout
 
+    @State private var visited: Set<SidebarPage> = []
+    /// The form the file tree was last shown in, which it keeps while
+    /// another page is in front of it.
+    @State private var lastChanges = false
+
     var body: some View {
+        let front = SidebarPage(layout)
+        let kept = front.map { visited.union([$0]) } ?? visited
+        let changes = layout.changes ?? lastChanges
         ZStack {
-            switch layout {
-            case .pulls:
-                PullRequestList()
-            case .files(let changes):
-                FilesLayout(changes: changes)
-            case .sessions:
-                SessionsList()
-            case .nothing:
-                Color.clear
+            ForEach(SidebarPage.allCases.filter(kept.contains), id: \.self) { page in
+                content(of: page, changes: changes)
+                    .kept(inFront: page == front)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: layout, initial: true) { _, layout in
+            if let page = SidebarPage(layout) { visited.insert(page) }
+            if let changes = layout.changes { lastChanges = changes }
+        }
+    }
+
+    @ViewBuilder
+    private func content(of page: SidebarPage, changes: Bool) -> some View {
+        switch page {
+        case .pulls:
+            VStack(spacing: 0) {
+                SidebarHeader()
+                PullRequestList()
+            }
+        case .files:
+            VStack(spacing: 0) {
+                SidebarHeader()
+                FilesLayout(changes: changes)
+            }
+        case .sessions:
+            SessionsList()
+        }
+    }
+}
+
+/// The pages the column keeps — the layouts that hold something.
+private enum SidebarPage: CaseIterable, Hashable {
+    case pulls, files, sessions
+
+    init?(_ layout: SidebarLayout) {
+        switch layout {
+        case .pulls: self = .pulls
+        case .files: self = .files
+        case .sessions: self = .sessions
+        case .nothing: return nil
+        }
+    }
+}
+
+private extension SidebarLayout {
+    var changes: Bool? {
+        guard case .files(let changes) = self else { return nil }
+        return changes
+    }
+}
+
+extension EnvironmentValues {
+    /// Whether the sidebar page a view stands on is the one in front, or
+    /// one kept up behind it (see `TreeColumn`).
+    @Entry var sidebarPageInFront = true
+}
+
+private extension View {
+    /// A kept page, faded in front or out behind: out of reach of the
+    /// pointer and of VoiceOver while it is behind.
+    func kept(inFront: Bool) -> some View {
+        animation(SidebarMotion.change) { $0.opacity(inFront ? 1 : 0) }
+            .allowsHitTesting(inFront)
+            .accessibilityHidden(!inFront)
+            .zIndex(inFront ? 1 : 0)
+            .environment(\.sidebarPageInFront, inFront)
     }
 }
 
@@ -144,7 +250,8 @@ private struct TreeColumn: View {
 /// own. The outline is the same one in both — a surface change swaps the
 /// tree in it, crossfading (see `FileTreeOutline`), rather than the outline
 /// itself — and the search band and the composer slide in and out around
-/// it, the outline giving them room as they come.
+/// it. The outline takes its new place at once and is drawn sliding over
+/// from the old one, so a band coming never resizes it frame by frame.
 private struct FilesLayout: View {
     @Environment(AppModel.self) private var model
     /// Whether the tree is the changed files rather than the project's —
@@ -152,38 +259,56 @@ private struct FilesLayout: View {
     /// address; the listing they stand around follows on its own.
     let changes: Bool
 
+    /// The search band's height as last laid out: how far the outline
+    /// moves as the band comes and goes. A guess until the band is first
+    /// drawn.
+    @State private var searchBandHeight: CGFloat = 42
+
     var body: some View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
-            if changes {
+            Band(edge: .top, shown: changes) {
                 ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchBandHeight = $0 }
             }
             FileTreeOutline()
                 .overlay {
-                    if tree.isEmpty {
-                        TreePlaceholder(loading: tree.isLoading, empty: changes ? "No changes" : "No files")
-                        .transition(.opacity)
+                    ZStack {
+                        if tree.isEmpty {
+                            TreePlaceholder(loading: tree.isLoading, empty: changes ? "No changes" : "No files")
+                                .transition(.opacity)
+                        }
                     }
+                    .animation(SidebarMotion.change, value: tree.isEmpty)
                 }
-            if let commit = tree.commit {
-                CommitComposer(composer: commit, project: tree.listing?.projectPath ?? "")
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                .slid(changes, by: CGSize(width: 0, height: searchBandHeight))
+            Band(edge: .bottom, shown: tree.commit != nil) {
+                if let commit = tree.commit {
+                    CommitComposer(composer: commit, project: tree.listing?.projectPath ?? "")
+                }
             }
         }
         .clipped()
-        .animation(
-            SidebarMotion.change,
-            value: Arrangement(changes: changes, composing: tree.commit != nil, empty: tree.isEmpty))
     }
+}
 
-    /// What the column is made of, so that a change to any of it moves the
-    /// whole at once and nothing else — a keystroke in the search, a status
-    /// arriving — does.
-    private struct Arrangement: Equatable {
-        let changes: Bool
-        let composing: Bool
-        let empty: Bool
+/// A band at an edge of the file tree, sliding in from that edge and back
+/// out. The motion is the band's alone: the room it takes is given at once
+/// rather than animated, so the outline beside it is laid out once, not
+/// every frame of the slide.
+private struct Band<Content: View>: View {
+    let edge: Edge
+    let shown: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ZStack {
+            if shown {
+                content()
+                    .transition(.move(edge: edge).combined(with: .opacity))
+            }
+        }
+        .animation(SidebarMotion.change, value: shown)
     }
 }
 

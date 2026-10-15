@@ -95,6 +95,7 @@ private struct OutlineRepresentable: NSViewRepresentable {
 
     func updateNSView(_ host: CrossfadingHost, context: Context) {
         context.coordinator.prompt = $prompt
+        context.coordinator.inFront = context.environment.sidebarPageInFront
         context.coordinator.sync(
             treeVersion: treeVersion, remadeVersion: remadeVersion, statusVersion: statusVersion,
             selected: selected)
@@ -169,6 +170,9 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
     var prompt: Binding<TreePrompt?>
     weak var outline: FileTreeOutlineView?
     weak var host: CrossfadingHost?
+    /// Whether the tree's page is the one in front: one kept behind
+    /// another has nothing on screen to fade from.
+    var inFront = true
 
     private var shownTreeVersion = -1
     private var shownRemadeVersion = -1
@@ -206,7 +210,7 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
                 // keeps its place.
                 if remade { outline.scroll(.zero) }
             }
-            if remade, let host { host.crossfade(reload) } else { reload() }
+            if remade, inFront, let host { host.crossfade(reload) } else { reload() }
             followedSelection = nil
         } else if statusVersion != drawnStatusVersion {
             drawnStatusVersion = statusVersion
