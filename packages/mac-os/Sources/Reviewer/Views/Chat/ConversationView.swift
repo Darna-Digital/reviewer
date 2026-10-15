@@ -145,6 +145,14 @@ enum ChatLayout {
 /// markdown at the leading edge under each turn's work log. Opens at the
 /// bottom and follows the stream while the reader is there; a prompt of
 /// their own always brings them back down to it.
+///
+/// The rows stand in an eager `VStack`, not a lazy one. A reply is one
+/// row however long it runs, and a lazy stack only guesses at a row it
+/// has not laid out: for a reply many screens tall the guess is off by
+/// thousands of points, so the bottom anchor parked the view in empty
+/// space past the real end — or the row was never made at all — and a
+/// long conversation came back blank. A thread is a few dozen rows at
+/// most, so laying them all out costs little.
 struct MessageTimeline: View {
     let chat: Chat
 
@@ -169,7 +177,7 @@ struct MessageTimeline: View {
         GeometryReader { pane in
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 28) {
                         ForEach(chat.messages) { message in
                             if message.role == .user {
                                 UserMessageRow(message: message)
