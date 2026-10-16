@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.23 — 2026-10-16
+
+### Changed
+
+- Commit messages drafted with Claude now come back faster: Claude writes them with Opus at low effort.
+
+### Fixed
+
+- Generating a commit message from the Changes sidebar now fills in the message as soon as it is ready. Before, the message often never appeared until you clicked into the diff.
+- Popovers such as the sessions filter, the branch and compare pickers, and the model picker now close when you move to another page, instead of staying open over a page they no longer belong to.
+
 ## v0.0.22 — 2026-10-15
 
 ### Changed
