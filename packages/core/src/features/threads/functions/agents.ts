@@ -31,7 +31,7 @@ export const agentCommand = (agent: AgentKind, input: string): string => {
     case "terminal":
       return withoutNulls(input);
     case "claude":
-      return `claude -p ${quote(input)} --output-format text`;
+      return `claude -p ${quote(input)} --output-format text --model opus --effort low`;
     case "opencode":
       return `opencode run ${quote(input)}`;
     case "codex":

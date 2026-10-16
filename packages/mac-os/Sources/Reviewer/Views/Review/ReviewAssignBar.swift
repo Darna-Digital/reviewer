@@ -88,6 +88,7 @@ private struct ReviewAssignBar: View {
             .popover(isPresented: $pickerOpen, arrowEdge: .top) {
                 TargetPicker(review: review) { pickerOpen = false }
             }
+            .closesOnNavigation($pickerOpen)
             if case .new(let agent, let modelId) = target {
                 ModelPicker(catalog: model.chats.catalog, model: modelId, provider: agent) { chosen in
                     handoff.pick(.new(agent: chosen.provider, model: chosen.id))
@@ -172,6 +173,7 @@ private struct CommentsButton: View {
         .popover(isPresented: $listOpen, arrowEdge: .top) {
             CommentList(review: review) { listOpen = false }
         }
+        .closesOnNavigation($listOpen)
     }
 }
 

@@ -31,7 +31,7 @@ describe("agentCommand", () => {
   it("wraps the prompt for each agent and passes a terminal's through", () => {
     expect(agentCommand("terminal", "ls -la")).toBe("ls -la");
     expect(agentCommand("claude", "hi")).toBe(
-      "claude -p 'hi' --output-format text"
+      "claude -p 'hi' --output-format text --model opus --effort low"
     );
     expect(agentCommand("opencode", "hi")).toBe("opencode run 'hi'");
     expect(agentCommand("codex", "hi")).toBe("codex exec 'hi'");
@@ -46,7 +46,7 @@ describe("agentCommand", () => {
 
   it("drops NUL bytes, which a spawn's argv cannot carry", () => {
     expect(agentCommand("claude", "diff\u0000 tail")).toBe(
-      "claude -p 'diff tail' --output-format text"
+      "claude -p 'diff tail' --output-format text --model opus --effort low"
     );
     expect(agentCommand("terminal", "ls\u0000 -la")).toBe("ls -la");
   });

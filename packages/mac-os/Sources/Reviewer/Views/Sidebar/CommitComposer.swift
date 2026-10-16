@@ -154,6 +154,7 @@ struct CommitComposer: View {
                 agentPickerOpen = false
             }
         }
+        .closesOnNavigation($agentPickerOpen)
     }
 
     private var controls: some View {

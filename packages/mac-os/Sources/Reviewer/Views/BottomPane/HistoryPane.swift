@@ -159,6 +159,7 @@ private struct RefPicker: View {
                 history.ref = choice.branch?.ref ?? choice.id
             }, dismiss: { open = false })
         }
+        .closesOnNavigation($open)
     }
 
     private var sections: [BranchChoiceSection] {
@@ -307,6 +308,7 @@ private struct SinceDateButton: View {
             }
             .padding(10)
         }
+        .closesOnNavigation($presented)
     }
 }
 

@@ -90,6 +90,10 @@ export const useCommitDraft = () =>
       staleTime: 0,
       refetchInterval: (query) =>
         query.state.data?.status === "running" ? 1_000 : false,
+      // In the macOS shell the Generate button is native, so pressing it takes
+      // focus out of this page — and an unfocused page skips its polls, which
+      // left the draft running here until the page was clicked again.
+      refetchIntervalInBackground: true,
       refetchOnWindowFocus: "always",
     }
   );

@@ -41,6 +41,7 @@ struct ModelPicker: View {
                 open = false
             }
         }
+        .closesOnNavigation($open)
     }
 }
 

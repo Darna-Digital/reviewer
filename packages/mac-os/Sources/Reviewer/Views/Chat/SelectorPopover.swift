@@ -38,6 +38,7 @@ struct SelectorPopover<Value: Hashable>: View {
                 open = false
             }
         }
+        .closesOnNavigation($open)
     }
 }
 

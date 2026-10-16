@@ -50,6 +50,7 @@ struct BranchPicker: View {
                 .padding(6)
             }
         }
+        .closesOnNavigation($open)
     }
 
     private var sections: [BranchChoiceSection] {

@@ -422,6 +422,12 @@ final class AppModel {
         return view.subviews.lazy.compactMap(splitController(in:)).first
     }
 
+    /// Which page the window is on — its address without the query, which
+    /// says what is picked there, not where it is.
+    var pagePath: String {
+        URLComponents(string: page.href)?.path ?? page.href
+    }
+
     /// The sidebar's rail: which of the code surfaces the page is on, as
     /// its address says.
     var codeSurface: CodeSurface? {

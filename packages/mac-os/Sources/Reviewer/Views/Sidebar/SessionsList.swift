@@ -114,6 +114,7 @@ private struct SessionFilterMenu: View {
                 model.act(onSessions: .filter(project: project, date: date))
             }
         }
+        .closesOnNavigation($open)
     }
 }
 

@@ -52,6 +52,7 @@ struct ComparePicker: View {
                 model.readChanges(against: choice.branch?.ref)
             }, dismiss: { open = false })
         }
+        .closesOnNavigation($open)
     }
 
     private var sections: [BranchChoiceSection] {

@@ -29,7 +29,7 @@ function agentCommand(agent: CommitAgent, prompt: string): string {
   const quoted = `'${prompt.replace(/\0/g, '').replace(/'/g, "'\\''")}'`;
   switch (agent) {
     case 'claude':
-      return `claude -p ${quoted} --output-format text`;
+      return `claude -p ${quoted} --output-format text --model opus --effort low`;
     case 'opencode':
       return `opencode run ${quoted}`;
     case 'codex':
