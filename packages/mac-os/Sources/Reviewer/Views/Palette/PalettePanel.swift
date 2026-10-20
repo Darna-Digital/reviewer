@@ -2,13 +2,14 @@
 // Glass pane hung near the top of the window over the page — a breadcrumb
 // naming the list that is up, one box, one list. It opens on Commands
 // (⌘E), and some of those rows lead deeper rather than acting: Files (also
-// ⇧⇧) is a name search over every path, Text (also ⌘⇧F) greps the working
+// ⇧⌘O) is a name search over every path, Text (also ⇧⌘F) greps the working
 // tree with the match modifiers (case, whole word, regex) on the box's
 // trailing edge, Git holds the git actions and leads on to Branches, which
 // checks one out. The keyboard drives it the way the web one is driven:
 // ↑/↓ walk the list, Home and End jump to its ends, Return runs the row,
 // Backspace on an empty box walks back up the trail, Escape — or a click
-// beside the pane — puts it away.
+// beside the pane — puts it away. The TUI's palette keys answer too: ⌃N/⌃P
+// walk the list, ⌃K is ⌘E, and ⌥C, ⌥W and ⌥R flip the grep's modifiers.
 //
 // The pane is frosted glass rather than an opaque sheet so the code stays
 // visible through it: a result is read against what it will open over. It is
@@ -88,29 +89,49 @@ private struct PalettePanel: View {
             // SwiftUI moves it to the field only once the field is on
             // screen — a turn of the run loop after this.
             Task { @MainActor in fieldFocused = true }
-            backspaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 let key = event.keyCode
-                let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-                return MainActor.assumeIsolated { walksBack(key: key, modifiers: modifiers) } ? nil : event
+                let character = event.charactersIgnoringModifiers?.lowercased()
+                let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+                return MainActor.assumeIsolated {
+                    answers(key: key, character: character, modifiers: modifiers)
+                } ? nil : event
             }
         }
         .onDisappear {
-            if let backspaceMonitor { NSEvent.removeMonitor(backspaceMonitor) }
-            backspaceMonitor = nil
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+            keyMonitor = nil
         }
     }
 
-    /// Backspace with nothing left to delete walks back up the trail. The
-    /// box's own editor answers the key before SwiftUI is asked — it
+    /// The box's own editor answers keys before SwiftUI is asked — it
     /// forwards the arrows and Return, but a delete it takes as its own,
-    /// even with nothing to delete — so the key is heard ahead of the
-    /// window, as ⇧⇧ is, and only this one press is kept from the box.
-    @State private var backspaceMonitor: Any?
+    /// even with nothing to delete, and ⌃N, ⌃P, ⌃K and the ⌥ letters are
+    /// its line moves, kill and accented letters — so these are heard ahead
+    /// of the window, and only the presses answered are kept from the box.
+    @State private var keyMonitor: Any?
     private static let backspaceKeyCode: UInt16 = 51
 
-    private func walksBack(key: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
-        guard key == Self.backspaceKeyCode, modifiers.isEmpty, palette.query.isEmpty else { return false }
-        return palette.back()
+    private func answers(key: UInt16, character: String?, modifiers: NSEvent.ModifierFlags) -> Bool {
+        switch (modifiers, character) {
+        case ([], _) where key == Self.backspaceKeyCode:
+            return palette.query.isEmpty && palette.back()
+        case ([.control], "n"):
+            step(1, in: palette.rows.count)
+        case ([.control], "p"):
+            step(-1, in: palette.rows.count)
+        case ([.control], "k"):
+            palette.toggleCommands()
+        case ([.option], "c") where palette.mode == .text:
+            palette.options.caseSensitive.toggle()
+        case ([.option], "w") where palette.mode == .text:
+            palette.options.wholeWord.toggle()
+        case ([.option], "r") where palette.mode == .text:
+            palette.options.regex.toggle()
+        default:
+            return false
+        }
+        return true
     }
 
     // MARK: header
@@ -165,9 +186,9 @@ private struct PalettePanel: View {
     /// the trailing edge, each lit while it is on.
     private func grepToggles(palette: Bindable<CommandPalette>) -> some View {
         HStack(spacing: 2) {
-            GrepToggle(glyph: "Aa", label: "Match case", isOn: palette.options.caseSensitive)
-            GrepToggle(glyph: "ab", label: "Match whole word", isOn: palette.options.wholeWord)
-            GrepToggle(glyph: ".*", label: "Use regular expression", isOn: palette.options.regex)
+            GrepToggle(glyph: "Aa", label: "Match case (⌥C)", isOn: palette.options.caseSensitive)
+            GrepToggle(glyph: "ab", label: "Match whole word (⌥W)", isOn: palette.options.wholeWord)
+            GrepToggle(glyph: ".*", label: "Use regular expression (⌥R)", isOn: palette.options.regex)
         }
     }
 

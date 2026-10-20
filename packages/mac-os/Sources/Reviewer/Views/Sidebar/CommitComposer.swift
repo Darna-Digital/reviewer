@@ -63,6 +63,14 @@ struct CommitComposer: View {
         .onChange(of: project) { _, project in message = Self.remembered(for: project) }
         .onChange(of: message) { _, message in Self.remember(message, for: project) }
         .onChange(of: composer.draft, initial: true) { _, draft in takeDraft(draft) }
+        .onChange(of: model.commitComposerRequest) { _, request in
+            switch request?.action {
+            case .draft: draft()
+            case .commit: commit(push: false)
+            case .commitAndPush: commit(push: true)
+            case nil: break
+            }
+        }
     }
 
     // A row's path card is anchored to the row, so it would ride along as
@@ -177,10 +185,22 @@ struct CommitComposer: View {
             set: { if $0 { excluded.remove(path) } else { excluded.insert(path) } })
     }
 
+    /// The buttons are disabled while there is nothing to commit, but ⌘↩
+    /// and the chords still reach here, so they are told why nothing
+    /// happened, as the TUI tells them.
     private func commit(push: Bool) {
-        guard canCommit else { return }
+        guard canCommit else {
+            model.notices.post(.info, commitBlocker)
+            return
+        }
         model.act(onTree: .commit(message: message.trimmingCharacters(in: .whitespacesAndNewlines), paths: chosen, push: push))
         message = ""
+    }
+
+    private var commitBlocker: String {
+        if drafting { return "Wait for the message to be drafted" }
+        if chosen.isEmpty { return "Tick at least one file" }
+        return "Write a commit message first"
     }
 
     private func draft() {

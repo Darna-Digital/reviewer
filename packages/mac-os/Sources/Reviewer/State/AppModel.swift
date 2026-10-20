@@ -93,7 +93,6 @@ final class AppModel {
     let catalog: RepoCatalog
     /// The settings window's own: the theme, and who the app works as.
     let settings: AppSettings
-    @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
     @ObservationIgnored private var headWatcher: HeadWatcher?
     @ObservationIgnored private var worktreeWatcher: WorktreeWatcher?
     /// The app's own actions that move HEAD and re-read the project once
@@ -126,13 +125,6 @@ final class AppModel {
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
         palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
-        // The web app keeps the gesture out of its inputs; here the one
-        // input it could land in is the palette's own box, where two Shifts
-        // in a row are typing, not a request to switch lists.
-        shiftTaps = ShiftTapMonitor { [weak self] in
-            guard let self, !palette.isShown else { return }
-            findFile()
-        }
         headWatcher = HeadWatcher { [weak self] in
             Task { await self?.followHead() }
         }
@@ -185,6 +177,15 @@ final class AppModel {
     /// the menu bar — the palette — which the workspace window answers the
     /// same way (see `ContentView`).
     private(set) var settingsRequests = 0
+    /// How many times the branch switcher has been asked for — ⇧⌘B, the
+    /// palette — which the branch picker in front answers by opening its
+    /// popover (see `BranchPicker`).
+    private(set) var branchPickerRequests = 0
+    /// The last thing the commit composer was asked to do from the menu bar
+    /// or the palette — draft, commit, commit and push — which it answers
+    /// with the files it has chosen, its message and its agent, all of
+    /// them its own (see `CommitComposer`).
+    private(set) var commitComposerRequest: CommitComposerRequest?
 
     // MARK: lifecycle
 
@@ -754,6 +755,42 @@ final class AppModel {
         settingsRequests += 1
     }
 
+    /// ⇧⌘B, the TUI's branch switcher: the popover of the branch chip on
+    /// screen — the sidebar's, or the session bar's. With neither in view —
+    /// the sidebar put away, a page with no sidebar — the palette's branch
+    /// list stands in, rather than a popover hanging off nothing.
+    func showBranchPicker() {
+        guard hasProject else { return }
+        if branchChipShown {
+            branchPickerRequests += 1
+        } else {
+            palette.open(.branches)
+        }
+    }
+
+    private var branchChipShown: Bool {
+        switch sidebarLayout {
+        case .pulls, .files: sidebarShown
+        case .sessions: chats.page != nil && chats.page != .landing
+        case .nothing: false
+        }
+    }
+
+    /// Whether the commit chords have a composer to answer them: your own
+    /// changes, with the commit composer under them.
+    var hasCommitComposer: Bool {
+        sidebarLayout == .files(changes: true) && sidebar.commit != nil
+    }
+
+    /// ⌃G, ⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
+    /// composer, the sidebar brought out first if it was put away, so what
+    /// they do is seen happening.
+    func ask(commitComposer action: CommitComposerRequest.Action) {
+        guard hasCommitComposer else { return }
+        if !sidebarShown { toggleSidebar() }
+        commitComposerRequest = CommitComposerRequest(action: action, serial: (commitComposerRequest?.serial ?? 0) + 1)
+    }
+
     /// `path` in a Reviewer window of its own — a second instance of the
     /// app with a server of its own, since a server holds one project.
     func openProjectInNewWindow(path: String, run: Bool = false) {
@@ -905,4 +942,16 @@ enum FindTarget {
     case changedFiles
     /// The find bar over the file the browse page has open.
     case openFile
+}
+
+/// One ask of the commit composer; the serial tells two of the same apart.
+struct CommitComposerRequest: Equatable {
+    enum Action {
+        case draft
+        case commit
+        case commitAndPush
+    }
+
+    let action: Action
+    let serial: Int
 }

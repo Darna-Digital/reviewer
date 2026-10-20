@@ -108,9 +108,9 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
-        // Into the Edit menu, under the pasteboard: the TUI's ⌘E, the web
-        // app's ⌘⇧F, and the IDEs' chord for the file search — the web
-        // app's ⇧⇧ is heard too, but a double tap is no menu equivalent.
+        // Into the Edit menu, under the pasteboard: ⌘E, ⇧⌘O and ⇧⌘F, the
+        // TUI's chords for the commands and the two searches, and each the
+        // one way in from the keys.
         // Then ⌘F, which finds on the page the window is on — the files of
         // a diff, or the open file — so it answers with the keyboard
         // anywhere in the window, not only while the page has it (see
@@ -178,6 +178,26 @@ struct ReviewerCommands: Commands {
                 Button(tab.title) { model.select(tabId: tab.id) }
                     .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: .command)
             }
+        }
+        // The git chords the TUI shares: ⇧⌘B the branch switcher, ⌃G a
+        // drafted commit message, and the JetBrains pair ⌘K to commit and
+        // ⌥⌘K to commit and push. The TUI also answers ⌥⌘4 for the
+        // switcher; here that is the rail's Branches (see `RailShortcut`).
+        // ⌘↩ stays the message box's own (see `CommitMessageEditor`).
+        CommandMenu("Git") {
+            Button("Switch branch…") { model.showBranchPicker() }
+                .keyboardShortcut("b", modifiers: [.command, .shift])
+                .disabled(!model.hasProject)
+            Divider()
+            Group {
+                Button("Generate commit message") { model.ask(commitComposer: .draft) }
+                    .keyboardShortcut("g", modifiers: .control)
+                Button("Commit") { model.ask(commitComposer: .commit) }
+                    .keyboardShortcut("k", modifiers: .command)
+                Button("Commit and push") { model.ask(commitComposer: .commitAndPush) }
+                    .keyboardShortcut("k", modifiers: [.command, .option])
+            }
+            .disabled(!model.hasCommitComposer)
         }
         // TEMPORARY — see `NoticeLab`.
         CommandMenu("Debug") {

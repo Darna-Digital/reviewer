@@ -35,13 +35,13 @@ export function EmptyPane({ hint }: { hint: string }) {
     },
     {
       label: "Find a file",
-      keys: "Double ⇧",
+      keys: island === undefined ? "Double ⇧" : "⇧⌘O",
       target: "files",
       run: () => openSearch("files"),
     },
     {
       label: "Search file contents",
-      keys: "⌘⇧F",
+      keys: "⇧⌘F",
       target: "text",
       run: () => openSearch("text"),
     },

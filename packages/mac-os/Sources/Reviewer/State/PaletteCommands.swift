@@ -9,7 +9,7 @@ import Foundation
 
 extension AppModel {
     func paletteCommands() -> [PaletteCommand] {
-        navigationCommands + gitCommands + viewCommands + projectCommands + sessionCommands
+        navigationCommands + gitCommands + commitCommands + viewCommands + projectCommands + sessionCommands
     }
 
     private var navigationCommands: [PaletteCommand] {
@@ -61,6 +61,27 @@ extension AppModel {
                 guard let self else { return }
                 branchPrompt = .create(startPoint: currentBranch)
             },
+        ]
+    }
+
+    /// The commit composer's actions, at the root beside Switch branch…
+    /// rather than down in the Git list: they are the chords the TUI
+    /// shares, and the list ⌘E lands on is where a chord is looked up.
+    private var commitCommands: [PaletteCommand] {
+        guard hasCommitComposer else { return [] }
+        return [
+            PaletteCommand(
+                id: "commit-draft-message", label: "Generate commit message", group: "Git", symbol: "sparkles",
+                keywords: "draft write claude codex agent ai", hint: "⌃G"
+            ) { [weak self] in self?.ask(commitComposer: .draft) },
+            PaletteCommand(
+                id: "commit-commit", label: "Commit", group: "Git", symbol: "checkmark.circle",
+                keywords: "save changes", hint: "⌘K"
+            ) { [weak self] in self?.ask(commitComposer: .commit) },
+            PaletteCommand(
+                id: "commit-commit-push", label: "Commit and push", group: "Git", symbol: "arrow.up.circle",
+                keywords: "save changes upload remote", hint: "⌥⌘K"
+            ) { [weak self] in self?.ask(commitComposer: .commitAndPush) },
         ]
     }
 

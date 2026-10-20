@@ -93,7 +93,7 @@ struct PaletteSubmenu {
     static let all: [PaletteSubmenu] = [
         PaletteSubmenu(
             mode: .files, label: "Go to file…", group: "Search", symbol: "doc",
-            keywords: "open path jump navigate", hint: "⇧⇧"),
+            keywords: "open path jump navigate", hint: "⇧⌘O"),
         PaletteSubmenu(
             mode: .text, label: "Search in files…", group: "Search", symbol: "magnifyingglass",
             keywords: "grep content text find occurrences", hint: "⇧⌘F"),
@@ -102,7 +102,7 @@ struct PaletteSubmenu {
             keywords: "fetch pull push branch merge rebase", hint: nil),
         PaletteSubmenu(
             mode: .branches, label: "Switch branch…", group: "Git", symbol: "arrow.left.arrow.right",
-            keywords: "checkout switch change branch", hint: nil),
+            keywords: "checkout switch change branch", hint: "⇧⌘B"),
     ]
 }
 

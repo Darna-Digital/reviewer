@@ -10,6 +10,9 @@ import SwiftUI
 struct BranchPicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.controlSize) private var controlSize
+    /// Sidebar pages kept up behind the one in front carry pickers of their
+    /// own; only the one in front answers ⇧⌘B.
+    @Environment(\.sidebarPageInFront) private var inFront
     @State private var open = false
 
     private var name: String { model.currentBranch ?? "No branch" }
@@ -51,6 +54,9 @@ struct BranchPicker: View {
             }
         }
         .closesOnNavigation($open)
+        .onChange(of: model.branchPickerRequests) {
+            if inFront { open.toggle() }
+        }
     }
 
     private var sections: [BranchChoiceSection] {
