@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.24 — 2026-10-20
+
+### Changed
+
+- The window is now titled with the repository's name and where it lives, for example "reviewer — …/reviewer-project". With several repositories open at once, you can tell them apart in Mission Control, App Exposé, the Window menu, and on a minimized window's Dock tile.
+
 ## v0.0.23 — 2026-10-16
 
 ### Changed
