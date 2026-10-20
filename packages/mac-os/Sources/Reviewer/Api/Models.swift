@@ -36,6 +36,19 @@ struct WorkspaceInfo: Codable, Sendable {
     var projectName: String? {
         project.map { URL(fileURLWithPath: $0).lastPathComponent }
     }
+
+    /// "name — ~/…/parent/folder": the repository's name, then where it
+    /// lives with the home folder shortened and only the last two folders
+    /// kept, enough to tell same-named checkouts apart in the window previews.
+    var windowTitle: String? {
+        guard let project, let projectName else { return nil }
+        let parent = URL(fileURLWithPath: project).deletingLastPathComponent().path
+        let shortened = parent.hasPrefix(home) ? "~" + parent.dropFirst(home.count) : parent
+        let folders = shortened.split(separator: "/", omittingEmptySubsequences: true)
+        let kept = folders.suffix(2).joined(separator: "/")
+        let truncated = folders.count > 2 ? "…/" + kept : shortened
+        return "\(projectName) — \(truncated)"
+    }
 }
 
 struct SetWorkspace: Encodable {

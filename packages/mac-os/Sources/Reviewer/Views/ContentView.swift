@@ -45,7 +45,8 @@ struct ContentView: View {
             } detail: {
                 DetailColumn(windowWidth: window.size.width)
             }
-            .navigationTitle("")
+            .navigationTitle(model.workspace?.windowTitle ?? "Reviewer")
+            .toolbar(removing: .title)
             .toolbar { ToolbarItems() }
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             .background { BorderlessSidebarToggle() }
