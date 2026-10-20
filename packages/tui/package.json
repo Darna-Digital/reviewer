@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "bun src/main.tsx",
-    "build:bin": "bun build --compile --minify --define REVIEWER_CHECKOUT=\"\\\"$(cd ../.. && pwd)\\\"\" src/main.tsx src/diff/highlightWorker.ts --outfile dist/reviewer",
+    "build:bin": "bun build --compile --no-compile-autoload-dotenv --minify --define REVIEWER_CHECKOUT=\"\\\"$(cd ../.. && pwd)\\\"\" src/main.tsx src/diff/highlightWorker.ts --outfile dist/reviewer",
     "install:bin": "bun run build:bin && mkdir -p \"${BIN_DIR:-$HOME/.local/bin}\" && install -m 755 dist/reviewer \"${BIN_DIR:-$HOME/.local/bin}/reviewer\" && echo \"installed ${BIN_DIR:-$HOME/.local/bin}/reviewer\"",
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",

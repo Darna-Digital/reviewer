@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { Overlay } from '../app/useApp';
 import type { Branch } from '../git/refs';
 import type { Seg } from '../render/styled';
+import { truncateMiddle } from '../text/measure';
 import { ago } from '../text/time';
 import { useAppContext } from './AppContext';
 import { Picker } from './Picker';
@@ -68,7 +69,8 @@ export function BranchPicker({
       anchor={overlay.at}
       width={WIDTH}
       inert={inert}
-      title={current ? `⎇ ${current}` : 'Branches'}
+      title={current ? `⎇ ${truncateMiddle(current, WIDTH - 8)}` : 'Branches'}
+      labelCut="middle"
       placeholder="Switch to a branch…"
       options={options}
       initialKey={

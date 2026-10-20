@@ -91,6 +91,38 @@ export function truncateStart(text: string, width: number): string {
   return `…${out}`;
 }
 
+/**
+ * Cuts from the middle, as the Mac sets a branch name — both ends are kept,
+ * since `feature/…` alone tells no two branches apart.
+ */
+export function truncateMiddle(text: string, width: number): string {
+  if (width <= 0) return '';
+  if (cellWidth(text) <= width) return text;
+  const parts = graphemes(text);
+  const room = width - 1;
+  let head = '';
+  let used = 0;
+  for (const g of parts) {
+    if (used + g.width > Math.ceil(room / 2)) break;
+    head += g.text;
+    used += g.width;
+  }
+  let tail = '';
+  for (let i = parts.length - 1; i >= 0; i -= 1) {
+    const g = parts[i]!;
+    if (used + g.width > room) break;
+    tail = g.text + tail;
+    used += g.width;
+  }
+  return `${head}…${tail}`;
+}
+
+/** Breaks `text` into rows of at most `width` cells. */
+export function wrapCells(text: string, width: number): string[] {
+  const points = [0, ...wrapPoints(text, width), text.length];
+  return points.slice(1).map((end, i) => text.slice(points[i], end));
+}
+
 export function padEnd(text: string, width: number): string {
   const cut = truncate(text, width);
   return cut + ' '.repeat(Math.max(0, width - cellWidth(cut)));

@@ -160,8 +160,10 @@ project is this one.
 
 The Mac app's shortcuts, where the terminal passes ⌘ through — that needs the
 kitty keyboard protocol (Ghostty, kitty, WezTerm, iTerm2 with CSI u) and ⌘
-not bound by the terminal itself. Each has a ⌃ or plain-key twin for
-terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay.
+not bound by the terminal itself. Most have a ⌃ or plain-key twin for
+terminals that keep ⌘, and the vim keys (`j` `k` `g` `G` `]` `[` …) stay; go
+to file and search in files are ⇧⌘O and ⇧⌘F alone, and in a terminal that
+keeps ⌘ they are reached from the command palette.
 Digits are vim counts — `10k` moves ten up — so the surfaces and panes have
 no plain-digit keys; a lone `0` still goes to the line's first symbol.
 `?` lists every key; the status bar shows the ones that work in yours.
@@ -169,11 +171,14 @@ no plain-digit keys; a lone `0` still goes to the line's first symbol.
 | Mac       | Also            | Does                                               |
 | --------- | --------------- | -------------------------------------------------- |
 | `⌘E`      | `⌃K` `:`        | Command palette                                    |
-| `⇧⌘O`     | `⌃⇧O` `⌃P` `p`  | Go to file                                         |
-| `⇧⌘F`     | `⌃⇧F` `/`       | Search in files                                    |
+| `⇧⌘O`     |                 | Go to file                                         |
+| `⇧⌘F`     |                 | Search in files                                    |
 | `⌥⌘1` `2` |                 | Browse · Review                                    |
 | `⌘G`      |                 | Switch Browse ⇄ Review                             |
-| `⌥⌘4`     |                 | Switch branch (popover)                            |
+| `⇧⌘B`     | `⌥⌘4`           | Switch branch (popover)                            |
+| `⌃G`      |                 | Review: ✦ generate the commit message              |
+| `⌘K`      |                 | Review: commit                                     |
+| `⌥⌘K`     |                 | Review: commit and push                            |
 | `⌥⌘5` `7` |                 | History · Run                                      |
 | `⌘B`      | `⌃B`            | Bottom pane                                        |
 | `⌃⌘S`     | `\`             | Sidebar                                            |
@@ -207,58 +212,59 @@ passes ⌘ through (see Keys).
 
 ### Anywhere
 
-| Key                  | Does                            |
-| -------------------- | ------------------------------- |
-| `?`                  | The keys for where you are      |
-| `⌘E` `⌃K` `:`        | Command palette                 |
-| `⇧⌘O` `⌃⇧O` `⌃P` `p` | Go to file                      |
-| `⇧⌘F` `⌃⇧F` `/`      | Search in files                 |
-| `@`                  | Go to a symbol in the open file |
-| `m`                  | All comments                    |
-| `tab` `⇧tab`         | Next · previous pane            |
-| `⌃O` `⌥←`            | Back to where you jumped from   |
-| `⌥→`                 | Forward again                   |
-| `⌥⌘1` `⌥⌘2`          | Browse · Review                 |
-| `⌘G`                 | Switch Browse ⇄ Review          |
-| `⌥⌘4`                | Switch branch                   |
-| `⌥⌘5` `⌥⌘6` `⌥⌘7`    | History · Usages · Run pane     |
-| `⌥⌘8`                | Pull request pane               |
-| `M` `⌥⌘3`            | Pull requests (sidebar)         |
-| `⌘B` `⌃B`            | Show / hide the bottom pane     |
-| `⌃⌘S` `\`            | Show / hide the sidebar         |
-| `t`                  | Compare against…                |
-| `T`                  | Uncommitted ⇄ last branch       |
-| `s`                  | Split ⇄ unified diff            |
-| `E`                  | Changed hunks ⇄ full files      |
-| `W` `⌥Z`             | Wrap long lines                 |
-| `C`                  | Show / hide comments            |
-| `F` `L` `P`          | Fetch · pull · push             |
-| `⌘R` `⌃R` `r`        | Refresh                         |
-| `⌘,` `⌃,` `⌃T`       | Theme & appearance              |
-| `q` `⌃C`             | Quit                            |
+| Key               | Does                            |
+| ----------------- | ------------------------------- |
+| `?`               | The keys for where you are      |
+| `⌘E` `⌃K` `:`     | Command palette                 |
+| `⇧⌘O`             | Go to file                      |
+| `⇧⌘F`             | Search in files                 |
+| `@`               | Go to a symbol in the open file |
+| `m`               | All comments                    |
+| `tab` `⇧tab`      | Next · previous pane            |
+| `⌃O` `⌥←`         | Back to where you jumped from   |
+| `⌥→`              | Forward again                   |
+| `⌥⌘1` `⌥⌘2`       | Browse · Review                 |
+| `⌘G`              | Switch Browse ⇄ Review          |
+| `⇧⌘B` `⌥⌘4`       | Switch branch                   |
+| `⌃G`              | Generate the commit message     |
+| `⌘K`              | Commit                          |
+| `⌥⌘K`             | Commit and push                 |
+| `⌥⌘5` `⌥⌘6` `⌥⌘7` | History · Usages · Run pane     |
+| `⌥⌘8`             | Pull request pane               |
+| `M` `⌥⌘3`         | Pull requests (sidebar)         |
+| `⌘B` `⌃B`         | Show / hide the bottom pane     |
+| `⌃⌘S` `\`         | Show / hide the sidebar         |
+| `t`               | Compare against…                |
+| `T`               | Uncommitted ⇄ last branch       |
+| `s`               | Split ⇄ unified diff            |
+| `E`               | Changed hunks ⇄ full files      |
+| `W` `⌥Z`          | Wrap long lines                 |
+| `C`               | Show / hide comments            |
+| `F` `L` `P`       | Fetch · pull · push             |
+| `⌘R` `⌃R` `r`     | Refresh                         |
+| `⌘,` `⌃,` `⌃T`    | Theme & appearance              |
+| `q` `⌃C`          | Quit                            |
 
-Create branch, add a service, start / stop all services, commit and push,
-cycle the appearance and show / hide file icons have no key; they are in the
-command palette.
+Create branch, add a service, start / stop all services, cycle the appearance
+and show / hide file icons have no key; they are in the command palette.
 
 ### Sidebar
 
-| Key                     | Does                               |
-| ----------------------- | ---------------------------------- |
-| `j` `k` `↓` `↑`         | Next · previous row                |
-| `⌃D` `⌃U` `pgdn` `pgup` | Ten down · ten up                  |
-| `g` `G` `home` `end`    | First · last                       |
-| `⏎` `l` `→`             | Open the file / expand the folder  |
-| `h` `←`                 | Collapse / go to the parent        |
-| `f`                     | Filter the changed files (Review)  |
-| `x`                     | Discard changes…                   |
-| `y`                     | Copy the path                      |
-| `H`                     | The file's history                 |
-| `space`                 | Commit box: include / leave out    |
-| `A`                     | Commit box: include all / none     |
-| `i`                     | Commit box: write the message      |
-| `⌃G`                    | Commit box: ✦ generate the message |
-| `⌘⏎` `⌃S`               | Commit box: commit                 |
+| Key                     | Does                              |
+| ----------------------- | --------------------------------- |
+| `j` `k` `↓` `↑`         | Next · previous row               |
+| `⌃D` `⌃U` `pgdn` `pgup` | Ten down · ten up                 |
+| `g` `G` `home` `end`    | First · last                      |
+| `⏎` `l` `→`             | Open the file / expand the folder |
+| `h` `←`                 | Collapse / go to the parent       |
+| `f`                     | Filter the changed files (Review) |
+| `x`                     | Discard changes…                  |
+| `y`                     | Copy the path                     |
+| `H`                     | The file's history                |
+| `space`                 | Commit box: include / leave out   |
+| `A`                     | Commit box: include all / none    |
+| `i`                     | Commit box: write the message     |
+| `⌘⏎` `⌃S`               | Commit box: commit                |
 
 While writing the message, `⌘⏎` / `⌃S` commits, `⌃G` generates and `esc`
 stops typing. In a filter field `⏎` or `esc` stops typing.

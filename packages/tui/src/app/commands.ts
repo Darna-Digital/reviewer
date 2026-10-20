@@ -194,7 +194,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'branch.pick',
     scope: 'global',
-    keys: ['alt+cmd+4'],
+    keys: ['cmd+shift+b', 'alt+cmd+4'],
     title: 'switch branch…',
     palette: true,
     run: (app) => app.actions.openBranches(),
@@ -274,6 +274,36 @@ export const COMMANDS: Command[] = [
     run: (app) => app.actions.toggleSidebar(),
   },
   {
+    id: 'commit.generate',
+    scope: 'global',
+    keys: ['ctrl+g'],
+    title: 'generate commit message',
+    hint: 'generate',
+    palette: true,
+    when: (app) => app.isCommitMode,
+    run: (app) => void app.commit.generate(),
+  },
+  // ⌘K and ⌥⌘K are JetBrains' and the Mac app's; ⌘⏎ commits only from the
+  // commit box, since anywhere else it would end typing a comment and commit.
+  {
+    id: 'commit.commit',
+    scope: 'global',
+    keys: ['cmd+k'],
+    title: 'commit',
+    palette: true,
+    when: (app) => app.isCommitMode,
+    run: (app) => void app.commit.commit(),
+  },
+  {
+    id: 'commit.push',
+    scope: 'global',
+    keys: ['alt+cmd+k'],
+    title: 'commit and push',
+    palette: true,
+    when: (app) => app.isCommitMode,
+    run: (app) => void app.commit.commit({ andPush: true }),
+  },
+  {
     id: 'target.pick',
     scope: 'global',
     keys: ['t'],
@@ -293,7 +323,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'file.find',
     scope: 'global',
-    keys: ['cmd+shift+o', 'ctrl+shift+o', 'ctrl+p', 'p'],
+    keys: ['cmd+shift+o'],
     title: 'go to file…',
     hint: 'file',
     palette: true,
@@ -302,7 +332,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'search',
     scope: 'global',
-    keys: ['cmd+shift+f', 'ctrl+shift+f', '/'],
+    keys: ['cmd+shift+f'],
     title: 'search in files…',
     palette: true,
     run: (app) => app.actions.openPalette('text'),
@@ -581,21 +611,11 @@ export const COMMANDS: Command[] = [
     run: (app) => app.actions.setTyping('message'),
   },
   {
-    id: 'commit.generate',
-    scope: 'commit',
-    keys: ['ctrl+g'],
-    title: 'generate message with Claude',
-    hint: 'generate',
-    palette: true,
-    run: (app) => void app.commit.generate(),
-  },
-  {
-    id: 'commit.commit',
+    id: 'commit.commitHere',
     scope: 'commit',
     keys: ['cmd+return', 'ctrl+s'],
     title: 'commit',
     hint: 'commit',
-    palette: true,
     run: (app) => void app.commit.commit(),
   },
   {
@@ -609,14 +629,6 @@ export const COMMANDS: Command[] = [
         x: 1,
         y: app.layout.bodyHeight - app.layout.commitBoxHeight,
       }),
-  },
-  {
-    id: 'commit.push',
-    scope: 'commit',
-    keys: [],
-    title: 'commit and push',
-    palette: true,
-    run: (app) => void app.commit.commit({ andPush: true }),
   },
 
   // diff

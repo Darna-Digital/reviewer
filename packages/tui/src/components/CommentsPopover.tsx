@@ -46,7 +46,7 @@ export function CommentsPopover({ overlay }: { overlay: CommentsOverlay }) {
       anchor={overlay.at}
       width={COMMENTS_POPOVER_WIDTH}
       pathGroups
-      proseLabels
+      labelCut="end"
       maxRows={COMMENTS_POPOVER_ROWS}
       title={`Comments · ${comments.length}`}
       placeholder="Search comments…"

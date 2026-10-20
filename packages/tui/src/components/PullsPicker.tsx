@@ -24,7 +24,7 @@ export function PullsPicker() {
       title="Pull requests"
       placeholder="Search by number, title, author or branch…"
       width={96}
-      proseLabels
+      labelCut="end"
       initialKey={shown}
       emptyText={
         pulls.error ??

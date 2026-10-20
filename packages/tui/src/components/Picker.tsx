@@ -2,7 +2,14 @@ import { useKeyboard } from '@opentui/react';
 import * as React from 'react';
 import { keyName } from '../app/keys';
 import type { Palette } from '../render/palette';
-import { cellWidth, truncate, truncateStart } from '../text/measure';
+import { mix } from '../render/palette';
+import {
+  cellWidth,
+  truncate,
+  truncateMiddle,
+  truncateStart,
+  wrapCells,
+} from '../text/measure';
 import { fitSegs } from '../render/styled';
 import type { Seg } from '../render/styled';
 import { Backdrop, centered } from './Modal';
@@ -57,8 +64,12 @@ export interface PickerProps {
   inert?: boolean;
   /** Group headings are file paths: shown as written, not as captions. */
   pathGroups?: boolean;
-  /** Labels are prose, cut at the end; by default they are paths, cut at the start. */
-  proseLabels?: boolean;
+  /**
+   * Where a label too long for its row is cut: paths at the start (the
+   * default), prose at the end, names in the middle. A cut label shows
+   * whole in a tooltip while its row is highlighted, by key or pointer.
+   */
+  labelCut?: LabelCut;
   /** List rows when the screen has room; defaults to a short list. */
   maxRows?: number;
   /** `false` when the caller filters (async search); defaults to fuzzy matching here. */
@@ -71,6 +82,14 @@ export interface PickerProps {
   /** Called as the selection moves, e.g. to preview it. */
   onHighlight?: (option: PickerOption) => void;
 }
+
+export type LabelCut = 'start' | 'end' | 'middle';
+
+const CUTS: Record<LabelCut, (text: string, width: number) => string> = {
+  start: truncateStart,
+  end: truncate,
+  middle: truncateMiddle,
+};
 
 const MAX_ROWS = 14;
 const RIGHT_BUTTON = 2;
@@ -142,12 +161,16 @@ export function Picker(props: PickerProps) {
     selected,
     inner,
     props.pathGroups,
-    props.proseLabels,
+    props.labelCut,
   );
   const selectedRow = rows.findIndex((row) => row.option === selected);
   const view = useScrollWindow(selectedRow, rows.length, listRows);
   const wheel = useWheel(view.scrollBy);
   const top = view.top;
+  const listTop = boxTop + 1 + LIST_OFFSET;
+  const selectedInView = selectedRow >= top && selectedRow < top + listRows;
+  const tip =
+    selectedInView && !props.inert ? rows[selectedRow]?.cutFrom : undefined;
 
   return (
     <>
@@ -254,11 +277,19 @@ export function Picker(props: PickerProps) {
           fill={palette.popover}
         />
       </box>
+      {tip ? (
+        <LabelTip
+          palette={palette}
+          screen={screen}
+          text={tip}
+          picker={{ left, width }}
+          y={listTop + selectedRow - top}
+        />
+      ) : null}
     </>
   );
 
   function besideSelected() {
-    const listTop = boxTop + 1 + LIST_OFFSET;
     return { x: left + width, y: listTop + Math.max(0, selectedRow - top) };
   }
 
@@ -298,15 +329,22 @@ function matchScore(label: string, query: string): number {
   return matched === needle.length ? 1 : 0;
 }
 
+interface PickerRow {
+  segs: Seg[];
+  option: number | null;
+  /** The whole label, when the row could only show it cut. */
+  cutFrom?: string;
+}
+
 function layoutRows(
   palette: Palette,
   options: PickerOption[],
   selected: number,
   width: number,
   pathGroups = false,
-  proseLabels = false,
-): Array<{ segs: Seg[]; option: number | null }> {
-  const rows: Array<{ segs: Seg[]; option: number | null }> = [];
+  labelCut: LabelCut = 'start',
+): PickerRow[] {
+  const rows: PickerRow[] = [];
   const leadWidth = Math.max(
     0,
     ...options.map((option) => cellWidth(option.lead ?? '')),
@@ -335,12 +373,11 @@ function layoutRows(
     const bg = lit ? palette.selection : palette.popover;
     const hint = option.hint ?? '';
     const room = Math.max(4, width - 4 - leadColumn - cellWidth(hint));
-    const label = proseLabels
-      ? truncate(option.label, room)
-      : truncateStart(option.label, room);
+    const label = CUTS[labelCut](option.label, room);
     const lead = option.lead ?? '';
     rows.push({
       option: index,
+      cutFrom: label === option.label ? undefined : option.label,
       segs: fitSegs(
         [
           { text: lit ? '▌' : ' ', fg: palette.accent, bg },
@@ -399,4 +436,51 @@ function pathHeading(palette: Palette, path: string, width: number): Seg[] {
     { text: ` ${folder}`, fg: palette.faint },
     { text: name, fg: palette.text, bold: true },
   ];
+}
+
+/**
+ * A cut label written out whole, beside its row and outside the picker:
+ * every drawn box takes the pointer, so one laid over the list would keep
+ * the rows under it from being hovered or clicked.
+ */
+function LabelTip({
+  palette,
+  screen,
+  text,
+  picker,
+  y,
+}: {
+  palette: Palette;
+  screen: { width: number; height: number };
+  text: string;
+  picker: { left: number; width: number };
+  y: number;
+}) {
+  const wanted = cellWidth(text) + 2;
+  const roomRight = screen.width - picker.left - picker.width;
+  const right = roomRight >= wanted || roomRight >= picker.left;
+  const width = Math.min(wanted, right ? roomRight : picker.left);
+  if (width < 3) return null;
+  const lines = wrapCells(text, width - 2);
+  const bg = mix(palette.popover, palette.text, 0.12);
+  return (
+    <box
+      position="absolute"
+      left={right ? picker.left + picker.width : picker.left - width}
+      top={Math.max(0, Math.min(y, screen.height - lines.length))}
+      width={width}
+      height={lines.length}
+      zIndex={21}
+      flexDirection="column"
+    >
+      {lines.map((line, i) => (
+        <Line
+          key={i}
+          segs={[{ text: ` ${line}`, fg: palette.text, bg }]}
+          width={width}
+          fill={bg}
+        />
+      ))}
+    </box>
+  );
 }
