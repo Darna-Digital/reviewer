@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.25 — 2026-10-20
+
+### Added
+
+- A Git menu with the shortcuts the terminal version uses: ⇧⌘B switches branch, ⌃G generates a commit message, ⌘K commits and ⌥⌘K commits and pushes. They also appear in the command palette. If a commit can't go through yet, you now get a notice saying why, such as no files ticked or no message written.
+- The command palette answers ⌃N and ⌃P to move through the list and ⌃K to go back to the commands. In the text search, ⌥C, ⌥W and ⌥R turn match case, whole word and regular expression on and off.
+
+### Changed
+
+- Go to file is now ⇧⌘O only. Double-tapping Shift no longer opens it, and the empty-pane hints show the new shortcuts.
+
 ## v0.0.24 — 2026-10-20
 
 ### Changed
