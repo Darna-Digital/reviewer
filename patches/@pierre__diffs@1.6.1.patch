@@ -1,0 +1,66 @@
+diff --git a/dist/components/File.js b/dist/components/File.js
+index 2ac57c5..0cd37a9 100644
+--- a/dist/components/File.js
++++ b/dist/components/File.js
+@@ -753,7 +753,6 @@ var File = class {
+ 		this.headerMetadata?.remove();
+ 		this.headerCustom?.remove();
+ 		this.pre?.remove();
+-		this.spriteSVG?.remove();
+ 		this.themeCSSStyle?.remove();
+ 		this.unsafeCSSStyle?.remove();
+ 		this.bufferAfter = void 0;
+@@ -766,7 +765,6 @@ var File = class {
+ 		this.headerMetadata = void 0;
+ 		this.headerCustom = void 0;
+ 		this.pre = void 0;
+-		this.spriteSVG = void 0;
+ 		this.themeCSSStyle = void 0;
+ 		this.appliedThemeCSS = void 0;
+ 		this.hasAdoptedThemeCSS = false;
+diff --git a/dist/components/FileDiff.js b/dist/components/FileDiff.js
+index 12f4f89..bc2ca84 100644
+--- a/dist/components/FileDiff.js
++++ b/dist/components/FileDiff.js
+@@ -1286,7 +1286,6 @@ var FileDiff = class {
+ 		this.headerMetadata?.remove();
+ 		this.headerCustom?.remove();
+ 		this.pre?.remove();
+-		this.spriteSVG?.remove();
+ 		this.themeCSSStyle?.remove();
+ 		this.unsafeCSSStyle?.remove();
+ 		this.bufferAfter = void 0;
+@@ -1301,7 +1300,6 @@ var FileDiff = class {
+ 		this.headerMetadata = void 0;
+ 		this.headerCustom = void 0;
+ 		this.pre = void 0;
+-		this.spriteSVG = void 0;
+ 		this.themeCSSStyle = void 0;
+ 		this.appliedThemeCSS = void 0;
+ 		this.hasAdoptedThemeCSS = false;
+diff --git a/dist/components/VirtualizedFile.js b/dist/components/VirtualizedFile.js
+index 95d4ca8..2ccf2ba 100644
+--- a/dist/components/VirtualizedFile.js
++++ b/dist/components/VirtualizedFile.js
+@@ -460,7 +460,7 @@ var VirtualizedFile = class extends File {
+ 		return this.isAdvancedMode() || super.shouldDisableVirtualizationBuffers();
+ 	}
+ 	shouldGuardRebuildScroll() {
+-		return false;
++		return this.isSimpleMode() && super.shouldGuardRebuildScroll();
+ 	}
+ 	isSimpleMode() {
+ 		return this.virtualizer.type === "simple";
+diff --git a/dist/utils/platform.js b/dist/utils/platform.js
+index 9a6635c..3cdd299 100644
+--- a/dist/utils/platform.js
++++ b/dist/utils/platform.js
+@@ -22,7 +22,7 @@ function isLinux() {
+ 	return _isLinux ??= /Linux/i.test(getPlatform());
+ }
+ function isSafari() {
+-	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
++	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || /AppleWebKit/.test(navigator.userAgent) && !/chrome|android/i.test(navigator.userAgent);
+ }
+ function isFirefox() {
+ 	return _isFirefox ??= /\bFirefox\//.test(navigator.userAgent);

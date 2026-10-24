@@ -18,7 +18,7 @@ allowBuilds:
 # keeping the sprite sheet across clean-ups, the patch lets a file under the simple `Virtualizer` keep the guard, and counts any
 # non-Chromium WebKit as Safari.
 patchedDependencies:
-  '@pierre/diffs@1.5.1': patches/@pierre__diffs@1.5.1.patch
+  '@pierre/diffs@1.6.1': patches/@pierre__diffs@1.6.1.patch
 
 # Security floors for transitive pins Dependabot flagged: miniflare pins
 # sharp@0.35.4 and solid-js@1.9.15 pins seroval ~1.5.4.

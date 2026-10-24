@@ -7,10 +7,10 @@ import type {
   FileDiffLoadedFiles,
   FileDiffMetadata,
   Hunk,
-  LineAnnotation,
 } from "@pierre/diffs";
 import {
   CodeView,
+  type CodeViewAnnotationArgs,
   type CodeViewHandle,
   type CodeViewProps,
 } from "@pierre/diffs/react";
@@ -1037,10 +1037,7 @@ export function DiffPane({
   );
 
   const renderAnnotation = useStableCallback(
-    (
-      annotation: LineAnnotation<AnnotationMeta> | Annotation,
-      item: CodeViewItem<AnnotationMeta>
-    ) => {
+    (...[annotation, , item]: CodeViewAnnotationArgs<AnnotationMeta>) => {
       if (item.type !== "diff" || !("side" in annotation)) return null;
       const meta = annotation.metadata;
       const name = item.fileDiff.name;
