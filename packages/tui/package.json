@@ -19,19 +19,19 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js}\""
   },
   "dependencies": {
-    "@opentui/core": "0.5.14",
-    "@opentui/react": "0.5.14",
+    "@opentui/core": "0.6.8",
+    "@opentui/react": "0.6.8",
     "@reviewer/core": "workspace:*",
     "@reviewer/embedded-server": "workspace:*",
-    "effect": "4.0.1",
-    "react": "^19.3.0"
+    "effect": "4.0.6",
+    "react": "^19.3.1"
   },
   "devDependencies": {
     "@reviewer/lint": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.4",
     "@types/react": "^19.3.0",
-    "eslint": "^10.12.0",
-    "prettier": "^3.9.9",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   }
 }

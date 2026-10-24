@@ -20,7 +20,7 @@ let package = Package(
         // the server's dev-process sockets. Its Metal renderer needs Xcode's
         // Metal toolchain, a separate download:
         // `xcodebuild -downloadComponent MetalToolchain`.
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.20.0"),
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.99.1"),
         // In-place updates: the "Install Update" window, the download, the
         // EdDSA check of the disk image against SUPublicEDKey, the swap of
         // the bundle and the relaunch. A binary framework — `bundle.sh`
