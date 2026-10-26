@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.26 — 2026-10-26
+
+### Changed
+
+- Updated the app's dependencies to their latest versions, including the built-in terminal, the diff viewer, React, Effect and the resizable panels.
+
 ## v0.0.25 — 2026-10-20
 
 ### Added
