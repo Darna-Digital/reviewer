@@ -28,11 +28,7 @@ export type DiffStyle = "split" | "unified";
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
 /** Active tab in the shared bottom dock (git + find + services + threads). */
 export type BottomTab =
-  | "branches"
-  | "history"
-  | "find"
-  | "services"
-  | "threads";
+  "branches" | "history" | "find" | "services" | "threads";
 
 /**
  * What the last session was composed with.

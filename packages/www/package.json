@@ -14,6 +14,9 @@
     "capture:spa": "node scripts/capture-spa/cli.ts",
     "capture:home": "node scripts/capture-spa/cli.ts --manifest scripts/capture-spa/home.json",
     "generate:og": "node scripts/og-image/render.ts",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,css}\"",
     "typecheck": "tsc --noEmit && tsc -p scripts --noEmit"
   },
   "dependencies": {
@@ -30,12 +33,18 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.65.0",
+    "@reviewer/lint": "workspace:*",
     "@tanstack/devtools-vite": "latest",
+    "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.167.46",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",
     "wrangler": "^4.152.0"

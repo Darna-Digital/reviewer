@@ -69,8 +69,7 @@ export function githubClient(root: string) {
       body,
     );
     const parsed = (await response.json().catch(() => null)) as
-      | (TResult & { reason?: string; _tag?: string })
-      | null;
+      (TResult & { reason?: string; _tag?: string }) | null;
     if (!response.ok || parsed === null)
       throw new GitHubRequestError(
         parsed?.reason ??
@@ -128,9 +127,6 @@ async function call(
     return await fetch(`http://127.0.0.1:${SERVER_PORT}${path}`, {
       method,
       headers: body === undefined ? {} : { 'content-type': 'application/json' },
-      // Undefined whenever the caller leaves `method` at GET, which the rule
-      // cannot see through the conditional.
-      // oxlint-disable-next-line no-invalid-fetch-options
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

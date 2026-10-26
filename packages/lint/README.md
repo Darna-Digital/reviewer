@@ -1,34 +1,37 @@
 # @reviewer/lint
 
-Shared [oxlint](https://oxc.rs) and [oxfmt](https://oxc.rs) setup for the
-reviewer.sh monorepo.
-
-Unlike the ESLint and Prettier setup it replaces, nothing is extended
-per package: this package owns the only config, and its scripts run the two
-tools from the repo root across the whole workspace. Packages carry no lint or
-format scripts and no lint dev dependencies of their own.
+Shared ESLint and Prettier rules for the reviewer.sh monorepo. Packages extend
+these so linting and formatting stay consistent across the workspace.
 
 ## Usage
 
-From the repo root:
+Add the package as a dev dependency:
 
-```bash
-pnpm lint          # oxlint
-pnpm lint:fix      # oxlint --fix
-pnpm format        # oxfmt, writes in place
-pnpm format:check  # oxfmt --check
+```jsonc
+// package.json
+"devDependencies": {
+  "@reviewer/lint": "workspace:*"
+}
 ```
 
-## Configuration
+### ESLint
 
-- `.oxlintrc.json` — `correctness` rules, plus `rules-of-hooks` everywhere and
-  `exhaustive-deps` in the packages that enforced it under ESLint. Its comments
-  explain each rule that is turned off.
-- `.oxfmtrc.json` — the formatting options Prettier used here (semicolons,
-  double quotes, 80 columns, `es5` trailing commas), with overrides for the
-  TUI's single-quote house style and for Tailwind class sorting, which oxfmt
-  does itself in place of `prettier-plugin-tailwindcss`.
-- `.oxfmtignore` — generated files, on top of `.gitignore`.
+```js
+// eslint.config.js
+import baseConfig from "@reviewer/lint/eslint"
 
-The `check` GitHub Action (`.github/workflows/check.yml`) runs `pnpm lint` and
-`pnpm format:check` on every pull request.
+export default [...baseConfig, { ignores: ["dist"] }]
+```
+
+### Prettier
+
+```js
+// prettier.config.js
+import baseConfig from "@reviewer/lint/prettier"
+
+export default { ...baseConfig }
+```
+
+The `check` GitHub Action (`.github/workflows/check.yml`) runs ESLint and the
+Prettier check across the workspace on pushes to `main` and on every pull
+request.

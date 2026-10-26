@@ -40,11 +40,7 @@ export interface UsageQuery {
  * provider's vocabulary; this is the reader's.
  */
 export type UsageCategory =
-  | "declaration"
-  | "unclassified"
-  | "write"
-  | "import"
-  | "export";
+  "declaration" | "unclassified" | "write" | "import" | "export";
 
 /** A branch of the results tree — a category, a directory, a file, a symbol. */
 export interface UsageGroup {

@@ -11,6 +11,7 @@ import { gitUserName } from "../git/git-identity.ts";
 import { ALL_REFS } from "@reviewer/core/repo";
 import type {
   BranchInfo,
+  CommitDetail,
   CommitFileChange,
   CommitInfo,
   ConflictedFile,

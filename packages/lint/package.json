@@ -3,19 +3,23 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Shared oxlint and oxfmt rules for reviewer.sh",
+  "description": "Shared ESLint and Prettier rules for reviewer.sh",
+  "exports": {
+    "./eslint": "./eslint.config.js",
+    "./prettier": "./prettier.config.js"
+  },
   "files": [
-    ".oxlintrc.json",
-    ".oxfmtrc.json"
+    "eslint.config.js",
+    "prettier.config.js"
   ],
   "scripts": {
-    "lint": "cd ../.. && oxlint -c packages/lint/.oxlintrc.json",
-    "lint:fix": "cd ../.. && oxlint -c packages/lint/.oxlintrc.json --fix",
-    "format": "cd ../.. && oxfmt -c packages/lint/.oxfmtrc.json --ignore-path .gitignore --ignore-path packages/lint/.oxfmtignore 'packages/**/*.{ts,tsx,js,jsx,css}'",
-    "format:check": "cd ../.. && oxfmt -c packages/lint/.oxfmtrc.json --ignore-path .gitignore --ignore-path packages/lint/.oxfmtignore 'packages/**/*.{ts,tsx,js,jsx,css}' --check"
+    "format": "prettier --write \"*.js\"",
+    "format:check": "prettier --check \"*.js\""
   },
-  "devDependencies": {
-    "oxfmt": "0.74.0",
-    "oxlint": "1.89.0"
+  "dependencies": {
+    "@tanstack/eslint-config": "^0.4.0",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3"
   }
 }

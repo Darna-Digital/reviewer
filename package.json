@@ -2,7 +2,7 @@
   "name": "reviewer",
   "private": true,
   "version": "0.0.25",
-  "description": "Reviewer \u2014 a macOS app for understanding, editing and reviewing AI-generated code",
+  "description": "Reviewer — a macOS app for understanding, editing and reviewing AI-generated code",
   "license": "MIT",
   "homepage": "https://reviewer.sh",
   "repository": {
@@ -24,11 +24,9 @@
     "build:mac": "pnpm --filter spa build && pnpm --filter @reviewer/embedded-server build:bundle && pnpm --filter @reviewer/mac-os bundle",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm --filter @reviewer/lint lint",
-    "format:check": "pnpm --filter @reviewer/lint format:check",
-    "deploy:www": "pnpm --filter www run deploy",
-    "lint:fix": "pnpm --filter @reviewer/lint lint:fix",
-    "format": "pnpm --filter @reviewer/lint format"
+    "lint": "pnpm -r --if-present lint",
+    "format:check": "pnpm -r --if-present format:check",
+    "deploy:www": "pnpm --filter www run deploy"
   },
   "packageManager": "pnpm@11.7.0"
 }
