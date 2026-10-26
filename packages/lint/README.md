@@ -21,8 +21,9 @@ pnpm format:check  # oxfmt --check
 
 ## Configuration
 
-- `.oxlintrc.json` — `correctness` rules, plus the two React hook rules the
-  ESLint setup enforced. Its comments explain each rule that is turned off.
+- `.oxlintrc.json` — `correctness` rules, plus `rules-of-hooks` everywhere and
+  `exhaustive-deps` in the packages that enforced it under ESLint. Its comments
+  explain each rule that is turned off.
 - `.oxfmtrc.json` — the formatting options Prettier used here (semicolons,
   double quotes, 80 columns, `es5` trailing commas), with overrides for the
   TUI's single-quote house style and for Tailwind class sorting, which oxfmt

@@ -13,9 +13,12 @@
     // The new JSX transform needs no React in scope.
     "react/react-in-jsx-scope": "off",
 
-    // The two hook rules the ESLint setup enforced before the move to oxlint.
+    // `rules-of-hooks` catches real bugs and has nothing to report here, so it
+    // runs everywhere. `exhaustive-deps` is scoped below to the packages that
+    // enforced it under ESLint; the TUI never did, and its effects deliberately
+    // leave out deps that are rebuilt every render.
     "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
+    "react-hooks/exhaustive-deps": "off",
 
     // The rest of oxlint's `react` correctness tier is the React Compiler
     // ruleset, which this codebase has never been written against. Leaving it
@@ -57,6 +60,12 @@
     "**/packages/www/scripts/capture-spa/prepare/**"
   ],
   "overrides": [
+    {
+      "files": ["**/packages/brand/**", "**/packages/spa/**", "**/packages/www/**"],
+      "rules": {
+        "react-hooks/exhaustive-deps": "warn"
+      }
+    },
     {
       // The browser's own dialogs look nothing like the app, put their buttons
       // in the platform's order rather than ours, and block the renderer while
