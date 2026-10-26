@@ -1,8 +1,8 @@
 diff --git a/dist/components/File.js b/dist/components/File.js
-index 9c9da1b4dac0365f872a53fa26040039fc574fae..a12cef12fbbda878073f2a24c93d6b51b51f4f6d 100644
+index 2ac57c5..0cd37a9 100644
 --- a/dist/components/File.js
 +++ b/dist/components/File.js
-@@ -670,7 +670,6 @@ var File = class {
+@@ -753,7 +753,6 @@ var File = class {
  		this.headerMetadata?.remove();
  		this.headerCustom?.remove();
  		this.pre?.remove();
@@ -10,7 +10,7 @@ index 9c9da1b4dac0365f872a53fa26040039fc574fae..a12cef12fbbda878073f2a24c93d6b51
  		this.themeCSSStyle?.remove();
  		this.unsafeCSSStyle?.remove();
  		this.bufferAfter = void 0;
-@@ -683,7 +682,6 @@ var File = class {
+@@ -766,7 +765,6 @@ var File = class {
  		this.headerMetadata = void 0;
  		this.headerCustom = void 0;
  		this.pre = void 0;
@@ -19,10 +19,10 @@ index 9c9da1b4dac0365f872a53fa26040039fc574fae..a12cef12fbbda878073f2a24c93d6b51
  		this.appliedThemeCSS = void 0;
  		this.hasAdoptedThemeCSS = false;
 diff --git a/dist/components/FileDiff.js b/dist/components/FileDiff.js
-index 8d9ba31e097990b3163fd6644906144529561262..a91f7c8d128c2e37861db11f58ef0e0f9e2fd02a 100644
+index 12f4f89..bc2ca84 100644
 --- a/dist/components/FileDiff.js
 +++ b/dist/components/FileDiff.js
-@@ -1194,7 +1194,6 @@ var FileDiff = class {
+@@ -1286,7 +1286,6 @@ var FileDiff = class {
  		this.headerMetadata?.remove();
  		this.headerCustom?.remove();
  		this.pre?.remove();
@@ -30,7 +30,7 @@ index 8d9ba31e097990b3163fd6644906144529561262..a91f7c8d128c2e37861db11f58ef0e0f
  		this.themeCSSStyle?.remove();
  		this.unsafeCSSStyle?.remove();
  		this.bufferAfter = void 0;
-@@ -1209,7 +1208,6 @@ var FileDiff = class {
+@@ -1301,7 +1300,6 @@ var FileDiff = class {
  		this.headerMetadata = void 0;
  		this.headerCustom = void 0;
  		this.pre = void 0;
@@ -39,10 +39,10 @@ index 8d9ba31e097990b3163fd6644906144529561262..a91f7c8d128c2e37861db11f58ef0e0f
  		this.appliedThemeCSS = void 0;
  		this.hasAdoptedThemeCSS = false;
 diff --git a/dist/components/VirtualizedFile.js b/dist/components/VirtualizedFile.js
-index 90d8a5e57f66cbe38f6b806285ecde5747bf2e16..c5fa29648b38ed447e74e837485f6d8266b241f1 100644
+index 95d4ca8..2ccf2ba 100644
 --- a/dist/components/VirtualizedFile.js
 +++ b/dist/components/VirtualizedFile.js
-@@ -447,7 +447,7 @@ var VirtualizedFile = class extends File {
+@@ -460,7 +460,7 @@ var VirtualizedFile = class extends File {
  		return this.isAdvancedMode() || super.shouldDisableVirtualizationBuffers();
  	}
  	shouldGuardRebuildScroll() {
@@ -52,15 +52,15 @@ index 90d8a5e57f66cbe38f6b806285ecde5747bf2e16..c5fa29648b38ed447e74e837485f6d82
  	isSimpleMode() {
  		return this.virtualizer.type === "simple";
 diff --git a/dist/utils/platform.js b/dist/utils/platform.js
-index 745b9fca5395223bc19871b8a0638acb940ded25..ce5bbdbd9f7683bed133f465971e66147b7c04b8 100644
+index 9a6635c..3cdd299 100644
 --- a/dist/utils/platform.js
 +++ b/dist/utils/platform.js
-@@ -20,7 +20,7 @@ function isLinux() {
+@@ -22,7 +22,7 @@ function isLinux() {
  	return _isLinux ??= /Linux/i.test(getPlatform());
  }
  function isSafari() {
 -	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 +	return _isSafari ??= "safari" in window && "pushNotification" in window.safari || /^((?!chrome|android).)*safari/i.test(navigator.userAgent) || /AppleWebKit/.test(navigator.userAgent) && !/chrome|android/i.test(navigator.userAgent);
  }
- function getPlatform() {
- 	const navigator = globalThis.navigator;
+ function isFirefox() {
+ 	return _isFirefox ??= /\bFirefox\//.test(navigator.userAgent);

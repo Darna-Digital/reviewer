@@ -28,8 +28,8 @@ final class PtyStream: NSObject {
 
     func attach() {
         socket?.cancel()
-        let terminal = view.getTerminal()
-        let socket = session.webSocketTask(with: url(terminal.cols, terminal.rows))
+        let size = view.terminalDimensions
+        let socket = session.webSocketTask(with: url(size.cols, size.rows))
         self.socket = socket
         socket.resume()
         receive(on: socket)
