@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "reviewer embedded-server — the API server the macOS shell runs beside the app; Effect backend (darna-stack pattern), git/filesystem-backed",
+  "description": "reviewer embedded-server \u2014 the API server the macOS shell runs beside the app; Effect backend (darna-stack pattern), git/filesystem-backed",
   "exports": {
     "./migrations": "./src/layers/db/migrations.ts"
   },
@@ -14,14 +14,11 @@
     "build:bundle": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/main.cjs --sourcemap --external:@lydell/node-pty",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "lint": "eslint",
-    "format": "prettier --write \"**/*.{ts,js}\"",
-    "format:check": "prettier --check \"**/*.{ts,js}\""
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.6",
-    "@lydell/node-pty": "1.2.0-beta.15",
+    "@lydell/node-pty": "1.2.0-beta.18",
     "@reviewer/core": "workspace:*",
     "@types/ws": "^8.18.2",
     "effect": "4.0.6",
@@ -29,11 +26,8 @@
   },
   "devDependencies": {
     "@effect/vitest": "4.0.6",
-    "@reviewer/lint": "workspace:*",
     "@types/node": "^24.19.2",
     "esbuild": "^0.28.2",
-    "eslint": "^10.13.0",
-    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.0.5"

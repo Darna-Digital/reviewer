@@ -146,7 +146,8 @@ export const pullFromGraphql = (
   node: Record<string, unknown>
 ): PullRequestInfo => {
   const commit = nodes(node["commits"])[0]?.["commit"] as
-    Record<string, unknown> | undefined;
+    | Record<string, unknown>
+    | undefined;
   return {
     number: num(node["number"]),
     title: str(node["title"]),

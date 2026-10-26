@@ -24,7 +24,10 @@ export interface RenameThreadInput {
   readonly branch?: string;
 }
 export type ThreadsFailure =
-  NoRepoSelected | NotFound | StorageError | TerminalError;
+  | NoRepoSelected
+  | NotFound
+  | StorageError
+  | TerminalError;
 export interface ThreadsRepo {
   readonly list: Effect.Effect<ReadonlyArray<ThreadSummary>, ThreadsFailure>;
   readonly get: (id: string) => Effect.Effect<Thread, ThreadsFailure>;

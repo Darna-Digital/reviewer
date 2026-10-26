@@ -239,7 +239,8 @@ export interface NavigationNode {
     readonly length: number;
   }>;
   readonly nameSpan?:
-    { readonly start: number; readonly length: number } | undefined;
+    | { readonly start: number; readonly length: number }
+    | undefined;
   readonly childItems?: ReadonlyArray<NavigationNode> | undefined;
 }
 

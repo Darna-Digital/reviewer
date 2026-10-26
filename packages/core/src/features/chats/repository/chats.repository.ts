@@ -49,7 +49,11 @@ export interface UpdateChatInput {
   readonly access?: ChatAccess;
 }
 export type ChatsFailure =
-  NoRepoSelected | NotFound | StorageError | TerminalError | ChatBusy;
+  | NoRepoSelected
+  | NotFound
+  | StorageError
+  | TerminalError
+  | ChatBusy;
 export interface ChatsRepo {
   readonly list: (
     input: ListChatsInput

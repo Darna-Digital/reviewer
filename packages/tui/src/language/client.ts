@@ -35,7 +35,11 @@ export interface DefinitionResult {
 }
 
 export type ReferenceKind =
-  'definition' | 'import' | 'export' | 'write' | 'read';
+  | 'definition'
+  | 'import'
+  | 'export'
+  | 'write'
+  | 'read';
 
 export interface SymbolReference {
   location: Location;
@@ -111,7 +115,8 @@ export function languageClient(root: string) {
         'This Reviewer server is too old for this — update Reviewer',
       );
     const body = (await response.json().catch(() => null)) as
-      (TResult & { reason?: string; _tag?: string }) | null;
+      | (TResult & { reason?: string; _tag?: string })
+      | null;
     if (!response.ok || !body)
       throw new LanguageRequestError(
         body?.reason ??

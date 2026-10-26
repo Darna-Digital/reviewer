@@ -58,7 +58,11 @@ export type Focus = 'sidebar' | 'main' | 'bottom';
 /** The pull request sidebar's two lists: the pull requests, and the files of the one under review. */
 export type PullPart = 'list' | 'files';
 export type Typing =
-  'message' | 'treeFilter' | 'historyFilter' | 'pullFilter' | null;
+  | 'message'
+  | 'treeFilter'
+  | 'historyFilter'
+  | 'pullFilter'
+  | null;
 export type Cell = { x: number; y: number };
 
 export type MenuEntry =

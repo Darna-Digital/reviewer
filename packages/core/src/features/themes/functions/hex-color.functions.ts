@@ -60,6 +60,8 @@ function fromDisplayP3(r: number, g: number, b: number, a: number): Rgba {
   const [lr, lg, lb] = [linear(r), linear(g), linear(b)];
   const x = 0.4865709 * lr + 0.2656677 * lg + 0.1982173 * lb;
   const y = 0.2289746 * lr + 0.6917385 * lg + 0.0792869 * lb;
+  // The zero coefficient is kept so the three matrix rows read as one block.
+  // oxlint-disable-next-line erasing-op
   const z = 0.0 * lr + 0.0451134 * lg + 1.0439444 * lb;
   const sr = 3.2404542 * x - 1.5371385 * y - 0.4985314 * z;
   const sg = -0.969266 * x + 1.8760108 * y + 0.041556 * z;

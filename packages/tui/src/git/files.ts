@@ -2,7 +2,11 @@ import { join } from 'node:path';
 import { git } from './exec';
 
 export type FileStatus =
-  'added' | 'untracked' | 'modified' | 'deleted' | 'renamed';
+  | 'added'
+  | 'untracked'
+  | 'modified'
+  | 'deleted'
+  | 'renamed';
 
 export interface FileContent {
   text: string;

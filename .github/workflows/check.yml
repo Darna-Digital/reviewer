@@ -26,10 +26,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm -r --if-present lint
+        run: pnpm lint
 
       - name: Check formatting
-        run: pnpm -r --if-present format:check
+        run: pnpm format:check
 
       - name: Test
         run: pnpm -r --if-present test
