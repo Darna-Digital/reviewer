@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.27 — 2026-10-27
+
+### Fixed
+
+- In the side-by-side diff, the ribbons linking changes on the left to the right no longer jitter or flash another file's ribbons as you scroll.
+
 ## v0.0.26 — 2026-10-26
 
 ### Changed
