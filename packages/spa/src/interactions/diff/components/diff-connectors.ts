@@ -18,10 +18,16 @@
  * renders asks for the ribbons again. So the painter is built around spending
  * as little as possible per render:
  *
- *  - one rAF for the whole pane rather than one per file, with every file
+ *  - one pass for the whole pane rather than one per file, with every file
  *    measured before any file is drawn. Measuring reads layout and drawing
  *    dirties it, so interleaving them across the four or five files on screen
  *    made each one force the layout the last had just invalidated;
+ *  - that pass runs in a microtask behind the viewer's render, not in a frame
+ *    of its own. The viewer renders inside its own rAF, and a rAF asked for
+ *    from in there lands on the next frame — so each scrolled render was
+ *    painted once with the rows moved and the ribbons where they had been,
+ *    and once more corrected: the ribbons jittered behind the code, and a
+ *    recycled host flashed the last file's ribbons over the new one;
  *  - the rows are read in one pass per column, banded in a single walk, and
  *    the drawn paths are kept and re-pointed rather than rebuilt.
  *
@@ -314,6 +320,7 @@ export class ConnectorPainter {
   private readonly drawn = new Map<HTMLElement, Geometry | null>();
   private readonly overlays = new Map<HTMLElement, SVGSVGElement>();
   private frame: number | null = null;
+  private flushQueued = false;
 
   schedule(host: HTMLElement, reason: ConnectorReason = "mounted"): void {
     if (reason === "mounted") this.drawn.delete(host);
@@ -324,7 +331,9 @@ export class ConnectorPainter {
       job.framesLeft = SETTLE_FRAMES;
       job.stable = 0;
     }
-    if (this.frame === null) this.frame = requestAnimationFrame(this.run);
+    if (this.flushQueued) return;
+    this.flushQueued = true;
+    queueMicrotask(this.flush);
   }
 
   clear(host: HTMLElement): void {
@@ -360,13 +369,31 @@ export class ConnectorPainter {
    * document's layout, so a read that follows one pays to have it computed
    * again, and with several files on screen that is a forced layout per file
    * per frame.
+   *
+   * The first pass after a render comes as a microtask, so it lands in the
+   * frame the viewer rendered in; the settling passes after it get a frame
+   * each. A render arriving while a settling frame is pending takes over
+   * from it rather than measuring twice.
    */
-  private readonly run = (): void => {
+  private readonly flush = (): void => {
+    this.flushQueued = false;
+    this.stop();
+    this.run();
+  };
+
+  private readonly settle = (): void => {
     this.frame = null;
+    this.run();
+  };
+
+  private run(): void {
     const changed: Array<[HTMLElement, Geometry | null]> = [];
     for (const [host, job] of this.jobs) {
       const geometry = host.isConnected ? measure(host) : null;
-      if (sameGeometry(geometry, this.drawn.get(host) ?? null)) {
+      // A host with nothing recorded has to be drawn even when it measures
+      // empty: it may still be showing the ribbons of the file it held before.
+      const drawn = this.drawn.get(host);
+      if (drawn !== undefined && sameGeometry(geometry, drawn)) {
         job.stable += 1;
       } else {
         this.drawn.set(host, geometry);
@@ -379,8 +406,8 @@ export class ConnectorPainter {
     for (const [host, job] of [...this.jobs])
       if (job.stable >= 2 || job.framesLeft <= 0) this.jobs.delete(host);
     if (this.jobs.size > 0 && this.frame === null)
-      this.frame = requestAnimationFrame(this.run);
-  };
+      this.frame = requestAnimationFrame(this.settle);
+  }
 
   private draw(host: HTMLElement, geometry: Geometry | null): void {
     const root = host.shadowRoot;
