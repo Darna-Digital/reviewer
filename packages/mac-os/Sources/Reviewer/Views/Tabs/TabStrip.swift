@@ -2,17 +2,17 @@
 // session by its title with its ✕, and the mark that mints one — the row
 // the web app's window bar draws, on the window's own bar, from the picture
 // the island sends up (see `WindowTabStrip`). The pinned pair are the
-// system's own toggles in the one pane of glass the bar gives a group —
-// the way Notes sets its format buttons — the one that is on lit the way
-// the system lights it; the sessions after them, and the mark that mints
-// one, wear the web bar's chips instead, cut to the glass's own height and
-// capsule, so a row of titles reads as the SPA's strip on the pinned
+// system's own tabs — the segmented control in its macOS 27 tabs role,
+// whose glass puck can be grabbed and dragged from one segment to the
+// other as well as clicked; the sessions after them, and the mark that
+// mints one, wear the web bar's chips instead, cut to the glass's own
+// height and capsule, so a row of titles reads as the SPA's strip on the pinned
 // pair's line rather than a run of glass buttons (see `BarChipStyle`). A
 // press goes back down to the island's strip, which is the one that
 // switches.
 //
-// The pinned pair are a toolbar item each, laid out and tipped by the bar
-// as it does everything else on it. The sessions are not: they are one
+// The pinned pair are one toolbar item, laid out and tipped by the bar as
+// it does everything else on it. The sessions are not: they are one
 // item holding a row this file lays out itself, because a tab is dragged
 // along that row to reorder it and the tabs it passes have to slide out of
 // its way under the pointer — which means one view that knows where every
@@ -34,10 +34,8 @@ struct TabStripItems: ToolbarContent {
     let model: AppModel
 
     var body: some ToolbarContent {
-        ToolbarItemGroup(placement: .navigation) {
-            ForEach(model.windowTabs.tabs.filter(\.pinned)) { tab in
-                PinnedTab(tab: tab, model: model)
-            }
+        ToolbarItem(placement: .navigation) {
+            ModeSwitch(model: model)
         }
         ToolbarItemGroup(placement: .navigation) {
             SessionTabRow(model: model)
@@ -46,50 +44,43 @@ struct TabStripItems: ToolbarContent {
     }
 }
 
-/// A pinned tab is its icon and nothing else: a system toggle on the bar,
-/// which draws it in the toolbar's own glass and lights it while its way
-/// of working is in front (see `WindowTabStrip.lights`). A tab is left by
-/// going to another, never by pressing it again, so a press on the tab in
-/// front is ignored; a press on Sessions lit for a session's own tab is
-/// the way back to the list, whichever way the toggle reads it.
-private struct PinnedTab: View {
-    let tab: WindowTab
+/// The pinned tabs — Code, Sessions — as the system's tabs: an icon a
+/// segment, in the toolbar's glass, the puck on the way of working in
+/// front (see `WindowTabStrip.lights`) and draggable across to the other.
+/// A tab is left by going to another, never by pressing it again, so a
+/// press on the tab in front is ignored; a press on Sessions lit for a
+/// session's own tab is the way back to the list — the control sends its
+/// action on every press, the same segment included, so that press
+/// reaches here even though the puck does not move.
+///
+/// The tab pressed is held here until the strip comes back with it in
+/// front: the control has already slid its puck there, and a selection
+/// read straight off the strip would still name the old tab for the trip
+/// over the bridge, sending the puck back and then over again.
+private struct ModeSwitch: View {
     let model: AppModel
-
-    private static let glyphWell: CGFloat = 20
+    @State private var pressed: String?
 
     var body: some View {
-        Toggle(isOn: isInFront) {
-            Label {
-                Text(tab.title)
-            } icon: {
-                // A square well for every glyph: the lit capsule hugs the
-                // icon, and Code's `</>` is wide enough to stretch it into a
-                // pill beside Sessions' circle.
-                Image(systemName: tab.kind.symbol)
-                    .frame(width: Self.glyphWell, height: Self.glyphWell)
-            }
-        }
-        .toggleStyle(.button)
-        // Lit in the theme's accent, as the pane's tabs and the diff's
-        // add-a-comment button are — the one colour every lit control shares;
-        // on the app's own palette that colour is the system's accent, which
-        // is what the toggle would have worn anyway. Set as a tint and no
-        // more: an ink would give the bar's glass a hover the system's items
-        // do not have, and wrapping the toggle in a view of its own loses
-        // it the bar's glass altogether.
-        .tint(Color(nsColor: IslandPalette.accent))
-        .help(tab.title)
-        .contextMenu { TabContextMenu(tab: tab, model: model) }
+        SegmentedTabs(
+            segments: model.windowTabs.tabs.filter(\.pinned).map {
+                SegmentedTabs.Segment(id: $0.id, title: $0.title, symbol: $0.kind.symbol, showsTitle: false)
+            },
+            selection: pressed ?? lit,
+            select: select
+        )
+        .contextMenu { PinnedTabContextMenu(model: model) }
+        .onChange(of: model.windowTabs.activeId) { pressed = nil }
     }
 
-    private var isInFront: Binding<Bool> {
-        Binding(
-            get: { model.windowTabs.lights(tab) },
-            set: { _ in
-                guard model.windowTabs.activeId != tab.id else { return }
-                model.select(tabId: tab.id)
-            })
+    private var lit: String {
+        model.windowTabs.tabs.first { $0.pinned && model.windowTabs.lights($0) }?.id ?? ""
+    }
+
+    private func select(_ id: String) {
+        guard model.windowTabs.activeId != id else { return }
+        if id != lit { pressed = id }
+        model.select(tabId: id)
     }
 }
 
@@ -766,16 +757,29 @@ private struct TabCloseButton: View {
     }
 }
 
+/// The segmented control is one view, so its menu cannot know which
+/// segment it was opened over; what a pinned tab's menu offers is the same
+/// for either — the sessions closed — so it does not need to.
+private struct PinnedTabContextMenu: View {
+    let model: AppModel
+
+    var body: some View {
+        Button("Close other tabs") {
+            for tab in model.windowTabs.sessions {
+                model.closeTab(id: tab.id)
+            }
+        }
+    }
+}
+
 private struct TabContextMenu: View {
     let tab: WindowTab
     let model: AppModel
 
     var body: some View {
-        if !tab.pinned {
-            Button("Close tab") { model.closeTab(id: tab.id) }
-        }
+        Button("Close tab") { model.closeTab(id: tab.id) }
         Button("Close other tabs") {
-            for other in model.windowTabs.tabs where other.id != tab.id && !other.pinned {
+            for other in model.windowTabs.sessions where other.id != tab.id {
                 model.closeTab(id: other.id)
             }
         }

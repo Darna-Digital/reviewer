@@ -303,13 +303,10 @@ private final class PaletteHeadingCell: NSTableCellView {
         var x = PaletteList.inset + 8
         if !iconView.isHidden {
             let size = Self.iconSize
-            iconView.frame = NSRect(x: x, y: (height - size) / 2 + 2, width: size, height: size)
+            iconView.frame = NSRect(x: x, y: ((height - size) / 2).rounded(), width: size, height: size)
             x += size + 6
         }
-        let labelHeight = ceil(label.font!.ascender - label.font!.descender) + 2
-        label.frame = NSRect(
-            x: x, y: (height - labelHeight) / 2 + 2, width: max(0, bounds.width - x - PaletteList.inset - 8),
-            height: labelHeight)
+        label.centre(x: x, width: max(0, bounds.width - x - PaletteList.inset - 8), inHeight: height)
     }
 }
 
@@ -410,8 +407,7 @@ private final class PaletteRowCell: NSTableCellView {
         let height = bounds.height
         var x = PaletteList.inset + 8
         if !leadField.isHidden {
-            let leadHeight = ceil(leadField.font!.ascender - leadField.font!.descender) + 2
-            leadField.frame = NSRect(x: x, y: (height - leadHeight) / 2, width: Self.leadWidth, height: leadHeight)
+            leadField.centre(x: x, width: Self.leadWidth, inHeight: height)
             x += Self.leadWidth + 10
         } else {
             let size = Self.iconSize
@@ -425,12 +421,23 @@ private final class PaletteRowCell: NSTableCellView {
         }
         if !hintField.isHidden {
             let width = min(ceil(hintField.fittingSize.width), 160)
-            let hintHeight = ceil(hintField.font!.ascender - hintField.font!.descender) + 2
-            hintField.frame = NSRect(x: trailing - width, y: (height - hintHeight) / 2, width: width, height: hintHeight)
+            hintField.centre(x: trailing - width, width: width, inHeight: height)
             trailing -= width + 8
         }
-        let labelHeight = ceil(Self.textFont.ascender - Self.textFont.descender) + 4
-        label.frame = NSRect(x: x, y: (height - labelHeight) / 2, width: max(0, trailing - x), height: labelHeight)
+        label.centre(x: x, width: max(0, trailing - x), inHeight: height)
+    }
+}
+
+private extension NSTextField {
+    /// The field set on the middle of a line of `height`. A label draws its
+    /// text from the top of its frame, so a frame given room past the
+    /// text's own height leaves that room empty beneath it and lifts the
+    /// text off the line's middle — off the icon's beside it. Cut to the
+    /// text's height, the frame is the text, and centring one centres the
+    /// other.
+    func centre(x: CGFloat, width: CGFloat, inHeight height: CGFloat) {
+        let textHeight = ceil(cell?.cellSize.height ?? 0)
+        frame = NSRect(x: x, y: ((height - textHeight) / 2).rounded(), width: width, height: textHeight)
     }
 }
 

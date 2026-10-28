@@ -315,7 +315,7 @@ private final class IslandGauge {
 
 /// The toolbar over the detail: the window tabs — the web app's window bar,
 /// on the window's own bar, so nothing on it is drawn a second time inside
-/// the island. The tabs' pinned pair are the system's own glass toggles (see
+/// the island. The tabs' pinned pair are the system's own glass tabs control (see
 /// `TabStripItems`); every other item wears the web bar's chip instead, the
 /// glass put away per item (see `BarChipStyle`). The sidebar's toggle is the
 /// system's, standing in the sidebar's own pane beside the traffic lights

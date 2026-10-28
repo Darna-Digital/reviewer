@@ -24,12 +24,19 @@ struct SettingsView: View {
         @Bindable var settings = model.settings
         Form {
             Section {
-                Picker("Appearance", selection: $settings.theme) {
-                    ForEach(ThemePreference.allCases) { theme in
-                        Label(theme.title, systemImage: theme.symbol).tag(theme)
-                    }
-                }
-                .pickerStyle(.segmented)
+                // The row to itself, under the section's own title rather
+                // than beside a second one, in the large size whose ends
+                // are a capsule's.
+                SegmentedTabs(
+                    segments: ThemePreference.allCases.map {
+                        SegmentedTabs.Segment(id: $0.rawValue, title: $0.title, symbol: $0.symbol, showsTitle: true)
+                    },
+                    selection: settings.theme.rawValue,
+                    fillsWidth: true,
+                    select: { settings.theme = ThemePreference(rawValue: $0) ?? settings.theme }
+                )
+                .controlSize(.large)
+                .accessibilityLabel("Appearance")
                 ThemePicker("Light theme", scheme: .light, selection: $settings.lightTheme, catalog: model.settings.themes)
                 ThemePicker("Dark theme", scheme: .dark, selection: $settings.darkTheme, catalog: model.settings.themes)
                 CodeFontPicker(selection: $settings.codeFont)
