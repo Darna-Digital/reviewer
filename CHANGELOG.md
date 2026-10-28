@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.28 — 2026-10-28
+
+### Changed
+
+- The Code and Sessions switch in the toolbar, the Branches, History, Terminal and Run tabs in the bottom pane, and the Appearance choice in Settings now use macOS's glass tabs. Click a tab, or drag the highlight across to it.
+
+### Fixed
+
+- In the command palette (⌘E), titles, shortcuts and group headings now line up with their icons instead of sitting slightly high.
+
 ## v0.0.27 — 2026-10-27
 
 ### Fixed
