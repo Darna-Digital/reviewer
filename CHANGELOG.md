@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.29 — 2026-10-28
+
+### Changed
+
+- Selecting text in a `.env` file no longer offers to start a comment. These files hold secrets and settings rather than code under review, so they take no comments.
+
 ## v0.0.28 — 2026-10-28
 
 ### Changed
