@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.32 — 2026-10-28
+
+### Changed
+
+- Right-clicking a branch in the Branches pane now opens the same menu as the branch picker, right at the pointer. Long branch names are shortened in the middle, and resting on an item shows it in full.
+- The lines between groups in the branch menu are thinner.
+
 ## v0.0.31 — 2026-10-28
 
 ### Changed
