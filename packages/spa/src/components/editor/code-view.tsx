@@ -1,4 +1,3 @@
-import { DIFFS_TAG_NAME } from "@pierre/diffs";
 import type {
   FileContents,
   LineAnnotation,
@@ -208,21 +207,11 @@ export function CodeView({
   // there is nothing to prime for it.
   const highlightPrimed = useHighlightPrimed(highlightFile, !editing);
 
-  // The editor keeps offering to comment for as long as the selection stands,
-  // which would put the offer on top of the composer it just opened. The flag
-  // rides on the shadow host, where the popover's own stylesheet can see it —
-  // `unsafeCSS` is read once at mount, so the CSS cannot be made conditional.
-  const drafting = draft !== null && draft.filePath === path;
-  useEffect(() => {
-    const host = scrollWrapper.current?.querySelector(DIFFS_TAG_NAME);
-    if (host === null || host === undefined) return;
-    if (drafting) host.setAttribute("data-drafting", "");
-    else host.removeAttribute("data-drafting");
-  }, [drafting]);
-
   // Report the file as saved when it goes away, so a stale marker cannot
   // outlive the view that owned it.
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
+  const drafting = draft !== null && draft.filePath === path;
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
@@ -368,54 +357,46 @@ export function CodeView({
     return <UnsupportedFile path={path} sizeBytes={file.data.sizeBytes} />;
   }
 
-  return (
-    // Virtualizer windows the file: only the viewport (±overscan) worth of
-    // lines is materialized in the DOM, so large files open instantly. The
-    // wrapper exists so `useRevealLine` can reach the Virtualizer's own
-    // scrolling root, which is its first child.
-    <div ref={scrollWrapper} className="relative h-full">
-      {/* Trailing gutter: the last lines have to clear the floating bars that
-          hang over the bottom of the pane (the assign bar, the problems bar),
-          and scrolling a little past the end is how an editor behaves anyway. */}
-      <Virtualizer className="h-full overflow-auto pb-20">
-        {/* The view builds its own editor from this factory as it mounts,
-            rather than being handed one that exists whether or not a file is
-            open — see `useFileEditing`. */}
-        <EditProvider createEditor={buffer.createEditor}>
-          <section className="diff-file" data-file-anchor={path}>
-            {/* Remount per file: the underlying File instance neither
-            re-highlights on a `file` prop change nor attaches the editor after
-            mount, so navigating would otherwise leave a stale view. */}
-            <File<AnnotationMeta>
-              key={path}
-              file={highlightFile}
-              selectedLines={selectedLines}
-              options={{
-                theme: codeThemes,
-                themeType: theme,
-                // Code is not prose: a long line runs off the side and is
-                // scrolled to, rather than being folded back under itself.
-                // Wrapping gave one statement several rows of its own, so the
-                // gutter no longer read as one number per row and the file
-                // reflowed whenever the pane was resized. The view pins the
-                // gutter and slides the code under it — see
-                // `[data-overflow="scroll"]` in the library's own stylesheet.
-                overflow: "scroll",
-                stickyHeader: false,
-                // The path, the file's actions and the trail that led here all
-                // belong on one line — the crumb bar above owns it, so the
-                // view's own header would only say the same thing twice.
-                disableFileHeader: true,
-                // Token hooks + the post-render pass that underlines problems.
-                ...language.viewOptions,
-                // Both layers paint from the same callback and into the same
-                // stylesheet, and the view keeps one of each.
-                onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
-                ...gutterCommenting,
-              }}
-              edit={editing}
-              /* Leaving the file editable ends its edit session, and the view
+  const code = (
+    <>
+      {/* The view builds its own editor from this factory as it mounts,
+          rather than being handed one that exists whether or not a file is
+          open — see `useFileEditing`. */}
+      <EditProvider createEditor={buffer.createEditor}>
+        <section className="diff-file" data-file-anchor={path}>
+          {/* Remount per file: the underlying File instance neither
+              re-highlights on a `file` prop change nor attaches the editor
+              after mount, so navigating would otherwise leave a stale view. */}
+          <File<AnnotationMeta>
+            key={path}
+            file={highlightFile}
+            selectedLines={selectedLines}
+            options={{
+              theme: codeThemes,
+              themeType: theme,
+              // Code is not prose: a long line runs off the side and is
+              // scrolled to, rather than being folded back under itself.
+              // Wrapping gave one statement several rows of its own, so the
+              // gutter no longer read as one number per row and the file
+              // reflowed whenever the pane was resized. The view pins the
+              // gutter and slides the code under it — see
+              // `[data-overflow="scroll"]` in the library's own stylesheet.
+              overflow: "scroll",
+              stickyHeader: false,
+              // The path, the file's actions and the trail that led here all
+              // belong on one line — the crumb bar above owns it, so the
+              // view's own header would only say the same thing twice.
+              disableFileHeader: true,
+              // Token hooks + the post-render pass that underlines problems.
+              ...language.viewOptions,
+              // Both layers paint from the same callback and into the same
+              // stylesheet, and the view keeps one of each.
+              onPostRender,
+              unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
+              ...gutterCommenting,
+            }}
+            edit={editing}
+            /* Leaving the file editable ends its edit session, and the view
                  goes back to the file it was handed — which is what is on disk.
                  A buffer with unsaved work in it would empty itself onto the
                  floor, and ⌘S would go on writing text nobody could see.
@@ -424,62 +405,84 @@ export function CodeView({
                  file may not wear the key of the one it replaces, so an
                  untouched buffer — same text, same key — is refused rather than
                  accepted: there is nothing to keep. */
-              onEditComplete={(event) => {
-                if (event.file.contents === event.originalFile.contents)
-                  return "reject";
-                event.file.cacheKey = fileCacheKey(path, event.file.contents);
-                return "accept";
-              }}
-              /* The editable view snapshots the rendered code when the editor
+            onEditComplete={(event) => {
+              if (event.file.contents === event.originalFile.contents)
+                return "reject";
+              event.file.cacheKey = fileCacheKey(path, event.file.contents);
+              return "accept";
+            }}
+            /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` primes the main-thread highlighter so
                the first paint is coloured anyway. A read-only file has no such
                snapshot, and reads the pool's cache instead — which is what
                lets it be highlighted before it is opened. */
-              disableWorkerPool={editing}
-              lineAnnotations={annotationsEnabled ? annotations : undefined}
-              renderAnnotation={
-                annotationsEnabled
-                  ? (annotation) => {
-                      const meta = annotation.metadata;
-                      if (meta === undefined) return null;
-                      if (meta.kind === "draft") {
-                        return onCommentSubmit === undefined ? null : (
-                          <DraftCard
-                            onCancel={() => onDraftCancel?.()}
-                            {...(meta.body === undefined
-                              ? {}
-                              : { initialBody: meta.body })}
-                            onSubmit={(body) =>
-                              onCommentSubmit(
-                                {
-                                  filePath: path,
-                                  side: FILE_COMMENT_SIDE,
-                                  lineNumber: annotation.lineNumber,
-                                },
-                                body
-                              )
-                            }
-                          />
-                        );
-                      }
-                      return onCommentDelete === undefined ? null : (
-                        <CommentThread
-                          comments={meta.comments}
-                          onDelete={onCommentDelete}
-                          onEdit={onCommentEdit}
+            disableWorkerPool={editing}
+            lineAnnotations={annotationsEnabled ? annotations : undefined}
+            renderAnnotation={
+              annotationsEnabled
+                ? (annotation) => {
+                    const meta = annotation.metadata;
+                    if (meta === undefined) return null;
+                    if (meta.kind === "draft") {
+                      return onCommentSubmit === undefined ? null : (
+                        <DraftCard
+                          onCancel={() => onDraftCancel?.()}
+                          {...(meta.body === undefined
+                            ? {}
+                            : { initialBody: meta.body })}
+                          onSubmit={(body) =>
+                            onCommentSubmit(
+                              {
+                                filePath: path,
+                                side: FILE_COMMENT_SIDE,
+                                lineNumber: annotation.lineNumber,
+                              },
+                              body
+                            )
+                          }
                         />
                       );
                     }
-                  : undefined
-              }
-            />
-          </section>
-        </EditProvider>
-        {language.card}
-        {language.completions}
-        {language.menu}
-      </Virtualizer>
+                    return onCommentDelete === undefined ? null : (
+                      <CommentThread
+                        comments={meta.comments}
+                        onDelete={onCommentDelete}
+                        onEdit={onCommentEdit}
+                      />
+                    );
+                  }
+                : undefined
+            }
+          />
+        </section>
+      </EditProvider>
+      {language.card}
+      {language.completions}
+      {language.menu}
+    </>
+  );
+
+  return (
+    // The wrapper exists so `useRevealLine` can reach the scrolling root, which
+    // is its first child.
+    <div ref={scrollWrapper} className="relative h-full">
+      {/* Trailing gutter: the last lines have to clear the floating bars that
+          hang over the bottom of the pane (the assign bar, the problems bar),
+          and scrolling a little past the end is how an editor behaves anyway. */}
+      {editing ? (
+        // An edited file is drawn whole. The editor only draws its caret on a
+        // line that is in the page, and a windowed file leaves a line typed
+        // past the window's edge out of it — so the editor, finding no caret
+        // to bring into view, centred the line instead, and every new line
+        // near the foot of the pane scrolled the whole view. The files typed
+        // into here are `.env` files, which are short enough not to need it.
+        <div className="h-full overflow-auto pb-20">{code}</div>
+      ) : (
+        // Virtualizer windows the file: only the viewport (±overscan) worth of
+        // lines is materialized in the DOM, so large files open instantly.
+        <Virtualizer className="h-full overflow-auto pb-20">{code}</Virtualizer>
+      )}
       {/* Floats over the code rather than sitting under it: diagnostics come
           and go while typing, and a bar that resizes the view would shove the
           text around under the caret every time the last problem cleared. */}
