@@ -1,10 +1,11 @@
-// The bottom pane: a bar with a row of flat tabs between its four surfaces
-// — Branches, History, Terminal and Run, the web dock's own strip — and the
+// The bottom pane: a bar with the tabs between its four surfaces —
+// Branches, History, Terminal and Run, the web dock's own strip — and the
 // mark that puts the pane away, then the surface beneath, the way Xcode's
-// debug area is laid out. The tabs are the system's accessory-bar toggles,
-// the flat switch Finder's and Xcode's bars wear: no bezel at rest, a tint
-// while on, so the bar reads as a strip of names rather than a run of
-// buttons. The bar stands at the web dock's own height — the 36pt strip
+// debug area is laid out. The tabs are the system's own (see
+// `SegmentedTabs`), as the settings' appearance is: each surface's icon and
+// name in a segment, the glass puck on the one that is up, at the bar's
+// leading edge in the large size whose capsule stands as tall as the mark
+// at its end. The bar stands at the web dock's own height — the 36pt strip
 // the Find-symbol drawer beside it wears — at the pane bar's inset, so
 // the two islands' bars line up along the foot of the window and the
 // surface's own 28pt bar under it reads as a second line of the same
@@ -32,13 +33,17 @@ struct BottomPane: View {
 
     private var header: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 2) {
-                ForEach(BottomPaneTab.allCases) { tab in
-                    SurfaceTab(tab: tab, isOn: model.bottomTab == tab) {
-                        model.show(bottomTab: tab)
-                    }
+            SegmentedTabs(
+                segments: BottomPaneTab.allCases.map {
+                    SegmentedTabs.Segment(id: $0.rawValue, title: $0.title, symbol: $0.symbol, showsTitle: true)
+                },
+                selection: model.bottomTab.rawValue,
+                select: { id in
+                    if let tab = BottomPaneTab(rawValue: id) { model.show(bottomTab: tab) }
                 }
-            }
+            )
+            .controlSize(.large)
+            .accessibilityLabel("Bottom pane")
             .padding(.leading, PaneMetrics.barInset)
             Spacer(minLength: 8)
             CornerButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
@@ -113,25 +118,5 @@ private struct CornerButtonStyle: ButtonStyle {
                 in: Self.shape)
             .contentShape(Self.shape)
             .onHover { isHovering = $0 }
-    }
-}
-
-/// One surface's tab: a toggle in the accessory-bar style that lights while
-/// its surface is up. A surface is left by going to another, never by
-/// pressing its tab again, so the toggle answers only to being switched on.
-private struct SurfaceTab: View {
-    let tab: BottomPaneTab
-    let isOn: Bool
-    let select: () -> Void
-
-    var body: some View {
-        Toggle(isOn: Binding(get: { isOn }, set: { if $0 { select() } })) {
-            Text(tab.title)
-                .font(.system(size: 11, weight: .medium))
-                .padding(.horizontal, 2)
-        }
-        .toggleStyle(.button)
-        .buttonStyle(.accessoryBar)
-        .help(tab.title)
     }
 }

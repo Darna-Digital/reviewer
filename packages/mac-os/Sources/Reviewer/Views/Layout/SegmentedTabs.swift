@@ -2,8 +2,9 @@
 // selection is a glass puck that can be grabbed and dragged from segment
 // to segment, rather than the flat fill a value picker wears — held
 // directly rather than through a `Picker`. It stands where the toolbar
-// switches between Code and Sessions (see `TabStripItems`) and where the
-// settings pick the window's appearance (see `SettingsView`).
+// switches between Code and Sessions (see `TabStripItems`), where the
+// settings pick the window's appearance (see `SettingsView`) and across the
+// bottom pane's bar (see `BottomPane`).
 //
 // SwiftUI's picker rebuilds the control on every update, setting each
 // segment's image again and deselecting every segment before selecting the
@@ -59,8 +60,9 @@ struct SegmentedTabs: NSViewRepresentable {
     func updateNSView(_ control: NSSegmentedControl, context: Context) {
         let coordinator = context.coordinator
         coordinator.select = select
-        if coordinator.segments != segments {
+        if coordinator.segments != segments || coordinator.controlSize != control.controlSize {
             coordinator.segments = segments
+            coordinator.controlSize = control.controlSize
             // Icons alone share the width evenly, as the toolbar's own
             // segmented items do, and so does a control stretched across a
             // row; otherwise each segment with a word beside its icon is
@@ -68,12 +70,11 @@ struct SegmentedTabs: NSViewRepresentable {
             let fitsContent = !fillsWidth && segments.contains(where: \.showsTitle)
             control.segmentDistribution = fitsContent ? .fit : .fillEqually
             control.segmentCount = segments.count
+            let font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: control.controlSize))
             for (index, segment) in segments.enumerated() {
-                control.setImage(
-                    NSImage(systemSymbolName: segment.symbol, accessibilityDescription: segment.title),
-                    forSegment: index)
+                control.setImage(Self.image(of: segment, font: font), forSegment: index)
                 control.setImageScaling(.scaleNone, forSegment: index)
-                control.setLabel(segment.showsTitle ? segment.title : "", forSegment: index)
+                control.setLabel("", forSegment: index)
                 control.setToolTip(segment.title, forSegment: index)
             }
         }
@@ -91,15 +92,54 @@ struct SegmentedTabs: NSViewRepresentable {
         }
     }
 
-    /// The control's own height — SwiftUI's control size, which it sets on
-    /// the control, decides it — at the width offered, when it fills one.
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView control: NSSegmentedControl, context: Context) -> CGSize? {
-        guard fillsWidth, let width = proposal.width else { return nil }
-        return CGSize(width: width, height: control.fittingSize.height)
+    /// A segment's icon, and its word beside it when it shows one, as one
+    /// image. The word is drawn into the image rather than set as the
+    /// segment's label: on macOS 27 the control sets the selected segment's
+    /// label in bold, which an image has no weight for. Drawn as a template,
+    /// so it takes the control's ink like a label would, with the air a
+    /// labelled segment has built into its sides — a segment holding only
+    /// an image is given less of its own.
+    private static func image(of segment: Segment, font: NSFont) -> NSImage? {
+        guard let symbol = NSImage(systemSymbolName: segment.symbol, accessibilityDescription: segment.title) else {
+            return nil
+        }
+        guard segment.showsTitle else { return symbol }
+        let icon = symbol.withSymbolConfiguration(.init(pointSize: font.pointSize, weight: .regular)) ?? symbol
+        let title = NSAttributedString(string: segment.title, attributes: [.font: font])
+        let titleSize = title.size()
+        let height = ceil(max(icon.size.height, titleSize.height))
+        let width = ceil(titleSideInset * 2 + icon.size.width + titleSpacing + titleSize.width)
+        let image = NSImage(size: NSSize(width: width, height: height), flipped: false) { _ in
+            icon.draw(in: NSRect(
+                x: titleSideInset, y: ((height - icon.size.height) / 2).rounded(),
+                width: icon.size.width, height: icon.size.height))
+            title.draw(at: NSPoint(
+                x: titleSideInset + icon.size.width + titleSpacing, y: ((height - titleSize.height) / 2).rounded()))
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = segment.title
+        return image
     }
 
+    private static let titleSpacing: CGFloat = 4
+    private static let titleSideInset: CGFloat = 8
+
+    /// The control's own size — SwiftUI's control size, which it sets on
+    /// the control, decides its height — or its height at the width
+    /// offered, when it fills one. Left to SwiftUI, a representable takes
+    /// whatever width it is offered whether it fills it or not, and the
+    /// control spreads its segments out across it.
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView control: NSSegmentedControl, context: Context) -> CGSize? {
+        let fitting = control.fittingSize
+        guard fillsWidth, let width = proposal.width else { return fitting }
+        return CGSize(width: width, height: fitting.height)
+    }
+
+    @MainActor
     final class Coordinator: NSObject {
         var segments: [Segment] = []
+        var controlSize: NSControl.ControlSize?
         var accent: AccentKey?
         var select: (String) -> Void = { _ in }
 
