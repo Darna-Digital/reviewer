@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.31 — 2026-10-28
+
+### Changed
+
+- The toolbar's buttons now show the same glass label as the rail when you rest the pointer on them: Code and Sessions, the sidebar toggle, the project picker and the new-session button, each with its shortcut. Once one label is up, it glides straight to the next button you point at.
+
 ## v0.0.30 — 2026-10-28
 
 ### Changed
