@@ -20,7 +20,7 @@ Work lands on `staging` through pull requests. Promote it with a
 | Workflow         | Trigger                    | Does                                                                 |
 | ---------------- | -------------------------- | -------------------------------------------------------------------- |
 | `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
-| `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `macos-26`, ad-hoc signed — proves it still builds |
+| `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `xcode-27`, ad-hoc signed — proves it still builds |
 | `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish with its Sparkle appcast, then redeploy reviewer.sh |
 | `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
 
@@ -32,7 +32,8 @@ run ends there in seconds.
 If there isn't:
 
 1. `check.yml` runs; a red check stops the release.
-2. On a `macos-26` runner, the Developer ID certificate is imported and
+2. On an `xcode-27` runner (macOS 27 with Xcode 27 — a GitHub preview
+   image; the app's tabs need its macOS 27 SDK), the Developer ID certificate is imported and
    `pnpm build:mac` builds the SPA, the server bundle and the Swift package,
    and `scripts/bundle.sh` assembles `Reviewer.app` and stamps it with the
    version. Handed a `Developer ID Application: …` identity, `bundle.sh`

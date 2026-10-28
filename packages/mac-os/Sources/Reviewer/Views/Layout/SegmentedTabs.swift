@@ -51,7 +51,12 @@ struct SegmentedTabs: NSViewRepresentable {
     func makeNSView(context: Context) -> NSSegmentedControl {
         let control = NSSegmentedControl()
         control.trackingMode = .selectOne
+        // The tabs role is in the macOS 27 SDK, which comes with the Swift
+        // 6.4 toolchain; a build on Xcode 26 has neither and gets the plain
+        // control. Releases are built on Xcode 27 (see `release.yml`).
+        #if compiler(>=6.4)
         if #available(macOS 27, *) { control.role = .tabs }
+        #endif
         control.target = context.coordinator
         control.action = #selector(Coordinator.pressed(_:))
         return control

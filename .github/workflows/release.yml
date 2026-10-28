@@ -65,7 +65,10 @@ jobs:
 
   release:
     needs: [version, check]
-    runs-on: macos-26
+    # Xcode 27 and its macOS 27 SDK: the app's tabs take the system's macOS 27
+    # tabs role (see `SegmentedTabs`), which the macOS 26 image's Xcode 26
+    # cannot build. GitHub still marks this image a preview.
+    runs-on: xcode-27
     timeout-minutes: 90
     env:
       VERSION: ${{ needs.version.outputs.version }}
