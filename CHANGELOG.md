@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.30 — 2026-10-28
+
+### Changed
+
+- The rail's buttons are now glass tabs: a glass highlight sits under the surface you're on and springs to the next one when you switch. Drag it up or down the rail to change surface; on a Force Touch trackpad you feel a tick as it passes each icon.
+- Resting the pointer on a rail icon shows its name and shortcut beside the rail. Search now sits with Browse, Review and Merge requests, and lights up while Go to file or Search in files is open.
+
+### Fixed
+
+- Adding a new line in a `.env` file no longer scrolls the whole view, and the caret stays on the line you're typing in.
+
 ## v0.0.29 — 2026-10-28
 
 ### Changed
