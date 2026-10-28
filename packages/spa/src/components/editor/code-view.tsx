@@ -11,11 +11,6 @@ import {
   DraftCard,
   type DraftLocation,
 } from "@/interactions/comments/components/comment-thread";
-import {
-  SELECTION_COMMENT_CSS,
-  selectionCommentAction,
-} from "@/interactions/comments/components/selection-comment-action";
-import { commentLineFor } from "@/interactions/comments/functions/selection-anchor";
 import { ProblemsBar } from "@/interactions/language/components/problems-bar";
 import { useLanguageLayer } from "@/interactions/language/components/language-layer";
 import { lineOfDiagnostic } from "@/interactions/language/functions/language.functions";
@@ -33,10 +28,7 @@ import {
 } from "@/components/editor/highlighter";
 import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
-import {
-  useFileEditing,
-  type SelectionActionContext,
-} from "@/components/editor/use-file-editing";
+import { useFileEditing } from "@/components/editor/use-file-editing";
 import { Orb } from "@/components/ui/orb";
 import { useCodeFontReady } from "@/lib/code-font";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
@@ -105,9 +97,9 @@ export function CodeView({
    * Code is read rather than written: the view is handed no edit session, so a
    * click puts no caret in the code, and the gutter is free to carry the offer
    * to comment that a diff's gutter carries. The `.env` files are the one kind
-   * that is typed into here — see `isEditablePath` — and there the `+` has
-   * nowhere to live, since the caret takes every click; commenting falls back
-   * to the offer the editor floats over a selection.
+   * that is typed into here — see `isEditablePath` — and they take no
+   * comments: the caret takes every click, so the `+` has nowhere to live,
+   * and a file of secrets and switches is not code anyone reviews.
    */
   const editing = isEditablePath(path);
   // Only the editable view renders off the main-thread highlighter; a read-only
@@ -129,10 +121,8 @@ export function CodeView({
     []
   );
 
-  // Starting a comment. While the file is editable the gutter `+` has nowhere
-  // to live — the view takes the caret on every click — so a comment begins
-  // from the passage it is about: select, and the editor floats an offer over
-  // the selection. A read-only file has no caret to lose, and gets the gutter.
+  // Starting a comment, from the gutter of a read-only file — an editable one
+  // takes none (see `editing`).
   const draftRef = useRef<((draft: DraftLocation) => void) | undefined>(
     undefined
   );
@@ -186,22 +176,6 @@ export function CodeView({
     editing,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
-    renderSelectionAction: useCallback(
-      (context: SelectionActionContext) =>
-        selectionCommentAction({
-          onComment: () => {
-            const lineNumber = commentLineFor(context.selection);
-            if (lineNumber === null) return;
-            draftRef.current?.({
-              filePath: path,
-              side: FILE_COMMENT_SIDE,
-              lineNumber,
-            });
-          },
-          close: context.close,
-        }),
-      [path]
-    ),
   });
 
   useEffect(() => {
@@ -437,7 +411,7 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
                 ...gutterCommenting,
               }}
               edit={editing}

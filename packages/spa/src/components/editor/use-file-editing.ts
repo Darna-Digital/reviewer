@@ -99,23 +99,6 @@ export interface FileEditingOptions {
   readonly loadedContents: string | undefined;
   /** Called after the buffer is written back, so git state can refresh. */
   readonly onSaved: () => void;
-  /**
-   * Build the popover the editor floats over a user-made selection. The editor
-   * owns when it appears and where; this only says what it is.
-   */
-  readonly renderSelectionAction?: (
-    context: SelectionActionContext
-  ) => HTMLElement;
-}
-
-/** What the selection popover is given to work with. */
-export interface SelectionActionContext {
-  readonly selection: {
-    readonly start: { readonly line: number; readonly character: number };
-    readonly end: { readonly line: number; readonly character: number };
-  };
-  readonly getSelectionText: () => string;
-  readonly close: () => void;
 }
 
 export function useFileEditing({
@@ -123,7 +106,6 @@ export function useFileEditing({
   editing,
   loadedContents,
   onSaved,
-  renderSelectionAction,
 }: FileEditingOptions): FileEditing {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -171,9 +153,6 @@ export function useFileEditing({
    * the debounced hand-off to the analyser all hang off ours. The view's own
    * callbacks are still called, so nothing it registered is lost.
    */
-  const selectionActionRef = useRef(renderSelectionAction);
-  selectionActionRef.current = renderSelectionAction;
-
   const createEditor = useCallback(
     <EType extends EditorType>(
       editorType: EType,
@@ -193,16 +172,6 @@ export function useFileEditing({
           keymap: [...EDITOR_KEYMAP, ...(options.keymap ?? [])],
           matchBrackets: options.matchBrackets ?? true,
           autoSurround: options.autoSurround ?? "default",
-          // The editor decides when a selection is the user's rather than the
-          // app's, and keeps the popover positioned and torn down; all this
-          // supplies is the element.
-          enabledSelectionAction: selectionActionRef.current !== undefined,
-          renderSelectionAction: (context) =>
-            selectionActionRef.current?.({
-              selection: context.selection,
-              getSelectionText: context.getSelectionText,
-              close: context.close,
-            }) ?? document.createElement("span"),
           onFocus: () => {
             focusedRef.current = true;
             options.onFocus?.();
