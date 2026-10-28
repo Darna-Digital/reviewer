@@ -285,30 +285,18 @@ struct GlassRailTabs<Extra: View>: View {
         let carried = drag?.moved == true
         return ZStack(alignment: .topLeading) {
             if let labelled {
-                HStack(spacing: 8) {
-                    Text(labelled.tab.title)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.primary)
-                    Text(labelled.tab.hint)
-                        .font(.system(size: 11))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 11)
-                .frame(height: Self.labelHeight)
-                .glassEffect(.regular, in: Capsule())
-                .fixedSize()
-                .animation(RailMotion.of(.snappy(duration: 0.18)), value: labelled.tab.id)
-                .offset(
-                    x: Self.width + Self.labelGap,
-                    y: Self.inset + labelled.offset + (Self.item - Self.labelHeight) / 2)
-                .animation(
-                    RailMotion.of(
-                        carried
-                            ? .interactiveSpring(response: 0.16, dampingFraction: 0.86)
-                            : .spring(response: 0.3, dampingFraction: 0.82)),
-                    value: labelled.offset)
-                .transition(.scale(scale: 0.88, anchor: .leading).combined(with: .opacity))
+                GlassChordLabel(title: labelled.tab.title, hint: labelled.tab.hint)
+                    .animation(RailMotion.of(.snappy(duration: 0.18)), value: labelled.tab.id)
+                    .offset(
+                        x: Self.width + Self.labelGap,
+                        y: Self.inset + labelled.offset + (Self.item - Self.labelHeight) / 2)
+                    .animation(
+                        RailMotion.of(
+                            carried
+                                ? .interactiveSpring(response: 0.16, dampingFraction: 0.86)
+                                : .spring(response: 0.3, dampingFraction: 0.82)),
+                        value: labelled.offset)
+                    .transition(.scale(scale: 0.88, anchor: .leading).combined(with: .opacity))
             }
         }
         .animation(RailMotion.of(.snappy(duration: 0.2)), value: labelled == nil)
@@ -322,6 +310,32 @@ extension GlassRailTabs where Extra == EmptyView {
         press: @escaping (String) -> Void, drop: @escaping (String) -> Void
     ) {
         self.init(tabs: tabs, extras: [], selection: selection, press: press, drop: drop) { _, _, _ in EmptyView() }
+    }
+}
+
+/// A name and the chord that reaches it, on glass: the label the rail
+/// holds out beside its icons, and the toolbar's under its switch (see
+/// `ToolbarGlassLabel`).
+struct GlassChordLabel: View {
+    let title: String
+    let hint: String?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.primary)
+            if let hint {
+                Text(hint)
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 11)
+        .frame(height: GlassRailTabsMetrics.labelHeight)
+        .glassEffect(.regular, in: Capsule())
+        .fixedSize()
     }
 }
 
@@ -370,7 +384,7 @@ private struct PuckDrag: Equatable {
 }
 
 /// The rail's motion, or none at all when the user has asked for less.
-private enum RailMotion {
+enum RailMotion {
     static func of(_ animation: Animation) -> Animation? {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : animation
     }

@@ -57,24 +57,38 @@ struct TabStripItems: ToolbarContent {
 /// front: the control has already slid its puck there, and a selection
 /// read straight off the strip would still name the old tab for the trip
 /// over the bridge, sending the puck back and then over again.
+///
+/// Each segment is named on the glass label under the bar, with ⌘G on the
+/// one it would cross to (see `ToolbarGlassLabel`).
 private struct ModeSwitch: View {
     let model: AppModel
     @State private var pressed: String?
 
     var body: some View {
         SegmentedTabs(
-            segments: model.windowTabs.tabs.filter(\.pinned).map {
+            segments: pinned.map {
                 SegmentedTabs.Segment(id: $0.id, title: $0.title, symbol: $0.kind.symbol, showsTitle: false)
             },
             selection: pressed ?? lit,
+            showsToolTips: false,
             select: select
         )
         .contextMenu { PinnedTabContextMenu(model: model) }
         .onChange(of: model.windowTabs.activeId) { pressed = nil }
+        .toolbarGlassLabel(labels)
     }
 
+    private var pinned: [WindowTab] { model.windowTabs.tabs.filter(\.pinned) }
+
     private var lit: String {
-        model.windowTabs.tabs.first { $0.pinned && model.windowTabs.lights($0) }?.id ?? ""
+        pinned.first { model.windowTabs.lights($0) }?.id ?? ""
+    }
+
+    private var labels: [ToolbarGlassLabel.Text] {
+        pinned.map { tab in
+            let crossesTo = model.windowTabs.canSwitchMode && (pressed ?? lit) != tab.id
+            return ToolbarGlassLabel.Text(title: tab.title, hint: crossesTo ? "⌘G" : nil)
+        }
     }
 
     private func select(_ id: String) {
@@ -146,7 +160,7 @@ private struct SessionTabRow: View {
                         .barGlyph()
                 }
                 .buttonStyle(BarChipStyle())
-                .help("New session (⌘T)")
+                .toolbarGlassLabel("New session", hint: "⌘T")
             }
         }
         .background { BarRunWidth(run: run) { run = $0 } }

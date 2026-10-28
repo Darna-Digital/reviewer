@@ -14,18 +14,30 @@
 // before SwiftUI has given the window its toolbar, and so before the
 // toggle is added to it — and an item found already on the bar is
 // unbordered and the bar asked to draw its items again.
+//
+// Caught there, the toggle is also named on the bar's glass label rather
+// than in the system's tooltip (see `ToolbarGlassLabel`), laid over the
+// item's view.
 import AppKit
 import SwiftUI
 
 struct BorderlessSidebarToggle: NSViewRepresentable {
+    let sidebarShown: Bool
+
     func makeNSView(context: Context) -> ToolbarWatcher { ToolbarWatcher() }
-    func updateNSView(_ view: ToolbarWatcher, context: Context) {}
+
+    func updateNSView(_ view: ToolbarWatcher, context: Context) {
+        view.toggleHover.labels = [
+            ToolbarGlassLabel.Text(title: sidebarShown ? "Hide sidebar" : "Show sidebar", hint: "⌃⌘S")
+        ]
+    }
 }
 
 final class ToolbarWatcher: NSView {
     private static let toggleIdentifier = NSToolbarItem.Identifier("com.apple.SwiftUI.navigationSplitView.toggleSidebar")
     private var toolbarWatch: NSKeyValueObservation?
     private var itemWatch: NSObjectProtocol?
+    let toggleHover = ToolbarHoverView()
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -37,14 +49,14 @@ final class ToolbarWatcher: NSView {
         // start arriving, and only the split's toggle is touched.
         itemWatch = NotificationCenter.default.addObserver(
             forName: NSToolbar.willAddItemNotification, object: nil, queue: .main
-        ) { note in
+        ) { [weak self] note in
             guard let item = note.userInfo?["item"] as? NSToolbarItem else { return }
-            _ = MainActor.assumeIsolated { Self.unborder(item) }
+            _ = MainActor.assumeIsolated { self?.adopt(item) }
         }
-        toolbarWatch = window.observe(\.toolbar, options: [.initial, .new]) { window, _ in
+        toolbarWatch = window.observe(\.toolbar, options: [.initial, .new]) { [weak self] window, _ in
             MainActor.assumeIsolated {
-                guard let toolbar = window.toolbar,
-                      toolbar.items.contains(where: Self.unborder)
+                guard let self, let toolbar = window.toolbar,
+                      toolbar.items.contains(where: self.adopt)
                 else { return }
                 toolbar.validateVisibleItems()
                 window.contentView?.needsLayout = true
@@ -52,11 +64,17 @@ final class ToolbarWatcher: NSView {
         }
     }
 
-    /// Unborders the item if it is the split's toggle, and says whether it
-    /// was one still bordered.
+    /// Unborders and labels the item if it is the split's toggle, and says
+    /// whether it was one still bordered.
     @discardableResult
-    private static func unborder(_ item: NSToolbarItem) -> Bool {
-        guard item.itemIdentifier == toggleIdentifier, item.isBordered else { return false }
+    private func adopt(_ item: NSToolbarItem) -> Bool {
+        guard item.itemIdentifier == Self.toggleIdentifier else { return false }
+        if let view = item.view, toggleHover.superview !== view {
+            toggleHover.frame = view.bounds
+            toggleHover.autoresizingMask = [.width, .height]
+            view.addSubview(toggleHover)
+        }
+        guard item.isBordered else { return false }
         item.isBordered = false
         return true
     }

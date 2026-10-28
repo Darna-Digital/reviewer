@@ -49,7 +49,7 @@ struct ContentView: View {
             .toolbar(removing: .title)
             .toolbar { ToolbarItems() }
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-            .background { BorderlessSidebarToggle() }
+            .background { BorderlessSidebarToggle(sidebarShown: model.sidebarShown) }
             .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
             // The notices over the islands, under the palette: a push's
             // outcome is worth seeing, but not over a search in progress.
@@ -371,7 +371,7 @@ private struct ProjectPicker: View {
         }
         // The toggle's air above and below its glyph, around the avatar.
         .buttonStyle(BarChipStyle(height: 30))
-        .help("Switch project (⇧⌘1)")
+        .toolbarGlassLabel("Switch project", hint: "⌘O")
     }
 }
 

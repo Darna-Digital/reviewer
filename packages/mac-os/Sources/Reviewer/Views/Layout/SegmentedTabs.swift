@@ -33,15 +33,22 @@ struct SegmentedTabs: NSViewRepresentable {
     /// Whether the control stretches across the width it is offered, its
     /// segments sharing it evenly, rather than standing at its own size.
     let fillsWidth: Bool
+    /// Whether each segment names itself in the system's tooltip, or leaves
+    /// naming it to a label of the holder's own (see `ToolbarGlassLabel`).
+    let showsToolTips: Bool
     let select: (String) -> Void
     /// The themes' accents, read here — in the body of the view that makes
     /// the control — so a theme change redraws the lit segment.
     private let accent: AccentKey
 
-    init(segments: [Segment], selection: String, fillsWidth: Bool = false, select: @escaping (String) -> Void) {
+    init(
+        segments: [Segment], selection: String, fillsWidth: Bool = false, showsToolTips: Bool = true,
+        select: @escaping (String) -> Void
+    ) {
         self.segments = segments
         self.selection = selection
         self.fillsWidth = fillsWidth
+        self.showsToolTips = showsToolTips
         self.select = select
         accent = AccentKey(palette: ChromePalette.shared)
     }
@@ -80,7 +87,7 @@ struct SegmentedTabs: NSViewRepresentable {
                 control.setImage(Self.image(of: segment, font: font), forSegment: index)
                 control.setImageScaling(.scaleNone, forSegment: index)
                 control.setLabel("", forSegment: index)
-                control.setToolTip(segment.title, forSegment: index)
+                control.setToolTip(showsToolTips ? segment.title : nil, forSegment: index)
             }
         }
         // Lit in the theme's accent, as the pane's tabs and the diff's
