@@ -4,8 +4,9 @@
 // a list — Recent, Local folded by folder, Remote folded by remote, each
 // section and folder collapsing on its header — with the branch you are on
 // starred and the others carrying their distance from upstream. A row
-// selects; a double-click checks out; the context menu is the switcher's,
-// and the empty space under the rows has the surface's own — a new branch,
+// selects; a double-click checks out; a right click opens the switcher's
+// own row menu at the pointer (see `BranchActionMenu`), and the empty
+// space under the rows has the surface's context menu — a new branch,
 // update, push.
 import ReviewerShared
 import SwiftUI
@@ -124,7 +125,7 @@ struct BranchesPane: View {
                         .tag(row.id)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
-                        .contextMenu { BranchActions(branch: ref) }
+                        .branchActionMenu(for: ref)
                         .onTapGesture(count: 2) {
                             guard !ref.isCurrent else { return }
                             model.checkout(ref.ref)
@@ -173,7 +174,38 @@ private enum BranchRow: Identifiable {
     }
 }
 
+/// The switcher's row menu, opened by a right click on the row: at the
+/// pointer rather than off the row's trailing edge, a row of the pane
+/// running the pane's whole width, and the row washed while it is up, as
+/// the switcher's row is.
+private struct BranchActionMenuOnRow: ViewModifier {
+    let branch: BranchRef
+    @Environment(AppModel.self) private var model
+    @State private var openAt: UnitPoint?
+
+    private var open: Binding<Bool> {
+        Binding(get: { openAt != nil }, set: { if !$0 { openAt = nil } })
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(Color.primary.opacity(openAt == nil ? 0 : 0.1), in: RoundedRectangle(cornerRadius: 5))
+            .overlay { SecondaryClick { openAt = $0 } }
+            .popover(isPresented: open, attachmentAnchor: .point(openAt ?? .center), arrowEdge: .trailing) {
+                BranchActionMenu(
+                    actions: model.branchActions(for: branch), litFirst: false, close: { openAt = nil }
+                ) {
+                    openAt = nil
+                }
+            }
+    }
+}
+
 private extension View {
+    func branchActionMenu(for branch: BranchRef) -> some View {
+        modifier(BranchActionMenuOnRow(branch: branch))
+    }
+
     /// A header stands in the list but is not a row of it: it cannot be
     /// selected, and it draws no rule.
     func headerRow() -> some View {

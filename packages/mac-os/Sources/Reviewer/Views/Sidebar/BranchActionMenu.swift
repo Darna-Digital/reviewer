@@ -1,4 +1,5 @@
-// A branch row's submenu in the switcher — everything that can be done to
+// A branch row's submenu in the switcher, and the menu a right click
+// opens on a branch in the Branches pane — everything that can be done to
 // the branch besides picking it — drawn by the shell rather than as a
 // system menu, the way the web switcher's `DropdownMenuSubContent` was: a
 // column the width of the web one's `w-72`, opening off the row's
@@ -39,7 +40,7 @@ struct BranchActionMenu: View {
                         run(action)
                     }
                 case .divider:
-                    ThemedDivider()
+                    MenuRule()
                         .padding(.horizontal, 4)
                         .padding(.vertical, 3)
                 }
@@ -67,6 +68,26 @@ struct BranchActionMenu: View {
         guard case .item(_, _, let run) = action.kind else { return }
         run()
         ran()
+    }
+}
+
+/// The rule between runs of items, a single pixel thick as a system
+/// menu's separator is: the point-thick `ThemedDivider` reads as a bar
+/// between lines of 12pt type.
+private struct MenuRule: View {
+    @Environment(\.displayScale) private var displayScale
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var ink: Color {
+        ChromePalette.shared.isThemed(colorScheme == .dark ? .dark : .light)
+            ? Color(nsColor: IslandPalette.hairline)
+            : Color(nsColor: .separatorColor)
+    }
+
+    var body: some View {
+        Rectangle()
+            .fill(ink)
+            .frame(height: 1 / displayScale)
     }
 }
 
@@ -103,9 +124,18 @@ private struct ActionRow: View {
 /// A secondary click on the view it overlays — a right click, or a click
 /// with Control held — and nothing else: every other click falls through
 /// to the view underneath, so a row can open its submenu on a right click
-/// without a system context menu of its own.
+/// without a system context menu of its own. It says where in the view the
+/// click landed, for a menu that opens at the pointer.
 struct SecondaryClick: NSViewRepresentable {
-    let action: () -> Void
+    let action: (_ at: UnitPoint) -> Void
+
+    init(action: @escaping (_ at: UnitPoint) -> Void) {
+        self.action = action
+    }
+
+    init(action: @escaping () -> Void) {
+        self.action = { _ in action() }
+    }
 
     func makeNSView(context: Context) -> SecondaryClickView {
         SecondaryClickView()
@@ -117,7 +147,7 @@ struct SecondaryClick: NSViewRepresentable {
 }
 
 final class SecondaryClickView: NSView {
-    var action: () -> Void = {}
+    var action: (UnitPoint) -> Void = { _ in }
 
     private static func isSecondary(_ event: NSEvent?) -> Bool {
         switch event?.type {
@@ -133,7 +163,16 @@ final class SecondaryClickView: NSView {
         Self.isSecondary(NSApp.currentEvent) ? super.hitTest(point) : nil
     }
 
-    override func rightMouseDown(with event: NSEvent) { action() }
-    override func mouseDown(with event: NSEvent) { action() }
+    override func rightMouseDown(with event: NSEvent) { action(spot(of: event)) }
+    override func mouseDown(with event: NSEvent) { action(spot(of: event)) }
     override func menu(for event: NSEvent) -> NSMenu? { nil }
+
+    /// Where the click landed, as a share of the view's width and of its
+    /// height down from the top.
+    private func spot(of event: NSEvent) -> UnitPoint {
+        guard bounds.width > 0, bounds.height > 0 else { return .center }
+        let point = convert(event.locationInWindow, from: nil)
+        let down = isFlipped ? point.y : bounds.height - point.y
+        return UnitPoint(x: point.x / bounds.width, y: down / bounds.height)
+    }
 }

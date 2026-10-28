@@ -126,26 +126,6 @@ extension AppModel {
     }
 }
 
-/// A branch's actions as menu items — a row's context menu, the ellipsis
-/// at its trailing edge — with `ran` called after any of them, for a
-/// popover to put itself away.
-struct BranchActions: View {
-    let branch: BranchRef
-    var ran: () -> Void = {}
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        ForEach(model.branchActions(for: branch)) { action in
-            switch action.kind {
-            case .item(let title, let destructive, let run):
-                Button(title, role: destructive ? .destructive : nil) { run(); ran() }
-            case .divider:
-                Divider()
-            }
-        }
-    }
-}
-
 /// The picker's prompts, as alerts on whatever view wears them — the
 /// sidebar, so the picker's own row isn't the thing presenting: a name for
 /// a branch, a new name, a yes to a deletion.
