@@ -225,6 +225,9 @@ private struct DetailColumn: View {
             if railed {
                 AppRail(inset: IslandMetrics.margin)
                     .transition(.move(edge: .leading).combined(with: .opacity))
+                    // Over the islands beside it, so the label its tabs hold
+                    // out while one is dragged is not drawn under the page.
+                    .zIndex(1)
             }
             VStack(spacing: 0) {
                 pageOrPull

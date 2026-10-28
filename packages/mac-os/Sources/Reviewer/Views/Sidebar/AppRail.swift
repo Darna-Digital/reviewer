@@ -2,7 +2,9 @@
 // web app's mode rail drawn natively. The code surfaces stand at its head,
 // the search under them, and at its foot the bottom pane's, which stand at
 // the foot of the window — the way the web rail splits them, so the
-// sidebar's tree and the page island both move from the same column. It measures 36pt with a
+// sidebar's tree and the page island both move from the same column. Each
+// of the two runs is a set of tabs in glass (see `GlassRailTabs`), the puck
+// under the surface that is up, which can be slid along to another. It measures 36pt with a
 // 28pt button in it — the web rail's own sizes — held off the edge it
 // stands by. It stands on the system sidebar's glass, down its leading
 // edge, off the glass's edge by the islands' gap, with no rule of its own
@@ -23,21 +25,27 @@ struct AppRail: View {
     var footprint: CGFloat { Self.width + inset }
 
     var body: some View {
-        VStack(spacing: 4) {
-            ForEach(CodeSurface.allCases) { surface in
-                RailButton(symbol: surface.symbol, help: surface.railHelp,
-                           isOn: model.codeSurface == surface) {
-                    model.show(surface: surface)
-                }
+        VStack(spacing: 8) {
+            GlassRailTabs(
+                tabs: CodeSurface.allCases.map {
+                    RailTab(id: $0.railID, symbol: $0.symbol, title: $0.title, hint: $0.railShortcut.hint)
+                },
+                extras: [SearchRailMenu.tab],
+                activeExtra: model.showsSearch ? SearchRailMenu.tab.id : nil,
+                selection: model.codeSurface?.railID,
+                press: showSurface,
+                drop: showSurface
+            ) { _, isHovered, isLit in
+                SearchRailMenu(isHovered: isHovered, isLit: isLit)
             }
-            SearchRailMenu()
             Spacer(minLength: 0)
-            ForEach(BottomPaneTab.allCases) { tab in
-                RailButton(symbol: tab.symbol, help: tab.railHelp,
-                           isOn: model.bottomExpanded && model.bottomTab == tab) {
-                    model.toggle(bottomTab: tab)
-                }
-            }
+            GlassRailTabs(
+                tabs: BottomPaneTab.allCases.map {
+                    RailTab(id: $0.rawValue, symbol: $0.symbol, title: $0.title, hint: $0.railShortcut.hint)
+                },
+                selection: model.bottomExpanded ? model.bottomTab.rawValue : nil,
+                press: { id in BottomPaneTab(rawValue: id).map(model.toggle(bottomTab:)) },
+                drop: { id in BottomPaneTab(rawValue: id).map(model.show(bottomTab:)) })
         }
         .padding(.top, 4)
         // The foot stands off the glass's bottom edge by the same gap the
@@ -51,69 +59,52 @@ struct AppRail: View {
         .padding(.leading, inset)
         .disabled(!model.hasProject)
     }
+
+    private func showSurface(_ id: String) {
+        if let surface = CodeSurface.allCases.first(where: { $0.railID == id }) {
+            model.show(surface: surface)
+        }
+    }
 }
 
-/// A rail button is an icon with no word under it, so the one that is on
-/// says so three ways at once — the chip it sits in, the weight of its ink,
-/// and the weight of its stroke — as the web rail's does. Hovered, it
-/// names its surface and the chord that reaches it.
-private struct RailButton: View {
-    let symbol: String
-    let help: String
-    let isOn: Bool
-    let action: () -> Void
-    @State private var isHovering = false
+private extension CodeSurface {
+    /// The surface as the rail's tabs name it.
+    var railID: String { String(describing: self) }
+}
 
-    var body: some View {
-        Button(action: action) {
-            RailGlyph(symbol: symbol, isOn: isOn, isHovering: isHovering)
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .help(help)
+private extension AppModel {
+    /// Whether one of the search's lists is up — a file by name, or a grep
+    /// of the working tree — which the rail's search stands lit for.
+    var showsSearch: Bool {
+        palette.isShown && (palette.mode == .files || palette.mode == .text)
     }
 }
 
 /// Searching the project is something you do *to* the surfaces above, not
-/// a fourth surface, so it follows them rather than joining them, as the
-/// web rail's search does — and like the web's it is a menu, not a button:
-/// there are two lists worth opening straight into, and the gestures for
-/// both are hard to guess, so the menu names them and shows the keys. It
-/// takes no rail chord of its own (see `RailShortcut`): the searches keep
-/// theirs, and the bottom pane's slots stay where they are.
+/// a fourth surface, so it follows them on their track without the puck
+/// ever standing on it, as the web rail's search follows its modes — and
+/// like the web's it is a menu, not a button: there are two lists worth
+/// opening straight into, and the gestures for both are hard to guess, so
+/// the menu names them and shows the keys. It takes no rail chord of its
+/// own (see `RailShortcut`): the searches keep theirs, and the bottom
+/// pane's slots stay where they are.
 private struct SearchRailMenu: View {
     @Environment(AppModel.self) private var model
-    @State private var isHovering = false
+    let isHovered: Bool
+    let isLit: Bool
+
+    static let tab = RailTab(
+        id: "search", symbol: "magnifyingglass", title: "Search", hint: "⇧⌘O  ⇧⌘F")
 
     var body: some View {
         Menu {
             SearchMenuItems(model: model)
         } label: {
-            RailGlyph(symbol: "magnifyingglass", isOn: false, isHovering: isHovering)
+            RailTabGlyph(symbol: Self.tab.symbol, isLit: isLit, isHovered: isHovered)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .onHover { isHovering = $0 }
-        .help("Search")
-    }
-}
-
-/// The icon in its chip, drawn the same whether a button or a menu wears
-/// it, so the search's rail button is not a shape of its own.
-private struct RailGlyph: View {
-    let symbol: String
-    let isOn: Bool
-    let isHovering: Bool
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 14, weight: isOn ? .semibold : .regular))
-            .foregroundStyle(isOn ? .primary : isHovering ? .primary : .secondary)
-            .frame(width: 28, height: 28)
-            .background(
-                isOn ? Color.primary.opacity(0.12) : isHovering ? Color.primary.opacity(0.06) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 6))
-            .contentShape(Rectangle())
+        .accessibilityLabel(Self.tab.title)
     }
 }
