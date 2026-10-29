@@ -135,9 +135,7 @@ private struct SidebarHeader: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if model.workspace?.isMultiRoot == true {
-                RootPicker()
-            }
+            RepositoryPicker()
             BranchPicker()
             Spacer(minLength: 0)
             if let comparison = model.sidebar.comparison {

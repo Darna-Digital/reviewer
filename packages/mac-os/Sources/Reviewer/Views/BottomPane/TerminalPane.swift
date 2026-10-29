@@ -124,7 +124,7 @@ private struct ShellTabBar: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            PaneRootPicker()
+            RepositoryPicker(look: .paneField)
             ForEach(shells) { thread in
                 ShellTab(thread: thread,
                          isSelected: model.threads.selectedId == thread.id,

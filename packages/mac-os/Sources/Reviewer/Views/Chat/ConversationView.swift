@@ -235,21 +235,8 @@ struct SessionContextBar: View {
             if model.roots.count > 1 {
                 // A session runs in one repository of the workspace: the
                 // one the page is on, picked here like everywhere else.
-                Menu {
-                    ForEach(model.roots) { root in
-                        Button(root.name) { model.focus(root: root) }
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        RepoAvatar(name: model.focused.name, size: 14)
-                        Text(model.focused.name)
-                            .lineLimit(1)
-                    }
-                    .font(.system(size: 11))
-                }
-                .menuStyle(.button)
-                .buttonStyle(.accessoryBar)
-                .fixedSize()
+                RepositoryPicker()
+                    .controlSize(.small)
             } else {
                 projectButton
             }

@@ -73,7 +73,7 @@ private struct HistoryFilterBar: View {
 
     var body: some View {
         PaneBar {
-            PaneRootPicker()
+            RepositoryPicker(look: .paneField)
             RefPicker()
             if let path = history.query.path {
                 PathChip(path: path) { apply { $0.path = nil; $0.follow = false } }
@@ -180,7 +180,7 @@ private struct RefPicker: View {
 
 /// The up-and-down chevron a picker on the bar ends in, held at the
 /// field's trailing edge whatever the pick's length.
-private struct MenuChevron: View {
+struct MenuChevron: View {
     var body: some View {
         Image(systemName: "chevron.up.chevron.down")
             .font(.system(size: 8, weight: .semibold))

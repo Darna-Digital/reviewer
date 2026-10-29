@@ -25,7 +25,7 @@ struct BranchesPane: View {
     var body: some View {
         VStack(spacing: 0) {
             PaneBar {
-                PaneRootPicker()
+                RepositoryPicker(look: .paneField)
                 PaneSearchField(prompt: "Search", text: $query)
                     .frame(width: PaneMetrics.toolbarSearchWidth)
                 Spacer(minLength: 0)
