@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.34 — 2026-10-29
+
+### Changed
+
+- Every message about something you did — discarding a file or a single change, saving, assigning comments, a dropped image that is too large — now appears in the same notice stack at the bottom corner of the window as git's push and commit notices, instead of in a separate pop-up inside the page that could end up hidden under a panel.
+- Notices are easier to read: the headline is lighter, the explanation under it is set at the same size with more space between lines and can run a little longer, and the icon lines up with the first line of text.
+
 ## v0.0.33 — 2026-10-29
 
 ### Fixed
