@@ -262,6 +262,28 @@ DROP TABLE IF EXISTS visual_comment;
  */
 const dropCloudConnection = `DROP TABLE IF EXISTS cloud_connection;`;
 
+/**
+ * Workspaces — a name over several repositories opened together. The roots
+ * are rows of their own, ordered by `position`, rather than a JSON column, so
+ * a repository's workspaces can be found from the repository.
+ */
+const workspaces = `
+CREATE TABLE workspace (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  opened_at  TEXT
+);
+
+CREATE TABLE workspace_root (
+  workspace_id TEXT NOT NULL REFERENCES workspace (id) ON DELETE CASCADE,
+  path         TEXT NOT NULL,
+  position     INTEGER NOT NULL,
+  PRIMARY KEY (workspace_id, path)
+);
+CREATE INDEX workspace_root_path ON workspace_root (path);
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
@@ -277,4 +299,5 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
     id: "0008_drop_cloud_connection",
     up: (db) => db.exec(dropCloudConnection),
   },
+  { id: "0009_workspaces", up: (db) => db.exec(workspaces) },
 ];

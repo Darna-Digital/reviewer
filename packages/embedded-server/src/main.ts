@@ -40,6 +40,7 @@ import { ThemesHandler } from "./layers/themes/themes.handler.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
 import { layer as repoIndexLayer } from "./layers/workspace/repo-index.ts";
+import { scopeToRequestedRepo } from "./layers/workspace/requested-repo.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
@@ -153,7 +154,10 @@ const HttpLive = HttpRouter.serve(
     HttpRouter.middleware(
       HttpMiddleware.cors({ allowedOrigins: isAllowedOrigin }),
       { global: true }
-    )
+    ),
+    // With several repositories open side by side, each request says which
+    // one it is about (see `layers/workspace/requested-repo.ts`).
+    HttpRouter.middleware(scopeToRequestedRepo, { global: true })
   )
 ).pipe(
   Layer.provide(InfraLive),

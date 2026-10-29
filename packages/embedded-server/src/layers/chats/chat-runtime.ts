@@ -27,7 +27,7 @@ import {
   writesDiscoverableSessions,
 } from "../terminal/agent-session-capture.ts";
 import { saveDroppedImage } from "../terminal/dropped-image.ts";
-import { onCurrentRepoChange } from "../workspace/current-repo.ts";
+import { onOpenRootsChange } from "../workspace/current-repo.ts";
 import {
   chatTurnProgram,
   withAttachedImages,
@@ -214,7 +214,7 @@ export const repairStaleTurns = (): void => {
   }
 };
 
-onCurrentRepoChange(() => repairStaleTurns());
+onOpenRootsChange(() => repairStaleTurns());
 
 const checkpointEveryLiveTurnSynchronously = () => {
   for (const live of liveTurns.values()) flushText(live);
