@@ -20,7 +20,7 @@ import {
   type SpecialLanguage,
 } from "shiki";
 import type { ThemeLike } from "@pierre/theming";
-import type { CodeToken, HighlightedCode } from "../schema/themes.schema.ts";
+import type { CodeToken, HighlightedCode } from "@reviewer/core/themes";
 
 /** Shiki's own name for "do not read this as anything". */
 const PLAIN: SpecialLanguage = "text";

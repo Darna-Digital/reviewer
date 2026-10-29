@@ -23,6 +23,7 @@
     "@effect/platform-node": "4.0.6",
     "@lydell/node-pty": "1.2.0-beta.18",
     "@reviewer/core": "workspace:*",
+    "@reviewer/themes": "workspace:*",
     "@types/ws": "^8.18.2",
     "effect": "4.0.6",
     "ws": "^8.22.0"

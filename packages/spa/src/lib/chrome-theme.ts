@@ -21,11 +21,10 @@
  */
 import {
   deriveChromeTokens,
-  loadTheme,
-  reviewerThemes,
   type ChromeTokens,
   type ColorScheme,
 } from "@reviewer/core/themes";
+import { loadTheme, reviewerThemes } from "@reviewer/themes";
 import { island } from "@/lib/shell";
 import {
   readUiPrefs,

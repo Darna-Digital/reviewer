@@ -37,6 +37,7 @@ import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThemesHandler } from "./layers/themes/themes.handler.ts";
+import { ThemesLive } from "./layers/themes/themes.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
 import { layer as repoIndexLayer } from "./layers/workspace/repo-index.ts";
@@ -100,7 +101,8 @@ const FeatureServices = Layer.mergeAll(
   ChatsLive,
   LanguageLive,
   LocalDevLive,
-  DevRuntimeLive
+  DevRuntimeLive,
+  ThemesLive
 );
 
 /**

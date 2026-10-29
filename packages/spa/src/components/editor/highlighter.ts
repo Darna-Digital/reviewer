@@ -7,7 +7,7 @@ import {
 } from "@pierre/diffs";
 import { useWorkerPool } from "@pierre/diffs/react";
 import { useEffect, useState } from "react";
-import { reviewerThemes } from "@reviewer/core/themes";
+import { reviewerThemes } from "@reviewer/themes";
 import { contentCacheKey } from "@/lib/highlight-cache-key";
 import { codeThemesOf, useUiPrefs, type CodeThemes } from "@/lib/ui-prefs";
 

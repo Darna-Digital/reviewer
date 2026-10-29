@@ -20,7 +20,7 @@ import {
   type ThemeLike,
 } from "@pierre/theming";
 import { createTheme, pierreThemes, shikiThemes } from "@pierre/theming/themes";
-import type { ColorScheme, ThemeDescriptor } from "../schema/themes.schema.ts";
+import type { ColorScheme, ThemeDescriptor } from "@reviewer/core/themes";
 
 export const DEFAULT_LIGHT_THEME = "reviewer-light";
 export const DEFAULT_DARK_THEME = "reviewer-dark";

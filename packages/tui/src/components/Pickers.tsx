@@ -1,4 +1,4 @@
-import { describeThemes } from '@reviewer/core/themes';
+import { describeThemes } from '@reviewer/themes';
 import { describeTarget } from '../app/comparison';
 import { TERMINAL_THEME } from '../store/settings';
 import { ago } from '../text/time';

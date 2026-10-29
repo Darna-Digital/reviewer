@@ -1,41 +1,15 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/http-api";
 import { Api } from "../../api.ts";
-import {
-  deriveChromeTokens,
-  describeTheme,
-  describeThemes,
-  findTheme,
-  highlightCode,
-  loadTheme,
-  ThemeNotFound,
-} from "@reviewer/core/themes";
+import { ThemesService } from "@reviewer/core/themes";
 
 export const ThemesHandler = HttpApiBuilder.group(Api, "themes", (handlers) =>
   handlers
-    .handle("list", () => Effect.succeed(describeThemes()))
+    .handle("list", () => Effect.map(ThemesService, (s) => s.list))
     .handle("chrome", ({ params }) =>
-      Effect.gen(function* () {
-        const entry = findTheme(params.name);
-        const loading = loadTheme(params.name);
-        if (entry === undefined || loading === undefined)
-          return yield* new ThemeNotFound({ name: params.name });
-        const theme = yield* Effect.promise(() => loading);
-        return {
-          theme: describeTheme(entry),
-          chrome: deriveChromeTokens(theme),
-        };
-      })
+      Effect.flatMap(ThemesService, (s) => s.chrome(params.name))
     )
     .handle("highlight", ({ params, payload }) =>
-      Effect.gen(function* () {
-        const loading = loadTheme(params.name);
-        if (loading === undefined)
-          return yield* new ThemeNotFound({ name: params.name });
-        const theme = yield* Effect.promise(() => loading);
-        return yield* Effect.promise(() =>
-          highlightCode(payload.code, payload.lang, theme)
-        );
-      })
+      Effect.flatMap(ThemesService, (s) => s.highlight(params.name, payload))
     )
 );
