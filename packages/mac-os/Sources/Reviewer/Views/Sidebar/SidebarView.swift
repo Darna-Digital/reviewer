@@ -396,16 +396,16 @@ struct TreePlaceholder: View {
             } else {
                 VStack(spacing: 6) {
                     Image(systemName: empty.symbol)
-                        .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(.tertiary)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 2)
                     Text(empty.title)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.primary.opacity(0.85))
                     if let detail = empty.detail {
                         Text(detail)
                             .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
                 }
