@@ -739,7 +739,6 @@ export function ComponentsGallery() {
             ))}
           </div>
         </Subsection>
-
       </Section>
     </>
   );
