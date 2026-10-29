@@ -261,7 +261,7 @@ private struct PullRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             selected ? TreeSelection.color : isHovering ? Color.primary.opacity(0.05) : Color.clear,
-            in: ControlShape.shape)
+            in: RoundedRectangle(cornerRadius: 5))
         .contentShape(Rectangle())
     }
 }

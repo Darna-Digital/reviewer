@@ -102,7 +102,7 @@ private struct ReviewAssignBar: View {
             .keyboardShortcut(.defaultAction)
             FoldButton()
         }
-        .modifier(BarGlass())
+        .modifier(BarCapsule())
     }
 
     private func targetAgent(_ target: ReviewTarget) -> ChatProviderKind {
@@ -148,7 +148,7 @@ private struct PullCommentsBar: View {
             .help("Answer the comments on the pull request on GitHub")
             FoldButton()
         }
-        .modifier(BarGlass())
+        .modifier(BarCapsule())
     }
 }
 
@@ -193,15 +193,14 @@ private struct FoldButton: View {
     }
 }
 
-/// The glass both bars stand on, cut concentric round the large chips on
-/// it.
-private struct BarGlass: ViewModifier {
+/// The glass both bars stand on, with the large capsule chips on it.
+private struct BarCapsule: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(8)
-            .environment(\.chipShape, .rounded)
+            .environment(\.chipShape, .capsule)
             .environment(\.chipSize, .large)
-            .glassEffect(.regular, in: ControlShape.track(inset: 8))
+            .glassEffect(.regular, in: .capsule)
             .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
     }
 }
@@ -224,10 +223,10 @@ private struct CollapsedChip: View {
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal, 14)
             .frame(height: 36)
-            .contentShape(ControlShape.shape)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: ControlShape.shape)
+        .glassEffect(.regular.interactive(), in: .capsule)
         .shadow(color: .black.opacity(0.14), radius: 12, y: 5)
         .help("Show \(count) review \(count == 1 ? "comment" : "comments")")
     }
@@ -563,9 +562,9 @@ private struct AssignButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, 16)
             .frame(height: 32)
-            .glassEffect(.regular.tint(Color(nsColor: IslandPalette.accent).opacity(isEnabled ? 1 : 0.5)).interactive(), in: ControlShape.shape)
+            .glassEffect(.regular.tint(Color(nsColor: IslandPalette.accent).opacity(isEnabled ? 1 : 0.5)).interactive(), in: .capsule)
             .opacity(configuration.isPressed ? 0.85 : 1)
-            .contentShape(ControlShape.shape)
+            .contentShape(Capsule())
     }
 }
 

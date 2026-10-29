@@ -178,12 +178,12 @@ private struct PaneBarButtonBody: View {
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
 
-    private static let shape = ControlShape.shape
+    private static let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
 
     var body: some View {
         configuration.label
-            .padding(.horizontal, 6)
-            .frame(minHeight: 22)
+            .padding(.horizontal, 4)
+            .frame(minHeight: 20)
             .background(Self.shape.fill(Color.primary.opacity(wash)))
             .contentShape(Self.shape)
             .opacity(isEnabled ? 1 : 0.4)
@@ -261,7 +261,7 @@ struct PaneSearchField: View {
                        controlSize: controlSize)
             .overlay {
                 if themed && editing {
-                    ControlShape.shape.strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
+                    Capsule().strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
                 }
             }
     }
@@ -302,7 +302,6 @@ private struct SearchFieldBox: NSViewRepresentable {
         let field = ReleasingSearchField()
         field.placeholderString = prompt
         field.controlSize = controlSize
-        field.borderShape = .roundedRectangle
         field.font = .systemFont(ofSize: NSFont.systemFontSize(for: controlSize))
         field.sendsSearchStringImmediately = true
         field.delegate = context.coordinator

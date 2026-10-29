@@ -160,7 +160,7 @@ private struct FileRow: View {
             .frame(height: 26)
             .background(
                 selected ? TreeSelection.color : isHovering ? Color.primary.opacity(0.05) : Color.clear,
-                in: ControlShape.shape)
+                in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

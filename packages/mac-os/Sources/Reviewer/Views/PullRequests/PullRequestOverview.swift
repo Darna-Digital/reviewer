@@ -207,7 +207,7 @@ private struct DraftBadge: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(.quaternaryWash(0.8), in: ControlShape.shape)
+            .background(.quaternaryWash(0.8), in: Capsule())
             .fixedSize()
     }
 }
@@ -271,14 +271,14 @@ private struct CollapsedDescription<Content: View>: View {
                 .font(.system(size: 12, weight: .medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .contentShape(ControlShape.shape)
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .background(.quaternaryWash(0.5), in: ControlShape.shape)
+        .background(.quaternaryWash(0.5), in: Capsule())
         // On the sheet's own colour first, so the last of the faded text
         // does not show through the wash where the pill stands over it.
-        .background(Color(nsColor: IslandPalette.island), in: ControlShape.shape)
+        .background(Color(nsColor: IslandPalette.island), in: Capsule())
         .frame(maxWidth: .infinity)
         .help(expanded ? "Fold the description" : "Show the whole description")
     }

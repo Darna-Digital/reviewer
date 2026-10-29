@@ -106,7 +106,7 @@ private struct PullFilesBar: View {
                                 .monospacedDigit()
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 1)
-                                .background(.quaternaryWash(0.7), in: ControlShape.shape)
+                                .background(.quaternaryWash(0.7), in: Capsule())
                         }
                     }
                     .transition(.opacity.combined(with: .offset(y: -4)))

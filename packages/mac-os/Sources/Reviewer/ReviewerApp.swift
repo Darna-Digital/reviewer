@@ -28,7 +28,6 @@ struct ReviewerApp: App {
     var body: some Scene {
         Window("Reviewer", id: ReviewerWindow.workspace) {
             ContentView()
-                .controlShape()
                 .environment(model)
                 // Re-opened from the opener, the window finds the server
                 // already answering, and only the first opening boots it.
@@ -48,13 +47,11 @@ struct ReviewerApp: App {
         // sized by its form, so no default size here.
         Settings {
             SettingsView()
-                .controlShape()
                 .environment(model)
         }
 
         Window("Open workspace", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
-                .controlShape()
                 .environment(model)
         }
         .windowToolbarStyle(.unified)

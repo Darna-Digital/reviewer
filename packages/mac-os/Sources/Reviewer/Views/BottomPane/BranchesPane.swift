@@ -234,7 +234,7 @@ private struct BranchActionMenuOnRow: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(Color.primary.opacity(openAt == nil ? 0 : 0.1), in: ControlShape.shape)
+            .background(Color.primary.opacity(openAt == nil ? 0 : 0.1), in: RoundedRectangle(cornerRadius: 5))
             .overlay {
                 SecondaryClick { point in
                     model.focus(root: root)

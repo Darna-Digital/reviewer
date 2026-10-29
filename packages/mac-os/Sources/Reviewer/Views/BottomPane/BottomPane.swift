@@ -119,7 +119,7 @@ private struct CornerButton: View {
 private struct CornerButtonStyle: ButtonStyle {
     @State private var isHovering = false
 
-    private static let shape = ControlShape.shape
+    private static let shape = RoundedRectangle(cornerRadius: 4.5, style: .continuous)
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

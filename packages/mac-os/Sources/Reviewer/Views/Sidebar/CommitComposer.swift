@@ -34,7 +34,7 @@ struct CommitComposer: View {
         composer.changes.map(\.path).filter { !excluded.contains($0) }
     }
 
-    private static let boxShape = ControlShape.shape
+    private static let boxShape = RoundedRectangle(cornerRadius: 6)
     private static let boxInset: CGFloat = 8
 
     private var drafting: Bool { composer.draft?.status == .running }
@@ -137,7 +137,7 @@ struct CommitComposer: View {
             agentPicker
         }
         .padding(2)
-        .glassEffect(.regular, in: ControlShape.shape)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
         .shadow(color: .black.opacity(0.14), radius: 8, y: 3)
         .padding(6)
         .opacity(draftControlsShown ? 1 : 0)

@@ -193,7 +193,7 @@ private struct ShellTab: View {
                 .frame(minWidth: ShellTabMetrics.minWidth, maxWidth: ShellTabMetrics.maxWidth)
                 .padding(.horizontal, ShellTabMetrics.closeSlot)
                 .frame(height: ShellTabMetrics.height)
-                .background(fill, in: ControlShape.shape)
+                .background(fill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -256,7 +256,7 @@ private struct ShellTabClose: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(isHovering ? .primary : .secondary)
                 .frame(width: 15, height: 15)
-                .background(isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : .clear, in: ControlShape.shape)
+                .background(isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : .clear, in: Circle())
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         }

@@ -84,7 +84,7 @@ private struct NoticeCard: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 20, height: 20)
-                    .background(Color.primary.opacity(isHovering ? 0.06 : 0), in: ControlShape.shape)
+                    .background(Color.primary.opacity(isHovering ? 0.06 : 0), in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
             .opacity(isHovering ? 1 : 0)

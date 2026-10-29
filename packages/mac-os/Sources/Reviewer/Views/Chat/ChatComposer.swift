@@ -112,7 +112,7 @@ struct ChatComposer: View {
                         Image(systemName: "stop.fill")
                             .font(.system(size: 10, weight: .bold))
                             .frame(width: 26, height: 26)
-                            .background(.quaternaryWash(), in: ControlShape.shape)
+                            .background(.quaternaryWash(), in: Circle())
                     }
                     .buttonStyle(.plain)
                     .help("Stop generation")
@@ -122,7 +122,7 @@ struct ChatComposer: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 26, height: 26)
-                        .background(canSend ? Color(nsColor: IslandPalette.accent) : Color.secondary.opacity(0.4), in: ControlShape.shape)
+                        .background(canSend ? Color(nsColor: IslandPalette.accent) : Color.secondary.opacity(0.4), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSend)
@@ -131,9 +131,9 @@ struct ChatComposer: View {
             .padding(.horizontal, 8)
             .padding(.bottom, 8)
         }
-        .background(Color(nsColor: IslandPalette.island), in: ControlShape.shape)
+        .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            ControlShape.shape
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(focused ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
         )
         .overlay(alignment: .top) {
@@ -407,7 +407,7 @@ private struct ImageDropZone: ViewModifier {
                                 .font(.system(size: 13, weight: .medium))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(.regularMaterial, in: ControlShape.shape)
+                                .background(.regularMaterial, in: Capsule())
                         }
                         .allowsHitTesting(false)
                 }

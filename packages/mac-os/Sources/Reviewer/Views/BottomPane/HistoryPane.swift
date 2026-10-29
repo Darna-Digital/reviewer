@@ -386,7 +386,7 @@ private struct ScopeToken: View {
         .padding(.leading, 8)
         .padding(.trailing, 4)
         .frame(height: 20)
-        .background(accent.opacity(0.14), in: ControlShape.shape)
+        .background(accent.opacity(0.14), in: Capsule())
         .fixedSize()
         .help(token.help)
     }
@@ -541,7 +541,7 @@ private struct CommitRow: View {
             }
             .frame(height: CommitGraphLayout.rowHeight)
             .rowInset()
-            .background(selected ? TreeSelection.color : Color.clear, in: ControlShape.shape)
+            .background(selected ? TreeSelection.color : Color.clear, in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -561,7 +561,7 @@ struct RefBadge: View {
             .lineLimit(1)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
-            .background(.quaternaryWash(0.7), in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .background(.quaternaryWash(0.7), in: RoundedRectangle(cornerRadius: 4))
     }
 }
 

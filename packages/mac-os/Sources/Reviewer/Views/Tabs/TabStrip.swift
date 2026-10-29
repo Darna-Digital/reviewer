@@ -37,9 +37,6 @@ struct TabStripItems: ToolbarContent {
         ToolbarItem(placement: .navigation) {
             ModeSwitch(model: model)
         }
-        // The toolbar's glass round an item is a capsule whatever the item
-        // is cut to, so the switch lays its own (see `ModeSwitch`).
-        .sharedBackgroundVisibility(.hidden)
         ToolbarItemGroup(placement: .navigation) {
             SessionTabRow(model: model)
         }
@@ -67,9 +64,6 @@ private struct ModeSwitch: View {
     let model: AppModel
     @State private var pressed: String?
 
-    /// The air between the puck and the glass it slides in.
-    private static let trackInset: CGFloat = 3
-
     var body: some View {
         SegmentedTabs(
             segments: pinned.map {
@@ -79,8 +73,6 @@ private struct ModeSwitch: View {
             showsToolTips: false,
             select: select
         )
-        .padding(Self.trackInset)
-        .glassEffect(.regular, in: ControlShape.track(inset: Self.trackInset))
         .contextMenu { PinnedTabContextMenu(model: model) }
         .onChange(of: model.windowTabs.activeId) { pressed = nil }
         .toolbarGlassLabel(labels)
@@ -769,7 +761,7 @@ private struct TabCloseButton: View {
                 .foregroundStyle(.primary.opacity(isHovering ? 1 : 0.7))
                 .background(
                     isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : Color.clear,
-                    in: ControlShape.shape)
+                    in: Circle())
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

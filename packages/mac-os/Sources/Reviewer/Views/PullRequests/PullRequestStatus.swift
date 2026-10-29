@@ -133,8 +133,8 @@ struct LabelBadge: View {
             .foregroundStyle(hue ?? Color.primary)
             .padding(.horizontal, 5)
             .frame(height: 16)
-            .background((hue ?? Color.primary).opacity(0.12), in: ControlShape.shape)
-            .overlay(ControlShape.shape.strokeBorder((hue ?? Color.primary).opacity(0.3), lineWidth: 1))
+            .background((hue ?? Color.primary).opacity(0.12), in: Capsule())
+            .overlay(Capsule().strokeBorder((hue ?? Color.primary).opacity(0.3), lineWidth: 1))
     }
 
     private static func hue(_ color: String) -> Color? {
