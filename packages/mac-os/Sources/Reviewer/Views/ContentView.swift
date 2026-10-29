@@ -412,10 +412,25 @@ private struct ProjectPicker: View {
     /// opened in it lately — two lists of one place, under the bar that
     /// names the place.
     private var choices: some View {
+        // Recent Repositories and Favorites are shortcuts into All
+        // Repositories, as the opener's sidebar is, so a search — which
+        // looks through all of them — leaves them out rather than showing
+        // each repository it finds two or three times.
         BranchPopover(
             sections: [
                 BranchChoiceSection(id: "workspaces", title: "Workspaces", rows: rows),
-                BranchChoiceSection(id: "recent", title: "Recent", rows: recentRows),
+                BranchChoiceSection(
+                    id: "recent", title: "Recent Repositories",
+                    rows: model.catalog.recents.prefix(Self.recentLimit).map { repositoryRow($0, in: "recent") },
+                    hiddenWhileSearching: true),
+                BranchChoiceSection(
+                    id: "favorites", title: "Favorites",
+                    rows: model.catalog.favoriteRows.map { repositoryRow($0, in: "favorites") },
+                    hiddenWhileSearching: true),
+                BranchChoiceSection(
+                    id: "all", title: "All Repositories",
+                    rows: model.catalog.rows.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                        .map { repositoryRow($0, in: "all") }),
             ],
             placeholder: "Search workspaces and repositories", pick: pick, dismiss: { open = false }, actions: nil
         ) {
@@ -435,48 +450,57 @@ private struct ProjectPicker: View {
         }
     }
 
+    /// The badge the open workspace or repository wears in place of a tick:
+    /// which one you are in, said in words.
+    private static let current = "Current"
+
+    /// The saved workspaces, the open one labelled Current — and, ahead of
+    /// them, several repositories open together without a name yet. One
+    /// repository open on its own is not a workspace; it wears the label in
+    /// the repository lists below.
     private var rows: [BranchChoice] {
         let openId = model.workspace?.workspace?.id
         var rows: [BranchChoice] = []
-        if let roots = model.workspace?.roots, !roots.isEmpty, openId == nil {
+        if let roots = model.workspace?.roots, roots.count > 1, openId == nil {
             rows.append(BranchChoice(
                 id: Self.unsavedId, branch: nil, title: roots.map(\.name).joined(separator: ", "),
-                symbol: "folder", tint: nil, badge: nil, checked: true,
+                symbol: "folder", tint: nil, badge: Self.current, checked: false,
                 detail: "Not saved as a workspace", monograms: roots.map(\.name)))
         }
         rows += model.catalog.workspaces.map { workspace in
             BranchChoice(
                 id: workspace.id, branch: nil, title: workspace.name, symbol: "folder",
-                tint: nil, badge: nil, checked: workspace.id == openId,
+                tint: nil, badge: workspace.id == openId ? Self.current : nil, checked: false,
                 detail: workspace.rootNames.joined(separator: ", "), monograms: workspace.rootNames)
         }
         return rows
     }
 
-    /// The repositories opened lately, each to open on its own again, as
-    /// Xcode lists recent projects under its workspaces — newest first,
-    /// the few that fit, leaving out the one open on its own right now.
-    private var recentRows: [BranchChoice] {
-        let openAlone = model.workspace?.workspace == nil ? Set(model.workspace?.roots.map(\.path) ?? []) : []
-        return model.catalog.recents
-            .filter { !openAlone.contains($0.path) }
-            .prefix(Self.recentLimit)
-            .map { row in
-                BranchChoice(
-                    id: Self.recentPrefix + row.path, branch: nil, title: row.name, symbol: "folder",
-                    tint: nil, badge: nil, checked: false, tooltip: RepoRow.fold(row.path, home: NSHomeDirectory()),
-                    monograms: [row.name])
-            }
+    /// The repository open on its own, if one is.
+    private var openAlone: String? {
+        guard model.workspace?.workspace == nil, let roots = model.workspace?.roots, roots.count == 1 else { return nil }
+        return roots.first?.path
+    }
+
+    /// A repository to open on its own, in one of the lists — keyed by the
+    /// list too, since a repository stands in more than one — where it
+    /// lives said on hover, labelled Current while it is the one open.
+    private func repositoryRow(_ row: RepoRow, in list: String) -> BranchChoice {
+        BranchChoice(
+            id: "\(list)\(Self.separator)\(row.path)", branch: nil, title: row.name, symbol: "folder",
+            tint: nil, badge: row.path == openAlone ? Self.current : nil, checked: false,
+            tooltip: RepoRow.fold(row.path, home: NSHomeDirectory()), monograms: [row.name])
     }
 
     private static let unsavedId = "unsaved"
-    private static let recentPrefix = "recent:"
+    private static let separator: Character = "\u{1f}"
     private static let recentLimit = 8
 
     private func pick(_ choice: BranchChoice) {
         open = false
-        if choice.id.hasPrefix(Self.recentPrefix) {
-            let path = String(choice.id.dropFirst(Self.recentPrefix.count))
+        if let at = choice.id.firstIndex(of: Self.separator) {
+            let path = String(choice.id[choice.id.index(after: at)...])
+            guard path != openAlone else { return }
             Task { await model.openProject(path: path) }
             return
         }
