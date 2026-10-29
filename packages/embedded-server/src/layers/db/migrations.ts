@@ -332,6 +332,15 @@ CREATE TABLE tui_ui_state (
 );
 `;
 
+/**
+ * The saved workspace a chat was started in, whose repositories its agent is
+ * given beside its own root. A workspace deleted since leaves the chat its
+ * root alone.
+ */
+const chatWorkspace = `
+ALTER TABLE chat ADD COLUMN workspace_id TEXT REFERENCES workspace (id) ON DELETE SET NULL;
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
@@ -349,4 +358,5 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   },
   { id: "0009_workspaces", up: (db) => db.exec(workspaces) },
   { id: "0010_app_state", up: (db) => db.exec(appState) },
+  { id: "0011_chat_workspace", up: (db) => db.exec(chatWorkspace) },
 ];

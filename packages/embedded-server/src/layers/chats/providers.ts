@@ -16,7 +16,7 @@
  * say over.
  */
 import { resolveChatAccess } from "@reviewer/core/chats";
-import type { Chat, ChatMessage } from "@reviewer/core/chats";
+import type { Chat, ChatMessage, ChatWorkspace } from "@reviewer/core/chats";
 
 export interface ChatTurnProgram {
   readonly file: string;
@@ -169,6 +169,33 @@ export const withAttachedImages = (
 };
 
 /**
+ * A fresh session's prompt, told what workspace it works in: every
+ * repository by name and absolute path, the one the agent starts in marked.
+ * The agents that take extra roots are given them as well (see
+ * `chatTurnProgram`); this is what tells any of them they are there, and the
+ * only way opencode, which takes none, learns of them. A chat of one
+ * repository has nothing to be told.
+ */
+export const withWorkspace = (
+  prompt: string,
+  workspace: ChatWorkspace | undefined,
+  startsIn: string
+): string => {
+  if (workspace === undefined || workspace.roots.length < 2) return prompt;
+  const roots = workspace.roots.map((root) => {
+    const name = root.slice(root.lastIndexOf("/") + 1);
+    return `- ${name}: ${root}${root === startsIn ? " (your working directory)" : ""}`;
+  });
+  return [
+    `You are working in the workspace “${workspace.name}”, which holds these repositories side by side:`,
+    ...roots,
+    "Reach the others by their absolute paths.",
+    "",
+    prompt,
+  ].join("\n");
+};
+
+/**
  * Build the streaming one-turn invocation for `chat`. The prompt goes through
  * stdin (never argv, so its size and content can't break the command line);
  * stdout is parsed by the chat runtime with the provider's parser.
@@ -182,13 +209,19 @@ export const withAttachedImages = (
 export const chatTurnProgram = (
   chat: Chat,
   prompt: string,
-  session: ChatTurnSession
+  session: ChatTurnSession,
+  alsoIn: ReadonlyArray<string> = []
 ): ChatTurnProgram => {
+  // The workspace's other repositories, for the agents that take more than
+  // one root; opencode takes none, and is told where they are instead (see
+  // `withWorkspace`).
+  const addDirs = alsoIn.flatMap((dir) => ["--add-dir", dir]);
   switch (chat.provider) {
     case "claude": {
       const parts = [
         "claude",
         "-p",
+        ...addDirs,
         "--output-format",
         "stream-json",
         "--verbose",
@@ -223,6 +256,7 @@ export const chatTurnProgram = (
           : []),
         ...(chat.model.length > 0 ? ["--model", chat.model] : []),
         ...codexAccessArgs(chat),
+        ...addDirs,
         // "-" = read the prompt from stdin.
         "-",
       ];
@@ -255,6 +289,7 @@ export const chatTurnProgram = (
         ...(chat.model.length > 0 ? ["--model", chat.model] : []),
         // No effort flag — cursor picks reasoning depth per model itself.
         ...cursorAccessArgs(chat),
+        ...addDirs,
         ...(session.resume && session.id !== null
           ? ["--resume", session.id]
           : []),

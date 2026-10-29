@@ -223,8 +223,11 @@ struct MessageTimeline: View {
 }
 
 /// The strip tucked under the composer, naming where the session will
-/// land, read outside in: the project it belongs to, then the branch it
-/// starts from — the picker the sidebar carries, live here too, since a
+/// land, read outside in. A session of a workspace is the workspace's —
+/// its agent works across every repository of it — so the strip names the
+/// workspace and nothing narrower: no one repository, and no branch, which
+/// is one repository's. A repository on its own is named with the branch
+/// it starts from — the picker the sidebar carries, live here too, since a
 /// running session is no reason to lock the window out of its own git.
 struct SessionContextBar: View {
     @Environment(AppModel.self) private var model
@@ -232,16 +235,13 @@ struct SessionContextBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if model.roots.count > 1 {
-                // A session runs in one repository of the workspace: the
-                // one the page is on, picked here like everywhere else.
-                RepositoryPicker()
-                    .controlSize(.small)
+            if let workspace = model.workspace, workspace.isMultiRoot {
+                WorkspaceLabel(workspace: workspace)
             } else {
                 projectButton
+                BranchPicker()
+                    .controlSize(.small)
             }
-            BranchPicker()
-                .controlSize(.small)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 8)
@@ -254,6 +254,24 @@ struct SessionContextBar: View {
         )
         .padding(.top, -14)
         .padding(.horizontal, 6)
+    }
+
+    /// The workspace a session works across: its repositories' avatars and
+    /// its name, the repositories said in full on hover.
+    private struct WorkspaceLabel: View {
+        let workspace: WorkspaceInfo
+
+        var body: some View {
+            HStack(spacing: 5) {
+                WorkspaceGlyph(names: workspace.roots.map(\.name), size: 14)
+                Text(workspace.displayName ?? "Workspace")
+                    .lineLimit(1)
+            }
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+            .frame(height: 22)
+            .help(workspace.roots.map(\.name).joined(separator: ", "))
+        }
     }
 
     private var projectButton: some View {
