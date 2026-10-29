@@ -73,12 +73,12 @@ struct CommitComposer: View {
         }
     }
 
-    // A row's path card is anchored to the row, so it would ride along as
-    // the list scrolls; the scroll's start is counted, and the rows close
-    // their cards on it. The rows are made as they scroll in: each is a
-    // checkbox, two measured labels and a popover, and a large diff has
-    // hundreds, which built all at once — and again on every keystroke in
-    // the message — was what made the composer lag.
+    // A row's path tooltip comes down as the list starts to scroll, since
+    // the row it names is moving out from under the pointer; the scroll's
+    // start is counted, and the rows put theirs away on it. The rows are
+    // made as they scroll in: each is a checkbox and two measured labels,
+    // and a large diff has hundreds, which built all at once — and again
+    // on every keystroke in the message — was what made the composer lag.
     private var files: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
@@ -338,8 +338,8 @@ private struct CommitAgentRow: View {
 
 /// One changed file: its status badge, its name, and the folder it is in
 /// — squeezed to the middle when the row is narrow, in which case the
-/// pointer resting on the row opens the whole path beside it, the way a
-/// session's row opens its preview, and leaving closes it.
+/// pointer on the row says the whole path in the one-line tooltip the
+/// branch picker's rows use (see `RowTooltip`).
 private struct ChangeRow: View {
     let change: GitStatusEntry
     @Binding var isOn: Bool
@@ -347,11 +347,7 @@ private struct ChangeRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var folderWidth = 0.0
     @State private var folderFullWidth = 0.0
-    @State private var pathShown = false
-    @State private var hoverTask: Task<Void, Never>?
-
-    private static let openDelay: Duration = .milliseconds(120)
-    private static let closeDelay: Duration = .milliseconds(100)
+    @State private var hovering = false
 
     private var folder: String { FileTree.ancestors(of: change.path).last ?? "" }
     private var folderTruncated: Bool { folderWidth + 0.5 < folderFullWidth }
@@ -384,59 +380,15 @@ private struct ChangeRow: View {
         .frame(height: 22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .onHover { hovering in
-            hoverTask?.cancel()
-            guard hovering ? folderTruncated : pathShown else { return }
-            hoverTask = Task {
-                try? await Task.sleep(for: hovering ? Self.openDelay : Self.closeDelay)
-                guard !Task.isCancelled else { return }
-                pathShown = hovering
-            }
-        }
-        .onChange(of: scrollStarts) { _, _ in
-            hoverTask?.cancel()
-            pathShown = false
-        }
-        .popover(isPresented: $pathShown, arrowEdge: .trailing) {
-            ChangePathCard(change: change)
-        }
+        .rowTooltip(folderTruncated ? change.path : nil, active: hovering)
+        .onHover { hovering = $0 }
+        .onChange(of: scrollStarts) { hovering = false }
     }
 
     private var folderText: some View {
         Text(folder)
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
-    }
-}
-
-/// The card a squeezed row opens under the pointer: the file's icon and
-/// its path in full on one line, and what became of the file.
-private struct ChangePathCard: View {
-    let change: GitStatusEntry
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                FileIconView(path: change.path, tint: change.status.hex(dark: colorScheme == .dark))
-                Text(change.path)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                    .textSelection(.enabled)
-            }
-            HStack(spacing: 5) {
-                Text(change.status.badge ?? "·")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(change.status.color(dark: colorScheme == .dark))
-                Text(change.status.title)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.leading, 22)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .fixedSize()
     }
 }
 
