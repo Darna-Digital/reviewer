@@ -138,12 +138,10 @@ struct ComposerChipStyle: ButtonStyle {
 
 enum ChipShape {
     case rounded
-    case capsule
 
     var insettable: AnyShape {
         switch self {
-        case .rounded: return AnyShape(RoundedRectangle(cornerRadius: 6))
-        case .capsule: return AnyShape(Capsule())
+        case .rounded: return AnyShape(ControlShape.shape)
         }
     }
 }
@@ -163,7 +161,6 @@ enum ChipSize {
     func inset(for shape: ChipShape) -> CGFloat {
         switch (self, shape) {
         case (.large, _): return 12
-        case (.compact, .capsule): return 9
         case (.compact, .rounded): return 7
         }
     }

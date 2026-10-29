@@ -59,7 +59,7 @@ final class RowTooltip {
         backdrop.blendingMode = .behindWindow
         backdrop.state = .active
         backdrop.wantsLayer = true
-        backdrop.layer?.cornerRadius = 6
+        backdrop.layer?.cornerRadius = ControlShape.radius
         backdrop.layer?.masksToBounds = true
 
         label = NSTextField(wrappingLabelWithString: "")

@@ -240,10 +240,10 @@ private struct RailButton<Label: View>: View {
                 .frame(width: 34, height: 34)
                 .background(
                     Color.primary.opacity(selected ? 0.1 : isHovering ? 0.06 : 0),
-                    in: RoundedRectangle(cornerRadius: 8))
+                    in: ControlShape.shape)
                 .overlay {
                     if selected && keyed {
-                        RoundedRectangle(cornerRadius: 8)
+                        ControlShape.shape
                             .strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 1.5)
                     }
                 }

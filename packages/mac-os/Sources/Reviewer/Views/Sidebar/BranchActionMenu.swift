@@ -113,7 +113,7 @@ private struct ActionRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(lit ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 5))
+            .background(Color.primary.opacity(lit ? 0.08 : 0), in: ControlShape.shape)
             .rowTooltip(clipped ? title : nil, active: lit)
             .contentShape(Rectangle())
             .onTapGesture(perform: run)

@@ -234,7 +234,7 @@ private struct CrumbStyle: ButtonStyle {
             .foregroundStyle(isHovering ? .primary : .secondary)
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
-            .background(Color.primary.opacity(isHovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 5))
+            .background(Color.primary.opacity(isHovering ? 0.08 : 0), in: ControlShape.shape)
             .contentShape(Rectangle())
             .onHover { isHovering = $0 }
     }
@@ -251,7 +251,7 @@ private struct GrepToggle: View {
                 .font(.system(size: 11))
                 .foregroundStyle(isOn ? .primary : .secondary)
                 .frame(width: 24, height: 24)
-                .background(isOn ? Color.primary.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                .background(isOn ? Color.primary.opacity(0.14) : Color.clear, in: ControlShape.shape)
         }
         .buttonStyle(.plain)
         .help(label)

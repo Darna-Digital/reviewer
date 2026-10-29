@@ -45,7 +45,7 @@ final class PathTooltip {
         backdrop.blendingMode = .behindWindow
         backdrop.state = .active
         backdrop.wantsLayer = true
-        backdrop.layer?.cornerRadius = 5
+        backdrop.layer?.cornerRadius = ControlShape.radius
         backdrop.layer?.masksToBounds = true
 
         label = NSTextField(labelWithString: "")

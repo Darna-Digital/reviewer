@@ -116,17 +116,34 @@ private struct ShellTabBar: View {
                 RepositoryPicker(look: .bar)
                 PaneBarSeparator()
             }
-            HStack(spacing: 2) {
-                ForEach(shells) { thread in
-                    ShellTab(thread: thread,
-                             isSelected: threads.selectedId == thread.id,
-                             select: { threads.selectedId = thread.id },
-                             close: { close(id: thread.id) })
-                }
-            }
-            .environment(rename)
-            Spacer(minLength: 0)
+            tabs
             PaneBarButton(symbol: "plus", help: "New session", action: open)
+        }
+    }
+
+    /// The tabs at their own widths, scrolling sideways once there are
+    /// more than the bar holds rather than squeezing every title away,
+    /// and keeping the tab in front in view as it changes.
+    private var tabs: some View {
+        ScrollViewReader { scroller in
+            ScrollView(.horizontal) {
+                HStack(spacing: 2) {
+                    ForEach(shells) { thread in
+                        ShellTab(thread: thread,
+                                 isSelected: threads.selectedId == thread.id,
+                                 select: { threads.selectedId = thread.id },
+                                 close: { close(id: thread.id) })
+                            .id(thread.id)
+                    }
+                }
+                .environment(rename)
+            }
+            .scrollIndicators(.never)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onChange(of: threads.selectedId) { _, id in
+                guard let id else { return }
+                withAnimation(PaneMotion.change) { scroller.scrollTo(id) }
+            }
         }
     }
 
@@ -176,7 +193,7 @@ private struct ShellTab: View {
                 .frame(minWidth: ShellTabMetrics.minWidth, maxWidth: ShellTabMetrics.maxWidth)
                 .padding(.horizontal, ShellTabMetrics.closeSlot)
                 .frame(height: ShellTabMetrics.height)
-                .background(fill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .background(fill, in: ControlShape.shape)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -239,7 +256,7 @@ private struct ShellTabClose: View {
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(isHovering ? .primary : .secondary)
                 .frame(width: 15, height: 15)
-                .background(isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : .clear, in: Circle())
+                .background(isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : .clear, in: ControlShape.shape)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
         }

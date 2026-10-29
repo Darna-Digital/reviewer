@@ -18,8 +18,8 @@ enum BarChipMetrics {
     static let onTint: Double = 0.12
     static let hoverTint: Double = 0.06
 
-    static var shape: Capsule {
-        Capsule()
+    static var shape: RoundedRectangle {
+        ControlShape.shape
     }
 }
 

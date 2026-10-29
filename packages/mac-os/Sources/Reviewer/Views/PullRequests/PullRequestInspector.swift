@@ -184,7 +184,7 @@ private struct MoreMenu: View {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14, weight: .semibold))
                 .frame(width: Self.size, height: Self.size)
-                .contentShape(Circle())
+                .contentShape(ControlShape.shape)
         }
         // A menu takes no glass style of its own, and drew as a small grey
         // disc beside the glass buttons; so it is drawn plain, and the glass
@@ -192,7 +192,7 @@ private struct MoreMenu: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .glassEffect(.regular.interactive(), in: Circle())
+        .glassEffect(.regular.interactive(), in: ControlShape.shape)
         .fixedSize()
         .help("More")
     }
@@ -227,9 +227,9 @@ private struct ClearGlassButton: View {
             .foregroundStyle(isEnabled ? .primary : .tertiary)
             .padding(.horizontal, 12)
             .frame(height: Self.height)
-            .background(Capsule().fill(lit ? Self.hoverWash : .clear))
-            .contentShape(Capsule())
-            .glassEffect(.regular.interactive(isEnabled), in: .capsule)
+            .background(ControlShape.shape.fill(lit ? Self.hoverWash : .clear))
+            .contentShape(ControlShape.shape)
+            .glassEffect(.regular.interactive(isEnabled), in: ControlShape.shape)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .onHover { hovered = $0 }
             .animation(.easeOut(duration: 0.15), value: lit)

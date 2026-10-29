@@ -248,9 +248,9 @@ struct SessionContextBar: View {
         .padding(.horizontal, 8)
         .padding(.top, 18)
         .padding(.bottom, 5)
-        .background(.quaternaryWash(0.35), in: UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14, style: .continuous))
+        .background(.quaternaryWash(0.35), in: UnevenRoundedRectangle(bottomLeadingRadius: ControlShape.radius, bottomTrailingRadius: ControlShape.radius, style: .continuous))
         .overlay(
-            UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14, style: .continuous)
+            UnevenRoundedRectangle(bottomLeadingRadius: ControlShape.radius, bottomTrailingRadius: ControlShape.radius, style: .continuous)
                 .strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1)
         )
         .padding(.top, -14)

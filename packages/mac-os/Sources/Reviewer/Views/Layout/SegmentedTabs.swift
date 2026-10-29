@@ -58,6 +58,7 @@ struct SegmentedTabs: NSViewRepresentable {
     func makeNSView(context: Context) -> NSSegmentedControl {
         let control = NSSegmentedControl()
         control.trackingMode = .selectOne
+        control.borderShape = .roundedRectangle
         // The tabs role is in the macOS 27 SDK, which comes with the Swift
         // 6.4 toolchain; a build on Xcode 26 has neither and gets the plain
         // control. Releases are built on Xcode 27 (see `release.yml`).

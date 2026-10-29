@@ -114,8 +114,8 @@ struct GlassRailTabs<Extra: View>: View {
         }
         .padding(Self.inset)
         .frame(width: Self.width)
-        .background(Color.primary.opacity(0.05), in: Capsule())
-        .contentShape(Capsule())
+        .background(Color.primary.opacity(0.05), in: ControlShape.track(inset: Self.inset))
+        .contentShape(ControlShape.track(inset: Self.inset))
         .onContinuousHover(perform: hover)
         .overlay(alignment: .topLeading) { label }
         .onChange(of: selection) { pending = nil }
@@ -146,7 +146,7 @@ struct GlassRailTabs<Extra: View>: View {
             if let offset = puckOffset {
                 Color.clear
                     .frame(width: Self.item, height: Self.item)
-                    .glassEffect(.regular.interactive(), in: Capsule())
+                    .glassEffect(.regular.interactive(), in: ControlShape.shape)
                     .shadow(color: .black.opacity(lifted ? 0.18 : 0), radius: 6, y: 2)
                     .scaleEffect(lifted ? Self.liftedScale : 1)
                     .offset(y: offset)
@@ -334,7 +334,7 @@ struct GlassChordLabel: View {
         }
         .padding(.horizontal, 11)
         .frame(height: GlassRailTabsMetrics.labelHeight)
-        .glassEffect(.regular, in: Capsule())
+        .glassEffect(.regular, in: ControlShape.shape)
         .fixedSize()
     }
 }
@@ -353,8 +353,8 @@ struct RailTabGlyph: View {
             .font(.system(size: 14))
             .foregroundStyle(isLit || isHovered ? .primary : .secondary)
             .frame(width: GlassRailTabsMetrics.item, height: GlassRailTabsMetrics.item)
-            .background(Color.primary.opacity(isHovered && !isLit ? 0.06 : 0), in: Circle())
-            .contentShape(Circle())
+            .background(Color.primary.opacity(isHovered && !isLit ? 0.06 : 0), in: ControlShape.shape)
+            .contentShape(ControlShape.shape)
     }
 }
 
