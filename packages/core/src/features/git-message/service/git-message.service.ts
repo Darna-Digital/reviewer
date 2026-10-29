@@ -101,15 +101,15 @@ const describeChanges = (
 ): string => {
   const { branch, diff, untracked } = changes;
   const truncated =
-    diff.length > budget
-      ? `${diff.slice(0, budget)}\n…[diff truncated]`
-      : diff;
+    diff.length > budget ? `${diff.slice(0, budget)}\n…[diff truncated]` : diff;
   const newFiles =
     untracked.length > 0
       ? `\n\nNew untracked files:\n${untracked.map((f) => `  ${f}`).join("\n")}`
       : "";
   const body = `${truncated}${newFiles}`.trim();
-  return headed ? `=== Repository: ${name} (branch ${branch}) ===\n${body}` : body;
+  return headed
+    ? `=== Repository: ${name} (branch ${branch}) ===\n${body}`
+    : body;
 };
 
 export interface GitMessageServiceShape {
