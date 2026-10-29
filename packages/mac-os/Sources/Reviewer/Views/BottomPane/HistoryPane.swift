@@ -279,6 +279,7 @@ private struct SinceCalendar: View {
         ), in: ...Date(), displayedComponents: .date)
         .datePickerStyle(.graphical)
         .labelsHidden()
+        .focusEffectDisabled()
         .padding(10)
     }
 }

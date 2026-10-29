@@ -440,7 +440,10 @@ private final class CentredTextCell: NSTextFieldCell {
 /// capsule of its own.
 struct PaneBarPopUp<Leading: View>: View {
     let title: String
-    let help: String
+    /// What the pop-up is, under it while the pointer rests — or nil where
+    /// the popover it opens says it already, and a tooltip would only
+    /// stand over it.
+    let help: String?
     var maxWidth: CGFloat = 160
     @ViewBuilder let leading: Leading
     let action: () -> Void
@@ -477,6 +480,13 @@ struct PaneBarPopUp<Leading: View>: View {
         }
         .buttonStyle(PaneBarButtonStyle())
         .controlTooltip(help)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func controlTooltip(_ text: String?) -> some View {
+        if let text { controlTooltip(text) } else { self }
     }
 }
 

@@ -37,7 +37,7 @@ struct ComparePicker: View {
     }
 
     var body: some View {
-        PaneBarPopUp(title: labels.chip, help: labels.summary, maxWidth: Self.maxWidth) {
+        PaneBarPopUp(title: labels.chip, help: nil, maxWidth: Self.maxWidth) {
             Image(systemName: symbol)
                 .foregroundStyle(.secondary)
         } action: {

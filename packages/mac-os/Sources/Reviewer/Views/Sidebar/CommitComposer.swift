@@ -37,7 +37,7 @@ struct CommitComposer: View {
     private static let boxShape = RoundedRectangle(cornerRadius: 6)
     private static let boxInset: CGFloat = 8
 
-    private var drafting: Bool { composer.draft?.status == .running }
+    private var drafting: Bool { composer.draft?.status == .running || model.isDraftingCommitMessage }
     private var canCommit: Bool {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !chosen.isEmpty && !drafting
     }

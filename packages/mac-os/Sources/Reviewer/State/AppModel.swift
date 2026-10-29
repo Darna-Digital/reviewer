@@ -98,7 +98,7 @@ final class AppModel {
     /// The bottom pane's History: the commit log, its filters and the
     /// commit picked out of it.
     let history: CommitHistory
-    /// The palette — ⌘E's commands, a file by name, a grep of the working
+    /// The palette — ⌘K's commands, a file by name, a grep of the working
     /// tree, the git actions and the branches.
     let palette: CommandPalette
     /// The repositories the machine holds, for the opener to list.
@@ -117,6 +117,8 @@ final class AppModel {
     /// The branch each repository was last read on — what a fresh read is
     /// measured against to tell that the branch has moved under the review.
     @ObservationIgnored private var lastCheckouts: [String: String] = [:]
+    /// ⇧⇧, the web app's way into the file search, beside ⇧⌘O.
+    @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
     /// What the window's per-repository surfaces stand on while nothing is
     /// open — never watched, never read.
     @ObservationIgnored private let detachedRoot: RootModel
@@ -141,6 +143,13 @@ final class AppModel {
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
         palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
+        // The web app keeps the gesture out of its inputs; here the one
+        // input it could land in is the palette's own box, where two Shifts
+        // in a row are typing, not a request to switch lists.
+        shiftTaps = ShiftTapMonitor { [weak self] in
+            guard let self, !palette.isShown else { return }
+            findFile()
+        }
         page.onNavigated = { [weak self] href in
             self?.focus(onPageAt: href)
             self?.chats.follow(href: href)
@@ -306,8 +315,11 @@ final class AppModel {
     /// with the files it has chosen, its message and its agent, all of
     /// them its own (see `CommitComposer`).
     private(set) var commitComposerRequest: CommitComposerRequest?
-    /// The last message drafted with the composer off screen.
+    /// The last message the app drafted itself rather than through the
+    /// page — away from the composer, or across a workspace.
     private(set) var landedCommitMessage: LandedCommitMessage?
+    /// Whether such a draft is being written.
+    private(set) var isDraftingCommitMessage = false
 
     // MARK: lifecycle
 
@@ -500,7 +512,7 @@ final class AppModel {
 
     // MARK: palette
 
-    /// ⌘E: the command list, or with it already up, away again.
+    /// ⌘K: the command list, or with it already up, away again.
     func showCommands() {
         guard hasProject else { return }
         palette.toggleCommands()
@@ -713,8 +725,14 @@ final class AppModel {
         case .discard(let ids):
             discard(paths: ids)
         case .draft(let ids, let agent):
-            // The draft is the page's, of its repository's chosen files.
-            page.send(TreeAction.draft(paths: paths(in: focusedRoot, of: ids), agent: agent))
+            // The page drafts from its own repository alone; one commit
+            // across a workspace is drafted from every repository's chosen
+            // files, which only the app can ask the server for.
+            if roots.count > 1 {
+                draftCommitMessage(from: byRoot(ids), agent: agent, awayFromComposer: false)
+            } else {
+                page.send(TreeAction.draft(paths: paths(in: focusedRoot, of: ids), agent: agent))
+            }
         case .draftSettled:
             page.send(action)
         }
@@ -980,6 +998,28 @@ final class AppModel {
         await setRoots(rest)
     }
 
+    /// `root` swapped for the repository at `path`, in the same place in
+    /// the workspace's order; the page goes with it if it was on `root`.
+    func replaceRoot(_ root: RootModel, with path: String) async {
+        let open = roots.map(\.path)
+        guard !open.contains(path) else {
+            notices.post(.info, "\(URL(fileURLWithPath: path).lastPathComponent) is already in the workspace")
+            return
+        }
+        let wasFocused = root === focusedRoot
+        if wasFocused, let other = roots.first(where: { $0 !== root }) {
+            showOnCodeTab(Href.browsePath, in: other)
+        }
+        await setRoots(open.map { $0 == root.path ? path : $0 })
+        if wasFocused, let replacement = self.root(at: path) { focus(root: replacement) }
+    }
+
+    /// The folder panel, for the repository to put in `root`'s place.
+    func chooseReplacement(for root: RootModel) {
+        guard let path = askForProjectFolder() else { return }
+        Task { await replaceRoot(root, with: path) }
+    }
+
     /// The folder panel, for a repository to open beside the others.
     func chooseRootToAdd() {
         guard let path = askForProjectFolder() else { return }
@@ -1139,39 +1179,72 @@ final class AppModel {
 
     /// ⌃G, from anywhere: the composer drafts it where it is on screen, so
     /// the draft is seen landing in the box. Elsewhere the server is asked
-    /// directly — an agent drafting from every change of the repository the
-    /// page is on — and the message is kept where the composer will find it,
-    /// with a notice to say it is there.
+    /// directly — an agent drafting from every change of every repository
+    /// in the workspace — and the message is kept where the composer will
+    /// find it, with a notice to say it is there.
     func generateCommitMessage() {
         if hasCommitComposer { return ask(commitComposer: .draft) }
-        guard let root = focusedRoot else { return }
+        draftCommitMessage(from: roots.map { ($0, []) }, agent: CommitMessages.agent, awayFromComposer: true)
+    }
+
+    /// A message drafted by the server for the chosen files of each
+    /// repository — one commit spans a workspace's, so one message reads
+    /// them all — then kept as the composer's and handed to it if it is up.
+    /// The run is the server's, asked of the page's repository, which keeps
+    /// it while the agent writes; it is waited on here and then let go.
+    private func draftCommitMessage(
+        from groups: [(root: RootModel, paths: [String])], agent: CommitAgent, awayFromComposer: Bool
+    ) {
+        guard !isDraftingCommitMessage, !groups.isEmpty,
+              let host = groups.count == 1 ? groups[0].root : focusedRoot ?? groups.first?.root
+        else { return }
         let scope = commitMessageScope
-        let agent = CommitMessages.agent
+        let repositories = groups.count > 1
+            ? groups.map { DraftRepositoryBody(path: $0.root.path, name: $0.root.name, paths: $0.paths) }
+            : nil
+        let paths = groups.count == 1 ? groups[0].paths : []
+        isDraftingCommitMessage = true
         Task {
-            let id = notices.post(.loading, "Drafting a commit message with \(agent.label)…")
+            defer { isDraftingCommitMessage = false }
+            let notice = awayFromComposer
+                ? notices.post(.loading, "Drafting a commit message with \(agent.label)…")
+                : nil
             do {
-                var draft = try await root.client.generateCommitMessage(agent: agent)
+                var draft = try await host.client.generateCommitMessage(
+                    agent: agent, paths: paths, repositories: repositories)
                 while draft.status == .running {
                     try await Task.sleep(for: Self.draftPoll)
-                    draft = try await root.client.commitDraft()
+                    draft = try await host.client.commitDraft()
                 }
-                try? await root.client.clearCommitDraft()
+                try? await host.client.clearCommitDraft()
                 guard draft.status == .ready, let message = draft.message else {
-                    return notices.settle(id, .error, "Could not draft a commit message", detail: draft.error)
+                    let reason = draft.error ?? "The agent wrote nothing."
+                    if let notice {
+                        notices.settle(notice, .error, "Could not draft a commit message", detail: reason)
+                    } else {
+                        notices.post(.error, "Could not draft a commit message", detail: reason)
+                    }
+                    return
                 }
                 CommitMessages.remember(message, for: scope)
                 landedCommitMessage = LandedCommitMessage(
                     scope: scope, message: message, serial: (landedCommitMessage?.serial ?? 0) + 1)
-                notices.settle(id, .success, "Commit message drafted", detail: "It is waiting in Review's commit box.")
+                if let notice {
+                    notices.settle(notice, .success, "Commit message drafted", detail: "It is waiting in Review's commit box.")
+                }
             } catch {
-                notices.settle(id, failed: "Could not draft a commit message", with: error)
+                if let notice {
+                    notices.settle(notice, failed: "Could not draft a commit message", with: error)
+                } else {
+                    notices.post(.error, "Could not draft a commit message", detail: error.localizedDescription)
+                }
             }
         }
     }
 
     private static let draftPoll: Duration = .seconds(1)
 
-    /// ⌃G, ⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
+    /// ⌃G, ⇧⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
     /// composer, the sidebar brought out first if it was put away, so what
     /// they do is seen happening.
     func ask(commitComposer action: CommitComposerRequest.Action) {

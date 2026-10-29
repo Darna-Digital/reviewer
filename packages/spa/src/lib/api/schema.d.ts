@@ -4471,6 +4471,11 @@ export interface operations {
                     paths?: string[];
                     /** @enum {string} */
                     agent?: "claude" | "opencode" | "codex" | "cursor";
+                    repositories?: {
+                        path: string;
+                        name: string;
+                        paths: string[];
+                    }[];
                 };
             };
         };
@@ -5044,6 +5049,11 @@ export interface operations {
                             repoPath: string;
                             repoName: string;
                         };
+                        workspace?: {
+                            id: string;
+                            name: string;
+                            roots: string[];
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5266,6 +5276,11 @@ export interface operations {
                             repoPath: string;
                             repoName: string;
                         };
+                        workspace?: {
+                            id: string;
+                            name: string;
+                            roots: string[];
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5433,6 +5448,11 @@ export interface operations {
                             repoPath: string;
                             repoName: string;
                         };
+                        workspace?: {
+                            id: string;
+                            name: string;
+                            roots: string[];
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5547,6 +5567,11 @@ export interface operations {
                             projectName: string;
                             repoPath: string;
                             repoName: string;
+                        };
+                        workspace?: {
+                            id: string;
+                            name: string;
+                            roots: string[];
                         };
                         title: string;
                         /** @enum {string} */

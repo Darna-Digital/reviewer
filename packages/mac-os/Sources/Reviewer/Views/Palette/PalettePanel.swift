@@ -1,7 +1,7 @@
 // The palette: the web app's search dialog drawn natively, as a Liquid
 // Glass pane hung near the top of the window over the page — a breadcrumb
 // naming the list that is up, one box, one list. It opens on Commands
-// (⌘E), and some of those rows lead deeper rather than acting: Files (also
+// (⌘K), and some of those rows lead deeper rather than acting: Files (also
 // ⇧⌘O) is a name search over every path, Text (also ⇧⌘F) greps the working
 // tree with the match modifiers (case, whole word, regex) on the box's
 // trailing edge, Git holds the git actions and leads on to Branches, which
@@ -9,7 +9,7 @@
 // ↑/↓ walk the list, Home and End jump to its ends, Return runs the row,
 // Backspace on an empty box walks back up the trail, Escape — or a click
 // beside the pane — puts it away. The TUI's palette keys answer too: ⌃N/⌃P
-// walk the list, ⌃K is ⌘E, and ⌥C, ⌥W and ⌥R flip the grep's modifiers.
+// walk the list, ⌃K is ⌘K, and ⌥C, ⌥W and ⌥R flip the grep's modifiers.
 //
 // The pane is frosted glass rather than an opaque sheet so the code stays
 // visible through it: a result is read against what it will open over. It is

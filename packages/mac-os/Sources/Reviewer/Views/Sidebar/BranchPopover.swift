@@ -100,6 +100,12 @@ private struct ShownSection: Identifiable {
     let lines: [Line]
 }
 
+/// The step in front, kept apart from the view's state: it is set as the
+/// list is laid out, which state may not be.
+private final class FrontStep {
+    var key = ""
+}
+
 /// The submenu open, and on which row — one at a time across the list —
 /// and whether the keys opened it, which lights its first item.
 private struct Submenu: Equatable {
@@ -131,6 +137,9 @@ struct BranchPopover<Footer: View>: View {
     /// The row's submenu — what can be done to the branch besides picking
     /// it — or nil where a pick is all a row is for.
     let actions: ((BranchRef) -> [BranchAction])?
+    /// The menu of a row that is no branch — a workspace's repository —
+    /// where the picker offers one.
+    var rowActions: ((BranchChoice) -> [BranchAction])? = nil
     /// A row whose pick leads further in — a repository, opening its
     /// branches — rather than being the answer: the popover stays up for
     /// what comes next instead of going away under it.
@@ -160,6 +169,11 @@ struct BranchPopover<Footer: View>: View {
     private var stepKey: String { sections.map(\.id).joined(separator: "\n") }
 
     @State private var contentHeight: CGFloat = 0
+    /// The step whose rows are in front, read by the rows' height reports:
+    /// a list crossfading out goes on reporting its own height for the
+    /// length of the fade, which tugged the eased height back towards the
+    /// step being left and made the popover shudder as it grew.
+    @State private var front = FrontStep()
 
     private var searching: Bool { !needle.isEmpty }
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
@@ -241,15 +255,25 @@ struct BranchPopover<Footer: View>: View {
             .padding(8)
     }
 
+    /// The air between rows: a hair between a menu's one-line rows, and
+    /// between two-line rows — a repository over the branch it is on — half
+    /// what the list keeps from the popover's edges, so each stands apart
+    /// while the list still reads as one.
+    private func rowGap(_ lines: [Line]) -> CGFloat {
+        lines.contains { $0.choice.detail != nil } ? Self.listInset / 2 : 1
+    }
+
     private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
-        ScrollViewReader { proxy in
+        let step = stepKey
+        front.key = step
+        return ScrollViewReader { proxy in
             ScrollView {
                 // Rows swapped for another step's crossfade, the old over
                 // the new, while the list eases to the new rows' height —
                 // keyed by the step so a search, which only narrows the
                 // same rows, does not fade them.
                 ZStack(alignment: .top) {
-                    LazyVStack(alignment: .leading, spacing: 1) {
+                    LazyVStack(alignment: .leading, spacing: rowGap(lines)) {
                         ForEach(shown) { section in
                             if let title = section.title {
                                 SectionHeader(title: title, count: section.lines.count)
@@ -257,7 +281,7 @@ struct BranchPopover<Footer: View>: View {
                             ForEach(section.lines) { line in
                                 ChoiceRow(
                                     line: line, lit: line.index == active, reading: reading,
-                                    actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
+                                    actions: menu(for: line.choice),
                                     submenu: submenuBinding(for: line.key),
                                     ran: dismiss
                                 ) {
@@ -268,11 +292,12 @@ struct BranchPopover<Footer: View>: View {
                         }
                     }
                     .padding(Self.listInset)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height.rounded() } action: { measured in
                         // The list opens at its height, and from then on
                         // takes a new one — eased, where the picker asks for
                         // it, as a search narrows it or its rows are swapped
                         // for the next step's — and the popover with it.
+                        guard step == front.key, measured != contentHeight else { return }
                         withAnimation(easesHeight && contentHeight > 0 ? Self.resize : nil) {
                             contentHeight = measured
                         }
@@ -316,11 +341,20 @@ struct BranchPopover<Footer: View>: View {
     /// → opens the lit row's submenu, its first item lit, as a menu's
     /// submenu opens — once the caret has nowhere further right to go.
     private func openSubmenu(in lines: [Line], caretAtEnd: Bool) -> Bool {
-        guard actions != nil, caretAtEnd, lines.indices.contains(active), lines[active].choice.branch != nil else {
+        guard caretAtEnd, lines.indices.contains(active), menu(for: lines[active].choice) != nil else {
             return false
         }
         submenu = Submenu(key: lines[active].key, fromKeys: true)
         return true
+    }
+
+    /// The row's menu, built only once it opens: a branch's actions, or
+    /// the picker's own for a row that is no branch.
+    private func menu(for choice: BranchChoice) -> (() -> [BranchAction])? {
+        if let branch = choice.branch {
+            return actions.map { actions in { actions(branch) } }
+        }
+        return rowActions.map { rowActions in { rowActions(choice) } }
     }
 
     private func submenuBinding(for key: String) -> Binding<Submenu?> {

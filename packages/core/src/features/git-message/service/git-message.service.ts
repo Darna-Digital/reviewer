@@ -5,9 +5,16 @@ import { agentCommand } from "../../threads/functions/agents.ts";
 import type { GitFailure } from "../../../ports/git-exec.ts";
 import { TerminalError, TerminalExec } from "../../../ports/terminal-exec.ts";
 import { hasChanges } from "../functions/git-message.functions.ts";
-import { GitMessageChanges } from "./git-message.changes.ts";
+import {
+  GitMessageChanges,
+  type RepositoryChanges,
+} from "./git-message.changes.ts";
 import { CommitDrafts, IDLE_DRAFT } from "./git-message.drafts.ts";
-import type { CommitAgent, CommitDraft } from "../schema/git-message.schema.ts";
+import type {
+  CommitAgent,
+  CommitDraft,
+  DraftRepository,
+} from "../schema/git-message.schema.ts";
 
 export const MAX_DIFF_CHARS = 16000;
 export const DEFAULT_COMMIT_AGENT: CommitAgent = "claude";
@@ -15,11 +22,22 @@ export const branchSlug = (branch: string): string | null => {
   const match = branch.match(/[A-Z][A-Z0-9]*-\d+/);
   return match?.[0] ?? null;
 };
-export const buildPrompt = (changes: string, slug: string | null): string =>
+export const buildPrompt = (
+  changes: string,
+  slug: string | null,
+  spansRepositories = false
+): string =>
   [
     "Generate a git commit message for the changes below.",
     "",
     "Rules:",
+    ...(spansRepositories
+      ? [
+          "- The changes span several repositories of one workspace, each under",
+          "  its own heading, and are committed together under this one message:",
+          "  summarize them as one change, naming a repository where it helps.",
+        ]
+      : []),
     "- First line: a concise, descriptive title summarizing the change.",
     "- Then a blank line, then bullet points (each starting with '- ')",
     "  describing the notable changes.",
@@ -71,10 +89,38 @@ const failedDraft = (
   error: string
 ): CommitDraft => ({ status: "error", message: null, error, agent, paths });
 
+/**
+ * A repository's changes as the prompt lists them: its diff cut to its share
+ * of the budget, then the untracked files the diff cannot show — under a
+ * heading naming the repository and its branch where several are listed.
+ */
+const describeChanges = (
+  { name, changes }: RepositoryChanges,
+  budget: number,
+  headed: boolean
+): string => {
+  const { branch, diff, untracked } = changes;
+  const truncated =
+    diff.length > budget
+      ? `${diff.slice(0, budget)}\n…[diff truncated]`
+      : diff;
+  const newFiles =
+    untracked.length > 0
+      ? `\n\nNew untracked files:\n${untracked.map((f) => `  ${f}`).join("\n")}`
+      : "";
+  const body = `${truncated}${newFiles}`.trim();
+  return headed ? `=== Repository: ${name} (branch ${branch}) ===\n${body}` : body;
+};
+
 export interface GitMessageServiceShape {
+  /**
+   * A message for `paths` of the request's repository — or, given several
+   * `repositories`, for each one's own changes as one commit.
+   */
   readonly generate: (
     paths: ReadonlyArray<string>,
-    agent: CommitAgent
+    agent: CommitAgent,
+    repositories?: ReadonlyArray<DraftRepository>
   ) => Effect.Effect<string, GitFailure | TerminalError>;
   /**
    * Draft in the background: the agent CLI is left running detached from the
@@ -85,7 +131,8 @@ export interface GitMessageServiceShape {
   readonly start: (
     scope: string,
     paths: ReadonlyArray<string>,
-    agent: CommitAgent
+    agent: CommitAgent,
+    repositories?: ReadonlyArray<DraftRepository>
   ) => Effect.Effect<CommitDraft>;
   readonly draft: (scope: string) => Effect.Effect<CommitDraft>;
   readonly clear: (scope: string) => Effect.Effect<CommitDraft>;
@@ -98,25 +145,32 @@ export const makeGitMessageService = Effect.gen(function* () {
   const source = yield* GitMessageChanges;
   const terminal = yield* TerminalExec;
   const drafts = yield* CommitDrafts;
-  const generate: GitMessageServiceShape["generate"] = (paths, agent) =>
+  const generate: GitMessageServiceShape["generate"] = (
+    paths,
+    agent,
+    repositories = []
+  ) =>
     Effect.gen(function* () {
-      const collected = yield* source.collect(paths);
-      if (!hasChanges(collected)) {
+      const collected =
+        repositories.length > 1
+          ? yield* source.collectAcross(repositories)
+          : [{ name: "", changes: yield* source.collect(paths) }];
+      const changed = collected.filter((entry) => hasChanges(entry.changes));
+      if (changed.length === 0) {
         return yield* Effect.fail(
           new TerminalError({ reason: "no changes to summarize" })
         );
       }
-      const { branch, diff, untracked } = collected;
-      const truncated =
-        diff.length > MAX_DIFF_CHARS
-          ? `${diff.slice(0, MAX_DIFF_CHARS)}\n…[diff truncated]`
-          : diff;
-      const newFiles =
-        untracked.length > 0
-          ? `\n\nNew untracked files:\n${untracked.map((f) => `  ${f}`).join("\n")}`
-          : "";
-      const changes = `${truncated}${newFiles}`.trim();
-      const prompt = buildPrompt(changes, branchSlug(branch));
+      const spans = changed.length > 1;
+      const budget = Math.floor(MAX_DIFF_CHARS / changed.length);
+      const changes = changed
+        .map((entry) => describeChanges(entry, budget, spans))
+        .join("\n\n");
+      const slug =
+        changed
+          .map((entry) => branchSlug(entry.changes.branch))
+          .find((found) => found !== null) ?? null;
+      const prompt = buildPrompt(changes, slug, spans);
       const { stdout, stderr, exitCode } = yield* terminal.run(
         agentCommand(agent, prompt)
       );
@@ -141,11 +195,16 @@ export const makeGitMessageService = Effect.gen(function* () {
           );
     });
 
-  const start: GitMessageServiceShape["start"] = (scope, paths, agent) =>
+  const start: GitMessageServiceShape["start"] = (
+    scope,
+    paths,
+    agent,
+    repositories
+  ) =>
     Effect.gen(function* () {
       const claimed = yield* drafts.claim(scope, runningDraft(agent, paths));
       if (claimed === null) return yield* drafts.get(scope);
-      yield* generate(paths, agent).pipe(
+      yield* generate(paths, agent, repositories).pipe(
         Effect.match({
           onSuccess: (message) => readyDraft(agent, paths, message),
           onFailure: (failure) => failedDraft(agent, paths, failure.message),

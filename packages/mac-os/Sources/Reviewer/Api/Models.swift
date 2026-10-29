@@ -716,10 +716,20 @@ struct CheckoutBody: Encodable, Sendable {
     let branch: String
 }
 
-/// What a commit message is drafted with — `GenerateBody` in core; with
-/// no paths the draft reads every change.
+/// What a commit message is drafted with — `GenerateBody` in core: the
+/// request's repository's `paths` (none, every change), or each named
+/// repository's own where one commit spans a workspace.
 struct GenerateCommitMessageBody: Encodable, Sendable {
     let agent: String
+    var paths: [String]? = nil
+    var repositories: [DraftRepositoryBody]? = nil
+}
+
+/// One repository of a workspace draft — `DraftRepository` in core.
+struct DraftRepositoryBody: Encodable, Sendable {
+    let path: String
+    let name: String
+    let paths: [String]
 }
 
 struct CommitBody: Encodable, Sendable {
