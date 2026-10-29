@@ -1247,10 +1247,13 @@ final class AppModel {
     /// ⌃G, ⇧⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
     /// composer, the sidebar brought out first if it was put away, so what
     /// they do is seen happening.
-    func ask(commitComposer action: CommitComposerRequest.Action) {
+    /// `only` names one repository of a workspace, whose ticked files alone
+    /// are committed.
+    func ask(commitComposer action: CommitComposerRequest.Action, only root: String? = nil) {
         guard hasCommitComposer else { return }
         if !sidebarShown { toggleSidebar() }
-        commitComposerRequest = CommitComposerRequest(action: action, serial: (commitComposerRequest?.serial ?? 0) + 1)
+        commitComposerRequest = CommitComposerRequest(
+            action: action, root: root, serial: (commitComposerRequest?.serial ?? 0) + 1)
     }
 
     /// `path` in a Reviewer window of its own — a second instance of the
@@ -1430,5 +1433,7 @@ struct CommitComposerRequest: Equatable {
     }
 
     let action: Action
+    /// The one repository of a workspace it is for, or nil for them all.
+    var root: String? = nil
     let serial: Int
 }

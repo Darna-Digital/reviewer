@@ -44,15 +44,15 @@ extension AppModel {
             ) { [weak self] in Task { await self?.refresh() } },
             PaletteCommand(
                 id: "git-fetch", label: "Fetch", group: "Git", symbol: "icloud.and.arrow.down", keywords: "remote",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.fetch(in: $0) }
             ) { [weak self] in self?.fetch() },
             PaletteCommand(
                 id: "git-pull", label: "Pull", group: "Git", symbol: "arrow.down", keywords: "remote update",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.pull(in: $0) }
             ) { [weak self] in self?.pull() },
             PaletteCommand(
                 id: "git-push", label: "Push", group: "Git", symbol: "arrow.up", keywords: "remote upload",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.push(in: $0) }
             ) { [weak self] in self?.push() },
             PaletteCommand(
                 id: "git-branch", label: "Create branch…", group: "Git", symbol: "arrow.triangle.branch",
@@ -75,17 +75,51 @@ extension AppModel {
             keywords: "draft write claude codex agent ai", hint: "⌃G"
         ) { [weak self] in self?.generateCommitMessage() }
         guard hasCommitComposer else { return [draft] }
+        let changed = rootsWithCommitChanges
         return [
             draft,
             PaletteCommand(
                 id: "commit-commit", label: "Commit", group: "Git", symbol: "checkmark.circle",
-                keywords: "save changes", hint: "⇧⌘K"
+                keywords: "save changes", hint: "⇧⌘K",
+                choices: repositoryChoices(in: changed, all: { [weak self] in self?.ask(commitComposer: .commit) }) {
+                    [weak self] root in self?.ask(commitComposer: .commit, only: root.path)
+                }
             ) { [weak self] in self?.ask(commitComposer: .commit) },
             PaletteCommand(
                 id: "commit-commit-push", label: "Commit and push", group: "Git", symbol: "arrow.up.circle",
-                keywords: "save changes upload remote", hint: "⌥⌘K"
+                keywords: "save changes upload remote", hint: "⌥⌘K",
+                choices: repositoryChoices(in: changed, all: { [weak self] in self?.ask(commitComposer: .commitAndPush) }) {
+                    [weak self] root in self?.ask(commitComposer: .commitAndPush, only: root.path)
+                }
             ) { [weak self] in self?.ask(commitComposer: .commitAndPush) },
         ]
+    }
+
+    /// The repositories the commit composer lists changes of.
+    private var rootsWithCommitChanges: [RootModel] {
+        let changed = Set((sidebar.workspaceCommit?.changes ?? []).compactMap { sidebar.locate($0.path)?.root })
+        return roots.filter { changed.contains($0.path) }
+    }
+
+    /// Where a workspace of several asks which repository a command is
+    /// for: all of them first — what the command does when nothing is
+    /// asked of one — then each by name, under its avatar. Nil while
+    /// there is only one to ask about, and the command simply runs.
+    private func repositoryChoices(
+        in candidates: [RootModel], all: (@MainActor () -> Void)? = nil, each: @escaping @MainActor (RootModel) -> Void
+    ) -> [PaletteCommand]? {
+        guard roots.count > 1, !candidates.isEmpty else { return nil }
+        let everyOne: @MainActor () -> Void = all ?? { candidates.forEach(each) }
+        let allRow = PaletteCommand(
+            id: "repositories-all", label: "All repositories", group: "Repository", symbol: "square.stack.3d.up",
+            run: everyOne)
+        let rows = candidates.map { root in
+            PaletteCommand(
+                id: "repository:\(root.path)", label: root.name, group: "Repository", symbol: "folder",
+                monogram: root.name, hint: root.branch
+            ) { each(root) }
+        }
+        return candidates.count > 1 ? [allRow] + rows : rows
     }
 
     /// The window's own: the diff style is the page's preference, asked

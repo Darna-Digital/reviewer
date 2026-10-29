@@ -163,7 +163,7 @@ private struct PalettePanel: View {
     /// to the list that is up, each earlier step a way back to it.
     private var crumbs: some View {
         HStack(spacing: 4) {
-            ForEach(Array(palette.mode.crumbs.enumerated()), id: \.element) { position, crumb in
+            ForEach(Array(palette.crumbs.enumerated()), id: \.element) { position, crumb in
                 if position > 0 {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
@@ -275,6 +275,8 @@ private struct EmptyResults: View {
             return "No commands found."
         case .branches:
             return typed.isEmpty ? "This repository has no branches." : "No branches match."
+        case .repositories:
+            return "No repositories match."
         case .files:
             if let error = palette.searchError { return error }
             return typed.isEmpty ? "Type to find a file by name." : "No files match."

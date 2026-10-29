@@ -29,6 +29,9 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
     case text
     case git
     case branches
+    /// Which of the workspace's repositories a command is for, asked before
+    /// it runs (see `PaletteCommand.choices`).
+    case repositories
 
     var id: String { rawValue }
 
@@ -39,6 +42,7 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
         case .text: return "Text"
         case .git: return "Git"
         case .branches: return "Branches"
+        case .repositories: return "Repository"
         }
     }
 
@@ -49,15 +53,18 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
         case .text: return "Search in files…"
         case .git: return "Type a git action…"
         case .branches: return "Search branches…"
+        case .repositories: return "Choose a repository…"
         }
     }
 
     /// The list this one hangs off, or nil for the command list at the
     /// root. Declared once, so a mode's breadcrumb trail, the row that
     /// opens it and where Backspace on an empty box returns to never drift.
+    /// The repository step hangs off whichever list asked it, which the
+    /// palette keeps (see `RepositoryChoice`).
     var parent: PaletteMode? {
         switch self {
-        case .commands: return nil
+        case .commands, .repositories: return nil
         case .files, .text, .git: return .commands
         case .branches: return .git
         }
@@ -74,7 +81,7 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
     /// The menus, which are not searches: they start on an empty box.
     var isMenu: Bool {
         switch self {
-        case .commands, .git, .branches: return true
+        case .commands, .git, .branches, .repositories: return true
         case .files, .text: return false
         }
     }
@@ -123,7 +130,20 @@ struct PaletteCommand: Identifiable {
     var hint: String? = nil
     /// The list the command lives in; the command list when nil.
     var submenu: PaletteMode? = nil
+    /// Where a workspace of several asks which repository the command is
+    /// for: the row leads on to these, one per repository and one for them
+    /// all, rather than running.
+    var choices: [PaletteCommand]? = nil
     let run: @MainActor () -> Void
+}
+
+/// The repository step as a command asked for it: what is being done, the
+/// list it was asked from — where the step's crumb and Backspace lead back
+/// to — and a row per repository.
+struct RepositoryChoice {
+    let title: String
+    let returnTo: PaletteMode
+    let options: [PaletteCommand]
 }
 
 /// A branch the checkout list offers, local and remote flattened into one
@@ -213,6 +233,7 @@ final class CommandPalette {
     private(set) var searchError: String?
     private(set) var commands: [PaletteCommand] = []
     private(set) var branches: [PaletteBranch] = []
+    private(set) var repositoryChoice: RepositoryChoice?
 
     /// What a search row opens: a file, at a line when a text hit named one.
     @ObservationIgnored var onOpen: ((String, Int?) -> Void)?
@@ -252,14 +273,14 @@ final class CommandPalette {
             switch mode {
             case .files: return fileQuery
             case .text: return textQuery
-            case .commands, .git, .branches: return menuQuery
+            case .commands, .git, .branches, .repositories: return menuQuery
             }
         }
         set {
             switch mode {
             case .files: fileQuery = newValue
             case .text: textQuery = newValue
-            case .commands, .git, .branches: menuQuery = newValue
+            case .commands, .git, .branches, .repositories: menuQuery = newValue
             }
         }
     }
@@ -296,8 +317,25 @@ final class CommandPalette {
         if mode == .files { Task { await loadPathsIfNeeded() } }
     }
 
+    /// The repository step, asked by a command that needs one.
+    func chooseRepository(for command: PaletteCommand, options: [PaletteCommand]) {
+        repositoryChoice = RepositoryChoice(title: command.label, returnTo: mode, options: options)
+        show(.repositories)
+    }
+
+    /// Where the list on screen sits, root first — the repository step
+    /// after the list that asked it.
+    var crumbs: [PaletteMode] {
+        guard mode == .repositories else { return mode.crumbs }
+        return (repositoryChoice?.returnTo.crumbs ?? [.commands]) + [.repositories]
+    }
+
     /// Back up the trail. False at the root, where Backspace is the box's.
     func back() -> Bool {
+        if mode == .repositories {
+            show(repositoryChoice?.returnTo ?? .commands)
+            return true
+        }
         guard let parent = mode.parent else { return false }
         show(parent)
         return true
@@ -319,6 +357,17 @@ final class CommandPalette {
         switch mode {
         case .commands, .git:
             return menuRows()
+        case .repositories:
+            let options = repositoryChoice?.options ?? []
+            let needle = menuQuery.trimmingCharacters(in: .whitespaces).lowercased()
+            return options
+                .filter { needle.isEmpty || Self.fuzzyScore($0.label, needle) != nil }
+                .map { option in
+                    PaletteRow(
+                        id: "repository:\(option.id)", group: repositoryChoice?.title ?? "",
+                        content: .command(label: option.label, symbol: option.symbol, monogram: option.monogram),
+                        run: option.run)
+                }
         case .files:
             return fileResults.map { path in
                 PaletteRow(id: "file:\(path)", group: "Files", content: .file(path: path)) { [weak self] in
@@ -369,7 +418,16 @@ final class CommandPalette {
         let actions = commands
             .filter { ($0.submenu ?? .commands) == mode || reachesEverything }
             .map { command in
-                PaletteRow(
+                if let choices = command.choices {
+                    return PaletteRow(
+                        id: "command:\(command.id)", group: command.group,
+                        content: .command(label: command.label, symbol: command.symbol, monogram: command.monogram),
+                        hint: command.hint, closesOnRun: false
+                    ) { [weak self] in
+                        self?.chooseRepository(for: command, options: choices)
+                    }
+                }
+                return PaletteRow(
                     id: "command:\(command.id)", group: command.group,
                     content: .command(label: command.label, symbol: command.symbol, monogram: command.monogram),
                     hint: command.hint, run: command.run)

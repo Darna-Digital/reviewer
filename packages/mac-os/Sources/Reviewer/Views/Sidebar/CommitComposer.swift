@@ -69,8 +69,8 @@ struct CommitComposer: View {
         .onChange(of: model.commitComposerRequest) { _, request in
             switch request?.action {
             case .draft: draft()
-            case .commit: commit(push: false)
-            case .commitAndPush: commit(push: true)
+            case .commit: commit(push: false, only: request?.root)
+            case .commitAndPush: commit(push: true, only: request?.root)
             case nil: break
             }
         }
@@ -192,13 +192,17 @@ struct CommitComposer: View {
     /// The buttons are disabled while there is nothing to commit, but ⌘↩
     /// and the chords still reach here, so they are told why nothing
     /// happened, as the TUI tells them.
-    private func commit(push: Bool) {
-        guard canCommit else {
-            model.notices.post(.info, commitBlocker)
+    ///
+    /// Asked for one repository of a workspace (`only`), it commits that
+    /// one's ticked files alone, and keeps the message for the others'.
+    private func commit(push: Bool, only root: String? = nil) {
+        let paths = root.map { root in chosen.filter { model.sidebar.locate($0)?.root == root } } ?? chosen
+        guard canCommit, !paths.isEmpty else {
+            model.notices.post(.info, paths.isEmpty && !chosen.isEmpty ? "No ticked files in that repository" : commitBlocker)
             return
         }
-        model.act(onTree: .commit(message: message.trimmingCharacters(in: .whitespacesAndNewlines), paths: chosen, push: push))
-        message = ""
+        model.act(onTree: .commit(message: message.trimmingCharacters(in: .whitespacesAndNewlines), paths: paths, push: push))
+        if paths.count == chosen.count { message = "" }
     }
 
     private var commitBlocker: String {
