@@ -293,10 +293,7 @@ private struct FilesLayout: View {
         let tree = model.sidebar
         guard changes else { return .noFiles }
         if tree.isSearching { return .noMatch(tree.query.trimmingCharacters(in: .whitespaces)) }
-        let repositories = tree.workspaceRootNames.isEmpty
-            ? [model.focusedRoot?.name].compactMap { $0 }
-            : tree.workspaceRootNames
-        return .clean(against: tree.comparison?.against, repositories: repositories)
+        return .clean(against: tree.comparison?.against)
     }
 
     /// What the composer keeps its message under: the workspace, while the
@@ -365,9 +362,9 @@ extension View {
     }
 }
 
-/// What an empty tree says, as the system's own empty state says it — a
-/// glyph, a title, and a line on why — the way Mail and Notes stand one in
-/// an empty list.
+/// What an empty tree says — a glyph, a title, and a short line on why —
+/// at the sidebar's own scale, the way Xcode's navigators say an empty
+/// list: quiet enough that a clean tree reads as rest, not as a problem.
 struct TreeEmpty {
     let title: String
     let symbol: String
@@ -376,22 +373,15 @@ struct TreeEmpty {
     static let noFiles = TreeEmpty(title: "No Files", symbol: "folder")
     static let noChanges = TreeEmpty(title: "No Changes", symbol: "checkmark.circle")
 
-    /// Nothing to commit or review: clean, and against what — the
-    /// repositories named when there are several.
-    static func clean(against: String?, repositories: [String]) -> TreeEmpty {
-        let detail: String
-        if let against {
-            detail = "Nothing differs from \(against)."
-        } else if repositories.count > 1 {
-            detail = "\(ListFormatter.localizedString(byJoining: repositories)) have nothing to commit."
-        } else {
-            detail = "The working tree is clean."
-        }
-        return TreeEmpty(title: "No Changes", symbol: "checkmark.circle", detail: detail)
+    /// Nothing to commit or review, and against what.
+    static func clean(against: String?) -> TreeEmpty {
+        TreeEmpty(
+            title: "No Changes", symbol: "checkmark.circle",
+            detail: against.map { "Nothing differs from \($0)" } ?? "Nothing to commit")
     }
 
     static func noMatch(_ query: String) -> TreeEmpty {
-        TreeEmpty(title: "No Results", symbol: "magnifyingglass", detail: "No changed files match “\(query)”.")
+        TreeEmpty(title: "No Results", symbol: "magnifyingglass", detail: "Nothing matches “\(query)”")
     }
 }
 
@@ -404,11 +394,22 @@ struct TreePlaceholder: View {
             if loading {
                 Orb(size: 16, label: "Loading")
             } else {
-                ContentUnavailableView {
-                    Label(empty.title, systemImage: empty.symbol)
-                } description: {
-                    if let detail = empty.detail { Text(detail) }
+                VStack(spacing: 6) {
+                    Image(systemName: empty.symbol)
+                        .font(.system(size: 18, weight: .light))
+                        .foregroundStyle(.tertiary)
+                        .padding(.bottom, 2)
+                    Text(empty.title)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    if let detail = empty.detail {
+                        Text(detail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
+                .padding(.horizontal, 24)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

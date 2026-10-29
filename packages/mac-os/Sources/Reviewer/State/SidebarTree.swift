@@ -377,10 +377,6 @@ final class SidebarTree {
         return listing.mode == .browse ? listings : listings.filter { !$0.paths.isEmpty }
     }
 
-    /// The repositories the tree lists, by name — what an empty diff says
-    /// is clean.
-    var workspaceRootNames: [String] { workspaceRoots.map(\.name) }
-
     /// The tree remade from what it now stands on, wherever that changed.
     /// The workspace's headers are repositories, its folds kept across a
     /// move between them; a plain tree is remade per mode and per project,
