@@ -161,7 +161,12 @@ struct BranchesPane: View {
             ForEach(rows) { row in
                 switch row {
                 case .rule:
-                    ThemedDivider()
+                    // A flat line in the island's hairline rather than a
+                    // `Divider`, which a list draws as its own separator, a
+                    // good deal brighter than the rules round the pane.
+                    Rectangle()
+                        .fill(Color(nsColor: IslandPalette.hairline))
+                        .frame(height: 1)
                         .padding(.vertical, 4)
                         .headerRow()
                 case .repository(let root, let open):
