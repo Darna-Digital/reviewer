@@ -127,11 +127,51 @@ final class RepoCatalog {
         rows.filter { URL(fileURLWithPath: $0.path).deletingLastPathComponent().path == location }
     }
 
-    /// Read the index as it stands, and keep reading while a walk is on.
+    // MARK: workspaces
+
+    /// The workspaces kept to come back to, most recently opened first —
+    /// the server's, so every window lists the same ones.
+    private(set) var workspaces: [SavedWorkspace] = []
+    private(set) var workspacesLoaded = false
+
+    func loadWorkspaces() async {
+        do {
+            workspaces = try await client.workspaces()
+        } catch {
+            loadError = error.localizedDescription
+        }
+        workspacesLoaded = true
+    }
+
+    /// A workspace kept under `name`, holding `roots` in that order.
+    func createWorkspace(name: String, roots: [String]) async throws -> SavedWorkspace {
+        let created = try await client.createWorkspace(name: name, roots: roots)
+        await loadWorkspaces()
+        return created
+    }
+
+    func updateWorkspace(_ workspace: SavedWorkspace, name: String? = nil, roots: [String]? = nil) async throws {
+        _ = try await client.updateWorkspace(id: workspace.id, UpdateWorkspace(name: name, roots: roots))
+        await loadWorkspaces()
+    }
+
+    func deleteWorkspace(_ workspace: SavedWorkspace) async throws {
+        try await client.deleteWorkspace(id: workspace.id)
+        await loadWorkspaces()
+    }
+
+    func row(at path: String) -> RepoRow? {
+        rows.first { $0.path == path }
+    }
+
+    /// Read the index as it stands, and keep reading while a walk is on —
+    /// and the saved workspaces beside it.
     func load() {
         followTask?.cancel()
         followTask = Task {
+            async let workspaces: Void = loadWorkspaces()
             await take { try await client.repos() }
+            await workspaces
             await follow()
         }
     }

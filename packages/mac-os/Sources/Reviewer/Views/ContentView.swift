@@ -78,7 +78,23 @@ struct ContentView: View {
         .onChange(of: model.settingsRequests) {
             openSettings()
         }
+        .onChange(of: model.saveWorkspaceRequests) { savingWorkspace = true }
+        .sheet(isPresented: $savingWorkspace) {
+            SaveWorkspaceSheet()
+                .environment(model)
+        }
+        // A new workspace is made over the window it was asked for in, not
+        // in the opener: a sheet asked of a window still coming up is
+        // dropped, which made the first ask go unanswered.
+        .onChange(of: model.newWorkspaceRequests) { newWorkspace = WorkspaceDraft(roots: []) }
+        .sheet(item: $newWorkspace) { draft in
+            WorkspaceEditor(draft: draft)
+                .environment(model)
+        }
     }
+
+    @State private var savingWorkspace = false
+    @State private var newWorkspace: WorkspaceDraft?
 
     /// The system's column state as the model's one switch, so the sidebar
     /// button on the bar, ⌃⌘S and the View menu all move the same thing,
@@ -335,43 +351,197 @@ private struct ToolbarItems: ToolbarContent {
     }
 }
 
-/// The project the window is on, as the web bar's chip — its avatar and
-/// its name — and the way to any other: pressing it brings up the opener,
-/// where every repository the machine holds is listed (see
-/// `RepoOpenerWindow`). Level with the
+/// Where the window is: the environment its code runs in, by its glyph —
+/// a laptop or a desktop for this Mac, a cloud next — and the workspace
+/// open there, by name, or the environment's own name for repositories
+/// opened without one. Never a repository: that is the sidebar's title to
+/// say, so the two never say the same thing. Pressing it lists the
+/// environment's workspaces to switch to, as Xcode's destination menu
+/// lists devices, with the opener and a new workspace at its foot. Level with the
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
 /// its line.
 private struct ProjectPicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @State private var open = false
+
+    private var environment: ReviewerEnvironment { model.environment }
+    /// The saved workspace open, by name; repositories opened without one
+    /// are the environment's own, and the chip says only where they run —
+    /// the repository is the sidebar's title to name, not this.
+    private var name: String { model.workspace?.workspace?.name ?? environment.name }
 
     var body: some View {
-        Button {
-            openWindow(id: ReviewerWindow.opener)
-        } label: {
+        Button { open.toggle() } label: {
             HStack(spacing: 6) {
-                if let name = model.workspace?.projectName {
-                    RepoAvatar(name: name)
-                    Text(name)
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } else {
-                    Image(systemName: "folder")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("Choose project")
-                        .font(.system(size: 13))
-                }
+                Image(systemName: environment.symbol)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text(name)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             // A little more than the air above and below: the capsule's
             // rounded ends cut into the sides.
             .padding(.horizontal, 8)
             .frame(maxWidth: 176)
         }
-        // The toggle's air above and below its glyph, around the avatar.
+        // The toggle's air above and below its glyph.
         .buttonStyle(BarChipStyle(height: 30))
-        .toolbarGlassLabel("Switch project", hint: "⌘O")
+        .toolbarGlassLabel("Switch workspace", hint: "⌘O")
+        .popover(isPresented: $open, arrowEdge: .bottom) { popover }
+        // The workspaces and the recents as they stand now — another
+        // window may have saved one or opened another since.
+        .onChange(of: open) { if open { model.catalog.load() } }
+    }
+
+    /// The workspaces under the environment they run in — one group while
+    /// this Mac is the only one — the open one ticked; repositories open
+    /// without a saved workspace stand first, as what is open now.
+    private var popover: some View {
+        VStack(spacing: 0) {
+            EnvironmentBar(environment: environment)
+            ThemedDivider()
+            choices
+        }
+    }
+
+    /// What the environment holds: its workspaces, and the repositories
+    /// opened in it lately — two lists of one place, under the bar that
+    /// names the place.
+    private var choices: some View {
+        // Recent Repositories and Favorites are shortcuts into All
+        // Repositories, as the opener's sidebar is, so a search — which
+        // looks through all of them — leaves them out rather than showing
+        // each repository it finds two or three times.
+        BranchPopover(
+            sections: [
+                BranchChoiceSection(id: "current", title: "Current", rows: currentRows, hiddenWhileSearching: true),
+                BranchChoiceSection(id: "workspaces", title: "Workspaces", rows: rows),
+                BranchChoiceSection(
+                    id: "recent", title: "Recent Repositories",
+                    rows: model.catalog.recents.filter { $0.path != openAlone }.prefix(Self.recentLimit)
+                        .map { repositoryRow($0, in: "recent") },
+                    hiddenWhileSearching: true),
+                BranchChoiceSection(
+                    id: "favorites", title: "Favorites",
+                    rows: model.catalog.favoriteRows.map { repositoryRow($0, in: "favorites") },
+                    hiddenWhileSearching: true),
+                BranchChoiceSection(
+                    id: "all", title: "All Repositories",
+                    rows: model.catalog.rows.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+                        .map { repositoryRow($0, in: "all") }),
+            ],
+            placeholder: "Search workspaces and repositories", pick: pick, dismiss: { open = false }, actions: nil
+        ) {
+            ThemedDivider()
+            HStack(spacing: 2) {
+                Button("Open…") { open = false; openWindow(id: ReviewerWindow.opener) }
+                Button("New workspace…") {
+                    open = false
+                    model.askForNewWorkspace()
+                }
+                Spacer(minLength: 0)
+                if model.hasProject, model.workspace?.workspace == nil {
+                    Button("Save as workspace…") { open = false; model.askToSaveWorkspace() }
+                }
+            }
+            .popoverFooterBar()
+        }
+    }
+
+    /// What is open, under a heading of its own at the head of the list:
+    /// the saved workspace, several repositories open together without a
+    /// name yet, or one repository open on its own.
+    private var currentRows: [BranchChoice] {
+        guard let open = model.workspace, !open.roots.isEmpty else { return [] }
+        if let saved = model.catalog.workspaces.first(where: { $0.id == open.workspace?.id }) {
+            return [workspaceRow(saved)]
+        }
+        if open.roots.count > 1 {
+            return [BranchChoice(
+                id: Self.unsavedId, branch: nil, title: open.roots.map(\.name).joined(separator: ", "),
+                symbol: "folder", tint: nil, badge: nil, checked: false,
+                detail: "Not saved as a workspace", monograms: open.roots.map(\.name))]
+        }
+        return model.catalog.row(at: open.roots[0].path).map { [repositoryRow($0, in: "current")] } ?? []
+    }
+
+    /// The saved workspaces to switch to — the one open stands under Current.
+    private var rows: [BranchChoice] {
+        let openId = model.workspace?.workspace?.id
+        return model.catalog.workspaces.filter { $0.id != openId }.map(workspaceRow)
+    }
+
+    private func workspaceRow(_ workspace: SavedWorkspace) -> BranchChoice {
+        BranchChoice(
+            id: workspace.id, branch: nil, title: workspace.name, symbol: "folder",
+            tint: nil, badge: nil, checked: false,
+            detail: workspace.rootNames.joined(separator: ", "), monograms: workspace.rootNames)
+    }
+
+    /// The repository open on its own, if one is.
+    private var openAlone: String? {
+        guard model.workspace?.workspace == nil, let roots = model.workspace?.roots, roots.count == 1 else { return nil }
+        return roots.first?.path
+    }
+
+    /// A repository to open on its own, in one of the lists — keyed by the
+    /// list too, since a repository stands in more than one — where it
+    /// lives said on hover.
+    private func repositoryRow(_ row: RepoRow, in list: String) -> BranchChoice {
+        BranchChoice(
+            id: "\(list)\(Self.separator)\(row.path)", branch: nil, title: row.name, symbol: "folder",
+            tint: nil, badge: nil, checked: false,
+            tooltip: RepoRow.fold(row.path, home: NSHomeDirectory()), monograms: [row.name])
+    }
+
+    private static let unsavedId = "unsaved"
+    private static let separator: Character = "\u{1f}"
+    private static let recentLimit = 8
+
+    private func pick(_ choice: BranchChoice) {
+        open = false
+        if let at = choice.id.firstIndex(of: Self.separator) {
+            let path = String(choice.id[choice.id.index(after: at)...])
+            guard path != openAlone else { return }
+            Task { await model.openProject(path: path) }
+            return
+        }
+        guard choice.id != Self.unsavedId, choice.id != model.workspace?.workspace?.id else { return }
+        Task { await model.openWorkspace(id: choice.id) }
+    }
+}
+
+/// The head of the workspace popover: the environment everything under it
+/// belongs to — its glyph, the machine's own name, and what kind of place
+/// it is — so the lists below read as its contents rather than as places
+/// of their own. With cloud environments it becomes the switch between
+/// them; with only this Mac it says where, and offers nothing to pick.
+private struct EnvironmentBar: View {
+    let environment: ReviewerEnvironment
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: environment.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+            Text(environment.detail ?? environment.name)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 8)
+            if environment.detail != nil {
+                Text(environment.name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 36)
     }
 }
 

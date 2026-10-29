@@ -53,7 +53,8 @@ moving through it previews each theme live, `tab` cycles the appearance —
 **System**, Light, Dark — and a theme is kept for its own scheme, as in the
 Mac app's settings (a light theme and a dark theme). With System it follows
 the OS appearance as it changes, and terminals that report colour-scheme
-changes repaint at once. Saved in `~/.reviewer/tui-settings.json`.
+changes repaint at once. Saved in `~/.reviewer/reviewer.db`, beside the
+layout each repository was left in.
 
 ### File icons
 
@@ -170,14 +171,14 @@ no plain-digit keys; a lone `0` still goes to the line's first symbol.
 
 | Mac       | Also            | Does                                               |
 | --------- | --------------- | -------------------------------------------------- |
-| `⌘E`      | `⌃K` `:`        | Command palette                                    |
+| `⌘K`      | `⌃K` `:`        | Command palette                                    |
 | `⇧⌘O`     |                 | Go to file                                         |
 | `⇧⌘F`     |                 | Search in files                                    |
 | `⌥⌘1` `2` |                 | Browse · Review                                    |
 | `⌘G`      |                 | Switch Browse ⇄ Review                             |
 | `⇧⌘B`     | `⌥⌘4`           | Switch branch (popover)                            |
 | `⌃G`      |                 | Review: ✦ generate the commit message              |
-| `⌘K`      |                 | Review: commit                                     |
+| `⇧⌘K`     |                 | Review: commit                                     |
 | `⌥⌘K`     |                 | Review: commit and push                            |
 | `⌥⌘5` `7` |                 | History · Run                                      |
 | `⌘B`      | `⌃B`            | Bottom pane                                        |
@@ -215,7 +216,7 @@ passes ⌘ through (see Keys).
 | Key               | Does                            |
 | ----------------- | ------------------------------- |
 | `?`               | The keys for where you are      |
-| `⌘E` `⌃K` `:`     | Command palette                 |
+| `⌘K` `⌃K` `:`     | Command palette                 |
 | `⇧⌘O`             | Go to file                      |
 | `⇧⌘F`             | Search in files                 |
 | `@`               | Go to a symbol in the open file |
@@ -227,7 +228,7 @@ passes ⌘ through (see Keys).
 | `⌘G`              | Switch Browse ⇄ Review          |
 | `⇧⌘B` `⌥⌘4`       | Switch branch                   |
 | `⌃G`              | Generate the commit message     |
-| `⌘K`              | Commit                          |
+| `⇧⌘K`             | Commit                          |
 | `⌥⌘K`             | Commit and push                 |
 | `⌥⌘5` `⌥⌘6` `⌥⌘7` | History · Usages · Run pane     |
 | `⌥⌘8`             | Pull request pane               |
@@ -361,7 +362,7 @@ opens as a popover from the compare chip (`t`) or when the sidebar is hidden:
 |                         | `esc`                   | Close                              |
 | Palette                 | `home` `end`            | First · last                       |
 |                         | `⌫` (empty field)       | Up a level                         |
-|                         | `⌘E` `⌃K`               | Back to Commands (closes it there) |
+|                         | `⌘K` `⌃K`               | Back to Commands (closes it there) |
 |                         | `⌥C` `⌥W` `⌥R`          | Search: case · whole word · regex  |
 | Branch picker           | `→` `tab`               | The branch's actions               |
 | Compare picker          | `⌃R`                    | Remember as the branch's target    |
@@ -405,7 +406,7 @@ second entry point by `build:bin`), so a large file never freezes a frame.
 | ------------- | ----------------------------------------------------------------- |
 | `diff/`       | Parsing, inline changes, layout, highlighting — pure              |
 | `git/`        | One module per git concern: `exec`, `repo`, `diff`, `refs`, `log` |
-| `store/`      | The shared SQLite store, and the TUI's layout and settings files  |
+| `store/`      | The shared SQLite store — comments, layouts and settings          |
 | `theme/`      | Terminal colours, OS appearance, resolving the look               |
 | `search/`     | The palette's modes and fuzzy matching — pure                     |
 | `process/`    | Shells, services, and starting the Reviewer server                |

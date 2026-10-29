@@ -223,8 +223,11 @@ struct MessageTimeline: View {
 }
 
 /// The strip tucked under the composer, naming where the session will
-/// land, read outside in: the project it belongs to, then the branch it
-/// starts from — the picker the sidebar carries, live here too, since a
+/// land, read outside in. A session of a workspace is the workspace's —
+/// its agent works across every repository of it — so the strip names the
+/// workspace and nothing narrower: no one repository, and no branch, which
+/// is one repository's. A repository on its own is named with the branch
+/// it starts from — the picker the sidebar carries, live here too, since a
 /// running session is no reason to lock the window out of its own git.
 struct SessionContextBar: View {
     @Environment(AppModel.self) private var model
@@ -232,25 +235,14 @@ struct SessionContextBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Button {
-                openWindow(id: ReviewerWindow.opener)
-            } label: {
-                HStack(spacing: 5) {
-                    if let name = model.workspace?.projectName {
-                        RepoAvatar(name: name, size: 14)
-                        Text(name)
-                            .lineLimit(1)
-                    } else {
-                        Image(systemName: "folder")
-                        Text("Choose project")
-                    }
-                }
-                .font(.system(size: 11))
+            if let workspace = model.workspace, workspace.isMultiRoot {
+                EnvironmentCrumb(environment: model.environment)
+                WorkspaceBranches(workspace: workspace)
+            } else {
+                projectButton
+                BranchPicker()
+                    .controlSize(.small)
             }
-            .buttonStyle(.accessoryBar)
-            .help("Switch project")
-            BranchPicker()
-                .controlSize(.small)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 8)
@@ -263,5 +255,80 @@ struct SessionContextBar: View {
         )
         .padding(.top, -14)
         .padding(.horizontal, 6)
+    }
+
+    /// Where the session runs, ahead of what it runs across: the machine,
+    /// then a chevron leading on to the workspace — the path down from the
+    /// environment, as the toolbar's chip and its popover read.
+    private struct EnvironmentCrumb: View {
+        let environment: ReviewerEnvironment
+
+        var body: some View {
+            HStack(spacing: 5) {
+                Image(systemName: environment.symbol)
+                    .foregroundStyle(.secondary)
+                Text(environment.detail ?? environment.name)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 1)
+            }
+            .font(.system(size: 11))
+            .padding(.leading, 6)
+        }
+    }
+
+    /// The workspace a session works across, by its avatars and name, and
+    /// the way to any of its repositories' branches, one step at a time:
+    /// the repositories first, each with the branch it is on, then — the
+    /// popover moving on in place, with the way back at its head — the one
+    /// picked's branches, a pick checking that branch out there.
+    private struct WorkspaceBranches: View {
+        let workspace: WorkspaceInfo
+        @Environment(AppModel.self) private var model
+        @State private var open = false
+
+        var body: some View {
+            Button { open.toggle() } label: {
+                HStack(spacing: 5) {
+                    WorkspaceGlyph(names: workspace.roots.map(\.name), size: 14)
+                    Text(workspace.displayName ?? "Workspace")
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .font(.system(size: 11))
+            }
+            .buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .help("Branches of \(workspace.roots.map(\.name).joined(separator: ", "))")
+            .popover(isPresented: $open, arrowEdge: .bottom) {
+                WorkspaceBranchPopover(dismiss: { open = false }) { _ in EmptyView() }
+            }
+            .closesOnNavigation($open)
+        }
+    }
+
+    private var projectButton: some View {
+        Button {
+            openWindow(id: ReviewerWindow.opener)
+        } label: {
+            HStack(spacing: 5) {
+                if let name = model.focusedRoot?.name {
+                    RepoAvatar(name: name, size: 14)
+                    Text(name)
+                        .lineLimit(1)
+                } else {
+                    Image(systemName: "folder")
+                    Text("Choose project")
+                }
+            }
+            .font(.system(size: 11))
+        }
+        .buttonStyle(.accessoryBar)
+        .help("Switch project")
     }
 }

@@ -24,13 +24,31 @@ enum ConnectionState: Equatable {
 @MainActor
 @Observable
 final class AppModel {
-    let client: ReviewerClient
+    /// The server, unscoped — for what is about no one repository: the
+    /// workspace itself, the index of repositories, the sessions.
+    let server: ReviewerClient
+    /// Where the window's code runs — the server above; this Mac until
+    /// cloud environments are.
+    let environment = ReviewerEnvironment.thisMac
+    /// How many times a new workspace has been asked for from the window —
+    /// the toolbar chip's popover — which the window answers with the
+    /// editor as a sheet of its own (see `ContentView`).
+    private(set) var newWorkspaceRequests = 0
+
+    func askForNewWorkspace() {
+        newWorkspaceRequests += 1
+    }
 
     var connection: ConnectionState = .starting
     var workspace: WorkspaceInfo?
-    var status: RepoStatus?
-    var branches: [BranchInfo] = []
-    var remoteBranches: [RemoteBranchInfo] = []
+    /// Every repository of the workspace, in its order, each live at once.
+    private(set) var roots: [RootModel] = []
+    /// The repository the page is on — the one the window's own
+    /// single-repository surfaces act on, as JetBrains acts on the
+    /// repository of the file in front: the branch chip, the commit
+    /// chords, the history, the palette's git commands. It follows the
+    /// page's address (see `Href.repo(of:)`).
+    private(set) var focusedRootPath: String?
     var branchPrompt: BranchPrompt?
     /// A refusal that stops a window from going on — a project that would
     /// not open — as an alert; everything that merely failed is a notice.
@@ -54,10 +72,6 @@ final class AppModel {
     /// by the shell in the page's place while the island is on it, read
     /// from the server by the shell itself.
     let chats: Chats
-    /// The project's merge requests, read by the shell itself: the list the
-    /// sidebar draws on that surface, and the overview beside a pull
-    /// request's diff.
-    let pullRequests: PullRequests
     /// The review the page is holding for a hand-off, and the assign bar
     /// the shell floats over the page for it in the web bar's place.
     let reviewHandoff: ReviewHandoff
@@ -81,57 +95,63 @@ final class AppModel {
     var bottomHeight: CGFloat = 280
     /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost
-    let threads: Threads
-    let services: DevServices
     /// The bottom pane's History: the commit log, its filters and the
     /// commit picked out of it.
     let history: CommitHistory
-    /// The palette — ⌘E's commands, a file by name, a grep of the working
+    /// The palette — ⌘K's commands, a file by name, a grep of the working
     /// tree, the git actions and the branches.
     let palette: CommandPalette
     /// The repositories the machine holds, for the opener to list.
     let catalog: RepoCatalog
     /// The settings window's own: the theme, and who the app works as.
     let settings: AppSettings
-    @ObservationIgnored private var headWatcher: HeadWatcher?
-    @ObservationIgnored private var worktreeWatcher: WorktreeWatcher?
     /// The app's own actions that move HEAD and re-read the project once
     /// they are through — while any is running, the watcher's word that
     /// HEAD moved is already answered for.
     @ObservationIgnored var headMovesInFlight = 0
-    /// The compare picker's answer as the review page's address last held
-    /// it, and the checkout it was picked on — what the rail's Review goes
-    /// back to, so a trip to Browse does not hand the diff back to the aim.
-    @ObservationIgnored private var reviewComparison: (checkout: String, target: String)?
-    /// The checkout the project was last read on — what a fresh read is
+    /// Each repository's compare-picker answer as its review page's address
+    /// last held it, and the branch it was picked on — what the rail's
+    /// Review goes back to, so a trip to Browse does not hand the diff back
+    /// to the aim.
+    @ObservationIgnored private var reviewComparisons: [String: (branch: String, target: String)] = [:]
+    /// The branch each repository was last read on — what a fresh read is
     /// measured against to tell that the branch has moved under the review.
-    @ObservationIgnored private var lastCheckout: String?
+    @ObservationIgnored private var lastCheckouts: [String: String] = [:]
+    /// ⇧⇧, the web app's way into the file search, beside ⇧⌘O.
+    @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
+    /// What the window's per-repository surfaces stand on while nothing is
+    /// open — never watched, never read.
+    @ObservationIgnored private let detachedRoot: RootModel
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
-        self.client = client
+        server = client
         let source = SpaSource.resolve()
         page = IslandHost(kind: .code, href: Href.browsePath, source: source, apiBaseURL: client.baseURL)
-        services = DevServices(client: client)
-        threads = Threads(client: client)
-        pullRequests = PullRequests(client: client)
+        detachedRoot = RootModel(root: WorkspaceRoot(path: "", name: "", branch: nil), client: client)
         chats = Chats(client: client)
         reviewHandoff = ReviewHandoff(client: client, chats: chats)
         history = CommitHistory(client: client)
         palette = CommandPalette(client: client)
         catalog = RepoCatalog(client: client)
         settings = AppSettings(client: client)
-        palette.onOpen = { [weak self] path, line in self?.browse(file: path, line: line) }
-        palette.onIntent = { [weak self] path in self?.page.send(TreeAction.intent(path)) }
+        palette.onOpen = { [weak self] path, line in self?.open(paletteFile: path, line: line) }
+        palette.onIntent = { [weak self] path in
+            guard let self, let (root, file) = locate(paletteFile: path), root === focusedRoot else { return }
+            page.send(TreeAction.intent(file))
+        }
+        palette.scopesSource = { [weak self] in self?.paletteScopes ?? [] }
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
         palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
-        headWatcher = HeadWatcher { [weak self] in
-            Task { await self?.followHead() }
-        }
-        worktreeWatcher = WorktreeWatcher { [weak self] in
-            self?.page.worktreeChanged()
+        // The web app keeps the gesture out of its inputs; here the one
+        // input it could land in is the palette's own box, where two Shifts
+        // in a row are typing, not a request to switch lists.
+        shiftTaps = ShiftTapMonitor { [weak self] in
+            guard let self, !palette.isShown else { return }
+            findFile()
         }
         page.onNavigated = { [weak self] href in
+            self?.focus(onPageAt: href)
             self?.chats.follow(href: href)
             self?.rememberComparison(on: href)
         }
@@ -162,7 +182,116 @@ final class AppModel {
         ProjectLinks.shared.handler = { [weak self] request in self?.open(link: request) }
     }
 
-    var hasProject: Bool { workspace?.project != nil }
+    var hasProject: Bool { !(workspace?.roots.isEmpty ?? true) }
+
+    // MARK: roots
+
+    /// The repository the page is on, or nil while nothing is open.
+    var focusedRoot: RootModel? {
+        roots.first { $0.path == focusedRootPath } ?? roots.first
+    }
+
+    /// The focused root, or a detached stand-in while nothing is open, for
+    /// the surfaces that read one repository's state unconditionally.
+    var focused: RootModel { focusedRoot ?? detachedRoot }
+
+    /// The server, about the focused root — what every action of the
+    /// window's single-repository surfaces is sent through.
+    var client: ReviewerClient { focused.client }
+
+    var status: RepoStatus? {
+        get { focused.status }
+        set { focused.status = newValue }
+    }
+
+    var branches: [BranchInfo] {
+        get { focused.branches }
+        set { focused.branches = newValue }
+    }
+
+    var remoteBranches: [RemoteBranchInfo] {
+        get { focused.remoteBranches }
+        set { focused.remoteBranches = newValue }
+    }
+
+    var services: DevServices { focused.services }
+
+    /// The repository whose dev command the Run pane has picked — the one
+    /// its output and its Add stand for; the focused root until one is.
+    var runRootPath: String?
+    var runRoot: RootModel { root(at: runRootPath) ?? focused }
+    var threads: Threads { focused.threads }
+    var pullRequests: PullRequests { focused.pullRequests }
+
+    func root(at path: String?) -> RootModel? {
+        guard let path else { return nil }
+        return roots.first { $0.path == path }
+    }
+
+    /// The roots as the workspace now lists them: one already open is kept
+    /// as it stands — its terminals attached, its dev commands' output
+    /// streaming — a new one opened and watched, and one that left closed.
+    private func syncRoots() {
+        let open = workspace?.roots ?? []
+        let kept = open.map { root -> RootModel in
+            if let existing = roots.first(where: { $0.path == root.path }) {
+                existing.remember(branch: root.branch)
+                return existing
+            }
+            let model = RootModel(root: root, client: server)
+            model.onHeadMoved = { [weak self] root in
+                Task { await self?.followHead(of: root) }
+            }
+            model.onWorktreeChanged = { [weak self] root in self?.worktreeChanged(in: root) }
+            model.onListingChanged = { [weak self] _ in self?.publishRootsToSidebar() }
+            model.startWatching()
+            return model
+        }
+        for gone in roots where !kept.contains(where: { $0 === gone }) {
+            gone.close()
+            reviewComparisons[gone.path] = nil
+            lastCheckouts[gone.path] = nil
+        }
+        roots = kept
+        if root(at: focusedRootPath) == nil { focus(on: kept.first?.path) }
+        publishRootsToSidebar()
+    }
+
+    /// The sidebar's tree told how the workspace's repositories now stand.
+    private func publishRootsToSidebar() {
+        sidebar.take(roots: roots.map(\.treeRoot))
+    }
+
+    /// The page moved: the root it is on now is the focused one. An address
+    /// that names none is the workspace's first.
+    private func focus(onPageAt href: String) {
+        focus(on: Href.repo(of: href) ?? roots.first?.path)
+    }
+
+    /// The window's single-repository surfaces turned to `path`: the
+    /// history, the palette, the composer and the settings read it from
+    /// now on, each starting over on it rather than showing what the last
+    /// root answered.
+    private func focus(on path: String?) {
+        guard path != focusedRootPath else { return }
+        focusedRootPath = path
+        let scoped = client
+        history.client = scoped
+        palette.client = scoped
+        chats.client = scoped
+        reviewHandoff.client = scoped
+        settings.client = scoped
+        palette.projectChanged()
+        history.projectChanged(project: focusedRoot?.path, head: status?.branch)
+        sidebar.focusChanged(to: focusedRoot?.path)
+    }
+
+    /// A file of `root` changed on disk: its status and changed files read
+    /// again, and the page told, when it is on that root.
+    private func worktreeChanged(in root: RootModel) {
+        if root === focusedRoot { page.worktreeChanged() }
+        Task { await root.refreshWorktree() }
+    }
 
     /// The server has answered, and remembers no open project: the window
     /// to be on is the welcome, not the workspace (see `ReviewerApp`).
@@ -189,6 +318,11 @@ final class AppModel {
     /// with the files it has chosen, its message and its agent, all of
     /// them its own (see `CommitComposer`).
     private(set) var commitComposerRequest: CommitComposerRequest?
+    /// The last message the app drafted itself rather than through the
+    /// page — away from the composer, or across a workspace.
+    private(set) var landedCommitMessage: LandedCommitMessage?
+    /// Whether such a draft is being written.
+    private(set) var isDraftingCommitMessage = false
 
     // MARK: lifecycle
 
@@ -224,11 +358,24 @@ final class AppModel {
     /// the sessions — a project switch, ⌘R.
     func refresh() async {
         do {
-            workspace = try await client.workspace()
+            workspace = try await server.workspace()
+            syncRoots()
         } catch {
             notices.post(.error, error.localizedDescription)
         }
         await refreshProjectState()
+        page.refresh()
+    }
+
+    /// One repository re-read after an action of its own — a checkout, a
+    /// commit — and the page with it when it is on that one; the rest of
+    /// the workspace has not moved.
+    func refresh(root: RootModel) async {
+        await root.refresh()
+        resetComparisonIfCheckoutMoved()
+        guard root === focusedRoot else { return }
+        palette.projectChanged()
+        history.projectChanged(project: root.path, head: root.branch)
         page.refresh()
     }
 
@@ -278,53 +425,97 @@ final class AppModel {
         for continuation in waiting.values { continuation.resume() }
     }
 
-    /// HEAD moved outside the app — a checkout in a terminal: the project
-    /// re-read as after one of its own, unless the move is already being
-    /// answered for, or a refresh has since read it.
-    private func followHead() async {
-        guard headMovesInFlight == 0 else { return }
-        let fresh = try? await client.repoStatus()
-        guard fresh?.branch != status?.branch || fresh?.headSha != status?.headSha else { return }
-        await refresh()
+    /// HEAD moved under a repository outside the app — a checkout in a
+    /// terminal: that repository re-read as after one of its own, unless the
+    /// move is already being answered for, or a refresh has since read it.
+    private func followHead(of root: RootModel) async {
+        guard headMovesInFlight == 0, await root.headMoved() else { return }
+        await refresh(root: root)
     }
 
     private func refreshProjectState() async {
         palette.projectChanged()
-        headWatcher?.watch(project: workspace?.project)
-        worktreeWatcher?.watch(project: workspace?.project)
         guard hasProject else {
-            status = nil
-            branches = []
-            remoteBranches = []
             history.projectChanged(project: nil, head: nil)
-            await pullRequests.projectChanged(github: nil)
             return
         }
-        status = try? await client.repoStatus()
+        await withTaskGroup(of: Void.self) { group in
+            for root in roots {
+                group.addTask { await root.refresh() }
+            }
+        }
         resetComparisonIfCheckoutMoved()
-        history.projectChanged(project: workspace?.project, head: status?.branch)
-        await loadBranches()
-        await services.load()
-        await threads.load()
-        let repo = try? await client.repoInfo()
-        await pullRequests.projectChanged(github: repo?.github)
+        history.projectChanged(project: focusedRoot?.path, head: status?.branch)
         await chats.refresh()
     }
 
     /// The page at a code address: what every native control that reaches
     /// for a code surface goes through. The strip hands the window to the
-    /// Code tab as the page arrives there, the way it does for a link.
+    /// Code tab as the page arrives there, the way it does for a link. An
+    /// address that names no repository is the focused root's.
     func showOnCodeTab(_ href: String) {
-        page.navigate(to: href)
+        page.navigate(to: Href.scoped(href, to: focusedRootPath))
+    }
+
+    /// The page at a code address of `root` — the way to another repository
+    /// of the workspace, which the page's arrival makes the focused one.
+    func showOnCodeTab(_ href: String, in root: RootModel) {
+        page.navigate(to: Href.moved(href, to: root.path))
+    }
+
+    /// The page turned to another repository, on the surface it is on: the
+    /// same page of `root`, or its browse page where the surface is one
+    /// repository's own thing — a pull request, a commit.
+    func focus(root: RootModel) {
+        guard root !== focusedRoot else { return }
+        // Sessions are no one repository's page: the conversation stays
+        // where it is, and only what a new session starts in moves.
+        if onSessions { return page.navigate(to: Href.moved(page.href, to: root.path)) }
+        let surface = codeSurface ?? .browse
+        showOnCodeTab(surface == .review ? reviewHref(for: root.path) : surface.href, in: root)
     }
 
     func browse(file: String, line: Int?) {
         showOnCodeTab(Href.browseTab(file, line: line))
     }
 
+    // MARK: palette scopes
+
+    /// Each repository's key, the way the tree names its files, while the
+    /// workspace holds more than one.
+    private var rootKeys: [String: String] {
+        roots.count > 1 ? SidebarTree.rootKeys(for: roots.map(\.treeRoot)) : [:]
+    }
+
+    /// The palette reaches into every repository of the workspace.
+    private var paletteScopes: [PaletteScope] {
+        let keys = rootKeys
+        guard !keys.isEmpty else { return [PaletteScope(key: nil, client: client)] }
+        return roots.map { PaletteScope(key: keys[$0.path], client: $0.client) }
+    }
+
+    /// A file the palette lists: its repository and its path there.
+    private func locate(paletteFile path: String) -> (RootModel, String)? {
+        let keys = rootKeys
+        guard !keys.isEmpty else { return focusedRoot.map { ($0, path) } }
+        let key = String(path.prefix { $0 != "/" })
+        guard let root = roots.first(where: { keys[$0.path] == key }) else { return nil }
+        return (root, String(path.dropFirst(key.count + 1)))
+    }
+
+    /// A file picked in the palette, opened in its own repository.
+    private func open(paletteFile path: String, line: Int?) {
+        guard let (root, file) = locate(paletteFile: path) else { return }
+        if root === focusedRoot {
+            browse(file: file, line: line)
+        } else {
+            showOnCodeTab(Href.browseTab(file, line: line), in: root)
+        }
+    }
+
     // MARK: palette
 
-    /// ⌘E: the command list, or with it already up, away again.
+    /// ⌘K: the command list, or with it already up, away again.
     func showCommands() {
         guard hasProject else { return }
         palette.toggleCommands()
@@ -441,40 +632,45 @@ final class AppModel {
     /// A rail button: the Code tab, on that surface — and the tree with it,
     /// since the page reports the tree of whatever surface it is on.
     func show(surface: CodeSurface) {
-        showOnCodeTab(surface == .review ? reviewHref : surface.href)
+        showOnCodeTab(surface == .review ? reviewHref(for: focusedRootPath) : surface.href)
     }
 
-    private var reviewHref: String {
-        guard let reviewComparison else { return Href.review }
+    /// The review page of the repository at `path`, read against what it
+    /// was last read against there.
+    private func reviewHref(for path: String?) -> String {
+        guard let path, let comparison = reviewComparisons[path] else { return Href.review }
         var components = URLComponents()
         components.path = Href.review
-        components.queryItems = [URLQueryItem(name: "target", value: reviewComparison.target)]
+        components.queryItems = [URLQueryItem(name: "target", value: comparison.target)]
         return components.string ?? Href.review
     }
-
-    /// The project and branch a comparison is picked for.
-    private var checkout: String { "\(workspace?.project ?? ""):\(currentBranch ?? "")" }
 
     /// Only the review page's own address says what the diff is read
     /// against; one without a target leaves it to the aim again.
     private func rememberComparison(on href: String) {
-        guard let components = URLComponents(string: href), components.path == Href.review else { return }
-        reviewComparison = components.queryItems?
+        guard let components = URLComponents(string: href), components.path == Href.review,
+              let root = root(at: Href.repo(of: href)) ?? roots.first else { return }
+        reviewComparisons[root.path] = components.queryItems?
             .first { $0.name == "target" }?.value
-            .map { (checkout: checkout, target: $0) }
+            .map { (branch: root.branch ?? "", target: $0) }
     }
 
     /// A comparison — picked, or the aim answering for want of one — was for
-    /// the branch you were on; once checkout moves, the review drops back to
-    /// what is uncommitted, so the new branch's aim does not answer either.
-    /// The web header does this itself, but the island draws no header. A
-    /// read that could not say which branch is checked out moves nothing.
+    /// the branch its repository was on; once checkout moves there, its
+    /// review drops back to what is uncommitted, so the new branch's aim
+    /// does not answer either. The web header does this itself, but the
+    /// island draws no header. A read that could not say which branch is
+    /// checked out moves nothing.
     private func resetComparisonIfCheckoutMoved() {
-        guard currentBranch != nil else { return }
-        defer { lastCheckout = checkout }
-        guard let lastCheckout, lastCheckout != checkout else { return }
-        reviewComparison = (checkout: checkout, target: "")
-        if URLComponents(string: page.href)?.path == Href.review { readChanges(against: nil) }
+        for root in roots {
+            guard let branch = root.status?.branch else { continue }
+            defer { lastCheckouts[root.path] = branch }
+            guard let last = lastCheckouts[root.path], last != branch else { continue }
+            reviewComparisons[root.path] = (branch: branch, target: "")
+            if root === focusedRoot, URLComponents(string: page.href)?.path == Href.review {
+                readChanges(against: nil)
+            }
+        }
     }
 
     /// Whether the page is anywhere inside Sessions — the composer, a
@@ -515,60 +711,131 @@ final class AppModel {
     /// what is left is the page's to carry out.
     func act(onTree action: TreeAction) {
         switch action {
-        case .history(let path):
-            showHistory(of: path)
-        case .commit(let message, let paths, let push):
-            commit(message: message, paths: paths, andPush: push)
-        case .discard(let paths):
-            discard(paths: paths)
-        default:
+        case .select(let id):
+            open(treeRow: id)
+        case .intent(let id):
+            // Only the page's own repository can be read ahead: a row of
+            // another is a move of the whole page, made on the click.
+            if let (root, path) = sidebar.locate(id), root == focusedRootPath {
+                page.send(TreeAction.intent(path))
+            }
+        case .history(let id):
+            guard let (path, file) = sidebar.locate(id), let root = root(at: path) else { return }
+            if root !== focusedRoot { showOnCodeTab(Href.browseTab(file, line: nil), in: root) }
+            showHistory(of: file, in: root)
+        case .commit(let message, let ids, let push):
+            commit(message: message, paths: ids, andPush: push)
+        case .discard(let ids):
+            discard(paths: ids)
+        case .draft(let ids, let agent):
+            // The page drafts from its own repository alone; one commit
+            // across a workspace is drafted from every repository's chosen
+            // files, which only the app can ask the server for.
+            if roots.count > 1 {
+                draftCommitMessage(from: byRoot(ids), agent: agent, awayFromComposer: false)
+            } else {
+                page.send(TreeAction.draft(paths: paths(in: focusedRoot, of: ids), agent: agent))
+            }
+        case .draftSettled:
             page.send(action)
         }
+    }
+
+    /// A row of the tree picked: the page on that file — the page's own
+    /// repository's, or another's, which the page's arrival focuses. Over
+    /// a diff the file is opened in that repository's diff; a repository's
+    /// header turns the page to it.
+    private func open(treeRow id: String) {
+        guard let (path, file) = sidebar.locate(id), let root = root(at: path) else { return }
+        if file.isEmpty { return focus(root: root) }
+        if root === focusedRoot { return page.send(TreeAction.select(file)) }
+        if sidebarLayout == .files(changes: true) {
+            var components = URLComponents()
+            components.path = Href.review
+            components.queryItems = [URLQueryItem(name: "path", value: file)]
+            showOnCodeTab(components.string ?? Href.review, in: root)
+        } else {
+            showOnCodeTab(Href.browseTab(file, line: nil), in: root)
+        }
+    }
+
+    /// The tree's rows grouped by the repository each is in, in the
+    /// workspace's order — what a commit or a discard over several is.
+    private func byRoot(_ ids: [String]) -> [(root: RootModel, paths: [String])] {
+        var grouped: [String: [String]] = [:]
+        for id in ids {
+            guard let (root, path) = sidebar.locate(id), !path.isEmpty else { continue }
+            grouped[root, default: []].append(path)
+        }
+        return roots.compactMap { root in grouped[root.path].map { (root, $0) } }
+    }
+
+    private func paths(in root: RootModel?, of ids: [String]) -> [String] {
+        byRoot(ids).first { $0.root === root }?.paths ?? []
     }
 
     /// The composer's Commit: the chosen paths under the message, then the
     /// push when asked for — one notice for the run, the way the web app
     /// reports it: a commit that landed is said so even when the push after
     /// it did not, since the work is safe and only the remote is behind.
-    /// The notice stays the attempt until the sidebar has caught up — a
-    /// push is a push while git is working, and a commit is a commit until
-    /// the files it took are gone from the tree, which is the refresh, not
-    /// the server's answer; settled any earlier, "Committed" would stand
-    /// over a composer still holding the committed files.
-    func commit(message: String, paths: [String], andPush push: Bool) {
+    /// Files of several repositories make a commit in each, under the one
+    /// message, the way a JetBrains commit across roots does — each pushed
+    /// when asked, and the notice naming them. The notice stays the attempt
+    /// until the sidebar has caught up — a push is a push while git is
+    /// working, and a commit is a commit until the files it took are gone
+    /// from the tree, which is the refresh, not the server's answer;
+    /// settled any earlier, "Committed" would stand over a composer still
+    /// holding the committed files.
+    func commit(message: String, paths ids: [String], andPush push: Bool) {
+        let groups = byRoot(ids)
+        guard !groups.isEmpty else { return }
+        let named = groups.count > 1
         Task {
             let id = notices.post(.loading, "Committing…")
-            let sha: String
-            do {
-                sha = try await client.commit(message: message, paths: paths)
-            } catch {
-                notices.settle(id, failed: "Commit failed", with: error)
-                return
-            }
+            var landed: [String] = []
             var pushFailure: Error?
-            if push {
-                notices.settle(id, .loading, "Committed \(sha), pushing…")
+            for group in groups {
+                let label = named ? "\(group.root.name) " : ""
                 do {
-                    _ = try await client.push()
+                    let sha = try await group.root.client.commit(message: message, paths: group.paths)
+                    landed.append("\(label)\(sha)")
                 } catch {
-                    pushFailure = error
+                    let done = landed.isEmpty ? "" : " after committing \(landed.joined(separator: ", "))"
+                    notices.settle(id, failed: "Commit\(named ? " in \(group.root.name)" : "") failed\(done)", with: error)
+                    await refreshShowingTree()
+                    return
+                }
+                if push {
+                    notices.settle(id, .loading, "Committed \(landed.joined(separator: ", ")), pushing…")
+                    do {
+                        _ = try await group.root.client.push()
+                    } catch {
+                        pushFailure = pushFailure ?? error
+                    }
                 }
             }
+            let summary = landed.joined(separator: ", ")
             await refreshShowingTree()
             if let pushFailure {
-                notices.settle(id, failed: "Committed \(sha), but push failed", with: pushFailure)
+                notices.settle(id, failed: "Committed \(summary), but push failed", with: pushFailure)
             } else {
-                notices.settle(id, .success, push ? "Committed \(sha) and pushed" : "Committed \(sha)")
+                notices.settle(id, .success, push ? "Committed \(summary) and pushed" : "Committed \(summary)")
             }
         }
     }
 
-    /// The tree's Discard, already confirmed by the outline's own prompt.
-    func discard(paths: [String]) {
+    /// The tree's Discard, already confirmed by the outline's own prompt —
+    /// in each repository the rows are in.
+    func discard(paths ids: [String]) {
+        let groups = byRoot(ids)
+        let count = groups.reduce(0) { $0 + $1.paths.count }
+        guard count > 0 else { return }
         Task {
-            let named = paths.count == 1 ? "changes in \(paths[0])" : "changes in \(paths.count) files"
+            let named = count == 1 ? "changes in \(groups[0].paths[0])" : "changes in \(count) files"
             await notices.run("Discarding \(named)…", done: "Discarded \(named)", failed: "Discard failed") {
-                try await client.discard(paths: paths)
+                for group in groups {
+                    try await group.root.client.discard(paths: group.paths)
+                }
                 return nil
             }
             await refresh()
@@ -586,7 +853,7 @@ final class AppModel {
     /// tab follows the address — a session's own tab keeps it, the Sessions
     /// tab shows it — the way the web composer's navigate is followed.
     func show(chat: Chat) {
-        page.navigate(to: SessionsPage.href(of: chat.id))
+        page.navigate(to: Href.scoped(SessionsPage.href(of: chat.id), to: focusedRootPath))
     }
 
     // MARK: merge requests
@@ -665,23 +932,34 @@ final class AppModel {
 
     // MARK: project
 
-    /// A project opens on its browse page — the tree of what it holds —
-    /// whatever the last one was showing.
+    /// A repository opened on its own, as a workspace of one.
     @discardableResult
     func openProject(path: String) async -> Bool {
+        await open { try await self.server.openProject(path: path) }
+    }
+
+    /// Every repository of a saved workspace opened side by side.
+    @discardableResult
+    func openWorkspace(id: String) async -> Bool {
+        await open { try await self.server.openWorkspace(id: id) }
+    }
+
+    /// A workspace opens on its first repository's browse page — the tree of
+    /// what it holds — whatever the last one was showing.
+    private func open(_ opening: () async throws -> WorkspaceInfo) async -> Bool {
         do {
-            workspace = try await client.openProject(path: path)
-            services.reset()
-            threads.reset()
+            workspace = try await opening()
+            syncRoots()
             bottomExpanded = false
-            // Everything the page holds is the project just left — its files,
-            // its branch, the strip of files it had open — so it is told to
-            // re-ask before it is sent anywhere. Arriving on the browse page
-            // still answering for the old repository is how one project's
-            // file ends up opened in another's; the refresh at the end of
-            // this comes too late for that, being several round trips away.
+            // Everything the page holds is the workspace just left — its
+            // files, its branch, the strip of files it had open — so it is
+            // told to re-ask before it is sent anywhere. Arriving on the
+            // browse page still answering for the old repository is how one
+            // project's file ends up opened in another's; the refresh at the
+            // end of this comes too late for that, being several round trips
+            // away.
             page.refresh()
-            showOnCodeTab(Href.browsePath)
+            if let first = roots.first { showOnCodeTab(Href.browsePath, in: first) }
             await refresh()
             projectOpens += 1
             catalog.load()
@@ -689,6 +967,100 @@ final class AppModel {
         } catch {
             lastError = error.localizedDescription
             return false
+        }
+    }
+
+    /// The open workspace's repositories replaced — one added beside the
+    /// others, one taken out, the order changed. A saved workspace keeps
+    /// them, so it opens the same way next time.
+    func setRoots(_ paths: [String]) async {
+        do {
+            workspace = try await server.setRoots(paths)
+            syncRoots()
+            await refresh()
+            catalog.load()
+        } catch {
+            notices.post(.error, error.localizedDescription)
+        }
+    }
+
+    /// A repository opened beside the ones already open.
+    func addRoot(_ path: String) async {
+        let open = workspace?.roots.map(\.path) ?? []
+        guard !open.contains(path) else { return }
+        await setRoots(open + [path])
+    }
+
+    /// A repository taken out of the workspace; its dev commands stop.
+    func removeRoot(_ root: RootModel) async {
+        let rest = roots.map(\.path).filter { $0 != root.path }
+        guard !rest.isEmpty else { return }
+        if root === focusedRoot, let next = roots.first(where: { $0 !== root }) {
+            showOnCodeTab(Href.browsePath, in: next)
+        }
+        await setRoots(rest)
+    }
+
+    /// `root` swapped for the repository at `path`, in the same place in
+    /// the workspace's order; the page goes with it if it was on `root`.
+    func replaceRoot(_ root: RootModel, with path: String) async {
+        let open = roots.map(\.path)
+        guard !open.contains(path) else {
+            notices.post(.info, "\(URL(fileURLWithPath: path).lastPathComponent) is already in the workspace")
+            return
+        }
+        let wasFocused = root === focusedRoot
+        if wasFocused, let other = roots.first(where: { $0 !== root }) {
+            showOnCodeTab(Href.browsePath, in: other)
+        }
+        await setRoots(open.map { $0 == root.path ? path : $0 })
+        if wasFocused, let replacement = self.root(at: path) { focus(root: replacement) }
+    }
+
+    /// The folder panel, for the repository to put in `root`'s place.
+    func chooseReplacement(for root: RootModel) {
+        guard let path = askForProjectFolder() else { return }
+        Task { await replaceRoot(root, with: path) }
+    }
+
+    /// The folder panel, for a repository to open beside the others.
+    func chooseRootToAdd() {
+        guard let path = askForProjectFolder() else { return }
+        Task { await addRoot(path) }
+    }
+
+    /// A new workspace of `roots`, kept under `name` — opened at once when
+    /// asked, as the opener's New workspace does.
+    @discardableResult
+    func createWorkspace(name: String, roots: [String], open: Bool) async -> Bool {
+        do {
+            let created = try await catalog.createWorkspace(name: name, roots: roots)
+            return open ? await openWorkspace(id: created.id) : true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    /// The window's ask for a name to keep the repositories open now under
+    /// — the File menu's Save as workspace (see `SaveWorkspaceSheet`).
+    private(set) var saveWorkspaceRequests = 0
+
+    func askToSaveWorkspace() {
+        guard hasProject, workspace?.workspace == nil else { return }
+        saveWorkspaceRequests += 1
+    }
+
+    /// The repositories open now kept as a workspace, and that workspace
+    /// made the open one, so later changes to the roots are kept with it.
+    func saveWorkspace(named name: String) async {
+        let paths = roots.map(\.path)
+        do {
+            let created = try await catalog.createWorkspace(name: name, roots: paths)
+            workspace = try await server.openWorkspace(id: created.id)
+            syncRoots()
+        } catch {
+            notices.post(.error, error.localizedDescription)
         }
     }
 
@@ -708,8 +1080,8 @@ final class AppModel {
             linkedRequest = request
             return
         }
-        if workspace?.project == path {
-            if request.run { runProject() }
+        if let root = root(at: path) {
+            if request.run { run(root) }
         } else if hasProject {
             openProjectInNewWindow(path: path, run: request.run)
         } else {
@@ -729,7 +1101,7 @@ final class AppModel {
     /// The widget's feed: the catalog's rows and stars, and the open
     /// project (see `ProjectWidgetFeed`).
     private func publishWidgetFeed() {
-        ProjectWidgetFeed.publish(rows: catalog.rows, favorites: catalog.favorites, current: workspace?.project)
+        ProjectWidgetFeed.publish(rows: catalog.rows, favorites: catalog.favorites, current: roots.first?.path)
     }
 
     /// The opener's Open and Run: the project opened, then every one of its
@@ -739,11 +1111,24 @@ final class AppModel {
         runProject()
     }
 
-    /// The running half of Open and run, for the project already open:
-    /// every dev command started, with the Run surface up to show them.
+    /// The running half of Open and run, for the workspace already open:
+    /// every dev command of every repository started, with the Run surface
+    /// up to show them — the environment the workspace is, up at once.
     func runProject() {
         Task {
-            await services.startAll()
+            await withTaskGroup(of: Void.self) { group in
+                for root in roots {
+                    group.addTask { await root.services.startAll() }
+                }
+            }
+            show(bottomTab: .run)
+        }
+    }
+
+    /// One repository's dev commands started, with the Run surface up.
+    func run(_ root: RootModel) {
+        Task {
+            await root.services.startAll()
             show(bottomTab: .run)
         }
     }
@@ -782,16 +1167,96 @@ final class AppModel {
     /// Whether the commit chords have a composer to answer them: your own
     /// changes, with the commit composer under them.
     var hasCommitComposer: Bool {
-        sidebarLayout == .files(changes: true) && sidebar.commit != nil
+        sidebarLayout == .files(changes: true) && sidebar.workspaceCommit != nil
     }
 
-    /// ⌃G, ⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
+    /// What the commit message is kept under: the workspace while it holds
+    /// several repositories — one message commits across them — else the
+    /// repository.
+    var commitMessageScope: String {
+        if roots.count > 1, let workspace {
+            return workspace.workspace.map { "workspace:\($0.id)" } ?? workspace.roots.map(\.path).joined(separator: "\n")
+        }
+        return focusedRootPath ?? ""
+    }
+
+    /// ⌃G, from anywhere: the composer drafts it where it is on screen, so
+    /// the draft is seen landing in the box. Elsewhere the server is asked
+    /// directly — an agent drafting from every change of every repository
+    /// in the workspace — and the message is kept where the composer will
+    /// find it, with a notice to say it is there.
+    func generateCommitMessage() {
+        if hasCommitComposer { return ask(commitComposer: .draft) }
+        draftCommitMessage(from: roots.map { ($0, []) }, agent: CommitMessages.agent, awayFromComposer: true)
+    }
+
+    /// A message drafted by the server for the chosen files of each
+    /// repository — one commit spans a workspace's, so one message reads
+    /// them all — then kept as the composer's and handed to it if it is up.
+    /// The run is the server's, asked of the page's repository, which keeps
+    /// it while the agent writes; it is waited on here and then let go.
+    private func draftCommitMessage(
+        from groups: [(root: RootModel, paths: [String])], agent: CommitAgent, awayFromComposer: Bool
+    ) {
+        guard !isDraftingCommitMessage, !groups.isEmpty,
+              let host = groups.count == 1 ? groups[0].root : focusedRoot ?? groups.first?.root
+        else { return }
+        let scope = commitMessageScope
+        let repositories = groups.count > 1
+            ? groups.map { DraftRepositoryBody(path: $0.root.path, name: $0.root.name, paths: $0.paths) }
+            : nil
+        let paths = groups.count == 1 ? groups[0].paths : []
+        isDraftingCommitMessage = true
+        Task {
+            defer { isDraftingCommitMessage = false }
+            let notice = awayFromComposer
+                ? notices.post(.loading, "Drafting a commit message with \(agent.label)…")
+                : nil
+            do {
+                var draft = try await host.client.generateCommitMessage(
+                    agent: agent, paths: paths, repositories: repositories)
+                while draft.status == .running {
+                    try await Task.sleep(for: Self.draftPoll)
+                    draft = try await host.client.commitDraft()
+                }
+                try? await host.client.clearCommitDraft()
+                guard draft.status == .ready, let message = draft.message else {
+                    let reason = draft.error ?? "The agent wrote nothing."
+                    if let notice {
+                        notices.settle(notice, .error, "Could not draft a commit message", detail: reason)
+                    } else {
+                        notices.post(.error, "Could not draft a commit message", detail: reason)
+                    }
+                    return
+                }
+                CommitMessages.remember(message, for: scope)
+                landedCommitMessage = LandedCommitMessage(
+                    scope: scope, message: message, serial: (landedCommitMessage?.serial ?? 0) + 1)
+                if let notice {
+                    notices.settle(notice, .success, "Commit message drafted", detail: "It is waiting in Review's commit box.")
+                }
+            } catch {
+                if let notice {
+                    notices.settle(notice, failed: "Could not draft a commit message", with: error)
+                } else {
+                    notices.post(.error, "Could not draft a commit message", detail: error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private static let draftPoll: Duration = .seconds(1)
+
+    /// ⌃G, ⇧⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
     /// composer, the sidebar brought out first if it was put away, so what
     /// they do is seen happening.
-    func ask(commitComposer action: CommitComposerRequest.Action) {
+    /// `only` names one repository of a workspace, whose ticked files alone
+    /// are committed.
+    func ask(commitComposer action: CommitComposerRequest.Action, only root: String? = nil) {
         guard hasCommitComposer else { return }
         if !sidebarShown { toggleSidebar() }
-        commitComposerRequest = CommitComposerRequest(action: action, serial: (commitComposerRequest?.serial ?? 0) + 1)
+        commitComposerRequest = CommitComposerRequest(
+            action: action, root: root, serial: (commitComposerRequest?.serial ?? 0) + 1)
     }
 
     /// `path` in a Reviewer window of its own — a second instance of the
@@ -914,6 +1379,21 @@ final class AppModel {
         show(bottomTab: .history)
     }
 
+    /// One file's past in `root` — the history turned to that repository
+    /// first, ahead of the page's arrival there, so it asks the right one.
+    func showHistory(of path: String, in root: RootModel) {
+        focus(on: root.path)
+        showHistory(of: path)
+    }
+
+    /// The history turned to another repository of the workspace, the page
+    /// with it — the pane's repository picker.
+    func showHistory(in root: RootModel) {
+        focus(root: root)
+        focus(on: root.path)
+        show(bottomTab: .history)
+    }
+
     /// A commit picked out of the history: the page on its diff. A history
     /// narrowed to a file opens the commit on that file.
     func show(commit: CommitInfo) {
@@ -956,5 +1436,7 @@ struct CommitComposerRequest: Equatable {
     }
 
     let action: Action
+    /// The one repository of a workspace it is for, or nil for them all.
+    var root: String? = nil
     let serial: Int
 }

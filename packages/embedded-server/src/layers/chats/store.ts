@@ -34,6 +34,7 @@ import {
   type ChatProjectTally,
   type ChatSummary,
   type ChatTurn,
+  type ChatWorkspace,
   type ListChatsInput,
 } from "@reviewer/core/chats";
 import {
@@ -67,6 +68,8 @@ interface ChatRow {
   readonly repo_name: string | null;
   readonly project_path: string | null;
   readonly project_name: string | null;
+  readonly workspace_id: string | null;
+  readonly workspace_name: string | null;
 }
 
 interface MessageRow {
@@ -95,11 +98,28 @@ interface ActivityRow {
 /** Every chat query needs the project labels, so they all start from here. */
 const CHAT_COLUMNS = `
   SELECT chat.*, repo.name AS repo_name, repo.project_path,
-         project.name AS project_name
+         project.name AS project_name, workspace.name AS workspace_name
   FROM chat
   LEFT JOIN repo ON repo.path = chat.repo_path
   LEFT JOIN project ON project.path = repo.project_path
+  LEFT JOIN workspace ON workspace.id = chat.workspace_id
 `;
+
+/**
+ * The saved workspace a chat belongs to, with its repositories as the
+ * workspace holds them now — one added since is the agent's next turn too.
+ */
+const workspaceOf = (row: ChatRow): ChatWorkspace | undefined =>
+  row.workspace_id === null || row.workspace_name === null
+    ? undefined
+    : {
+        id: row.workspace_id,
+        name: row.workspace_name,
+        roots: allRows<{ path: string }>(
+          "SELECT path FROM workspace_root WHERE workspace_id = ? ORDER BY position",
+          row.workspace_id
+        ).map((root) => root.path),
+      };
 
 const originOf = (row: ChatRow): Origin =>
   row.project_path === null
@@ -154,7 +174,15 @@ const activitiesOf = (chatId: string): ChatActivity[] =>
     chatId
   ).map(toActivity);
 
-const toChat = (row: ChatRow): Chat => ({
+const toChat = (row: ChatRow): Chat => {
+  const workspace = workspaceOf(row);
+  return {
+    ...toChatFields(row),
+    ...(workspace === undefined ? {} : { workspace }),
+  };
+};
+
+const toChatFields = (row: ChatRow): Chat => ({
   id: row.id,
   origin: originOf(row),
   title: row.title,
@@ -341,6 +369,8 @@ export interface InsertChatInput {
   readonly access: Chat["access"];
   readonly branch: string;
   readonly createdAt: string;
+  /** The saved workspace it is started in, or null for a lone repository. */
+  readonly workspaceId?: string | null;
 }
 
 export const insertChat = (input: InsertChatInput): Chat => {
@@ -350,8 +380,8 @@ export const insertChat = (input: InsertChatInput): Chat => {
       // starts seen — an empty conversation has nothing to have missed.
       `INSERT INTO chat (id, repo_path, title, provider, model, effort, access,
                          branch, session_id, created_at, updated_at, seen_at,
-                         latest_turn)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)`
+                         latest_turn, workspace_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, ?)`
     )
     .run(
       input.id,
@@ -364,7 +394,8 @@ export const insertChat = (input: InsertChatInput): Chat => {
       input.branch,
       input.createdAt,
       input.createdAt,
-      input.createdAt
+      input.createdAt,
+      input.workspaceId ?? null
     );
   const created = findChat(input.id);
   if (created === undefined) {

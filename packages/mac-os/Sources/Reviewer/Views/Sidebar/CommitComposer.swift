@@ -18,7 +18,7 @@ struct CommitComposer: View {
     @Environment(AppModel.self) private var model
     @State private var message = ""
     @State private var excluded: Set<String> = []
-    @AppStorage("commit-agent") private var agent: CommitAgent = .claude
+    @AppStorage(CommitMessages.agentKey) private var agent: CommitAgent = .claude
     @State private var composerFocused = false
     @State private var agentPickerOpen = false
     @State private var controlsHovered = false
@@ -37,7 +37,7 @@ struct CommitComposer: View {
     private static let boxShape = RoundedRectangle(cornerRadius: 6)
     private static let boxInset: CGFloat = 8
 
-    private var drafting: Bool { composer.draft?.status == .running }
+    private var drafting: Bool { composer.draft?.status == .running || model.isDraftingCommitMessage }
     private var canCommit: Bool {
         !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !chosen.isEmpty && !drafting
     }
@@ -56,29 +56,32 @@ struct CommitComposer: View {
             controls
         }
         .onAppear {
-            message = Self.remembered(for: project)
+            message = CommitMessages.remembered(for: project)
             filesHeight = savedFilesHeight
             messageHeight = savedMessageHeight
         }
-        .onChange(of: project) { _, project in message = Self.remembered(for: project) }
-        .onChange(of: message) { _, message in Self.remember(message, for: project) }
+        .onChange(of: project) { _, project in message = CommitMessages.remembered(for: project) }
+        .onChange(of: message) { _, message in CommitMessages.remember(message, for: project) }
+        .onChange(of: model.landedCommitMessage) { _, landed in
+            if let landed, landed.scope == project { message = landed.message }
+        }
         .onChange(of: composer.draft, initial: true) { _, draft in takeDraft(draft) }
         .onChange(of: model.commitComposerRequest) { _, request in
             switch request?.action {
             case .draft: draft()
-            case .commit: commit(push: false)
-            case .commitAndPush: commit(push: true)
+            case .commit: commit(push: false, only: request?.root)
+            case .commitAndPush: commit(push: true, only: request?.root)
             case nil: break
             }
         }
     }
 
-    // A row's path card is anchored to the row, so it would ride along as
-    // the list scrolls; the scroll's start is counted, and the rows close
-    // their cards on it. The rows are made as they scroll in: each is a
-    // checkbox, two measured labels and a popover, and a large diff has
-    // hundreds, which built all at once — and again on every keystroke in
-    // the message — was what made the composer lag.
+    // A row's path tooltip comes down as the list starts to scroll, since
+    // the row it names is moving out from under the pointer; the scroll's
+    // start is counted, and the rows put theirs away on it. The rows are
+    // made as they scroll in: each is a checkbox and two measured labels,
+    // and a large diff has hundreds, which built all at once — and again
+    // on every keystroke in the message — was what made the composer lag.
     private var files: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
@@ -168,9 +171,10 @@ struct CommitComposer: View {
     private var controls: some View {
         HStack(spacing: 6) {
             Button("Commit") { commit(push: false) }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
                 .disabled(!canCommit)
             Button("Commit and push") { commit(push: true) }
+                .buttonStyle(.glass)
                 .disabled(!canCommit)
             Spacer()
         }
@@ -188,13 +192,17 @@ struct CommitComposer: View {
     /// The buttons are disabled while there is nothing to commit, but ⌘↩
     /// and the chords still reach here, so they are told why nothing
     /// happened, as the TUI tells them.
-    private func commit(push: Bool) {
-        guard canCommit else {
-            model.notices.post(.info, commitBlocker)
+    ///
+    /// Asked for one repository of a workspace (`only`), it commits that
+    /// one's ticked files alone, and keeps the message for the others'.
+    private func commit(push: Bool, only root: String? = nil) {
+        let paths = root.map { root in chosen.filter { model.sidebar.locate($0)?.root == root } } ?? chosen
+        guard canCommit, !paths.isEmpty else {
+            model.notices.post(.info, paths.isEmpty && !chosen.isEmpty ? "No ticked files in that repository" : commitBlocker)
             return
         }
-        model.act(onTree: .commit(message: message.trimmingCharacters(in: .whitespacesAndNewlines), paths: chosen, push: push))
-        message = ""
+        model.act(onTree: .commit(message: message.trimmingCharacters(in: .whitespacesAndNewlines), paths: paths, push: push))
+        if paths.count == chosen.count { message = "" }
     }
 
     private var commitBlocker: String {
@@ -221,20 +229,6 @@ struct CommitComposer: View {
             model.act(onTree: .draftSettled)
         case .idle, .running:
             break
-        }
-    }
-
-    private static func key(for project: String) -> String { "commit-message:\(project)" }
-
-    private static func remembered(for project: String) -> String {
-        UserDefaults.standard.string(forKey: key(for: project)) ?? ""
-    }
-
-    private static func remember(_ message: String, for project: String) {
-        if message.isEmpty {
-            UserDefaults.standard.removeObject(forKey: key(for: project))
-        } else {
-            UserDefaults.standard.set(message, forKey: key(for: project))
         }
     }
 }
@@ -338,8 +332,8 @@ private struct CommitAgentRow: View {
 
 /// One changed file: its status badge, its name, and the folder it is in
 /// — squeezed to the middle when the row is narrow, in which case the
-/// pointer resting on the row opens the whole path beside it, the way a
-/// session's row opens its preview, and leaving closes it.
+/// pointer on the row says the whole path in the one-line tooltip the
+/// branch picker's rows use (see `RowTooltip`).
 private struct ChangeRow: View {
     let change: GitStatusEntry
     @Binding var isOn: Bool
@@ -347,11 +341,7 @@ private struct ChangeRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var folderWidth = 0.0
     @State private var folderFullWidth = 0.0
-    @State private var pathShown = false
-    @State private var hoverTask: Task<Void, Never>?
-
-    private static let openDelay: Duration = .milliseconds(120)
-    private static let closeDelay: Duration = .milliseconds(100)
+    @State private var hovering = false
 
     private var folder: String { FileTree.ancestors(of: change.path).last ?? "" }
     private var folderTruncated: Bool { folderWidth + 0.5 < folderFullWidth }
@@ -384,59 +374,15 @@ private struct ChangeRow: View {
         .frame(height: 22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .onHover { hovering in
-            hoverTask?.cancel()
-            guard hovering ? folderTruncated : pathShown else { return }
-            hoverTask = Task {
-                try? await Task.sleep(for: hovering ? Self.openDelay : Self.closeDelay)
-                guard !Task.isCancelled else { return }
-                pathShown = hovering
-            }
-        }
-        .onChange(of: scrollStarts) { _, _ in
-            hoverTask?.cancel()
-            pathShown = false
-        }
-        .popover(isPresented: $pathShown, arrowEdge: .trailing) {
-            ChangePathCard(change: change)
-        }
+        .rowTooltip(folderTruncated ? change.path : nil, active: hovering)
+        .onHover { hovering = $0 }
+        .onChange(of: scrollStarts) { hovering = false }
     }
 
     private var folderText: some View {
         Text(folder)
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
-    }
-}
-
-/// The card a squeezed row opens under the pointer: the file's icon and
-/// its path in full on one line, and what became of the file.
-private struct ChangePathCard: View {
-    let change: GitStatusEntry
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                FileIconView(path: change.path, tint: change.status.hex(dark: colorScheme == .dark))
-                Text(change.path)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                    .textSelection(.enabled)
-            }
-            HStack(spacing: 5) {
-                Text(change.status.badge ?? "·")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(change.status.color(dark: colorScheme == .dark))
-                Text(change.status.title)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.leading, 22)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .fixedSize()
     }
 }
 

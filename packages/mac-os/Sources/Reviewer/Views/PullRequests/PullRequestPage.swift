@@ -161,13 +161,16 @@ private struct PullFiles: View {
                 FileTreeOutline()
                     .overlay {
                         if tree.isEmpty {
-                            TreePlaceholder(loading: tree.listing?.loading ?? false, empty: "No changes")
+                            TreePlaceholder(
+                                loading: tree.listing?.loading ?? false,
+                                empty: tree.isSearching
+                                    ? .noMatch(tree.query.trimmingCharacters(in: .whitespaces)) : .noChanges)
                         }
                     }
             } else {
                 // The page is on its way to the pull request and has not
                 // reported its files yet.
-                TreePlaceholder(loading: true, empty: "No changes")
+                TreePlaceholder(loading: true, empty: .noChanges)
             }
         }
     }

@@ -1,16 +1,18 @@
-// The opener: every git repository the machine holds, laid out as a Finder
-// window — the sidebar's glass pane down the leading edge with Recents,
-// Favorites and All Repositories at its head and, under Locations, each
-// folder the walk found repositories in; the picked list's name as the
-// window's title on the toolbar, with the search at the toolbar's trailing
-// edge; and the repositories as the system's own table — name, where it
-// sits, when it was last opened — sortable on any column, with a
-// status bar along the foot counting them and saying while the walk is
-// still on. A click picks a row, a double-click or Return opens it as the
-// project, and the row's menu opens it with its dev commands started and
-// the Run surface up, opens it in a window of its own — a second Reviewer,
-// with a server of its own — stars it among the favourites, or reaches the
-// folder in Finder. It is the window up while no project is
+// The opener: the saved workspaces and every git repository the machine
+// holds, laid out as a Finder window — the sidebar's glass pane down the
+// leading edge with Workspaces, Recents, Favorites and All Repositories at
+// its head and, under Locations, each folder the walk found repositories
+// in; the picked list's name as the window's title on the toolbar, with the
+// search at the toolbar's trailing edge; and the list as the system's own
+// table, sortable on any column, with a status bar along the foot saying
+// while the walk is still on. Workspaces are several repositories opened
+// together (see `WorkspacesTable`); New workspace makes one, from the
+// repositories picked in the table when several are. A repository's row
+// opens it on its own with a double-click or Return, and its menu opens it
+// with its dev commands started and the Run surface up, adds it beside the
+// repositories open now, opens it in a window of its own — a second
+// Reviewer, with a server of its own — stars it among the favourites, or
+// reaches the folder in Finder. It is the window up while no project is
 // (the workspace hands over to it, see `ContentView`),
 // and the one ⌘O, ⇧⌘1 and the project chip bring up over an open
 // workspace; a repository opened in it hands back — the workspace forward,
@@ -37,6 +39,7 @@ struct RepoOpenerWindow: View {
 
 /// Which list the table shows — the sidebar's pick.
 private enum OpenerList: Hashable {
+    case workspaces
     case recents
     case favorites
     case all
@@ -44,6 +47,7 @@ private enum OpenerList: Hashable {
 
     var title: String {
         switch self {
+        case .workspaces: return "Workspaces"
         case .recents: return "Recents"
         case .favorites: return "Favorites"
         case .all: return "All repositories"
@@ -61,10 +65,11 @@ private enum OpenerList: Hashable {
 
 private struct RepoOpener: View {
     @Environment(AppModel.self) private var model
-    @State private var list: OpenerList? = .recents
+    @State private var list: OpenerList? = .workspaces
     @State private var query = ""
-    @State private var selected: RepoRow.ID?
+    @State private var selected: Set<RepoRow.ID> = []
     @State private var sortOrder = OpenerList.recents.defaultSort
+    @State private var editing: WorkspaceDraft?
 
     private var catalog: RepoCatalog { model.catalog }
 
@@ -75,24 +80,51 @@ private struct RepoOpener: View {
             Group {
                 if let empty {
                     OpenerEmptyView(empty: empty)
+                } else if list == .workspaces {
+                    WorkspacesTable(workspaces: workspaces, editing: $editing)
                 } else {
-                    OpenerTable(rows: rows, selected: $selected, sortOrder: $sortOrder)
+                    OpenerTable(rows: rows, selected: $selected, sortOrder: $sortOrder, editing: $editing)
                 }
             }
                 .safeAreaInset(edge: .bottom, spacing: 0) { OpenerStatusBar() }
                 .navigationTitle(list?.title ?? "Repositories")
         }
-        .toolbar { OpenerToolbar() }
+        .toolbar { OpenerToolbar(newWorkspace: newWorkspace) }
         .searchable(text: $query, placement: .toolbar, prompt: "Search")
-        .task { catalog.load() }
-        // Recents is the list the window opens on; it is empty until a
-        // repository has been opened here, when everything is the list to
-        // pick the first one from.
-        .onChange(of: catalog.hasLoaded) {
-            if list == .recents && catalog.recents.isEmpty { list = .all }
+        .sheet(item: $editing) { draft in
+            WorkspaceEditor(draft: draft)
+                .environment(model)
         }
+        .task { catalog.load() }
+        // Workspaces is the list the window opens on; with none saved yet,
+        // the recent repositories are, and with none of those either,
+        // everything is the list to pick the first one from.
+        .onChange(of: catalog.hasLoaded) { settleInitialList() }
+        .onChange(of: catalog.workspacesLoaded) { settleInitialList() }
         .onChange(of: list) { sortOrder = (list ?? .all).defaultSort }
         .frame(minWidth: 820, minHeight: 440)
+    }
+
+    private func settleInitialList() {
+        guard catalog.hasLoaded, catalog.workspacesLoaded else { return }
+        if list == .workspaces && catalog.workspaces.isEmpty { list = .recents }
+        if list == .recents && catalog.recents.isEmpty { list = .all }
+    }
+
+    /// A new workspace, starting from the repositories picked in the table.
+    private func newWorkspace() {
+        let picked = rows.map(\.path).filter(selected.contains)
+        editing = WorkspaceDraft(roots: list == .workspaces ? [] : picked)
+    }
+
+    private var needle: String { query.trimmingCharacters(in: .whitespaces) }
+
+    private var workspaces: [SavedWorkspace] {
+        guard !needle.isEmpty else { return catalog.workspaces }
+        return catalog.workspaces.filter { workspace in
+            workspace.name.localizedCaseInsensitiveContains(needle)
+                || workspace.rootNames.contains { $0.localizedCaseInsensitiveContains(needle) }
+        }
     }
 
     private var rows: [RepoRow] {
@@ -101,7 +133,7 @@ private struct RepoOpener: View {
         case .recents: listed = catalog.recents
         case .favorites: listed = catalog.favoriteRows
         case .location(let path): listed = catalog.rows(under: path)
-        case .all, .none: listed = catalog.rows
+        case .all, .workspaces, .none: listed = catalog.rows
         }
         let needle = query.trimmingCharacters(in: .whitespaces)
         let matched = needle.isEmpty
@@ -113,8 +145,14 @@ private struct RepoOpener: View {
     }
 
     private var empty: OpenerEmpty? {
+        if list == .workspaces {
+            guard workspaces.isEmpty else { return nil }
+            if !needle.isEmpty { return .noMatch(needle) }
+            return .none(
+                title: "No workspaces",
+                detail: "A workspace opens several repositories together. Choose New workspace, or pick repositories in a list and choose Open together.")
+        }
         guard rows.isEmpty else { return nil }
-        let needle = query.trimmingCharacters(in: .whitespaces)
         if !needle.isEmpty { return .noMatch(needle) }
         if catalog.isScanning && catalog.rows.isEmpty { return .scanning }
         switch list {
@@ -124,7 +162,7 @@ private struct RepoOpener: View {
             return .none(title: "No favorite repositories", detail: "Right-click a repository and choose Add to favorites.")
         case .location(let path):
             return .none(title: "No repositories", detail: "\(RepoRow.fold(path, home: NSHomeDirectory())) holds no repositories any more. Scan again to look afresh.")
-        case .all, nil:
+        case .all, .workspaces, nil:
             return .none(title: "No repositories", detail: "None were found under your home folder. Scan again, or use Open other… to pick one.")
         }
     }
@@ -174,6 +212,20 @@ private struct OpenerSidebar: View {
 
     var body: some View {
         List(selection: $list) {
+            Label {
+                HStack {
+                    Text("Workspaces")
+                    Spacer(minLength: 8)
+                    if !model.catalog.workspaces.isEmpty {
+                        Text(model.catalog.workspaces.count, format: .number)
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } icon: {
+                Image(systemName: "square.on.square")
+            }
+            .tag(OpenerList.workspaces)
             Label("Recents", systemImage: "clock")
                 .tag(OpenerList.recents)
             Label("Favorites", systemImage: "star")
@@ -211,8 +263,9 @@ private struct OpenerSidebar: View {
 private struct OpenerTable: View {
     @Environment(AppModel.self) private var model
     let rows: [RepoRow]
-    @Binding var selected: RepoRow.ID?
+    @Binding var selected: Set<RepoRow.ID>
     @Binding var sortOrder: [KeyPathComparator<RepoRow>]
+    @Binding var editing: WorkspaceDraft?
 
     var body: some View {
         Table(rows, selection: $selected, sortOrder: $sortOrder) {
@@ -242,9 +295,19 @@ private struct OpenerTable: View {
         }
         .tableStyle(.inset(alternatesRowBackgrounds: true))
         .contextMenu(forSelectionType: RepoRow.ID.self) { ids in
-            if let path = ids.first {
+            if ids.count > 1 {
+                let paths = ordered(ids)
+                Button("Open together as a workspace…") { editing = WorkspaceDraft(roots: paths) }
+                if model.hasProject {
+                    Button("Add to this workspace") { add(paths) }
+                }
+            } else if let path = ids.first {
                 Button("Open") { open(path) }
                 Button("Open and run") { openAndRun(path) }
+                if model.hasProject {
+                    Button("Add to this workspace") { add([path]) }
+                        .disabled(model.root(at: path) != nil)
+                }
                 Button("Open in new window") { model.openProjectInNewWindow(path: path) }
                 Divider()
                 if model.catalog.isFavorite(path) {
@@ -257,13 +320,44 @@ private struct OpenerTable: View {
                 Button("Copy path") { copy(path) }
             }
         } primaryAction: { ids in
-            if let path = ids.first { open(path) }
+            openPicked(ids)
         }
         .onKeyPress(.return) {
-            guard let selected else { return .ignored }
-            open(selected)
+            guard !selected.isEmpty else { return .ignored }
+            openPicked(selected)
             return .handled
         }
+    }
+
+    /// One repository opens on its own; several are the start of a
+    /// workspace, named before it opens.
+    private func openPicked(_ ids: Set<RepoRow.ID>) {
+        if ids.count > 1 {
+            editing = WorkspaceDraft(roots: ordered(ids))
+        } else if let path = ids.first {
+            open(path)
+        }
+    }
+
+    /// The picked rows in the order the table shows them.
+    private func ordered(_ ids: Set<RepoRow.ID>) -> [String] {
+        rows.map(\.path).filter(ids.contains)
+    }
+
+    /// Repositories opened beside the ones open now, the opener handing back.
+    private func add(_ paths: [String]) {
+        Task {
+            await model.setRoots((model.workspace?.roots.map(\.path) ?? []) + paths.filter { model.root(at: $0) == nil })
+            dismissToWorkspace()
+        }
+    }
+
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
+
+    private func dismissToWorkspace() {
+        openWindow(id: ReviewerWindow.workspace)
+        dismissWindow(id: ReviewerWindow.opener)
     }
 
     private func open(_ path: String) {
@@ -288,8 +382,15 @@ private struct OpenerTable: View {
 /// folder panel for a repository the index does not list.
 private struct OpenerToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
+    let newWorkspace: () -> Void
 
     var body: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Button(action: newWorkspace) {
+                Label("New workspace…", systemImage: "plus.square.on.square")
+            }
+            .help("Keep several repositories together, to open them in one go")
+        }
         ToolbarItem(placement: .primaryAction) {
             Button {
                 model.catalog.rescan()

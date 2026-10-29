@@ -26,6 +26,7 @@ struct SessionFilterPopover: View {
     let choose: (_ project: String?, _ date: SessionDateFilter?) -> Void
 
     @State private var query = ""
+    @State private var fieldWantsKeyboard = false
     @State private var active = 0
 
     private static let width: CGFloat = 288
@@ -91,8 +92,9 @@ struct SessionFilterPopover: View {
     }
 
     private var field: some View {
-        PaneSearchField(prompt: "Search projects", text: $query, focusesOnAppear: true)
+        MinimalSearchField(prompt: "Search projects", text: $query, takesKeyboard: $fieldWantsKeyboard)
             .padding(8)
+            .onAppear { fieldWantsKeyboard = true }
     }
 
     private func projects(_ lines: [Line]) -> some View {

@@ -179,6 +179,39 @@ enum Href {
     static func browseTab(_ path: String, line: Int?) -> String {
         file(path, line: line, on: "\(browsePath)?tab=permanent")
     }
+
+    /// The query param naming the workspace repository a page is about —
+    /// the web app's `repo` search param (see the SPA's `lib/repo-scope`).
+    private static let repoParam = "repo"
+
+    /// The workspace repository an address is about, or nil for one that
+    /// names none — which the page reads as the workspace's first.
+    static func repo(of href: String) -> String? {
+        URLComponents(string: href)?.queryItems?
+            .first { $0.name == repoParam }?.value
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// `href` about `repo`. One that already names a repository keeps its
+    /// own: an address is about where it was made, and a pull request of
+    /// one repository read from another's page is still its repository's.
+    static func scoped(_ href: String, to repo: String?) -> String {
+        guard let repo, self.repo(of: href) == nil else { return href }
+        return moved(href, to: repo)
+    }
+
+    /// `href` moved to `repo`, whatever repository it named before — for
+    /// opening the same surface on another repository.
+    static func moved(_ href: String, to repo: String) -> String {
+        guard var components = URLComponents(string: href) else { return href }
+        components.queryItems = (components.queryItems ?? []).filter { $0.name != repoParam }
+            + [URLQueryItem(name: repoParam, value: repo)]
+        // URLComponents leaves `+` as it is in a query, which the page's
+        // search parser reads back as a space.
+        components.percentEncodedQuery = components.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
+        return components.string ?? href
+    }
 }
 
 /// The code surfaces the sidebar's rail moves between — the web app's mode

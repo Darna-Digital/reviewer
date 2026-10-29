@@ -14,6 +14,28 @@ export const WorkspaceHandler = HttpApiBuilder.group(
       .handle("setCurrent", ({ payload }) =>
         Effect.flatMap(WorkspaceService, (s) => s.setCurrent(payload.path))
       )
+      .handle("setRoots", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) => s.setRoots(payload.roots))
+      )
+      .handle("workspaces", () =>
+        Effect.flatMap(WorkspaceService, (s) => s.workspaces)
+      )
+      .handle("createWorkspace", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) => s.createWorkspace(payload))
+      )
+      .handle("updateWorkspace", ({ params, payload }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.updateWorkspace(params.id, payload)
+        )
+      )
+      .handle("deleteWorkspace", ({ params }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.deleteWorkspace(params.id)
+        ).pipe(Effect.as(ok))
+      )
+      .handle("openWorkspace", ({ params }) =>
+        Effect.flatMap(WorkspaceService, (s) => s.openWorkspace(params.id))
+      )
       .handle("repos", () => Effect.flatMap(WorkspaceService, (s) => s.repos))
       .handle("rescanRepos", () =>
         Effect.flatMap(WorkspaceService, (s) => s.rescan)

@@ -130,10 +130,40 @@ enum Wire {
     }
 }
 
+/// One repository of the workspace as the tree stands it under a header:
+/// its own listing, read by the shell from the server — what the tree shows
+/// under it while the page is on another repository. The focused root's
+/// rows are the page's report instead, with everything the page knows that
+/// a plain listing does not — the comparison, the commented files.
+struct TreeRoot: Equatable, Sendable {
+    let path: String
+    let name: String
+    let branch: String?
+    let paths: [String]
+    let gitStatus: [GitStatusEntry]
+
+    /// The files a diff of its own changes lists: everything git calls
+    /// changed, the ignored aside.
+    var changedPaths: [String] {
+        gitStatus.filter { $0.status != .ignored }.map(\.path)
+    }
+}
+
 @MainActor
 @Observable
 final class SidebarTree {
     private(set) var listing: ShellTree?
+    /// The workspace's repositories in its order, while it holds more than
+    /// one — each the header of its own part of the tree.
+    private(set) var workspaceRoots: [TreeRoot] = []
+    /// The repository the page is on.
+    private(set) var focusedRootPath: String?
+    /// Each root's key — the first component of every id under its header
+    /// — by its path: the folder's name, numbered from the second root that
+    /// shares one.
+    private var keys: [String: String] = [:]
+    /// The root of each key, the way back from a row to its repository.
+    private var rootsByKey: [String: TreeRoot] = [:]
     private(set) var selected: String?
     private(set) var commit: ShellCommitComposer?
     /// The comparison the changed files are read against, while they are
@@ -195,7 +225,10 @@ final class SidebarTree {
     /// Whether a folder's row shows its children: every one while a search
     /// is on, otherwise as it was left.
     func isExpanded(_ path: String) -> Bool {
-        isSearching || opensByDefault != toggled.contains(path)
+        if isSearching { return true }
+        // A repository's header opens on its top level, whatever the mode.
+        let opens = isRootHeader(path) || opensByDefault
+        return opens != toggled.contains(path)
     }
 
     func status(of path: String) -> GitFileStatus? {
@@ -216,30 +249,9 @@ final class SidebarTree {
     /// under a fading outline vanish before it does; the next tree reported
     /// replaces them, remade if it is another mode's or project's.
     func take(_ listing: ShellTree?) {
-        let previous = self.listing
-        guard listing != previous else { return }
+        guard listing != self.listing else { return }
         self.listing = listing
         guard let listing else { return }
-        var changed = false
-        if previous?.paths != listing.paths {
-            roots = FileTree.build(paths: listing.paths)
-            nodes = FileTree.index(roots)
-            changed = true
-        }
-        if previous?.gitStatus != listing.gitStatus {
-            index(listing.gitStatus)
-        }
-        // The web tree is remade per mode and per project, and its folds
-        // start over with it.
-        let key = "\(listing.mode.rawValue):\(listing.projectPath ?? "")"
-        if key != foldsKey {
-            foldsKey = key
-            toggled = []
-            query = ""
-            reveal(selected)
-            remadeVersion += 1
-            changed = true
-        }
         // The composer and the comparison are the commit view's; on any
         // other surface they are gone with the listing, not a state report
         // later, so the sidebar leaves them in one move with the tree.
@@ -247,7 +259,7 @@ final class SidebarTree {
             commit = nil
             comparison = nil
         }
-        if changed { refilter() }
+        rebuild()
     }
 
     func take(_ state: ShellTreeState) {
@@ -256,10 +268,178 @@ final class SidebarTree {
         // redraw its whole file list on each pick.
         if commit != state.commit { commit = state.commit }
         if comparison != state.comparison { comparison = state.comparison }
-        guard state.selected != selected else { return }
-        selected = state.selected
-        reveal(state.selected)
+        pageSelected = state.selected
+        let selected = state.selected.map { id(of: $0, in: pageRootPath) }
+        guard selected != self.selected else { return }
+        self.selected = selected
+        reveal(selected)
     }
+
+    // MARK: workspace
+
+    /// The workspace's repositories as they now stand — their listings
+    /// read again, one opened or closed. One repository on its own is no
+    /// workspace to stand under headers: its tree is the page's alone.
+    func take(roots: [TreeRoot]) {
+        let roots = roots.count > 1 ? roots : []
+        guard roots != workspaceRoots else { return }
+        workspaceRoots = roots
+        keys = Self.rootKeys(for: roots)
+        rootsByKey = Dictionary(uniqueKeysWithValues: roots.compactMap { root in keys[root.path].map { ($0, root) } })
+        rebuild()
+    }
+
+    /// The page moved to another repository of the workspace: its rows are
+    /// the page's report from now on, and the selection the page's there.
+    func focusChanged(to path: String?) {
+        guard path != focusedRootPath else { return }
+        focusedRootPath = path
+        rebuild()
+    }
+
+    /// The repository the page's report is of — the one it names, which
+    /// for a moment after a move is still the repository the page left;
+    /// until the page reports the new one, that one's rows are its own
+    /// listing rather than the old repository's under its header.
+    private var pageRootPath: String? { listing?.projectPath ?? focusedRootPath }
+
+    /// Whether the tree stands each of the workspace's repositories under a
+    /// header of its own. A pull request's files are its repository's
+    /// alone, and stand beside the diff rather than in the sidebar.
+    var isMultiRoot: Bool { !workspaceRoots.isEmpty && listing?.mode != .review }
+
+    /// The row's repository and its path inside it — what the page and the
+    /// server are told, a row's id being namespaced by its root's key while
+    /// the tree holds more than one. A root's own header is its repository
+    /// with an empty path.
+    func locate(_ id: String) -> (root: String, path: String)? {
+        guard isMultiRoot else { return (focusedRootPath ?? listing?.projectPath).map { ($0, id) } }
+        let key = id.prefix { $0 != "/" }
+        guard let root = rootsByKey[String(key)] else { return nil }
+        return (root.path, String(id.dropFirst(key.count).drop { $0 == "/" }))
+    }
+
+    /// The id a repository's path has in the tree.
+    func id(of path: String, in root: String?) -> String {
+        guard isMultiRoot, let root, let key = keys[root] else { return path }
+        return path.isEmpty ? key : "\(key)/\(path)"
+    }
+
+    /// Whether a row is a repository's header.
+    func isRootHeader(_ id: String) -> Bool {
+        isMultiRoot && rootsByKey[id] != nil
+    }
+
+    /// The commit composer's changes across the workspace: the page's own,
+    /// for the repository it is on, and every other repository's changed
+    /// files beside them, each under its root's key — so one commit can
+    /// take files of several repositories, a commit in each (see
+    /// `AppModel.commit`). The draft is the page's, of its repository.
+    ///
+    /// The page reports no composer while its own repository is clean, so
+    /// across a workspace the composer stands on the changes alone: over
+    /// your uncommitted changes, it is up while any repository has some,
+    /// whichever one the page is on.
+    var workspaceCommit: ShellCommitComposer? {
+        guard isMultiRoot else { return commit }
+        guard listing?.mode == .commit, comparison?.against == nil else { return nil }
+        let changes = workspaceRoots.flatMap { root -> [GitStatusEntry] in
+            let entries = root.path == pageRootPath
+                ? commit?.changes ?? []
+                : root.gitStatus.filter { $0.status != .ignored }
+            return entries.map { GitStatusEntry(path: id(of: $0.path, in: root.path), status: $0.status) }
+        }
+        guard !changes.isEmpty else { return nil }
+        return ShellCommitComposer(changes: changes, draft: commit?.draft)
+    }
+
+    /// The selection the page last reported, in its own repository's terms.
+    private var pageSelected: String?
+
+    /// Each repository's key by its path — what the tree and the palette
+    /// name its files under.
+    static func rootKeys(for roots: [TreeRoot]) -> [String: String] {
+        var taken: [String: Int] = [:]
+        var keys: [String: String] = [:]
+        for root in roots {
+            let seen = taken[root.name, default: 0] + 1
+            taken[root.name] = seen
+            keys[root.path] = seen == 1 ? root.name : "\(root.name) \(seen)"
+        }
+        return keys
+    }
+
+    /// Each repository's rows and statuses: the page's for the one it is
+    /// on, the repository's own listing for the rest — all of its files on
+    /// the browse page, only its changed ones over a diff. Over a diff a
+    /// repository with nothing changed stands no header, the way a
+    /// JetBrains commit view lists only the roots that have something to
+    /// commit; with none, the tree is empty and says so.
+    private func workspaceListings(_ listing: ShellTree) -> [(root: TreeRoot, paths: [String], status: [GitStatusEntry])] {
+        let listings = workspaceRoots.map { root in
+            if root.path == pageRootPath { return (root: root, paths: listing.paths, status: listing.gitStatus) }
+            return (root: root, paths: listing.mode == .browse ? root.paths : root.changedPaths, status: root.gitStatus)
+        }
+        return listing.mode == .browse ? listings : listings.filter { !$0.paths.isEmpty }
+    }
+
+    /// The tree remade from what it now stands on, wherever that changed.
+    /// The workspace's headers are repositories, its folds kept across a
+    /// move between them; a plain tree is remade per mode and per project,
+    /// and its folds start over with it, as the web tree's do.
+    private func rebuild() {
+        guard let listing else { return }
+        let built: [FileTreeNode]
+        let statuses: [GitStatusEntry]
+        let signature: [String]
+        if isMultiRoot {
+            let listings = workspaceListings(listing)
+            signature = listings.flatMap { entry in
+                [">\(entry.root.path)", entry.root.branch ?? ""] + entry.paths
+            }
+            built = listings.map { entry in
+                let key = keys[entry.root.path] ?? entry.root.name
+                return FileTreeNode(
+                    id: key, name: entry.root.name, isDirectory: true,
+                    children: FileTree.build(paths: entry.paths, prefix: key), root: entry.root)
+            }
+            statuses = listings.flatMap { entry in
+                entry.status.map { GitStatusEntry(path: id(of: $0.path, in: entry.root.path), status: $0.status) }
+            }
+        } else {
+            signature = listing.paths
+            built = []
+            statuses = listing.gitStatus
+        }
+        var changed = false
+        if signature != builtSignature {
+            builtSignature = signature
+            roots = isMultiRoot ? built : FileTree.build(paths: listing.paths)
+            nodes = FileTree.index(roots)
+            changed = true
+        }
+        if statuses != indexedStatuses {
+            indexedStatuses = statuses
+            index(statuses)
+        }
+        let key = isMultiRoot
+            ? "\(listing.mode.rawValue):workspace:\(workspaceRoots.map(\.path).joined(separator: "\n"))"
+            : "\(listing.mode.rawValue):\(listing.projectPath ?? "")"
+        if key != foldsKey {
+            foldsKey = key
+            toggled = []
+            query = ""
+            reveal(selected)
+            remadeVersion += 1
+            changed = true
+        }
+        if changed { refilter() }
+    }
+
+    /// What the tree was last built from and its statuses indexed from —
+    /// what a fresh report is measured against.
+    private var builtSignature: [String]?
+    private var indexedStatuses: [GitStatusEntry]?
 
     private func index(_ entries: [GitStatusEntry]) {
         var byPath: [String: GitFileStatus] = [:]

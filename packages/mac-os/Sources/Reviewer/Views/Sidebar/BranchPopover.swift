@@ -13,6 +13,19 @@
 // keys walked to (see `RowTooltip`).
 import SwiftUI
 
+extension View {
+    /// The row of buttons at a picker popover's foot: their pills lined up
+    /// with the rows' highlight above, and clear of the popover's rounded
+    /// corners below.
+    func popoverFooterBar() -> some View {
+        buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .padding(.horizontal, BranchPopover<EmptyView>.listInset)
+            .padding(.top, 6)
+            .padding(.bottom, 9)
+    }
+}
+
 /// A row the popover offers: a branch, or one of the answers that needs
 /// none — "Uncommitted changes", "All branches" — which stands at the
 /// head of the list and steps aside while a search is on, since a filter
@@ -27,6 +40,19 @@ struct BranchChoice: Identifiable, Hashable {
     let badge: String?
     /// Ticked — the branch the picker is on, where the pick is a setting.
     let checked: Bool
+    /// A second line under the name, on one line cut in the middle — the
+    /// branch a repository is on, in the repository picker.
+    var detail: String? = nil
+    /// What hovering the row says beyond what it shows — where a
+    /// repository lives, which is noise in the row itself.
+    var tooltip: String? = nil
+    /// The glyph before `detail` — a branch's, where the detail is one —
+    /// or nil for a detail that is no branch.
+    var detailSymbol: String? = nil
+    /// The names whose monograms stand in the glyph's place — a
+    /// repository's, so a row wears the colour it wears everywhere else, or
+    /// a workspace's repositories', overlapping.
+    var monograms: [String] = []
 
     static func branch(_ ref: BranchRef, badge: String? = nil, checked: Bool = false) -> BranchChoice {
         BranchChoice(
@@ -74,6 +100,12 @@ private struct ShownSection: Identifiable {
     let lines: [Line]
 }
 
+/// The step in front, kept apart from the view's state: it is set as the
+/// list is laid out, which state may not be.
+private final class FrontStep {
+    var key = ""
+}
+
 /// The submenu open, and on which row — one at a time across the list —
 /// and whether the keys opened it, which lights its first item.
 private struct Submenu: Equatable {
@@ -90,7 +122,11 @@ private struct Submenu: Equatable {
 private final class RowReading {
     var hovered: String?
     var walked: String?
-    var key: String? { hovered ?? walked }
+    /// The rows are being swapped for another step's, and the popover is
+    /// still easing to their height: whatever row the still pointer lands
+    /// on is not one being read, and says nothing until the list settles.
+    var settling = false
+    var key: String? { settling ? nil : hovered ?? walked }
 }
 
 struct BranchPopover<Footer: View>: View {
@@ -101,16 +137,43 @@ struct BranchPopover<Footer: View>: View {
     /// The row's submenu — what can be done to the branch besides picking
     /// it — or nil where a pick is all a row is for.
     let actions: ((BranchRef) -> [BranchAction])?
+    /// The menu of a row that is no branch — a workspace's repository —
+    /// where the picker offers one.
+    var rowActions: ((BranchChoice) -> [BranchAction])? = nil
+    /// A row whose pick leads further in — a repository, opening its
+    /// branches — rather than being the answer: the popover stays up for
+    /// what comes next instead of going away under it.
+    var drillsIn: (BranchChoice) -> Bool = { _ in false }
+    /// Whether the list eases to a new height as its rows change — the
+    /// agent chat's picker, whose steps swap one list for another — or
+    /// takes it at once, as every other picker does.
+    var easesHeight = false
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
     @State private var active = 0
     @State private var reading = RowReading()
     @State private var submenu: Submenu?
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldWantsKeyboard = false
 
     private static var width: CGFloat { 320 }
     private static var listHeight: CGFloat { 360 }
+    /// The air between the rows' highlight and the popover's edges.
+    static var listInset: CGFloat { 6 }
+    /// How the list — and the popover around it — moves to a new height: a
+    /// gentle ease, for a change of size the eye follows rather than a
+    /// press it answers.
+    static var resize: Animation { .smooth(duration: 0.32) }
+
+    /// Which rows these are: another step's, not a search of these.
+    private var stepKey: String { sections.map(\.id).joined(separator: "\n") }
+
+    @State private var contentHeight: CGFloat = 0
+    /// The step whose rows are in front, read by the rows' height reports:
+    /// a list crossfading out goes on reporting its own height for the
+    /// length of the fade, which tugged the eased height back towards the
+    /// step being left and made the popover shudder as it grew.
+    @State private var front = FrontStep()
 
     private var searching: Bool { !needle.isEmpty }
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
@@ -121,7 +184,12 @@ struct BranchPopover<Footer: View>: View {
         var index = 0
         return sections.compactMap { section in
             if searching, section.hiddenWhileSearching { return nil }
-            let rows = searching ? section.rows.filter { $0.title.localizedCaseInsensitiveContains(needle) } : section.rows
+            let rows = searching
+                ? section.rows.filter {
+                    $0.title.localizedCaseInsensitiveContains(needle)
+                        || ($0.detail?.localizedCaseInsensitiveContains(needle) ?? false)
+                }
+                : section.rows
             guard !rows.isEmpty else { return nil }
             let lines = rows.map { choice in
                 defer { index += 1 }
@@ -157,52 +225,96 @@ struct BranchPopover<Footer: View>: View {
         // A submenu put away hands the keys back to the search, so ↑/↓ go
         // on walking the branches from where they were.
         .onChange(of: submenu) { _, open in
-            if open == nil { Task { @MainActor in fieldFocused = true } }
+            if open == nil { fieldWantsKeyboard = true }
         }
         // The field is focused only once it is on screen, a turn of the
         // run loop after the popover comes up.
-        .onAppear { Task { @MainActor in fieldFocused = true } }
+        .onAppear { fieldWantsKeyboard = true }
+        // Rows swapped for another step's — a repository's branches after
+        // the repositories — start the search and the walk over.
+        .onChange(of: sections.map(\.id)) {
+            query = ""
+            active = 0
+            reading.settling = true
+        }
+        // The tooltips wait out the ease to the new step's height, a
+        // little past it, and the row under the pointer speaks once the
+        // list has come to rest.
+        .task(id: stepKey) {
+            guard reading.settling else { return }
+            try? await Task.sleep(for: Self.settleTime)
+            guard !Task.isCancelled else { return }
+            reading.settling = false
+        }
     }
 
+    private static var settleTime: Duration { .milliseconds(380) }
+
     private func field(_ lines: [Line]) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-            TextField(placeholder, text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .focused($fieldFocused)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, 10)
-        .frame(height: 32)
+        MinimalSearchField(prompt: placeholder, text: $query, takesKeyboard: $fieldWantsKeyboard)
+            .padding(8)
+    }
+
+    /// The air between rows: a hair between a menu's one-line rows, and
+    /// between two-line rows — a repository over the branch it is on — half
+    /// what the list keeps from the popover's edges, so each stands apart
+    /// while the list still reads as one.
+    private func rowGap(_ lines: [Line]) -> CGFloat {
+        lines.contains { $0.choice.detail != nil } ? Self.listInset / 2 : 1
     }
 
     private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
-        ScrollViewReader { proxy in
+        let step = stepKey
+        front.key = step
+        return ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(shown) { section in
-                        if let title = section.title {
-                            SectionHeader(title: title, count: section.lines.count)
-                        }
-                        ForEach(section.lines) { line in
-                            ChoiceRow(
-                                line: line, lit: line.index == active, reading: reading,
-                                actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
-                                submenu: submenuBinding(for: line.key),
-                                ran: dismiss
-                            ) {
-                                pick(at: line.index, in: lines)
+                // Rows swapped for another step's crossfade, the old over
+                // the new, while the list eases to the new rows' height —
+                // keyed by the step so a search, which only narrows the
+                // same rows, does not fade them.
+                ZStack(alignment: .top) {
+                    LazyVStack(alignment: .leading, spacing: rowGap(lines)) {
+                        ForEach(shown) { section in
+                            if let title = section.title {
+                                SectionHeader(title: title, count: section.lines.count)
                             }
-                            .id(line.key)
+                            ForEach(section.lines) { line in
+                                ChoiceRow(
+                                    line: line, lit: line.index == active, reading: reading,
+                                    actions: menu(for: line.choice),
+                                    submenu: submenuBinding(for: line.key),
+                                    ran: dismiss
+                                ) {
+                                    pick(at: line.index, in: lines)
+                                }
+                                .id(line.key)
+                            }
                         }
                     }
+                    .padding(Self.listInset)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height.rounded() } action: { measured in
+                        // The list opens at its height, and from then on
+                        // takes a new one — eased, where the picker asks for
+                        // it, as a search narrows it or its rows are swapped
+                        // for the next step's — and the popover with it.
+                        guard step == front.key, measured != contentHeight else { return }
+                        withAnimation(easesHeight && contentHeight > 0 ? Self.resize : nil) {
+                            contentHeight = measured
+                        }
+                    }
+                    .id(stepKey)
+                    .transition(.opacity)
                 }
-                .padding(4)
             }
-            .frame(maxHeight: Self.listHeight)
+            // While the rows fit, no indicator at all: a list easing taller
+            // holds rows taller than its frame for the length of the ease,
+            // and the indicator would flash over them each time.
+            .scrollIndicators(contentHeight > Self.listHeight ? .automatic : .hidden)
+            // As tall as its rows, up to the cap: a scroll view takes all the
+            // height it is offered, which left a short list scrollable, its
+            // indicator over the rows and its last row against the footer.
+            .frame(height: min(max(contentHeight, 1), Self.listHeight))
+            .scrollBounceBehavior(.basedOnSize)
             .onChange(of: active) { _, index in
                 guard lines.indices.contains(index) else { return }
                 proxy.scrollTo(lines[index].key)
@@ -229,11 +341,20 @@ struct BranchPopover<Footer: View>: View {
     /// → opens the lit row's submenu, its first item lit, as a menu's
     /// submenu opens — once the caret has nowhere further right to go.
     private func openSubmenu(in lines: [Line], caretAtEnd: Bool) -> Bool {
-        guard actions != nil, caretAtEnd, lines.indices.contains(active), lines[active].choice.branch != nil else {
+        guard caretAtEnd, lines.indices.contains(active), menu(for: lines[active].choice) != nil else {
             return false
         }
         submenu = Submenu(key: lines[active].key, fromKeys: true)
         return true
+    }
+
+    /// The row's menu, built only once it opens: a branch's actions, or
+    /// the picker's own for a row that is no branch.
+    private func menu(for choice: BranchChoice) -> (() -> [BranchAction])? {
+        if let branch = choice.branch {
+            return actions.map { actions in { actions(branch) } }
+        }
+        return rowActions.map { rowActions in { rowActions(choice) } }
     }
 
     private func submenuBinding(for key: String) -> Binding<Submenu?> {
@@ -257,8 +378,9 @@ struct BranchPopover<Footer: View>: View {
 
     private func pick(at index: Int, in lines: [Line]) {
         guard lines.indices.contains(index) else { return }
-        dismiss()
-        pick(lines[index].choice)
+        let choice = lines[index].choice
+        if !drillsIn(choice) { dismiss() }
+        pick(choice)
     }
 }
 
@@ -327,18 +449,42 @@ private struct ChoiceRow: View {
     var body: some View {
         let hovered = reading.hovered == line.key
         HStack(spacing: 8) {
-            Image(systemName: choice.symbol)
-                .foregroundStyle(choice.tint ?? Color.secondary)
-                .frame(width: 14)
-            Text(choice.title)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .measuringClip(choice.title, font: rowFont, into: $clipped)
+            if choice.monograms.count > 1 {
+                WorkspaceGlyph(names: choice.monograms, size: 18)
+            } else if let monogram = choice.monograms.first {
+                RepoAvatar(name: monogram, size: 18)
+            } else {
+                Image(systemName: choice.symbol)
+                    .foregroundStyle(choice.tint ?? Color.secondary)
+                    .frame(width: 14)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(choice.title)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .measuringClip(choice.title, font: rowFont, into: $clipped)
+                if let detail = choice.detail {
+                    HStack(spacing: 3) {
+                        if let symbol = choice.detailSymbol {
+                            Image(systemName: symbol)
+                                .font(.system(size: 9))
+                        }
+                        Text(detail)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .help(detail)
+                }
+            }
             Spacer(minLength: 4)
             if let badge = choice.badge {
                 Text(badge)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             if choice.checked {
                 Image(systemName: "checkmark")
@@ -368,7 +514,7 @@ private struct ChoiceRow: View {
             in: RoundedRectangle(cornerRadius: 6))
         // The submenu opens where the tooltip would stand, so the tooltip
         // gives way to it.
-        .rowTooltip(clipped ? choice.title : nil, active: reading.key == line.key && !submenuOpen)
+        .rowTooltip(choice.tooltip ?? (clipped ? choice.title : nil), active: reading.key == line.key && !submenuOpen)
         .contentShape(Rectangle())
         .onTapGesture(perform: pick)
         .onHover { inside in

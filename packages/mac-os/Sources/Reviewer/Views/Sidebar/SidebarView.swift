@@ -34,7 +34,7 @@ struct SidebarView: View {
         // column held, at once: the outgoing field is on screen for the
         // length of the crossfade, and would otherwise keep the strokes
         // meant for the one coming in.
-        .onChange(of: layout) { PaneSearchField.releaseKeyboard() }
+        .onChange(of: layout) { MinimalSearchField.releaseKeyboard() }
     }
 }
 
@@ -122,30 +122,26 @@ extension View {
     }
 }
 
-/// The band along the island's top: the web header's 36pt around a 28pt
-/// chip, with the branch picker leading it and, while the changes are your
-/// own, the compare picker at the trailing edge — the branch the tree is a
-/// tree of, and what its changes are measured from, each at its own width
-/// and the room between them the sidebar's to give. The web app puts the
-/// compare picker at the head of the band over the diff; the shell's
-/// sidebar is where its commit view keeps its controls. Over the tree only
-/// — the sessions list is not one branch's.
+/// The band along the island's top: the title of what the tree is a tree
+/// of — the repository over the branch it is on, the whole width the
+/// sidebar has, the way Xcode titles a project over its branch — and the
+/// one way to another repository or branch. What the changes are measured
+/// from is not the tree's identity but a scope over its list, and stands
+/// in the changes' filter row (see `ChangesHeader`). Over the tree only —
+/// the sessions list is not one branch's.
 private struct SidebarHeader: View {
-    @Environment(AppModel.self) private var model
-
     var body: some View {
-        HStack(spacing: 4) {
-            BranchPicker()
-            Spacer(minLength: 0)
-            if let comparison = model.sidebar.comparison {
-                ComparePicker(comparison: comparison)
-                    .transition(.opacity)
-            }
-        }
-        .padding(.horizontal, 4)
-        .frame(height: 36)
-        .animation(SidebarMotion.change, value: model.sidebar.comparison == nil)
+        BranchPicker(look: .title)
+            .padding(.horizontal, SidebarInsets.side)
+            .frame(height: 44)
     }
+}
+
+/// The one line the sidebar's bands keep from its edges — the title, the
+/// changes' filter row, and the tree's row highlights — so they stand flush
+/// with one another down the column.
+enum SidebarInsets {
+    static let side: CGFloat = 10
 }
 
 /// The layout for the surface the page is on — the merge requests, its
@@ -268,28 +264,40 @@ private struct FilesLayout: View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
             Band(edge: .top, shown: changes) {
-                ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard)
+                ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard, scoped: true)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchBandHeight = $0 }
             }
             FileTreeOutline()
                 .overlay {
                     ZStack {
                         if tree.isEmpty {
-                            TreePlaceholder(loading: tree.isLoading, empty: changes ? "No changes" : "No files")
+                            TreePlaceholder(loading: tree.isLoading, empty: empty)
                                 .transition(.opacity)
                         }
                     }
                     .animation(SidebarMotion.change, value: tree.isEmpty)
                 }
                 .slid(changes, by: CGSize(width: 0, height: searchBandHeight))
-            Band(edge: .bottom, shown: tree.commit != nil) {
-                if let commit = tree.commit {
-                    CommitComposer(composer: commit, project: tree.listing?.projectPath ?? "")
+            Band(edge: .bottom, shown: tree.workspaceCommit != nil) {
+                if let commit = tree.workspaceCommit {
+                    CommitComposer(composer: commit, project: model.commitMessageScope)
                 }
             }
         }
         .clipped()
     }
+
+    /// What the tree says with no rows: no files on the browse page; over
+    /// your changes, that they are clean — or that the filter matched none.
+    private var empty: TreeEmpty {
+        let tree = model.sidebar
+        guard changes else { return .noFiles }
+        if tree.isSearching { return .noMatch(tree.query.trimmingCharacters(in: .whitespaces)) }
+        return .clean(against: tree.comparison?.against)
+    }
+
+    /// What the composer keeps its message under: the workspace, while the
+    /// changes are several repositories', or the one repository's.
 }
 
 /// A band at an edge of the file tree, sliding in from that edge and back
@@ -312,16 +320,28 @@ private struct Band<Content: View>: View {
     }
 }
 
-/// The search over the changed files — the system's own field, the one
-/// the merge-requests list stands its search in (see `PullRequestList`),
-/// so the two columns search alike.
+/// The search over the changed files — the field the merge-requests list
+/// and the bottom pane's bars stand their searches in (see
+/// `MinimalSearchField`), so every column searches alike.
 struct ChangesHeader: View {
     @Binding var query: String
     @Binding var wantsKeyboard: Bool
+    /// Whether the compare picker stands at the row's trailing edge — over
+    /// your own changes, where what they are measured from is yours to
+    /// pick, the way Finder's scope bar stands over its results.
+    var scoped = false
+    @Environment(AppModel.self) private var model
 
     var body: some View {
-        PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
-            .sidebarSearchBand()
+        HStack(spacing: 6) {
+            MinimalSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
+            if scoped, let comparison = model.sidebar.comparison {
+                ComparePicker(comparison: comparison)
+                    .transition(.opacity)
+            }
+        }
+        .animation(SidebarMotion.change, value: model.sidebar.comparison == nil)
+        .sidebarSearchBand()
     }
 }
 
@@ -330,28 +350,64 @@ struct ChangesHeader: View {
 /// its shape as the surface under it changes.
 extension View {
     func sidebarSearchBand() -> some View {
-        padding(.horizontal, 10)
+        padding(.horizontal, SidebarInsets.side)
             .padding(.top, 8)
             .padding(.bottom, 6)
     }
 }
 
+/// What an empty tree says — a glyph, a title, and a short line on why —
+/// at the sidebar's own scale, the way Xcode's navigators say an empty
+/// list: quiet enough that a clean tree reads as rest, not as a problem.
+/// The glyph is what the list would hold, as Mail's empty mailbox wears a
+/// tray — a change wears the Review rail's ±, not a verdict like a tick.
+struct TreeEmpty {
+    let title: String
+    let symbol: String
+    var detail: String? = nil
+
+    static let noFiles = TreeEmpty(title: "No Files", symbol: "folder")
+    static let noChanges = TreeEmpty(title: "No Changes", symbol: CodeSurface.review.symbol)
+
+    /// Nothing to commit or review, and against what.
+    static func clean(against: String?) -> TreeEmpty {
+        TreeEmpty(
+            title: "No Changes", symbol: CodeSurface.review.symbol,
+            detail: against.map { "Nothing differs from \($0)" } ?? "Nothing to commit")
+    }
+
+    static func noMatch(_ query: String) -> TreeEmpty {
+        TreeEmpty(title: "No Results", symbol: "magnifyingglass", detail: "Nothing matches “\(query)”")
+    }
+}
+
 struct TreePlaceholder: View {
     let loading: Bool
-    let empty: String
+    let empty: TreeEmpty
 
     var body: some View {
-        VStack {
-            Spacer()
+        Group {
             if loading {
                 Orb(size: 16, label: "Loading")
             } else {
-                Text(empty)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    Image(systemName: empty.symbol)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 2)
+                    Text(empty.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.primary.opacity(0.85))
+                    if let detail = empty.detail {
+                        Text(detail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(.horizontal, 24)
             }
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

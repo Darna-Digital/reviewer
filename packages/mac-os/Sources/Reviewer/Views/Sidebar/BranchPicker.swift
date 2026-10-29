@@ -8,6 +8,18 @@
 import SwiftUI
 
 struct BranchPicker: View {
+    /// How the picker stands: a chip naming the branch, as on the session
+    /// bar's strip; or the sidebar's title — the repository over its
+    /// branch, the way Xcode's toolbar names a project over the branch it
+    /// is on — whose popover opens on the workspace's repositories and
+    /// steps into one's branches (see `WorkspaceBranchPopover`), so one
+    /// control says and switches both.
+    enum Look {
+        case chip
+        case title
+    }
+
+    var look: Look = .chip
     @Environment(AppModel.self) private var model
     @Environment(\.controlSize) private var controlSize
     /// Sidebar pages kept up behind the one in front carry pickers of their
@@ -21,41 +33,93 @@ struct BranchPicker: View {
     private var font: NSFont { .systemFont(ofSize: controlSize == .small ? 11 : 13) }
 
     var body: some View {
-        Button { open.toggle() } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "arrow.triangle.branch")
-                Text(name)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .clipHelp(name, font: font)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.secondary)
+        label
+            .disabled(!model.hasProject)
+            .popover(isPresented: $open, arrowEdge: .bottom) { popover }
+            .closesOnNavigation($open)
+            .onChange(of: model.branchPickerRequests) {
+                if inFront { open.toggle() }
             }
-            .font(Font(font))
-        }
-        .buttonStyle(.accessoryBar)
-        .disabled(!model.hasProject)
-        .popover(isPresented: $open, arrowEdge: .bottom) {
+    }
+
+    /// The title's popover is the workspace's, a step at a time, as the
+    /// agent chat's chip opens it; the chip's is the branches of the
+    /// repository the page is on.
+    @ViewBuilder
+    private var popover: some View {
+        if look == .title {
+            WorkspaceBranchPopover(dismiss: { open = false }, ticksFocused: true,
+                                   actions: { actionsOffered(in: $0) }) { root in
+                ThemedDivider()
+                HStack(spacing: 2) {
+                    if let root, root === model.focusedRoot {
+                        branchFooterButtons
+                    }
+                    Spacer(minLength: 0)
+                    Button("Add repository…") { open = false; model.chooseRootToAdd() }
+                }
+                .popoverFooterBar()
+            }
+        } else {
             BranchPopover(
-                sections: sections, placeholder: "Search branches", pick: checkout, dismiss: { open = false },
-                actions: model.branchActions(for:)
+                sections: sections, placeholder: "Search branches",
+                pick: pick, dismiss: { open = false }, actions: model.branchActions(for:)
             ) {
                 ThemedDivider()
                 HStack(spacing: 2) {
-                    Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
-                    Button("Update") { open = false; model.fetch() }
-                    Button("Push…") { open = false; model.push() }
+                    branchFooterButtons
                     Spacer(minLength: 0)
                 }
-                .buttonStyle(.accessoryBar)
-                .controlSize(.small)
-                .padding(6)
+                .popoverFooterBar()
             }
         }
-        .closesOnNavigation($open)
-        .onChange(of: model.branchPickerRequests) {
-            if inFront { open.toggle() }
+    }
+
+    /// What can be done to a branch, and to the repository, act on the
+    /// repository the page is on, so they are offered only over its
+    /// branches.
+    private func actionsOffered(in root: RootModel) -> ((BranchRef) -> [BranchAction])? {
+        guard root === model.focusedRoot else { return nil }
+        return { [model] branch in model.branchActions(for: branch) }
+    }
+
+    @ViewBuilder
+    private var branchFooterButtons: some View {
+        Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
+        Button("Update") { open = false; model.fetch() }
+        Button("Push…") { open = false; model.push() }
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        switch look {
+        case .chip:
+            Button { open.toggle() } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.triangle.branch")
+                    Text(name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .clipHelp(name, font: font)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .font(Font(font))
+            }
+            .buttonStyle(.accessoryBar)
+        case .title:
+            if model.roots.count > 1 {
+                Button { open.toggle() } label: {
+                    WorkspaceTitle(name: model.workspace?.displayName ?? "Workspace", repositories: model.roots.map(\.name))
+                }
+                .buttonStyle(.accessoryBar)
+                .help(model.roots.map { "\($0.name) — \($0.branch ?? "Detached HEAD")" }.joined(separator: "\n"))
+            } else {
+                Button { open.toggle() } label: { SourceControlTitle(repository: model.focusedRoot?.name, branch: name) }
+                    .buttonStyle(.accessoryBar)
+                    .help(model.focusedRoot.map { "\($0.name) — \(name)" } ?? name)
+            }
         }
     }
 
@@ -69,9 +133,81 @@ struct BranchPicker: View {
         ]
     }
 
-    private func checkout(_ choice: BranchChoice) {
+    private func pick(_ choice: BranchChoice) {
         guard let branch = choice.branch, !branch.isCurrent else { return }
         model.checkout(branch.ref)
+    }
+}
+
+/// The sidebar's title: the repository's avatar and name over the branch
+/// it is on, cut at the end rather than the middle — a branch name's
+/// meaning is at its front, the ticket and the kind of change, the way
+/// Xcode keeps it.
+private struct SourceControlTitle: View {
+    let repository: String?
+    let branch: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let repository {
+                RepoAvatar(name: repository, size: 22)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                if let repository {
+                    Text(repository)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                }
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 9, weight: .medium))
+                    Text(branch)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
+/// The sidebar's title over a workspace of several repositories: the
+/// workspace's glyph and name over the repositories it holds, as the agent
+/// chat's chip names it — the popover under it is where one of them, and
+/// its branch, is picked.
+private struct WorkspaceTitle: View {
+    let name: String
+    let repositories: [String]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            WorkspaceGlyph(names: repositories, size: 22)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Text(repositories.joined(separator: ", "))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
@@ -90,6 +226,24 @@ struct BranchAction: Identifiable {
 }
 
 extension AppModel {
+    /// What a workspace's repository offers on its row's menu: the page
+    /// turned to it, and — while the workspace holds others — another
+    /// repository put in its place, or it taken out.
+    func repositoryActions(for root: RootModel) -> [BranchAction] {
+        var actions: [BranchAction] = []
+        func item(_ title: String, destructive: Bool = false, _ run: @escaping () -> Void) {
+            actions.append(BranchAction(id: actions.count, kind: .item(title: title, destructive: destructive, run: run)))
+        }
+        if root !== focusedRoot {
+            item("Switch to ‘\(root.name)’") { self.focus(root: root) }
+        }
+        guard roots.count > 1 else { return actions }
+        item("Replace…") { self.chooseReplacement(for: root) }
+        if !actions.isEmpty { actions.append(BranchAction(id: actions.count, kind: .divider)) }
+        item("Remove", destructive: true) { Task { await self.removeRoot(root) } }
+        return actions
+    }
+
     /// The same actions the web app's switcher gives a branch, in the same
     /// order, worded against the branch you are on.
     func branchActions(for branch: BranchRef) -> [BranchAction] {

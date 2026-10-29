@@ -50,7 +50,7 @@ struct ReviewerApp: App {
                 .environment(model)
         }
 
-        Window("Open repository", id: ReviewerWindow.opener) {
+        Window("Open workspace", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
                 .environment(model)
         }
@@ -100,15 +100,20 @@ struct ReviewerCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New agent session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
-            Button("Open repository…") { model.showOpener() }
+            Button("Open workspace…") { model.showOpener() }
                 .keyboardShortcut("o", modifiers: .command)
+            Button("Add repository to workspace…") { model.chooseRootToAdd() }
+                .keyboardShortcut("o", modifiers: [.command, .option])
+                .disabled(!model.hasProject)
+            Button("Save as workspace…") { model.askToSaveWorkspace() }
+                .disabled(!model.hasProject || model.workspace?.workspace != nil)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Close tab") { model.closeCurrentTab() }
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
-        // Into the Edit menu, under the pasteboard: ⌘E, ⇧⌘O and ⇧⌘F, the
+        // Into the Edit menu, under the pasteboard: ⌘K, ⇧⌘O and ⇧⌘F, the
         // TUI's chords for the commands and the two searches, and each the
         // one way in from the keys.
         // Then ⌘F, which finds on the page the window is on — the files of
@@ -118,7 +123,7 @@ struct ReviewerCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Commands…") { model.showCommands() }
-                .keyboardShortcut("e", modifiers: .command)
+                .keyboardShortcut("k", modifiers: .command)
                 .disabled(!model.hasProject)
             SearchMenuItems(model: model)
                 .disabled(!model.hasProject)
@@ -180,8 +185,8 @@ struct ReviewerCommands: Commands {
             }
         }
         // The git chords the TUI shares: ⇧⌘B the branch switcher, ⌃G a
-        // drafted commit message, and the JetBrains pair ⌘K to commit and
-        // ⌥⌘K to commit and push. The TUI also answers ⌥⌘4 for the
+        // drafted commit message, ⇧⌘K to commit and ⌥⌘K to commit and push
+        // — ⌘K itself being the palette's. The TUI also answers ⌥⌘4 for the
         // switcher; here that is the rail's Branches (see `RailShortcut`).
         // ⌘↩ stays the message box's own (see `CommitMessageEditor`).
         CommandMenu("Git") {
@@ -189,11 +194,12 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("b", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)
             Divider()
+            Button("Generate commit message") { model.generateCommitMessage() }
+                .keyboardShortcut("g", modifiers: .control)
+                .disabled(!model.hasProject)
             Group {
-                Button("Generate commit message") { model.ask(commitComposer: .draft) }
-                    .keyboardShortcut("g", modifiers: .control)
                 Button("Commit") { model.ask(commitComposer: .commit) }
-                    .keyboardShortcut("k", modifiers: .command)
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
                 Button("Commit and push") { model.ask(commitComposer: .commitAndPush) }
                     .keyboardShortcut("k", modifiers: [.command, .option])
             }

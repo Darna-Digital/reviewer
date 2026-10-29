@@ -92,7 +92,9 @@ final class Chats {
 
     @ObservationIgnored var onListChanged: (() -> Void)?
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — the repository a new session
+    /// starts in. A session already started keeps the one it began in.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private let defaults = UserDefaults.standard
     /// The conversations left lately or read ahead, newest last: what a
     /// `ChatSession` opens on while its first snapshot is on its way.

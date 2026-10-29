@@ -29,7 +29,7 @@ export function EmptyPane({ hint }: { hint: string }) {
   const ways: ReadonlyArray<Way> = [
     {
       label: "Commands",
-      keys: "⌘E",
+      keys: "⌘K",
       target: "commands",
       run: toggleCommandSearch,
     },

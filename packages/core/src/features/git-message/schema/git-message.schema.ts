@@ -7,9 +7,26 @@ export const CommitAgent = Schema.Literals([
   "cursor",
 ]);
 export type CommitAgent = typeof CommitAgent.Type;
+/**
+ * One repository of a workspace a draft reads from: where it is, what it is
+ * called in the prompt, and which of its files the commit takes (none named
+ * is every change).
+ */
+export const DraftRepository = Schema.Struct({
+  path: Schema.String,
+  name: Schema.String,
+  paths: Schema.Array(Schema.String),
+});
+export type DraftRepository = typeof DraftRepository.Type;
+
+/**
+ * A draft of the request's repository's `paths` — or, where one commit spans
+ * a workspace of several, of each named repository's own.
+ */
 export const GenerateBody = Schema.Struct({
   paths: Schema.optionalKey(Schema.Array(Schema.String)),
   agent: Schema.optionalKey(CommitAgent),
+  repositories: Schema.optionalKey(Schema.Array(DraftRepository)),
 });
 export type GenerateBody = typeof GenerateBody.Type;
 

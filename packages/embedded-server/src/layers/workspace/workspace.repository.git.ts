@@ -10,10 +10,15 @@ import type { PlatformError, SystemErrorTag } from "effect/PlatformError";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { homedir, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
-import { NoRepoSelected, StorageError } from "@reviewer/core/shared";
-import { InvalidRepo, mediaTypeFor } from "@reviewer/core/workspace";
+import { NoRepoSelected, NotFound, StorageError } from "@reviewer/core/shared";
+import {
+  folderName,
+  InvalidRepo,
+  mediaTypeFor,
+} from "@reviewer/core/workspace";
 import { RepoIndexService } from "./repo-index.ts";
 import { isGitRoot, readBranch } from "./repo-scan.ts";
+import * as saved from "./saved-workspaces.ts";
 import { resolveRepo, WorkspaceContext } from "./workspace-context.ts";
 import type {
   BrowseEntry,
@@ -61,6 +66,16 @@ export const revealCommand = (
   };
 };
 
+/** A write to the shared database, its failure told as a StorageError. */
+const tryDb = <A>(write: () => A) =>
+  Effect.try({
+    try: write,
+    catch: (error) =>
+      new StorageError({
+        reason: error instanceof Error ? error.message : String(error),
+      }),
+  });
+
 // Git's own heuristic: a NUL byte in the first 8k means "not text".
 const BINARY_SNIFF_BYTES = 8000;
 const looksBinary = (bytes: Uint8Array) =>
@@ -75,19 +90,37 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
   const tryFs = <A, R>(effect: Effect.Effect<A, PlatformError, R>) =>
     effect.pipe(Effect.mapError(toStorageError));
 
-  /** The open repository as the clients see it, its branch read afresh so a
-   * checkout made elsewhere shows without reopening it. */
+  /** The open workspace as the clients see it, each root's branch read
+   * afresh so a checkout made elsewhere shows without reopening it. */
   const info: WorkspaceRepo["info"] = Effect.gen(function* () {
     const project = yield* ctx.current;
+    const roots = yield* Effect.forEach(yield* ctx.roots, (path) =>
+      Effect.map(readBranch(path), (branch) => ({
+        path,
+        name: folderName(path),
+        branch,
+      }))
+    );
+    const savedId = yield* ctx.savedId;
+    const openSaved =
+      savedId === null ? undefined : saved.findWorkspace(savedId);
     return {
       project,
-      branch: project === null ? null : yield* readBranch(project),
+      branch:
+        roots.find((root) => root.path === project)?.branch ??
+        (project === null ? null : yield* readBranch(project)),
+      roots,
+      workspace:
+        openSaved === undefined
+          ? null
+          : { id: openSaved.id, name: openSaved.name },
       recents: yield* ctx.recents,
       home: homedir(),
     } satisfies WorkspaceInfo;
   });
 
-  const setCurrent: WorkspaceRepo["setCurrent"] = (path) =>
+  /** `path` as the root of the repository it is in, or why it is not one. */
+  const rootOf = (path: string) =>
     Effect.gen(function* () {
       const root = yield* resolveRepo(fs, spawner, path).pipe(
         Effect.mapError(toStorageError)
@@ -97,7 +130,95 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
           new InvalidRepo({ path, reason: "not a git repository" })
         );
       }
-      yield* ctx.selectRepo(root);
+      return root;
+    });
+
+  /** Every path as its repository's root, each once, in the order given. */
+  const rootsOf = (paths: ReadonlyArray<string>) =>
+    Effect.map(Effect.forEach(paths, rootOf), (roots) => [...new Set(roots)]);
+
+  const setCurrent: WorkspaceRepo["setCurrent"] = (path) =>
+    Effect.gen(function* () {
+      yield* ctx.selectRepo(yield* rootOf(path));
+      return yield* info;
+    });
+
+  const setRoots: WorkspaceRepo["setRoots"] = (paths) =>
+    Effect.gen(function* () {
+      const roots = yield* rootsOf(paths);
+      const savedId = yield* ctx.savedId;
+      if (savedId !== null) {
+        yield* tryDb(() => saved.updateWorkspace(savedId, { roots }));
+      }
+      yield* ctx.openRoots(roots, savedId);
+      return yield* info;
+    });
+
+  const workspaces: WorkspaceRepo["workspaces"] = tryDb(saved.listWorkspaces);
+
+  const createWorkspace: WorkspaceRepo["createWorkspace"] = (input) =>
+    Effect.gen(function* () {
+      const roots = yield* rootsOf(input.roots);
+      return yield* tryDb(() =>
+        saved.createWorkspace(input.name.trim() || "Workspace", roots)
+      );
+    });
+
+  const noSuchWorkspace = (id: string) =>
+    new NotFound({ reason: `There is no workspace ${id}.` });
+
+  const updateWorkspace: WorkspaceRepo["updateWorkspace"] = (id, patch) =>
+    Effect.gen(function* () {
+      const roots =
+        patch.roots === undefined ? undefined : yield* rootsOf(patch.roots);
+      const name = patch.name?.trim();
+      const updated = yield* tryDb(() =>
+        saved.updateWorkspace(id, {
+          ...(name ? { name } : {}),
+          ...(roots === undefined ? {} : { roots }),
+        })
+      );
+      if (updated === undefined) return yield* Effect.fail(noSuchWorkspace(id));
+      // The open workspace follows its saved self: a repository added to it
+      // opens beside the others, one taken out closes.
+      if (roots !== undefined && (yield* ctx.savedId) === id) {
+        yield* ctx.openRoots(updated.roots, id);
+      }
+      return updated;
+    });
+
+  const deleteWorkspace: WorkspaceRepo["deleteWorkspace"] = (id) =>
+    Effect.gen(function* () {
+      const deleted = yield* tryDb(() => saved.deleteWorkspace(id));
+      if (!deleted) return yield* Effect.fail(noSuchWorkspace(id));
+      // Its repositories stay open, as repositories opened on their own.
+      if ((yield* ctx.savedId) === id) {
+        yield* ctx.openRoots(yield* ctx.roots, null);
+      }
+    });
+
+  const openWorkspace: WorkspaceRepo["openWorkspace"] = (id) =>
+    Effect.gen(function* () {
+      const found = yield* tryDb(() => saved.findWorkspace(id));
+      if (found === undefined) return yield* Effect.fail(noSuchWorkspace(id));
+      // A repository moved or deleted since the workspace was saved is left
+      // out rather than refusing the rest — the workspace still opens, and
+      // keeps it, so it is back once the folder is.
+      const roots = (yield* Effect.forEach(found.roots, (path) =>
+        resolveRepo(fs, spawner, path).pipe(
+          Effect.catch(() => Effect.succeed(null))
+        )
+      )).filter((root): root is string => root !== null);
+      if (roots.length === 0) {
+        return yield* Effect.fail(
+          new InvalidRepo({
+            path: found.name,
+            reason: "none of its repositories are on disk any more",
+          })
+        );
+      }
+      yield* tryDb(() => saved.markWorkspaceOpened(id));
+      yield* ctx.openRoots(roots, id);
       return yield* info;
     });
 
@@ -191,6 +312,12 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
   return {
     info,
     setCurrent,
+    setRoots,
+    workspaces,
+    createWorkspace,
+    updateWorkspace,
+    deleteWorkspace,
+    openWorkspace,
     repos: index.read,
     rescan: index.rescan,
     browse,

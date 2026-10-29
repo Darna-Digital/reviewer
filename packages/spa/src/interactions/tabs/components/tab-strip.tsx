@@ -73,6 +73,11 @@ export interface TabStripProps {
   readonly onShowHistory?: (path: string) => void;
   /** Drop the dragged tab at `toIndex` of the strip's order. */
   readonly onMove: (path: string, toIndex: number) => void;
+  /**
+   * What hovering a tab says — where its file is, and in a workspace which
+   * repository; the tab's own identity when absent.
+   */
+  readonly describe?: (path: string) => string;
 }
 
 export function TabStrip({
@@ -88,6 +93,7 @@ export function TabStrip({
   onCloseAll,
   onShowHistory,
   onMove,
+  describe,
 }: TabStripProps) {
   const ordered = orderTabs(tabs);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -222,7 +228,7 @@ export function TabStrip({
                 align="start"
                 className="max-w-none whitespace-nowrap"
               >
-                {tab.path}
+                {describe?.(tab.path) ?? tab.path}
               </TooltipContent>
             </Tooltip>
           );

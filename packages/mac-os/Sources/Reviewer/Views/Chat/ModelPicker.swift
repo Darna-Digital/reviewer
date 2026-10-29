@@ -71,7 +71,7 @@ private struct ModelPopover: View {
     @Environment(AppModel.self) private var appModel
     @State private var active: Int? = 0
     @State private var column: ModelColumn = .list
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldWantsKeyboard = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -85,7 +85,7 @@ private struct ModelPopover: View {
             column = .list
         }
         .onChange(of: rail) { active = 0 }
-        .onAppear { Task { @MainActor in fieldFocused = true } }
+        .onAppear { fieldWantsKeyboard = true }
     }
 
     private var rails: [ModelRail] {
@@ -153,18 +153,8 @@ private struct ModelPopover: View {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
         let visible = needle.isEmpty ? inRail : inRail.filter { $0.label.lowercased().contains(needle) }
         return VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                TextField("Search models…", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .focused($fieldFocused)
-                    .autocorrectionDisabled()
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
+            MinimalSearchField(prompt: "Search models…", text: $query, takesKeyboard: $fieldWantsKeyboard)
+                .padding(8)
             ThemedDivider()
             if visible.isEmpty {
                 Spacer()

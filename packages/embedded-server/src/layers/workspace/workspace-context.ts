@@ -4,17 +4,21 @@
  * server's analogue of a database connection in the darna-stack: a single infra
  * service the feature repositories build on.
  *
- * What is open is one git repository — the project. It is persisted to
- * ~/.reviewer/state.json together with the repositories opened before and
- * when each was, and seeded at boot from REVIEWER_REPO / cwd. Only primitives
- * (paths, timestamps) cross this boundary — domain shapes live in the
- * workspace feature's schema.
+ * What is open is a workspace: one or more git repositories side by side —
+ * its roots — and, when they are a saved workspace, which one. Which root a
+ * request runs against is the request's to say (`requested-repo.ts`);
+ * `current` and `requireCurrent` answer with that root, or the workspace's
+ * first for a request that names none. What is open is kept in the database
+ * together with the repositories opened before and when each was (see
+ * `db/app-state.ts`), and seeded at boot from REVIEWER_REPO / cwd. Only
+ * primitives (paths, timestamps, ids) cross this boundary — domain shapes
+ * live in the workspace feature's schema.
  *
  * Several servers can be up at once — one per Reviewer window, each on its
- * own port — sharing the one state file, so a write folds into what the
- * file holds by then rather than replacing it. A server booted on an
- * explicit REVIEWER_REPO is a window opened beside the main one, and leaves
- * the remembered project to that one: the next plain launch comes back to
+ * own port — sharing the one database, so each open is recorded as its own
+ * write rather than a copy of the whole. A server booted on an explicit
+ * REVIEWER_REPO is a window opened beside the main one, and leaves the
+ * remembered workspace to that one: the next plain launch comes back to
  * where the main window was, not to whichever window wrote last.
  */
 import * as Context from "effect/Context";
@@ -28,27 +32,49 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { homedir } from "node:os";
 import { NoRepoSelected } from "@reviewer/core/shared";
 import { folderName, InvalidRepo } from "@reviewer/core/workspace";
+import {
+  importStateFile,
+  type OpenedRepo,
+  readOpened,
+  readOpenWorkspace,
+  recordOpened,
+  writeOpenWorkspace,
+} from "../db/app-state.ts";
 import { importLegacyJson } from "../db/legacy-import.ts";
 import { rememberProject } from "../db/scope.ts";
-import { getCurrentRepo, setCurrentRepo } from "./current-repo.ts";
+import { getOpenRoots, setOpenRoots } from "./current-repo.ts";
+import { RequestedRepo } from "./requested-repo.ts";
+import { findWorkspace } from "./saved-workspaces.ts";
 
-/** A repository opened before, and when it last was. */
-export interface OpenedRepo {
-  readonly path: string;
-  readonly openedAt: string;
-}
+export type { OpenedRepo } from "../db/app-state.ts";
 
 export interface WorkspaceContextShape {
-  /** The open repository, or fail with NoRepoSelected when none is. */
+  /**
+   * The root the request in flight runs against — the one it named, or the
+   * workspace's first — or fail with NoRepoSelected when nothing is open or
+   * the root it named is not.
+   */
   readonly requireCurrent: Effect.Effect<string, NoRepoSelected>;
-  /** The open repository, or null when nothing is open. */
+  /** The same root, or null where `requireCurrent` would fail. */
   readonly current: Effect.Effect<string | null>;
+  /** Every repository open side by side, in the workspace's order. */
+  readonly roots: Effect.Effect<ReadonlyArray<string>>;
+  /** The saved workspace the roots are, or null for roots opened on their own. */
+  readonly savedId: Effect.Effect<string | null>;
   /** Recently opened repositories, most-recent first. */
   readonly recents: Effect.Effect<ReadonlyArray<string>>;
   /** Every repository opened here, with its last open, most-recent first. */
   readonly opened: Effect.Effect<ReadonlyArray<OpenedRepo>>;
-  /** Open an already-resolved repository root as the project, and persist it. */
+  /** Open an already-resolved repository root on its own, and persist it. */
   readonly selectRepo: (repo: string) => Effect.Effect<void>;
+  /**
+   * Open already-resolved roots side by side — those of the saved workspace
+   * `savedId`, or of none — and persist them.
+   */
+  readonly openRoots: (
+    roots: ReadonlyArray<string>,
+    savedId: string | null
+  ) => Effect.Effect<void>;
   /** The user's home directory (for the picker's default browse root). */
   readonly home: string;
 }
@@ -58,16 +84,41 @@ export class WorkspaceContext extends Context.Service<
   WorkspaceContextShape
 >()("WorkspaceContext") {}
 
-const STATE_DIR = `${homedir()}/.reviewer`;
-const STATE_FILE = `${STATE_DIR}/state.json`;
-const MAX_RECENTS = 20;
+/**
+ * The root the request in flight runs against, given the roots open: the one
+ * it named when that is open, the first when it named none. A root it named
+ * that is not open answers null rather than falling back to another — a
+ * commit meant for one repository must never land in its neighbour.
+ */
+const requestedRoot = (roots: Effect.Effect<ReadonlyArray<string>>) =>
+  Effect.gen(function* () {
+    const requested = yield* RequestedRepo;
+    const open = yield* roots;
+    const root =
+      requested === null
+        ? (open[0] ?? null)
+        : open.includes(requested)
+          ? requested
+          : null;
+    return { requested, root };
+  });
 
-interface PersistedState {
-  /** The open repository. */
-  readonly current: string | null;
-  /** Repositories opened before, most-recent first, each with its last open. */
-  readonly recents: ReadonlyArray<OpenedRepo>;
-}
+const currentOf = (roots: Effect.Effect<ReadonlyArray<string>>) =>
+  Effect.map(requestedRoot(roots), ({ root }) => root);
+
+const requireCurrentOf = (roots: Effect.Effect<ReadonlyArray<string>>) =>
+  Effect.flatMap(requestedRoot(roots), ({ requested, root }) =>
+    root !== null
+      ? Effect.succeed(root)
+      : Effect.fail(
+          requested === null
+            ? new NoRepoSelected()
+            : new NoRepoSelected({ repo: requested })
+        )
+  );
+
+/** Where what is open was kept before the database — imported once. */
+const STATE_FILE = `${homedir()}/.reviewer/state.json`;
 
 export interface InitialSelection {
   readonly path: string;
@@ -122,118 +173,86 @@ export const resolveRepo = (
   });
 
 /**
- * State written before opens were dated listed recents as bare paths. Those
- * are dated from when the file was last written, a second apart so the order
- * they were kept in survives — the file was written at the newest open.
+ * A write of the app's state that fails is logged and let go: the open it
+ * records has already happened, and is still one the user can work in.
  */
-const readRecents = (
-  raw: unknown,
-  writtenAt: Date
-): ReadonlyArray<OpenedRepo> => {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((entry: unknown, index): OpenedRepo[] => {
-    if (typeof entry === "string") {
-      return [
-        {
-          path: entry,
-          openedAt: new Date(writtenAt.getTime() - index * 1000).toISOString(),
-        },
-      ];
+const remembering = (write: () => void) =>
+  Effect.sync(() => {
+    try {
+      write();
+    } catch (error) {
+      console.warn(
+        "reviewer: could not remember what is open —",
+        error instanceof Error ? error.message : error
+      );
     }
-    if (
-      typeof entry === "object" &&
-      entry !== null &&
-      typeof (entry as { path?: unknown }).path === "string" &&
-      typeof (entry as { openedAt?: unknown }).openedAt === "string"
-    ) {
-      const { openedAt, path } = entry as OpenedRepo;
-      return [{ path, openedAt }];
-    }
-    return [];
   });
-};
-
-/** Two windows' opens as one list, each repository at its latest, newest first. */
-const mergeOpened = (
-  ours: ReadonlyArray<OpenedRepo>,
-  theirs: ReadonlyArray<OpenedRepo>
-): ReadonlyArray<OpenedRepo> => {
-  const latest = new Map<string, string>();
-  for (const entry of [...ours, ...theirs]) {
-    const known = latest.get(entry.path);
-    if (known === undefined || known < entry.openedAt) {
-      latest.set(entry.path, entry.openedAt);
-    }
-  }
-  return [...latest]
-    .map(([path, openedAt]) => ({ path, openedAt }))
-    .sort((a, b) => b.openedAt.localeCompare(a.openedAt))
-    .slice(0, MAX_RECENTS);
-};
 
 export const make = (initial: InitialSelection | null) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
-    const EMPTY_STATE: PersistedState = { current: null, recents: [] };
-
-    const readState: Effect.Effect<PersistedState> = Effect.gen(function* () {
-      const present = yield* fs.exists(STATE_FILE);
-      if (!present) return EMPTY_STATE;
-      const raw = yield* fs.readFileString(STATE_FILE);
-      const writtenAt = yield* fs.stat(STATE_FILE).pipe(
-        Effect.map((info) => Option.getOrElse(info.mtime, () => new Date())),
-        Effect.catch(() => Effect.succeed(new Date()))
-      );
-      try {
-        const parsed = JSON.parse(raw);
-        return {
-          current: typeof parsed?.current === "string" ? parsed.current : null,
-          recents: readRecents(parsed?.recents, writtenAt),
-        };
-      } catch {
-        return EMPTY_STATE;
-      }
-    }).pipe(Effect.catch(() => Effect.succeed(EMPTY_STATE)));
-
-    const writeState = (state: PersistedState) =>
-      Effect.gen(function* () {
-        yield* fs.makeDirectory(STATE_DIR, { recursive: true });
-        yield* fs.writeFileString(STATE_FILE, JSON.stringify(state, null, 2));
-      }).pipe(Effect.catch(() => Effect.void));
+    // What `state.json` held before the database did, taken across once.
+    // A recents list of bare paths is dated from when the file was written.
+    const stateWrittenAt = yield* fs.stat(STATE_FILE).pipe(
+      Effect.map((info) => Option.getOrElse(info.mtime, () => new Date())),
+      Effect.catch(() => Effect.succeed(new Date()))
+    );
+    yield* remembering(() => importStateFile(STATE_FILE, stateWrittenAt));
 
     const validOrNull = (path: string | null) =>
       path === null ? Effect.succeed(null) : resolveRepo(fs, spawner, path);
 
-    // Boot order: explicit REVIEWER_REPO > last repository used > cwd guess.
-    const persisted = yield* readState;
+    /** Each path that is still a repository, as its root; the rest dropped. */
+    const validRoots = (paths: ReadonlyArray<string>) =>
+      Effect.map(Effect.forEach(paths, validOrNull), (roots) =>
+        roots.filter((root): root is string => root !== null)
+      );
+
+    // Boot order: explicit REVIEWER_REPO > the workspace last open > cwd
+    // guess. A remembered root that has gone from disk is dropped rather than
+    // failing the rest; a saved workspace stays the one open only while it
+    // still exists.
+    const persisted = readOpenWorkspace();
     const explicitValid =
       initial !== null && initial.explicit
         ? yield* validOrNull(initial.path)
         : null;
-    const persistedValid =
-      explicitValid === null ? yield* validOrNull(persisted.current) : null;
+    const persistedRoots =
+      explicitValid === null ? yield* validRoots(persisted.roots) : [];
     const fallbackValid =
-      explicitValid === null && persistedValid === null
+      explicitValid === null && persistedRoots.length === 0
         ? yield* validOrNull(
             initial !== null && !initial.explicit ? initial.path : null
           )
         : null;
 
-    const initialRepo = explicitValid ?? persistedValid ?? fallbackValid;
-    const recentsRef = yield* Ref.make<ReadonlyArray<OpenedRepo>>(
-      persisted.recents
-    );
+    const initialRoots: ReadonlyArray<string> =
+      explicitValid !== null
+        ? [explicitValid]
+        : persistedRoots.length > 0
+          ? persistedRoots
+          : fallbackValid !== null
+            ? [fallbackValid]
+            : [];
+    const initialSaved =
+      persistedRoots.length > 0 &&
+      persisted.workspaceId !== null &&
+      findWorkspace(persisted.workspaceId) !== undefined
+        ? persisted.workspaceId
+        : null;
+    const savedIdRef = yield* Ref.make<string | null>(initialSaved);
 
     const remembersCurrent = explicitValid === null;
 
+    /** What is open now kept for the next plain launch — by the main window. */
     const persist = Effect.gen(function* () {
-      const onDisk = yield* readState;
-      yield* writeState({
-        current: remembersCurrent ? getCurrentRepo() : onDisk.current,
-        recents: mergeOpened(yield* Ref.get(recentsRef), onDisk.recents),
-      });
+      if (!remembersCurrent) return;
+      const workspaceId = yield* Ref.get(savedIdRef);
+      yield* remembering(() =>
+        writeOpenWorkspace({ roots: getOpenRoots(), workspaceId })
+      );
     });
 
     /**
@@ -254,48 +273,60 @@ export const make = (initial: InitialSelection | null) =>
         }
       });
 
-    const open = (repo: string) =>
+    const open = (roots: ReadonlyArray<string>, savedId: string | null) =>
       Effect.gen(function* () {
-        yield* adopt(repo);
-        // `current-repo.ts` is the single store for the selection: an Effect
-        // Ref couldn't be read by the PTY socket / chat runtime, which run
+        yield* Effect.forEach(roots, adopt, { discard: true });
+        yield* Ref.set(savedIdRef, savedId);
+        // `current-repo.ts` is the single store for the roots: an Effect Ref
+        // couldn't be read by the PTY socket / chat runtime, which run
         // outside the Effect runtime, so those (and this service) share the
         // one module snapshot.
-        setCurrentRepo(repo);
+        setOpenRoots(roots);
       });
 
-    if (initialRepo !== null) yield* open(initialRepo);
+    if (initialRoots.length > 0) yield* open(initialRoots, initialSaved);
 
-    const current: Effect.Effect<string | null> = Effect.sync(getCurrentRepo);
+    const roots: Effect.Effect<ReadonlyArray<string>> =
+      Effect.sync(getOpenRoots);
 
-    const selectRepo: WorkspaceContextShape["selectRepo"] = (repo) =>
+    /**
+     * Open roots side by side, each dated as just opened — the first last,
+     * so the recents keep the workspace's order with its first at the top.
+     */
+    const openRoots: WorkspaceContextShape["openRoots"] = (next, savedId) =>
       Effect.gen(function* () {
-        yield* open(repo);
-        const openedAt = new Date().toISOString();
-        yield* Ref.update(recentsRef, (existing) =>
-          [
-            { path: repo, openedAt },
-            ...existing.filter((entry) => entry.path !== repo),
-          ].slice(0, MAX_RECENTS)
-        );
+        yield* open(next, savedId);
+        const now = Date.now();
+        const dated = next.map((path, index) => ({
+          path,
+          openedAt: new Date(now - index).toISOString(),
+        }));
+        yield* remembering(() => recordOpened(dated));
         yield* persist;
       });
 
+    // Read from the database each time rather than held: another window's
+    // opens belong in this one's recents too.
+    const opened = Effect.sync(() => {
+      try {
+        return readOpened();
+      } catch {
+        return [];
+      }
+    });
+
     return WorkspaceContext.of({
       home: homedir(),
-      current,
-      recents: Effect.map(Ref.get(recentsRef), (recents) =>
+      current: currentOf(roots),
+      requireCurrent: requireCurrentOf(roots),
+      roots,
+      savedId: Ref.get(savedIdRef),
+      recents: Effect.map(opened, (recents) =>
         recents.map((entry) => entry.path)
       ),
-      opened: Ref.get(recentsRef),
-      requireCurrent: current.pipe(
-        Effect.flatMap((selected) =>
-          selected === null
-            ? Effect.fail(new NoRepoSelected())
-            : Effect.succeed(selected)
-        )
-      ),
-      selectRepo,
+      opened,
+      selectRepo: (repo) => openRoots([repo], null),
+      openRoots,
     });
   });
 
@@ -323,41 +354,53 @@ export const pinnedTo = (
     requireCurrent: Effect.succeed(root),
   });
 
-/** Test seam: an in-memory context with no filesystem/git/persistence. */
-export const makeMemory = (initial: string | null = null) =>
+/**
+ * Test seam: an in-memory context with no filesystem/git/persistence — a
+ * repository open on its own, or several side by side.
+ */
+export const makeMemory = (
+  initial: string | ReadonlyArray<string> | null = null
+) =>
   Effect.gen(function* () {
-    const currentRef = yield* Ref.make<string | null>(initial);
+    const initialRoots =
+      initial === null ? [] : typeof initial === "string" ? [initial] : initial;
+    const rootsRef = yield* Ref.make<ReadonlyArray<string>>(initialRoots);
+    const savedIdRef = yield* Ref.make<string | null>(null);
     const recentsRef = yield* Ref.make<ReadonlyArray<OpenedRepo>>(
-      initial === null
-        ? []
-        : [{ path: initial, openedAt: "2026-01-01T00:00:00.000Z" }]
+      initialRoots.map((path) => ({
+        path,
+        openedAt: "2026-01-01T00:00:00.000Z",
+      }))
     );
+    const roots = Ref.get(rootsRef);
+    const openRoots: WorkspaceContextShape["openRoots"] = (next, savedId) =>
+      Effect.gen(function* () {
+        yield* Ref.set(rootsRef, next);
+        yield* Ref.set(savedIdRef, savedId);
+        yield* Ref.update(recentsRef, (existing) => [
+          ...next.map((path) => ({
+            path,
+            openedAt: "2026-01-01T00:00:00.000Z",
+          })),
+          ...existing.filter((entry) => !next.includes(entry.path)),
+        ]);
+      });
     return WorkspaceContext.of({
       home: "/home/test",
-      current: Ref.get(currentRef),
+      current: currentOf(roots),
+      requireCurrent: requireCurrentOf(roots),
+      roots,
+      savedId: Ref.get(savedIdRef),
       recents: Effect.map(Ref.get(recentsRef), (recents) =>
         recents.map((entry) => entry.path)
       ),
       opened: Ref.get(recentsRef),
-      requireCurrent: Ref.get(currentRef).pipe(
-        Effect.flatMap((selected) =>
-          selected === null
-            ? Effect.fail(new NoRepoSelected())
-            : Effect.succeed(selected)
-        )
-      ),
-      selectRepo: (repo) =>
-        Effect.gen(function* () {
-          yield* Ref.set(currentRef, repo);
-          yield* Ref.update(recentsRef, (existing) => [
-            { path: repo, openedAt: "2026-01-01T00:00:00.000Z" },
-            ...existing.filter((entry) => entry.path !== repo),
-          ]);
-        }),
+      selectRepo: (repo) => openRoots([repo], null),
+      openRoots,
     });
   });
 
 export const memoryLayer = (
-  initial: string | null = null
+  initial: string | ReadonlyArray<string> | null = null
 ): Layer.Layer<WorkspaceContext> =>
   Layer.effect(WorkspaceContext)(makeMemory(initial));

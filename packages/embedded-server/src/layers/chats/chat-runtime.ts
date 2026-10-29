@@ -20,6 +20,7 @@
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import type { WebSocket } from "ws";
 import {
@@ -27,11 +28,12 @@ import {
   writesDiscoverableSessions,
 } from "../terminal/agent-session-capture.ts";
 import { saveDroppedImage } from "../terminal/dropped-image.ts";
-import { onCurrentRepoChange } from "../workspace/current-repo.ts";
+import { onOpenRootsChange } from "../workspace/current-repo.ts";
 import {
   chatTurnProgram,
   withAttachedImages,
   withHistory,
+  withWorkspace,
   type ChatTurnSession,
 } from "./providers.ts";
 import { chatSessionOrigin } from "@reviewer/core/chats";
@@ -214,7 +216,7 @@ export const repairStaleTurns = (): void => {
   }
 };
 
-onCurrentRepoChange(() => repairStaleTurns());
+onOpenRootsChange(() => repairStaleTurns());
 
 const checkpointEveryLiveTurnSynchronously = () => {
   for (const live of liveTurns.values()) flushText(live);
@@ -444,10 +446,20 @@ const launchTurn = (input: {
   const withImages = withAttachedImages(input.promptText, [
     ...input.imagePaths,
   ]);
+  // A chat of a workspace is given its other repositories as they stand —
+  // one taken out since is not, one gone from disk is left out — and a
+  // fresh session is told what they are.
+  const alsoIn = (chat.workspace?.roots ?? []).filter(
+    (root) => root !== repoPath && existsSync(root)
+  );
   const prompt = session.resume
     ? withImages
-    : withHistory(input.historyMessages ?? chat.messages, withImages);
-  const program = chatTurnProgram(chat, prompt, session);
+    : withWorkspace(
+        withHistory(input.historyMessages ?? chat.messages, withImages),
+        chat.workspace,
+        repoPath
+      );
+  const program = chatTurnProgram(chat, prompt, session, alsoIn);
 
   const child = spawn(program.file, [...program.args], {
     cwd: repoPath,

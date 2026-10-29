@@ -87,10 +87,7 @@ extension AppModel {
     var recentBranches: [BranchInfo] { Array(branches.prefix(5)) }
 
     func loadBranches() async {
-        async let local = client.branches()
-        async let remote = client.remoteBranches()
-        branches = (try? await local) ?? []
-        remoteBranches = (try? await remote) ?? []
+        await focused.loadBranches()
     }
 
     // MARK: actions
@@ -99,6 +96,24 @@ extension AppModel {
         runGit("Checking out \(branch)…", done: "Checked out \(branch)", failed: "Checkout failed") {
             try await self.client.checkout(branch: branch)
             return nil
+        }
+    }
+
+    /// `branch` checked out in `root`, whichever repository the page is on —
+    /// what a workspace session's branch list picks, for any of its
+    /// repositories. Only that repository is read again after.
+    func checkout(_ branch: String, in root: RootModel) {
+        Task {
+            headMovesInFlight += 1
+            defer { headMovesInFlight -= 1 }
+            await notices.run(
+                "Checking out \(branch) in \(root.name)…", done: "Checked out \(branch) in \(root.name)",
+                failed: "Checkout in \(root.name) failed", report: .command
+            ) {
+                try await root.client.checkout(branch: branch)
+                return nil
+            }
+            await refresh(root: root)
         }
     }
 
@@ -187,6 +202,35 @@ extension AppModel {
     /// `failed` over what git said — and the project re-read either way,
     /// since a merge that stopped on a conflict has changed the tree as
     /// surely as one that went through.
+    func fetch(in root: RootModel) {
+        runGit(in: root, "Fetching", done: "Fetched", failed: "Fetch") { try await $0.fetch() }
+    }
+
+    func pull(in root: RootModel) {
+        runGit(in: root, "Pulling", done: "Pulled", failed: "Pull") { try await $0.pull() }
+    }
+
+    func push(in root: RootModel) {
+        runGit(in: root, "Pushing", done: "Pushed", failed: "Push") { try await $0.push() }
+    }
+
+    /// A git action in `root`, whichever repository the page is on, the
+    /// repository named in its notice; only that one is read again after.
+    private func runGit(
+        in root: RootModel, _ pending: String, done: String, failed: String,
+        _ body: @escaping (ReviewerClient) async throws -> String?
+    ) {
+        Task {
+            headMovesInFlight += 1
+            defer { headMovesInFlight -= 1 }
+            await notices.run(
+                "\(pending) \(root.name)…", done: "\(done) \(root.name)", failed: "\(failed) of \(root.name) failed",
+                report: .command
+            ) { try await body(root.client) }
+            await refresh(root: root)
+        }
+    }
+
     private func runGit(_ pending: String, done: String, failed: String, _ body: @escaping () async throws -> String?) {
         Task {
             headMovesInFlight += 1
