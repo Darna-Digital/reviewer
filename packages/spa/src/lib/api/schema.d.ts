@@ -20,6 +20,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspace/roots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["workspace.setRoots"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["workspace.workspaces"];
+        put?: never;
+        post: operations["workspace.createWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["workspace.deleteWorkspace"];
+        options?: never;
+        head?: never;
+        patch: operations["workspace.updateWorkspace"];
+        trace?: never;
+    };
+    "/api/workspaces/{id}/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["workspace.openWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/repos": {
         parameters: {
             query?: never;
@@ -1322,6 +1386,7 @@ export interface components {
         NoRepoSelectedEncoded: {
             /** @enum {string} */
             _tag: "NoRepoSelected";
+            repo?: string;
         };
         LanguageErrorEncoded: {
             /** @enum {string} */
@@ -1385,6 +1450,15 @@ export interface operations {
                     "application/json": {
                         project: string | null;
                         branch: string | null;
+                        roots: {
+                            path: string;
+                            name: string;
+                            branch: string | null;
+                        }[];
+                        workspace: {
+                            id: string;
+                            name: string;
+                        } | null;
                         recents: string[];
                         home: string;
                     };
@@ -1425,6 +1499,15 @@ export interface operations {
                     "application/json": {
                         project: string | null;
                         branch: string | null;
+                        roots: {
+                            path: string;
+                            name: string;
+                            branch: string | null;
+                        }[];
+                        workspace: {
+                            id: string;
+                            name: string;
+                        } | null;
                         recents: string[];
                         home: string;
                     };
@@ -1437,6 +1520,317 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvalidRepoEncoded"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.setRoots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    roots: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        project: string | null;
+                        branch: string | null;
+                        roots: {
+                            path: string;
+                            name: string;
+                            branch: string | null;
+                        }[];
+                        workspace: {
+                            id: string;
+                            name: string;
+                        } | null;
+                        recents: string[];
+                        home: string;
+                    };
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        roots: string[];
+                        createdAt: string;
+                        openedAt: string | null;
+                    }[];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.createWorkspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    roots: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        roots: string[];
+                        createdAt: string;
+                        openedAt: string | null;
+                    };
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.deleteWorkspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.updateWorkspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    roots?: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        roots: string[];
+                        createdAt: string;
+                        openedAt: string | null;
+                    };
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageErrorEncoded"];
+                };
+            };
+        };
+    };
+    "workspace.openWorkspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        project: string | null;
+                        branch: string | null;
+                        roots: {
+                            path: string;
+                            name: string;
+                            branch: string | null;
+                        }[];
+                        workspace: {
+                            id: string;
+                            name: string;
+                        } | null;
+                        recents: string[];
+                        home: string;
+                    };
+                };
+            };
+            /** @description InvalidRepo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvalidRepoEncoded"];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFoundEncoded"];
                 };
             };
             /** @description StorageError */
@@ -4695,7 +5089,7 @@ export interface operations {
                             startedAt: string;
                             endedAt: string | null;
                             errorMessage: string | null;
-                            totalCostUsd: (number) | null;
+                            totalCostUsd: number | null;
                         } | null;
                     };
                 };
@@ -4917,7 +5311,7 @@ export interface operations {
                             startedAt: string;
                             endedAt: string | null;
                             errorMessage: string | null;
-                            totalCostUsd: (number) | null;
+                            totalCostUsd: number | null;
                         } | null;
                     };
                 };
@@ -5084,7 +5478,7 @@ export interface operations {
                             startedAt: string;
                             endedAt: string | null;
                             errorMessage: string | null;
-                            totalCostUsd: (number) | null;
+                            totalCostUsd: number | null;
                         } | null;
                     };
                 };
@@ -5199,7 +5593,7 @@ export interface operations {
                             startedAt: string;
                             endedAt: string | null;
                             errorMessage: string | null;
-                            totalCostUsd: (number) | null;
+                            totalCostUsd: number | null;
                         } | null;
                     };
                 };
@@ -6093,7 +6487,7 @@ export interface operations {
                         updatedAt: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
-                        exitCode: (number) | null;
+                        exitCode: number | null;
                     }[];
                 };
             };
@@ -6385,7 +6779,7 @@ export interface operations {
                         updatedAt: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
-                        exitCode: (number) | null;
+                        exitCode: number | null;
                     };
                 };
             };
@@ -6493,7 +6887,7 @@ export interface operations {
                         updatedAt: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
-                        exitCode: (number) | null;
+                        exitCode: number | null;
                     }[];
                 };
             };

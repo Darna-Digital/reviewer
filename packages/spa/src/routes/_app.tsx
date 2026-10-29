@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layout/app-layout";
 import { IslandLayout } from "@/components/layout/island-layout";
+import { repoFromSearch } from "@/lib/repo-scope";
 import { island } from "@/lib/shell";
 
 /**
@@ -37,10 +38,20 @@ export interface AppSearch {
   target?: string;
   /** Set when the file named in `file` should get a tab of its own rather than the preview slot. */
   tab?: "permanent";
+  /**
+   * The workspace repository the page is about — its absolute path — or
+   * absent for the workspace's first (see `lib/repo-scope`).
+   */
+  repo?: string;
 }
 
 export const Route = createFileRoute("/_app")({
+  // The repository is part of every address under this route: a link that
+  // spells out the rest of its search keeps the repository the page is on,
+  // rather than falling back to the workspace's first.
+  search: { middlewares: [retainSearchParams(["repo"])] },
   validateSearch: (search: Record<string, unknown>): AppSearch => ({
+    repo: repoFromSearch(search),
     file: typeof search["file"] === "string" ? search["file"] : undefined,
     path: typeof search["path"] === "string" ? search["path"] : undefined,
     history:

@@ -5,6 +5,8 @@ import type { WorkspaceDependencies } from "../interfaces/workspace.interfaces";
 export const openWorkspace: WorkspaceInfo = {
   project: "/work/backend",
   branch: "main",
+  roots: [{ path: "/work/backend", name: "backend", branch: "main" }],
+  workspace: null,
   recents: ["/work/backend"],
   home: "/home/ada",
 };

@@ -13,6 +13,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "build:bundle": "esbuild src/main.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/main.cjs --sourcemap --external:@lydell/node-pty",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "openapi": "tsx scripts/write-openapi.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint",
