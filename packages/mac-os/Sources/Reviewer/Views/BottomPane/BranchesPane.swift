@@ -153,6 +153,7 @@ struct BranchesPane: View {
     private var list: some View {
         let rows = rows
         return List(selection: $selected) {
+            ListEdgeSpacer()
             ForEach(rows) { row in
                 switch row {
                 case .repository(let root, let open):
@@ -173,6 +174,7 @@ struct BranchesPane: View {
                         .onTapGesture(count: 2) { checkout(ref, in: root) }
                 }
             }
+            ListEdgeSpacer()
         }
         .listStyle(.plain)
         .environment(\.defaultMinListRowHeight, 0)

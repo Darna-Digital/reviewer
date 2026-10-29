@@ -107,6 +107,20 @@ struct ColumnResizeHandle: View {
     }
 }
 
+/// The air above a pane list's first row and below its last, as much as
+/// the bar above it keeps at its sides. A row rather than
+/// `contentMargins`, which the list ignores, so it scrolls with the rows;
+/// it cannot be picked, so the keys walk past it.
+struct ListEdgeSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(height: PaneMetrics.barInset)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
+            .selectionDisabled()
+    }
+}
+
 /// The hairline between groups of a bar's controls.
 struct PaneBarSeparator: View {
     var body: some View {

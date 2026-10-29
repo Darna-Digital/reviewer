@@ -411,18 +411,6 @@ private extension View {
     }
 }
 
-/// The air above the first row and below the last, as much as the list
-/// keeps at its sides. A row rather than `contentMargins`, which the list
-/// ignores, so it scrolls with the rows.
-private struct EdgeSpacer: View {
-    var body: some View {
-        Color.clear
-            .frame(height: PaneMetrics.barInset)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-    }
-}
-
 /// The commits: one row each, the graph's cell down the leading edge. The
 /// list paints its own pick, in `TreeSelection`'s wash, since a selecting
 /// `List` would paint the accent blue; Up and Down still walk the rows.
@@ -436,7 +424,7 @@ private struct CommitList: View {
         let layout = history.graph
         ScrollViewReader { scroller in
             List {
-                EdgeSpacer()
+                ListEdgeSpacer()
                 ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
                     CommitRow(commit: commit, graph: layout.rows[index],
                               selected: commit.sha == history.selectedSha) { select(commit) }
@@ -456,7 +444,7 @@ private struct CommitList: View {
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
                 }
-                EdgeSpacer()
+                ListEdgeSpacer()
             }
             .listStyle(.plain)
             .environment(\.defaultMinListRowHeight, 0)
