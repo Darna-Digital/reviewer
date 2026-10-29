@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.33 — 2026-10-29
+
+### Fixed
+
+- Reviewer's built-in server is no longer reachable from other computers on your network or from websites open in your browser, either of which could previously have opened a terminal on your Mac. The app, the TUI and your agents connect just as before.
+
 ## v0.0.32 — 2026-10-28
 
 ### Changed
