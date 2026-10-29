@@ -23,6 +23,7 @@
     "@opentui/react": "0.6.8",
     "@reviewer/core": "workspace:*",
     "@reviewer/embedded-server": "workspace:*",
+    "@reviewer/themes": "workspace:*",
     "effect": "4.0.6",
     "react": "^19.3.1"
   },

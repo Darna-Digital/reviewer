@@ -181,6 +181,7 @@ does the git and filesystem work.
 | [`packages/spa`](packages/spa)                         | The React web app whose surfaces the shell hosts                                |
 | [`packages/embedded-server`](packages/embedded-server) | The local API server the app runs beside it (Effect, git/filesystem-backed)     |
 | [`packages/core`](packages/core)                       | Feature schemas and services shared by the server and the SPA                   |
+| [`packages/themes`](packages/themes)                   | The theme catalog and Shiki highlighting, behind core's `ThemeLibrary` port     |
 | [`packages/tui`](packages/tui)                         | Reviewer in a terminal — diffs, branches, history and comments (OpenTUI, Bun)   |
 | [`packages/www`](packages/www)                         | [reviewer.sh](https://reviewer.sh), on Cloudflare Workers                       |
 | [`packages/brand`](packages/brand)                     | The brand studio that draws and exports the logo and icons                      |

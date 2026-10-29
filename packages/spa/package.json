@@ -25,6 +25,7 @@
     "@pierre/diffs": "1.6.1",
     "@pierre/trees": "1.0.0-beta.6",
     "@reviewer/core": "workspace:*",
+    "@reviewer/themes": "workspace:*",
     "@tabler/icons-react": "^3.49.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-devtools": "latest",

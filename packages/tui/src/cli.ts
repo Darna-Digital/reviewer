@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { DEFAULT_LIGHT_THEME } from '@reviewer/core/themes';
+import { DEFAULT_LIGHT_THEME } from '@reviewer/themes';
 
 export const USAGE = `Usage: reviewer [path] [options]
 

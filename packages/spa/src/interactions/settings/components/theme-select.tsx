@@ -8,12 +8,11 @@
  */
 import {
   deriveChromeTokens,
-  describeThemes,
-  loadTheme,
   type ChromeTokens,
   type ColorScheme,
   type ThemeDescriptor,
 } from "@reviewer/core/themes";
+import { describeThemes, loadTheme } from "@reviewer/themes";
 import { useEffect, useMemo, useState } from "react";
 import {
   Select,

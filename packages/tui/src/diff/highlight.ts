@@ -1,5 +1,6 @@
-import { highlightCode } from '@reviewer/core/themes';
-import type { CodeToken, loadTheme } from '@reviewer/core/themes';
+import type { CodeToken } from '@reviewer/core/themes';
+import { highlightCode } from '@reviewer/themes';
+import type { loadTheme } from '@reviewer/themes';
 import type { HighlightReply, HighlightRequest } from './highlightWorker';
 import type { FileDiff } from './parseDiff';
 

@@ -1,5 +1,5 @@
-import { highlightCode, loadTheme } from '@reviewer/core/themes';
 import type { CodeToken } from '@reviewer/core/themes';
+import { highlightCode, loadTheme } from '@reviewer/themes';
 
 declare const self: Worker;
 
