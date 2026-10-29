@@ -390,10 +390,11 @@ struct SessionContextBar: View {
             }
         }
 
-        /// A move between the steps: the back row fading, the popover easing
-        /// to the new rows' height.
+        /// A move between the steps: the rows and the back row crossfading,
+        /// the popover easing to the new rows' height — on the curve the
+        /// list's own height moves on, so the two arrive together.
         private func step(_ move: () -> Void) {
-            withAnimation(.snappy(duration: 0.25), move)
+            withAnimation(BranchPopover<EmptyView>.resize, move)
         }
 
         private func branchSections(of root: RootModel) -> [BranchChoiceSection] {

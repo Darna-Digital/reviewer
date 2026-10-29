@@ -143,6 +143,13 @@ struct BranchPopover<Footer: View>: View {
     private static var listHeight: CGFloat { 360 }
     /// The air between the rows' highlight and the popover's edges.
     static var listInset: CGFloat { 6 }
+    /// How the list — and the popover around it — moves to a new height: a
+    /// gentle ease, for a change of size the eye follows rather than a
+    /// press it answers.
+    static var resize: Animation { .smooth(duration: 0.32) }
+
+    /// Which rows these are: another step's, not a search of these.
+    private var stepKey: String { sections.map(\.id).joined(separator: "\n") }
 
     @State private var contentHeight: CGFloat = 0
 
@@ -227,34 +234,47 @@ struct BranchPopover<Footer: View>: View {
     private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 1) {
-                    ForEach(shown) { section in
-                        if let title = section.title {
-                            SectionHeader(title: title, count: section.lines.count)
-                        }
-                        ForEach(section.lines) { line in
-                            ChoiceRow(
-                                line: line, lit: line.index == active, reading: reading,
-                                actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
-                                submenu: submenuBinding(for: line.key),
-                                ran: dismiss
-                            ) {
-                                pick(at: line.index, in: lines)
+                // Rows swapped for another step's crossfade, the old over
+                // the new, while the list eases to the new rows' height —
+                // keyed by the step so a search, which only narrows the
+                // same rows, does not fade them.
+                ZStack(alignment: .top) {
+                    LazyVStack(alignment: .leading, spacing: 1) {
+                        ForEach(shown) { section in
+                            if let title = section.title {
+                                SectionHeader(title: title, count: section.lines.count)
                             }
-                            .id(line.key)
+                            ForEach(section.lines) { line in
+                                ChoiceRow(
+                                    line: line, lit: line.index == active, reading: reading,
+                                    actions: actions.flatMap { actions in line.choice.branch.map { branch in { actions(branch) } } },
+                                    submenu: submenuBinding(for: line.key),
+                                    ran: dismiss
+                                ) {
+                                    pick(at: line.index, in: lines)
+                                }
+                                .id(line.key)
+                            }
                         }
                     }
-                }
-                .padding(Self.listInset)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
-                    // The list opens at its height, and from then on eases
-                    // to a new one — a search narrowing it, its rows swapped
-                    // for the next step's — and the popover with it.
-                    withAnimation(contentHeight > 0 ? .snappy(duration: 0.25) : nil) {
-                        contentHeight = measured
+                    .padding(Self.listInset)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
+                        // The list opens at its height, and from then on
+                        // eases to a new one — a search narrowing it, its
+                        // rows swapped for the next step's — and the
+                        // popover with it.
+                        withAnimation(contentHeight > 0 ? Self.resize : nil) {
+                            contentHeight = measured
+                        }
                     }
+                    .id(stepKey)
+                    .transition(.opacity)
                 }
             }
+            // While the rows fit, no indicator at all: a list easing taller
+            // holds rows taller than its frame for the length of the ease,
+            // and the indicator would flash over them each time.
+            .scrollIndicators(contentHeight > Self.listHeight ? .automatic : .hidden)
             // As tall as its rows, up to the cap: a scroll view takes all the
             // height it is offered, which left a short list scrollable, its
             // indicator over the rows and its last row against the footer.
