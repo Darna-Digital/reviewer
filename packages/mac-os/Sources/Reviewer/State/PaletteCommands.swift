@@ -66,14 +66,17 @@ extension AppModel {
 
     /// The commit composer's actions, at the root beside Switch branch…
     /// rather than down in the Git list: they are the chords the TUI
-    /// shares, and the list ⌘E lands on is where a chord is looked up.
+    /// shares, and the list ⌘E lands on is where a chord is looked up. A
+    /// message can be drafted from anywhere (see `generateCommitMessage`);
+    /// committing takes the composer, with its ticked files.
     private var commitCommands: [PaletteCommand] {
-        guard hasCommitComposer else { return [] }
+        let draft = PaletteCommand(
+            id: "commit-draft-message", label: "Generate commit message", group: "Git", symbol: "sparkles",
+            keywords: "draft write claude codex agent ai", hint: "⌃G"
+        ) { [weak self] in self?.generateCommitMessage() }
+        guard hasCommitComposer else { return [draft] }
         return [
-            PaletteCommand(
-                id: "commit-draft-message", label: "Generate commit message", group: "Git", symbol: "sparkles",
-                keywords: "draft write claude codex agent ai", hint: "⌃G"
-            ) { [weak self] in self?.ask(commitComposer: .draft) },
+            draft,
             PaletteCommand(
                 id: "commit-commit", label: "Commit", group: "Git", symbol: "checkmark.circle",
                 keywords: "save changes", hint: "⌘K"

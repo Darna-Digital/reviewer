@@ -18,7 +18,7 @@ struct CommitComposer: View {
     @Environment(AppModel.self) private var model
     @State private var message = ""
     @State private var excluded: Set<String> = []
-    @AppStorage("commit-agent") private var agent: CommitAgent = .claude
+    @AppStorage(CommitMessages.agentKey) private var agent: CommitAgent = .claude
     @State private var composerFocused = false
     @State private var agentPickerOpen = false
     @State private var controlsHovered = false
@@ -56,12 +56,15 @@ struct CommitComposer: View {
             controls
         }
         .onAppear {
-            message = Self.remembered(for: project)
+            message = CommitMessages.remembered(for: project)
             filesHeight = savedFilesHeight
             messageHeight = savedMessageHeight
         }
-        .onChange(of: project) { _, project in message = Self.remembered(for: project) }
-        .onChange(of: message) { _, message in Self.remember(message, for: project) }
+        .onChange(of: project) { _, project in message = CommitMessages.remembered(for: project) }
+        .onChange(of: message) { _, message in CommitMessages.remember(message, for: project) }
+        .onChange(of: model.landedCommitMessage) { _, landed in
+            if let landed, landed.scope == project { message = landed.message }
+        }
         .onChange(of: composer.draft, initial: true) { _, draft in takeDraft(draft) }
         .onChange(of: model.commitComposerRequest) { _, request in
             switch request?.action {
@@ -221,20 +224,6 @@ struct CommitComposer: View {
             model.act(onTree: .draftSettled)
         case .idle, .running:
             break
-        }
-    }
-
-    private static func key(for project: String) -> String { "commit-message:\(project)" }
-
-    private static func remembered(for project: String) -> String {
-        UserDefaults.standard.string(forKey: key(for: project)) ?? ""
-    }
-
-    private static func remember(_ message: String, for project: String) {
-        if message.isEmpty {
-            UserDefaults.standard.removeObject(forKey: key(for: project))
-        } else {
-            UserDefaults.standard.set(message, forKey: key(for: project))
         }
     }
 }

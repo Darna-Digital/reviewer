@@ -335,6 +335,21 @@ struct ReviewerClient: Sendable {
         let _: Ok = try await send("POST", "/api/discard", body: DiscardBody(paths: paths))
     }
 
+    /// Start an agent drafting a commit message from the changes; the run
+    /// answers before the message is written, which is read off `commitDraft`.
+    func generateCommitMessage(agent: CommitAgent) async throws -> CommitDraft {
+        try await send("POST", "/api/git-message/generate", body: GenerateCommitMessageBody(agent: agent.rawValue))
+    }
+
+    func commitDraft() async throws -> CommitDraft {
+        try await get("/api/git-message/draft")
+    }
+
+    /// The draft taken, so the server lets it go.
+    func clearCommitDraft() async throws {
+        let _: CommitDraft = try await send("POST", "/api/git-message/draft/clear", body: EmptyBody())
+    }
+
     func pull() async throws -> String {
         let result: CommandOutput = try await send("POST", "/api/pull", body: EmptyBody())
         return result.output

@@ -716,6 +716,12 @@ struct CheckoutBody: Encodable, Sendable {
     let branch: String
 }
 
+/// What a commit message is drafted with — `GenerateBody` in core; with
+/// no paths the draft reads every change.
+struct GenerateCommitMessageBody: Encodable, Sendable {
+    let agent: String
+}
+
 struct CommitBody: Encodable, Sendable {
     let message: String
     let paths: [String]

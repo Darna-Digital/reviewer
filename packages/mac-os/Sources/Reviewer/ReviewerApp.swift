@@ -194,9 +194,10 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("b", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)
             Divider()
+            Button("Generate commit message") { model.generateCommitMessage() }
+                .keyboardShortcut("g", modifiers: .control)
+                .disabled(!model.hasProject)
             Group {
-                Button("Generate commit message") { model.ask(commitComposer: .draft) }
-                    .keyboardShortcut("g", modifiers: .control)
                 Button("Commit") { model.ask(commitComposer: .commit) }
                     .keyboardShortcut("k", modifiers: .command)
                 Button("Commit and push") { model.ask(commitComposer: .commitAndPush) }

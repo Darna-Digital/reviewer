@@ -306,6 +306,8 @@ final class AppModel {
     /// with the files it has chosen, its message and its agent, all of
     /// them its own (see `CommitComposer`).
     private(set) var commitComposerRequest: CommitComposerRequest?
+    /// The last message drafted with the composer off screen.
+    private(set) var landedCommitMessage: LandedCommitMessage?
 
     // MARK: lifecycle
 
@@ -1124,6 +1126,50 @@ final class AppModel {
     var hasCommitComposer: Bool {
         sidebarLayout == .files(changes: true) && sidebar.commit != nil
     }
+
+    /// What the commit message is kept under: the workspace while it holds
+    /// several repositories — one message commits across them — else the
+    /// repository.
+    var commitMessageScope: String {
+        if roots.count > 1, let workspace {
+            return workspace.workspace.map { "workspace:\($0.id)" } ?? workspace.roots.map(\.path).joined(separator: "\n")
+        }
+        return focusedRootPath ?? ""
+    }
+
+    /// ⌃G, from anywhere: the composer drafts it where it is on screen, so
+    /// the draft is seen landing in the box. Elsewhere the server is asked
+    /// directly — an agent drafting from every change of the repository the
+    /// page is on — and the message is kept where the composer will find it,
+    /// with a notice to say it is there.
+    func generateCommitMessage() {
+        if hasCommitComposer { return ask(commitComposer: .draft) }
+        guard let root = focusedRoot else { return }
+        let scope = commitMessageScope
+        let agent = CommitMessages.agent
+        Task {
+            let id = notices.post(.loading, "Drafting a commit message with \(agent.label)…")
+            do {
+                var draft = try await root.client.generateCommitMessage(agent: agent)
+                while draft.status == .running {
+                    try await Task.sleep(for: Self.draftPoll)
+                    draft = try await root.client.commitDraft()
+                }
+                try? await root.client.clearCommitDraft()
+                guard draft.status == .ready, let message = draft.message else {
+                    return notices.settle(id, .error, "Could not draft a commit message", detail: draft.error)
+                }
+                CommitMessages.remember(message, for: scope)
+                landedCommitMessage = LandedCommitMessage(
+                    scope: scope, message: message, serial: (landedCommitMessage?.serial ?? 0) + 1)
+                notices.settle(id, .success, "Commit message drafted", detail: "It is waiting in Review's commit box.")
+            } catch {
+                notices.settle(id, failed: "Could not draft a commit message", with: error)
+            }
+        }
+    }
+
+    private static let draftPoll: Duration = .seconds(1)
 
     /// ⌃G, ⌘K, ⌥⌘K — the chords the TUI shares — handed to the commit
     /// composer, the sidebar brought out first if it was put away, so what
