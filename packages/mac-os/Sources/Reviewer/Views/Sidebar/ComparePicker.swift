@@ -37,23 +37,12 @@ struct ComparePicker: View {
     }
 
     var body: some View {
-        Button { open.toggle() } label: {
-            HStack(spacing: 5) {
-                Image(systemName: symbol)
-                    .foregroundStyle(.secondary)
-                Text(labels.chip)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .font(.system(size: 11))
-            .frame(maxWidth: Self.maxWidth)
-            .fixedSize(horizontal: true, vertical: false)
+        PaneBarPopUp(title: labels.chip, help: labels.summary, maxWidth: Self.maxWidth) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+        } action: {
+            open.toggle()
         }
-        .buttonStyle(.accessoryBar)
-        .help(labels.summary)
         .popover(isPresented: $open, arrowEdge: .bottom) {
             BranchPopover(sections: sections, placeholder: "Search branches", pick: { choice in
                 model.readChanges(against: choice.branch?.ref)

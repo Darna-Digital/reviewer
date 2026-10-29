@@ -70,19 +70,21 @@ private struct RunBar: View {
     var body: some View {
         @Bindable var queries = queries
         PaneBar {
-            PaneBarButton(symbol: "plus", help: multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command") {
-                queries.addingCommand = true
+            PaneGlassGroup {
+                PaneBarButton(symbol: "plus", help: multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command") {
+                    queries.addingCommand = true
+                }
+                PaneBarButton(symbol: "minus", help: "Remove the selected command", action: removeSelected)
+                    .disabled(model.runRoot.services.selected == nil)
+                PaneGlassDivider()
+                PaneBarButton(symbol: "play.fill", help: multiRoot ? "Start every repository's commands" : "Start all") {
+                    model.runProject()
+                }
+                .disabled(commands.isEmpty)
+                PaneBarButton(symbol: "stop.fill", help: multiRoot ? "Stop every repository's commands" : "Stop all",
+                              action: stopAll)
+                    .disabled(!commands.contains(where: \.isRunning))
             }
-            PaneBarButton(symbol: "minus", help: "Remove the selected command", action: removeSelected)
-                .disabled(model.runRoot.services.selected == nil)
-            PaneBarSeparator()
-            PaneBarButton(symbol: "play.fill", help: multiRoot ? "Start every repository's commands" : "Start all") {
-                model.runProject()
-            }
-            .disabled(commands.isEmpty)
-            PaneBarButton(symbol: "stop.fill", help: multiRoot ? "Stop every repository's commands" : "Stop all",
-                          action: stopAll)
-                .disabled(!commands.contains(where: \.isRunning))
             Spacer(minLength: 0)
             PaneFilterField(text: $queries.commands)
         }
@@ -345,17 +347,19 @@ private struct CommandDetail: View {
                 .font(.system(size: 11))
                 .foregroundStyle(command.exitedBadly ? .red : .secondary)
             let services = model.runRoot.services
-            if command.isRunning {
-                PaneBarButton(symbol: "arrow.clockwise", help: "Restart") {
-                    Task { await services.start(id: command.id) }
-                }
-                PaneBarButton(symbol: "stop.fill", help: "Stop") {
-                    Task { await services.stop(id: command.id) }
-                }
-            } else {
-                PaneBarButton(symbol: command.status == .exited ? "arrow.clockwise" : "play.fill",
-                              help: command.status == .exited ? "Restart" : "Start") {
-                    Task { await services.start(id: command.id) }
+            PaneGlassGroup {
+                if command.isRunning {
+                    PaneBarButton(symbol: "arrow.clockwise", help: "Restart") {
+                        Task { await services.start(id: command.id) }
+                    }
+                    PaneBarButton(symbol: "stop.fill", help: "Stop") {
+                        Task { await services.stop(id: command.id) }
+                    }
+                } else {
+                    PaneBarButton(symbol: command.status == .exited ? "arrow.clockwise" : "play.fill",
+                                  help: command.status == .exited ? "Restart" : "Start") {
+                        Task { await services.start(id: command.id) }
+                    }
                 }
             }
         }

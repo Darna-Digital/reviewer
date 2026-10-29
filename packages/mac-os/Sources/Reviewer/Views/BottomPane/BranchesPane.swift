@@ -32,12 +32,14 @@ struct BranchesPane: View {
         @Bindable var queries = queries
         VStack(spacing: 0) {
             PaneBar {
-                PaneBarButton(symbol: "plus", help: multiRoot ? "New branch in \(focusedName)…" : "New branch…") {
-                    model.branchPrompt = .create(startPoint: nil)
+                PaneGlassGroup {
+                    PaneBarButton(symbol: "plus", help: multiRoot ? "New branch in \(focusedName)…" : "New branch…") {
+                        model.branchPrompt = .create(startPoint: nil)
+                    }
+                    PaneGlassDivider()
+                    PaneBarButton(symbol: "arrow.down", help: multiRoot ? "Update \(focusedName)" : "Update") { model.fetch() }
+                    PaneBarButton(symbol: "arrow.up", help: multiRoot ? "Push \(focusedName)…" : "Push…") { model.push() }
                 }
-                PaneBarSeparator()
-                PaneBarButton(symbol: "arrow.down", help: multiRoot ? "Update \(focusedName)" : "Update") { model.fetch() }
-                PaneBarButton(symbol: "arrow.up", help: multiRoot ? "Push \(focusedName)…" : "Push…") { model.push() }
                 Spacer(minLength: 0)
                 PaneFilterField(text: $queries.branches)
             }

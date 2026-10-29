@@ -382,7 +382,7 @@ private struct TargetPicker: View {
     @Environment(AppModel.self) private var model
     @State private var query = ""
     @State private var active: Int? = 0
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldWantsKeyboard = false
 
     private var handoff: ReviewHandoff { model.reviewHandoff }
 
@@ -404,18 +404,8 @@ private struct TargetPicker: View {
         let lines = agents.map(Line.agent) + (here + elsewhere).map { Line.session($0.id) }
         let lit = active.flatMap { lines.indices.contains($0) ? lines[$0] : nil }
         VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                TextField("Search sessions…", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .focused($fieldFocused)
-                    .autocorrectionDisabled()
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
+            MinimalSearchField(prompt: "Search sessions…", text: $query, takesKeyboard: $fieldWantsKeyboard)
+                .padding(8)
             ThemedDivider()
             if agents.isEmpty && here.isEmpty && elsewhere.isEmpty {
                 Text("No matches")
@@ -460,7 +450,7 @@ private struct TargetPicker: View {
         .popoverListKeys(active: $active, count: lines.count) { pick(lines[$0]) }
         .onChange(of: query) { active = 0 }
         .onAppear {
-            Task { @MainActor in fieldFocused = true }
+            fieldWantsKeyboard = true
             Task { await handoff.reloadSessions() }
         }
     }

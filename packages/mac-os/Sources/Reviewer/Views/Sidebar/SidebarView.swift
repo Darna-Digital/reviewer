@@ -34,7 +34,7 @@ struct SidebarView: View {
         // column held, at once: the outgoing field is on screen for the
         // length of the crossfade, and would otherwise keep the strokes
         // meant for the one coming in.
-        .onChange(of: layout) { PaneSearchField.releaseKeyboard() }
+        .onChange(of: layout) { MinimalSearchField.releaseKeyboard() }
     }
 }
 
@@ -278,7 +278,7 @@ private struct FilesLayout: View {
                     .animation(SidebarMotion.change, value: tree.isEmpty)
                 }
                 .slid(changes, by: CGSize(width: 0, height: searchBandHeight))
-            Band(edge: .bottom, shown: tree.commit != nil) {
+            Band(edge: .bottom, shown: tree.workspaceCommit != nil) {
                 if let commit = tree.workspaceCommit {
                     CommitComposer(composer: commit, project: model.commitMessageScope)
                 }

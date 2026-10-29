@@ -161,18 +161,21 @@ private struct PullFilterMenu: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .font(.system(size: 11, weight: .medium))
-                .frame(width: 24, height: 24)
+                .foregroundStyle(.secondary)
+                .frame(width: PaneMetrics.glassHeight, height: PaneMetrics.glassHeight)
                 .overlay(alignment: .topTrailing) {
                     if pulls.isNarrowed {
                         Circle()
                             .fill(Color.accentColor)
                             .frame(width: 5, height: 5)
-                            .padding(3)
+                            .padding(4)
                     }
                 }
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
+        .glassCircleControl()
         .fixedSize()
         .help("Filter merge requests")
     }

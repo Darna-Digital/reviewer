@@ -335,16 +335,22 @@ final class SidebarTree {
     /// files beside them, each under its root's key — so one commit can
     /// take files of several repositories, a commit in each (see
     /// `AppModel.commit`). The draft is the page's, of its repository.
+    ///
+    /// The page reports no composer while its own repository is clean, so
+    /// across a workspace the composer stands on the changes alone: over
+    /// your uncommitted changes, it is up while any repository has some,
+    /// whichever one the page is on.
     var workspaceCommit: ShellCommitComposer? {
-        guard let commit else { return nil }
         guard isMultiRoot else { return commit }
+        guard listing?.mode == .commit, comparison?.against == nil else { return nil }
         let changes = workspaceRoots.flatMap { root -> [GitStatusEntry] in
             let entries = root.path == pageRootPath
-                ? commit.changes
+                ? commit?.changes ?? []
                 : root.gitStatus.filter { $0.status != .ignored }
             return entries.map { GitStatusEntry(path: id(of: $0.path, in: root.path), status: $0.status) }
         }
-        return ShellCommitComposer(changes: changes, draft: commit.draft)
+        guard !changes.isEmpty else { return nil }
+        return ShellCommitComposer(changes: changes, draft: commit?.draft)
     }
 
     /// The selection the page last reported, in its own repository's terms.

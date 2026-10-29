@@ -76,10 +76,15 @@ private struct HistoryBar: View {
 
     var body: some View {
         PaneBar {
-            RepositoryPicker(look: .bar)
-            RefPicker()
-            PaneBarSeparator()
-            HistoryFilterMenu()
+            PaneGlassGroup {
+                if model.roots.count > 1 {
+                    RepositoryPicker(look: .bar)
+                    PaneGlassDivider()
+                }
+                RefPicker()
+                PaneGlassDivider()
+                HistoryFilterMenu()
+            }
             Spacer(minLength: 0)
             PaneFilterField(prompt: "Search commit messages", text: $text, submit: search)
         }
@@ -184,12 +189,11 @@ private struct HistoryFilterMenu: View {
             Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(active ? Color(nsColor: IslandPalette.accent) : .secondary)
-                .frame(width: 24, height: 20)
-                .contentShape(Rectangle())
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
+        .glassCircleControl()
         .fixedSize()
         .controlTooltip("Filter")
         .popover(isPresented: $pickingDate, arrowEdge: .bottom) {

@@ -1124,7 +1124,7 @@ final class AppModel {
     /// Whether the commit chords have a composer to answer them: your own
     /// changes, with the commit composer under them.
     var hasCommitComposer: Bool {
-        sidebarLayout == .files(changes: true) && sidebar.commit != nil
+        sidebarLayout == .files(changes: true) && sidebar.workspaceCommit != nil
     }
 
     /// What the commit message is kept under: the workspace while it holds

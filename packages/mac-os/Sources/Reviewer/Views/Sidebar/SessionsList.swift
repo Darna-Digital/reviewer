@@ -96,7 +96,7 @@ private struct SessionFilterMenu: View {
                         .font(.system(size: 11, weight: .medium))
                 }
             }
-            // The bar style pads the glyph out to the search field's 24pt.
+            .foregroundStyle(.secondary)
             .frame(width: 16, height: 16)
             .overlay(alignment: .topTrailing) {
                 if filters.isNarrowed {
@@ -106,8 +106,9 @@ private struct SessionFilterMenu: View {
                         .offset(x: 2, y: -2)
                 }
             }
+            .glassCircleControl()
         }
-        .buttonStyle(.accessoryBar)
+        .buttonStyle(.plain)
         .help("Filter sessions")
         .popover(isPresented: $open, arrowEdge: .bottom) {
             SessionFilterPopover(filters: filters, dismiss: { open = false }) { project, date in

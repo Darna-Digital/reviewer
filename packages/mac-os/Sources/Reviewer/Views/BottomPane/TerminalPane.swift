@@ -1,8 +1,9 @@
 // The Terminal surface, laid out as the system's own Terminal is: the
-// project's shells as a row of tabs on the bar over the shell — the
-// repository's pop-up first while the workspace holds several, the tab in
-// front filled, its ✕ at the leading edge as the system puts it — and the
-// mark that opens one at the trailing end (see `ShellTabBar`). Nothing else: a shell is opened, picked
+// project's shells as a row of tabs in one capsule of glass on the bar
+// over the shell — the repository's pop-up first while the workspace holds
+// several, the tab in front filled, its ✕ at the leading edge as the
+// system puts it — and the mark that opens one at the trailing end (see
+// `ShellTabBar`). Nothing else: a shell is opened, picked
 // and closed, and that is the whole of it. A double-click on a tab, or its
 // menu, renames it in place the way Finder renames a file. A repository
 // with no shell of its own opens one on the way in, so the surface comes
@@ -106,25 +107,38 @@ private final class ThreadRename {
 private struct ShellTabBar: View {
     @Environment(AppModel.self) private var model
     @State private var rename = ThreadRename()
+    @State private var overflow = TabOverflow()
 
     private var threads: Threads { model.threads }
     private var shells: [ThreadSummary] { threads.shells }
 
     var body: some View {
         PaneBar {
-            if model.roots.count > 1 {
-                RepositoryPicker(look: .bar)
-                PaneBarSeparator()
-            }
+            RepositoryPicker(look: .bar)
             tabs
-            PaneBarButton(symbol: "plus", help: "New session", action: open)
+            PaneGlassGroup {
+                PaneBarButton(symbol: "plus", help: "New session", action: open)
+            }
         }
     }
 
     /// The tabs at their own widths, scrolling sideways once there are
     /// more than the bar holds rather than squeezing every title away,
     /// and keeping the tab in front in view as it changes.
+    @ViewBuilder
     private var tabs: some View {
+        if shells.isEmpty {
+            Spacer(minLength: 0)
+        } else {
+            scrollingTabs
+                .layoutPriority(1)
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The tabs' capsule, drawn only while there are tabs to hold: empty,
+    /// it shrank to a sliver of glass beside the repository's pop-up.
+    private var scrollingTabs: some View {
         ScrollViewReader { scroller in
             ScrollView(.horizontal) {
                 HStack(spacing: 2) {
@@ -139,7 +153,19 @@ private struct ShellTabBar: View {
                 .environment(rename)
             }
             .scrollIndicators(.never)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .onScrollGeometryChange(for: TabOverflow.self) { geometry in
+                TabOverflow(geometry)
+            } action: { _, overflow in
+                self.overflow = overflow
+            }
+            .mask { EdgeFade(leading: overflow.before, trailing: overflow.after) }
+            // The glass stands round the scroller rather than inside it, so
+            // the capsule keeps its ends while the tabs scroll under them;
+            // it hugs the tabs until they outrun the bar.
+            .frame(maxWidth: overflow.contentWidth > 0 ? overflow.contentWidth : nil)
+            .padding(.horizontal, 2)
+            .frame(height: PaneMetrics.glassHeight)
+            .glassEffect(.regular, in: Capsule())
             .onChange(of: threads.selectedId) { _, id in
                 guard let id else { return }
                 withAnimation(PaneMotion.change) { scroller.scrollTo(id) }
@@ -165,8 +191,46 @@ private struct ShellTabBar: View {
     }
 }
 
+/// How far the tabs run past the capsule on either side, and how wide
+/// they are in all — what the edges fade by and the capsule hugs.
+private struct TabOverflow: Equatable {
+    var before = false
+    var after = false
+    var contentWidth: CGFloat = 0
+
+    init() {}
+
+    init(_ geometry: ScrollGeometry) {
+        let shown = geometry.visibleRect
+        before = shown.minX > 0.5
+        after = shown.maxX < geometry.contentSize.width - 0.5
+        contentWidth = geometry.contentSize.width
+    }
+}
+
+/// The mask that fades a scrolled row out at an edge it has more past —
+/// the tabs going on under the capsule's end rather than cut off at it.
+private struct EdgeFade: View {
+    let leading: Bool
+    let trailing: Bool
+
+    private static let width: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: leading ? Self.width : 0)
+            Rectangle()
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: trailing ? Self.width : 0)
+        }
+        .animation(.easeOut(duration: 0.15), value: leading)
+        .animation(.easeOut(duration: 0.15), value: trailing)
+    }
+}
+
 enum ShellTabMetrics {
-    static let height: CGFloat = 20
+    static let height: CGFloat = PaneMetrics.glassHeight - 4
     static let minWidth: CGFloat = 72
     static let maxWidth: CGFloat = 170
     /// The ✕ stands in this much room at the leading edge, and the same is
@@ -193,7 +257,7 @@ private struct ShellTab: View {
                 .frame(minWidth: ShellTabMetrics.minWidth, maxWidth: ShellTabMetrics.maxWidth)
                 .padding(.horizontal, ShellTabMetrics.closeSlot)
                 .frame(height: ShellTabMetrics.height)
-                .background(fill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .background(fill, in: Capsule())
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

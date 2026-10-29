@@ -145,7 +145,7 @@ struct BranchPopover<Footer: View>: View {
     @State private var active = 0
     @State private var reading = RowReading()
     @State private var submenu: Submenu?
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldWantsKeyboard = false
 
     private static var width: CGFloat { 320 }
     private static var listHeight: CGFloat { 360 }
@@ -211,11 +211,11 @@ struct BranchPopover<Footer: View>: View {
         // A submenu put away hands the keys back to the search, so ↑/↓ go
         // on walking the branches from where they were.
         .onChange(of: submenu) { _, open in
-            if open == nil { Task { @MainActor in fieldFocused = true } }
+            if open == nil { fieldWantsKeyboard = true }
         }
         // The field is focused only once it is on screen, a turn of the
         // run loop after the popover comes up.
-        .onAppear { Task { @MainActor in fieldFocused = true } }
+        .onAppear { fieldWantsKeyboard = true }
         // Rows swapped for another step's — a repository's branches after
         // the repositories — start the search and the walk over.
         .onChange(of: sections.map(\.id)) {
@@ -237,18 +237,8 @@ struct BranchPopover<Footer: View>: View {
     private static var settleTime: Duration { .milliseconds(380) }
 
     private func field(_ lines: [Line]) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-            TextField(placeholder, text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .focused($fieldFocused)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, 10)
-        .frame(height: 32)
+        MinimalSearchField(prompt: placeholder, text: $query, takesKeyboard: $fieldWantsKeyboard)
+            .padding(8)
     }
 
     private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
