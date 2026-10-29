@@ -271,7 +271,7 @@ private struct FilesLayout: View {
                 .overlay {
                     ZStack {
                         if tree.isEmpty {
-                            TreePlaceholder(loading: tree.isLoading, empty: changes ? "No changes" : "No files")
+                            TreePlaceholder(loading: tree.isLoading, empty: empty)
                                 .transition(.opacity)
                         }
                     }
@@ -285,6 +285,18 @@ private struct FilesLayout: View {
             }
         }
         .clipped()
+    }
+
+    /// What the tree says with no rows: no files on the browse page; over
+    /// your changes, that they are clean — or that the filter matched none.
+    private var empty: TreeEmpty {
+        let tree = model.sidebar
+        guard changes else { return .noFiles }
+        if tree.isSearching { return .noMatch(tree.query.trimmingCharacters(in: .whitespaces)) }
+        let repositories = tree.workspaceRootNames.isEmpty
+            ? [model.focusedRoot?.name].compactMap { $0 }
+            : tree.workspaceRootNames
+        return .clean(against: tree.comparison?.against, repositories: repositories)
     }
 
     /// What the composer keeps its message under: the workspace, while the
@@ -353,22 +365,52 @@ extension View {
     }
 }
 
+/// What an empty tree says, as the system's own empty state says it — a
+/// glyph, a title, and a line on why — the way Mail and Notes stand one in
+/// an empty list.
+struct TreeEmpty {
+    let title: String
+    let symbol: String
+    var detail: String? = nil
+
+    static let noFiles = TreeEmpty(title: "No Files", symbol: "folder")
+    static let noChanges = TreeEmpty(title: "No Changes", symbol: "checkmark.circle")
+
+    /// Nothing to commit or review: clean, and against what — the
+    /// repositories named when there are several.
+    static func clean(against: String?, repositories: [String]) -> TreeEmpty {
+        let detail: String
+        if let against {
+            detail = "Nothing differs from \(against)."
+        } else if repositories.count > 1 {
+            detail = "\(ListFormatter.localizedString(byJoining: repositories)) have nothing to commit."
+        } else {
+            detail = "The working tree is clean."
+        }
+        return TreeEmpty(title: "No Changes", symbol: "checkmark.circle", detail: detail)
+    }
+
+    static func noMatch(_ query: String) -> TreeEmpty {
+        TreeEmpty(title: "No Results", symbol: "magnifyingglass", detail: "No changed files match “\(query)”.")
+    }
+}
+
 struct TreePlaceholder: View {
     let loading: Bool
-    let empty: String
+    let empty: TreeEmpty
 
     var body: some View {
-        VStack {
-            Spacer()
+        Group {
             if loading {
                 Orb(size: 16, label: "Loading")
             } else {
-                Text(empty)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                ContentUnavailableView {
+                    Label(empty.title, systemImage: empty.symbol)
+                } description: {
+                    if let detail = empty.detail { Text(detail) }
+                }
             }
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

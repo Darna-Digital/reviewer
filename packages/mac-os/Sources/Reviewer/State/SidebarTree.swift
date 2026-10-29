@@ -365,13 +365,21 @@ final class SidebarTree {
 
     /// Each repository's rows and statuses: the page's for the one it is
     /// on, the repository's own listing for the rest — all of its files on
-    /// the browse page, only its changed ones over a diff.
+    /// the browse page, only its changed ones over a diff. Over a diff a
+    /// repository with nothing changed stands no header, the way a
+    /// JetBrains commit view lists only the roots that have something to
+    /// commit; with none, the tree is empty and says so.
     private func workspaceListings(_ listing: ShellTree) -> [(root: TreeRoot, paths: [String], status: [GitStatusEntry])] {
-        workspaceRoots.map { root in
-            if root.path == pageRootPath { return (root, listing.paths, listing.gitStatus) }
-            return (root, listing.mode == .browse ? root.paths : root.changedPaths, root.gitStatus)
+        let listings = workspaceRoots.map { root in
+            if root.path == pageRootPath { return (root: root, paths: listing.paths, status: listing.gitStatus) }
+            return (root: root, paths: listing.mode == .browse ? root.paths : root.changedPaths, status: root.gitStatus)
         }
+        return listing.mode == .browse ? listings : listings.filter { !$0.paths.isEmpty }
     }
+
+    /// The repositories the tree lists, by name — what an empty diff says
+    /// is clean.
+    var workspaceRootNames: [String] { workspaceRoots.map(\.name) }
 
     /// The tree remade from what it now stands on, wherever that changed.
     /// The workspace's headers are repositories, its folds kept across a
