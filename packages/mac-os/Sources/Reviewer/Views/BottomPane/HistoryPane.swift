@@ -73,6 +73,7 @@ private struct HistoryFilterBar: View {
 
     var body: some View {
         PaneBar {
+            PaneRootPicker()
             RefPicker()
             if let path = history.query.path {
                 PathChip(path: path) { apply { $0.path = nil; $0.follow = false } }

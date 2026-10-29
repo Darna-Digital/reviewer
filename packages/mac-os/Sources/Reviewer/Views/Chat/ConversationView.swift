@@ -232,23 +232,27 @@ struct SessionContextBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Button {
-                openWindow(id: ReviewerWindow.opener)
-            } label: {
-                HStack(spacing: 5) {
-                    if let name = model.workspace?.projectName {
-                        RepoAvatar(name: name, size: 14)
-                        Text(name)
-                            .lineLimit(1)
-                    } else {
-                        Image(systemName: "folder")
-                        Text("Choose project")
+            if model.roots.count > 1 {
+                // A session runs in one repository of the workspace: the
+                // one the page is on, picked here like everywhere else.
+                Menu {
+                    ForEach(model.roots) { root in
+                        Button(root.name) { model.focus(root: root) }
                     }
+                } label: {
+                    HStack(spacing: 5) {
+                        RepoAvatar(name: model.focused.name, size: 14)
+                        Text(model.focused.name)
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 11))
                 }
-                .font(.system(size: 11))
+                .menuStyle(.button)
+                .buttonStyle(.accessoryBar)
+                .fixedSize()
+            } else {
+                projectButton
             }
-            .buttonStyle(.accessoryBar)
-            .help("Switch project")
             BranchPicker()
                 .controlSize(.small)
             Spacer(minLength: 0)
@@ -263,5 +267,25 @@ struct SessionContextBar: View {
         )
         .padding(.top, -14)
         .padding(.horizontal, 6)
+    }
+
+    private var projectButton: some View {
+        Button {
+            openWindow(id: ReviewerWindow.opener)
+        } label: {
+            HStack(spacing: 5) {
+                if let name = model.focusedRoot?.name {
+                    RepoAvatar(name: name, size: 14)
+                    Text(name)
+                        .lineLimit(1)
+                } else {
+                    Image(systemName: "folder")
+                    Text("Choose project")
+                }
+            }
+            .font(.system(size: 11))
+        }
+        .buttonStyle(.accessoryBar)
+        .help("Switch project")
     }
 }

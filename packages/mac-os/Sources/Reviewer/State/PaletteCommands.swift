@@ -126,12 +126,30 @@ extension AppModel {
     ]
 
     private var projectCommands: [PaletteCommand] {
-        [
+        var commands = [
             PaletteCommand(
-                id: "project-open", label: "Open repository…", group: "Project", symbol: "folder",
-                keywords: "open change repository folder picker switch", hint: "⌘O"
-            ) { [weak self] in self?.showOpener() }
+                id: "project-open", label: "Open workspace…", group: "Project", symbol: "folder",
+                keywords: "open change repository folder picker switch workspace project", hint: "⌘O"
+            ) { [weak self] in self?.showOpener() },
+            PaletteCommand(
+                id: "project-add-root", label: "Add repository to workspace…", group: "Project",
+                symbol: "plus.square.on.square", keywords: "add repository root workspace multi folder", hint: "⌥⌘O"
+            ) { [weak self] in self?.chooseRootToAdd() },
         ]
+        if workspace?.workspace == nil {
+            commands.append(PaletteCommand(
+                id: "project-save-workspace", label: "Save as workspace…", group: "Project",
+                symbol: "square.stack.3d.up", keywords: "save keep workspace name repositories"
+            ) { [weak self] in self?.askToSaveWorkspace() })
+        }
+        // Each repository of the workspace, to turn the page to.
+        for root in roots.count > 1 ? roots : [] where root !== focusedRoot {
+            commands.append(PaletteCommand(
+                id: "project-focus-\(root.path)", label: "Go to repository \(root.name)", group: "Project",
+                symbol: "square.stack.3d.up", keywords: "switch repository root focus \(root.name)"
+            ) { [weak self] in self?.focus(root: root) })
+        }
+        return commands
     }
 
     private var sessionCommands: [PaletteCommand] {

@@ -35,7 +35,7 @@ struct TerminalPane: View {
             terminal
         }
         .environment(rename)
-        .task(id: model.workspace?.project) { await openFirstSession() }
+        .task(id: model.focusedRootPath) { await openFirstSession() }
     }
 
     /// The shells of the project being opened, and one opened for it if it
@@ -124,6 +124,7 @@ private struct ShellTabBar: View {
 
     var body: some View {
         HStack(spacing: 3) {
+            PaneRootPicker()
             ForEach(shells) { thread in
                 ShellTab(thread: thread,
                          isSelected: model.threads.selectedId == thread.id,

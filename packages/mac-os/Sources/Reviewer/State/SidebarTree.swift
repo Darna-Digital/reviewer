@@ -156,7 +156,7 @@ final class SidebarTree {
     /// The workspace's repositories in its order, while it holds more than
     /// one — each the header of its own part of the tree.
     private(set) var workspaceRoots: [TreeRoot] = []
-    /// The repository the page is on, whose rows are the page's report.
+    /// The repository the page is on.
     private(set) var focusedRootPath: String?
     /// Each root's key — the first component of every id under its header
     /// — by its path: the folder's name, numbered from the second root that
@@ -269,7 +269,7 @@ final class SidebarTree {
         if commit != state.commit { commit = state.commit }
         if comparison != state.comparison { comparison = state.comparison }
         pageSelected = state.selected
-        let selected = state.selected.map { id(of: $0, in: focusedRootPath) }
+        let selected = state.selected.map { id(of: $0, in: pageRootPath) }
         guard selected != self.selected else { return }
         self.selected = selected
         reveal(selected)
@@ -284,7 +284,7 @@ final class SidebarTree {
         let roots = roots.count > 1 ? roots : []
         guard roots != workspaceRoots else { return }
         workspaceRoots = roots
-        keys = Self.keys(for: roots)
+        keys = Self.rootKeys(for: roots)
         rootsByKey = Dictionary(uniqueKeysWithValues: roots.compactMap { root in keys[root.path].map { ($0, root) } })
         rebuild()
     }
@@ -294,9 +294,14 @@ final class SidebarTree {
     func focusChanged(to path: String?) {
         guard path != focusedRootPath else { return }
         focusedRootPath = path
-        selected = pageSelected.map { id(of: $0, in: path) }
         rebuild()
     }
+
+    /// The repository the page's report is of — the one it names, which
+    /// for a moment after a move is still the repository the page left;
+    /// until the page reports the new one, that one's rows are its own
+    /// listing rather than the old repository's under its header.
+    private var pageRootPath: String? { listing?.projectPath ?? focusedRootPath }
 
     /// Whether the tree stands each of the workspace's repositories under a
     /// header of its own. A pull request's files are its repository's
@@ -334,7 +339,7 @@ final class SidebarTree {
         guard let commit else { return nil }
         guard isMultiRoot else { return commit }
         let changes = workspaceRoots.flatMap { root -> [GitStatusEntry] in
-            let entries = root.path == focusedRootPath
+            let entries = root.path == pageRootPath
                 ? commit.changes
                 : root.gitStatus.filter { $0.status != .ignored }
             return entries.map { GitStatusEntry(path: id(of: $0.path, in: root.path), status: $0.status) }
@@ -345,7 +350,9 @@ final class SidebarTree {
     /// The selection the page last reported, in its own repository's terms.
     private var pageSelected: String?
 
-    private static func keys(for roots: [TreeRoot]) -> [String: String] {
+    /// Each repository's key by its path — what the tree and the palette
+    /// name its files under.
+    static func rootKeys(for roots: [TreeRoot]) -> [String: String] {
         var taken: [String: Int] = [:]
         var keys: [String: String] = [:]
         for root in roots {
@@ -361,7 +368,7 @@ final class SidebarTree {
     /// the browse page, only its changed ones over a diff.
     private func workspaceListings(_ listing: ShellTree) -> [(root: TreeRoot, paths: [String], status: [GitStatusEntry])] {
         workspaceRoots.map { root in
-            if root.path == focusedRootPath { return (root, listing.paths, listing.gitStatus) }
+            if root.path == pageRootPath { return (root, listing.paths, listing.gitStatus) }
             return (root, listing.mode == .browse ? root.paths : root.changedPaths, root.gitStatus)
         }
     }

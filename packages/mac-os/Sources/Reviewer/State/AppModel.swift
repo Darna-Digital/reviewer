@@ -121,8 +121,12 @@ final class AppModel {
         palette = CommandPalette(client: client)
         catalog = RepoCatalog(client: client)
         settings = AppSettings(client: client)
-        palette.onOpen = { [weak self] path, line in self?.browse(file: path, line: line) }
-        palette.onIntent = { [weak self] path in self?.page.send(TreeAction.intent(path)) }
+        palette.onOpen = { [weak self] path, line in self?.open(paletteFile: path, line: line) }
+        palette.onIntent = { [weak self] path in
+            guard let self, let (root, file) = locate(paletteFile: path), root === focusedRoot else { return }
+            page.send(TreeAction.intent(file))
+        }
+        palette.scopesSource = { [weak self] in self?.paletteScopes ?? [] }
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
         palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
@@ -188,6 +192,11 @@ final class AppModel {
     }
 
     var services: DevServices { focused.services }
+
+    /// The repository whose dev command the Run pane has picked — the one
+    /// its output and its Add stand for; the focused root until one is.
+    var runRootPath: String?
+    var runRoot: RootModel { root(at: runRootPath) ?? focused }
     var threads: Threads { focused.threads }
     var pullRequests: PullRequests { focused.pullRequests }
 
@@ -431,12 +440,49 @@ final class AppModel {
     /// repository's own thing — a pull request, a commit.
     func focus(root: RootModel) {
         guard root !== focusedRoot else { return }
+        // Sessions are no one repository's page: the conversation stays
+        // where it is, and only what a new session starts in moves.
+        if onSessions { return page.navigate(to: Href.moved(page.href, to: root.path)) }
         let surface = codeSurface ?? .browse
         showOnCodeTab(surface == .review ? reviewHref(for: root.path) : surface.href, in: root)
     }
 
     func browse(file: String, line: Int?) {
         showOnCodeTab(Href.browseTab(file, line: line))
+    }
+
+    // MARK: palette scopes
+
+    /// Each repository's key, the way the tree names its files, while the
+    /// workspace holds more than one.
+    private var rootKeys: [String: String] {
+        roots.count > 1 ? SidebarTree.rootKeys(for: roots.map(\.treeRoot)) : [:]
+    }
+
+    /// The palette reaches into every repository of the workspace.
+    private var paletteScopes: [PaletteScope] {
+        let keys = rootKeys
+        guard !keys.isEmpty else { return [PaletteScope(key: nil, client: client)] }
+        return roots.map { PaletteScope(key: keys[$0.path], client: $0.client) }
+    }
+
+    /// A file the palette lists: its repository and its path there.
+    private func locate(paletteFile path: String) -> (RootModel, String)? {
+        let keys = rootKeys
+        guard !keys.isEmpty else { return focusedRoot.map { ($0, path) } }
+        let key = String(path.prefix { $0 != "/" })
+        guard let root = roots.first(where: { keys[$0.path] == key }) else { return nil }
+        return (root, String(path.dropFirst(key.count + 1)))
+    }
+
+    /// A file picked in the palette, opened in its own repository.
+    private func open(paletteFile path: String, line: Int?) {
+        guard let (root, file) = locate(paletteFile: path) else { return }
+        if root === focusedRoot {
+            browse(file: file, line: line)
+        } else {
+            showOnCodeTab(Href.browseTab(file, line: line), in: root)
+        }
     }
 
     // MARK: palette
@@ -773,7 +819,7 @@ final class AppModel {
     /// tab follows the address — a session's own tab keeps it, the Sessions
     /// tab shows it — the way the web composer's navigate is followed.
     func show(chat: Chat) {
-        page.navigate(to: SessionsPage.href(of: chat.id))
+        page.navigate(to: Href.scoped(SessionsPage.href(of: chat.id), to: focusedRootPath))
     }
 
     // MARK: merge requests

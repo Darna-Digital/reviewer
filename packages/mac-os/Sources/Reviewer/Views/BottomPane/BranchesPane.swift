@@ -25,13 +25,14 @@ struct BranchesPane: View {
     var body: some View {
         VStack(spacing: 0) {
             PaneBar {
+                PaneRootPicker()
                 PaneSearchField(prompt: "Search", text: $query)
                     .frame(width: PaneMetrics.toolbarSearchWidth)
                 Spacer(minLength: 0)
             }
             list
         }
-        .task(id: model.workspace?.project) { await model.loadBranches() }
+        .task(id: model.focusedRootPath) { await model.loadBranches() }
     }
 
     private var rows: [BranchRow] {

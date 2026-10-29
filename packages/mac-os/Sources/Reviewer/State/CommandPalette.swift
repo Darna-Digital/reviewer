@@ -125,6 +125,28 @@ struct PaletteCommand: Identifiable {
 
 /// A branch the checkout list offers, local and remote flattened into one
 /// row: the ref to check out, and the name it is shown under.
+/// One repository the palette's file list and grep reach into, and the
+/// key its results are named under — nil for a workspace of one, whose
+/// paths need no repository named.
+struct PaletteScope: Sendable {
+    let key: String?
+    let client: ReviewerClient
+
+    func named(_ paths: [String]) -> [String] {
+        guard let key else { return paths }
+        return paths.map { "\(key)/\($0)" }
+    }
+
+    func named(_ found: ContentMatches) -> ContentMatches {
+        guard let key else { return found }
+        return ContentMatches(
+            matches: found.matches.map {
+                ContentMatch(path: "\(key)/\($0.path)", line: $0.line, column: $0.column, text: $0.text)
+            },
+            truncated: found.truncated)
+    }
+}
+
 struct PaletteBranch: Identifiable, Hashable, Sendable {
     let name: String
     let ref: String
@@ -374,16 +396,52 @@ final class CommandPalette {
         searchError = nil
     }
 
+    /// Where a file by name and a grep look: every repository of the
+    /// workspace, each result named under its repository's key — the way
+    /// the tree names it — or, in a workspace of one, the focused root
+    /// alone with its paths as they are. Unset, the focused root's client.
+    @ObservationIgnored var scopesSource: (() -> [PaletteScope])?
+
+    private var scopes: [PaletteScope] {
+        scopesSource?() ?? [PaletteScope(key: nil, client: client)]
+    }
+
     private func loadPathsIfNeeded() async {
         guard !pathsLoaded else { return }
         pathsLoaded = true
         do {
-            let payload = try await client.files()
-            paths = payload.paths
+            paths = try await withThrowingTaskGroup(of: (Int, [String]).self) { group in
+                for (index, scope) in scopes.enumerated() {
+                    group.addTask { (index, scope.named(try await scope.client.files().paths)) }
+                }
+                var listed: [(Int, [String])] = []
+                for try await result in group { listed.append(result) }
+                return listed.sorted { $0.0 < $1.0 }.flatMap(\.1)
+            }
             fileResults = Self.fuzzyFilter(paths, by: fileQuery)
         } catch {
             pathsLoaded = false
             searchError = error.localizedDescription
+        }
+    }
+
+    /// The grep run in every scope at once, the hits kept in the
+    /// workspace's order and named under their repositories.
+    private func search(_ query: String, options: GrepOptions) async throws -> ContentMatches {
+        try await withThrowingTaskGroup(of: (Int, ContentMatches).self) { group in
+            for (index, scope) in scopes.enumerated() {
+                group.addTask {
+                    let found = try await scope.client.search(query, options: options, limit: Self.maximumMatches)
+                    return (index, scope.named(found))
+                }
+            }
+            var found: [(Int, ContentMatches)] = []
+            for try await result in group { found.append(result) }
+            let ordered = found.sorted { $0.0 < $1.0 }.map(\.1)
+            let matches = ordered.flatMap(\.matches)
+            return ContentMatches(
+                matches: Array(matches.prefix(Self.maximumMatches)),
+                truncated: matches.count > Self.maximumMatches || ordered.contains(where: \.truncated))
         }
     }
 
@@ -407,7 +465,7 @@ final class CommandPalette {
             try? await Task.sleep(for: Self.debounce)
             guard !Task.isCancelled else { return }
             do {
-                let found = try await client.search(query, options: options, limit: Self.maximumMatches)
+                let found = try await search(query, options: options)
                 guard !Task.isCancelled else { return }
                 matches = found
                 searchError = nil
