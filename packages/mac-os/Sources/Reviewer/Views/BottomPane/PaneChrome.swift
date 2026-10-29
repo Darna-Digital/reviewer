@@ -145,7 +145,8 @@ struct MinimalSearchField: View {
     @Binding var text: String
     var submit: (() -> Void)? = nil
     var takesKeyboard: Binding<Bool> = .constant(false)
-    @FocusState private var focused: Bool
+    @State private var focused = false
+    @State private var wantsFocus = false
 
     private static let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
 
@@ -154,14 +155,8 @@ struct MinimalSearchField: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("", text: $text, prompt: Text(prompt))
-                .textFieldStyle(.plain)
-                .font(.system(size: 11))
-                .focused($focused)
-                .onSubmit { submit?() }
-                .onExitCommand {
-                    if text.isEmpty { focused = false } else { clear() }
-                }
+            SearchTextInput(prompt: prompt, text: $text, focused: $focused, wantsFocus: $wantsFocus,
+                            submit: { submit?() }, clear: clear)
             if !text.isEmpty {
                 Button(action: clear) {
                     Image(systemName: "xmark.circle.fill")
@@ -181,18 +176,152 @@ struct MinimalSearchField: View {
                 lineWidth: focused ? 1.5 : 1)
         }
         .contentShape(Self.shape)
-        .onTapGesture { focused = true }
+        .onTapGesture { wantsFocus = true }
         .onChange(of: focused) { if !focused { submit?() } }
         .onChange(of: takesKeyboard.wrappedValue) { _, wanted in
             guard wanted else { return }
-            focused = true
+            wantsFocus = true
             takesKeyboard.wrappedValue = false
         }
     }
 
+
     private func clear() {
         text = ""
         submit?()
+    }
+}
+
+/// The text of `MinimalSearchField`: a borderless AppKit field whose cell
+/// draws its text, and hands the editor the rect to edit in, centred the
+/// same way (see `CentredTextCell`). SwiftUI's own field drew its resting
+/// text — the prompt, or what was typed — a point lower than the editor
+/// that takes over on focus, so the words hopped up as the field took the
+/// keys.
+private struct SearchTextInput: NSViewRepresentable {
+    let prompt: String
+    @Binding var text: String
+    @Binding var focused: Bool
+    @Binding var wantsFocus: Bool
+    let submit: () -> Void
+    let clear: () -> Void
+
+    private static let font = NSFont.systemFont(ofSize: 11)
+
+    func makeNSView(context: Context) -> FocusReportingTextField {
+        let field = FocusReportingTextField()
+        field.cell = CentredTextCell(textCell: "")
+        field.isEditable = true
+        field.isSelectable = true
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.usesSingleLineMode = true
+        field.cell?.isScrollable = true
+        field.cell?.wraps = false
+        field.lineBreakMode = .byTruncatingTail
+        field.font = Self.font
+        field.placeholderAttributedString = NSAttributedString(
+            string: prompt, attributes: [.font: Self.font, .foregroundColor: NSColor.placeholderTextColor])
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        field.delegate = context.coordinator
+        return field
+    }
+
+    func updateNSView(_ field: FocusReportingTextField, context: Context) {
+        context.coordinator.parent = self
+        field.onFocus = { [binding = $focused] holds in
+            if binding.wrappedValue != holds { binding.wrappedValue = holds }
+        }
+        if field.stringValue != text { field.stringValue = text }
+        if wantsFocus {
+            Task { @MainActor [flag = $wantsFocus] in
+                field.window?.makeFirstResponder(field)
+                flag.wrappedValue = false
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    @MainActor
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: SearchTextInput
+
+        init(parent: SearchTextInput) {
+            self.parent = parent
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            parent.text = field.stringValue
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            switch selector {
+            case #selector(NSResponder.insertNewline(_:)):
+                parent.submit()
+                return true
+            case #selector(NSResponder.cancelOperation(_:)):
+                if parent.text.isEmpty {
+                    control.window?.makeFirstResponder(nil)
+                } else {
+                    parent.clear()
+                }
+                return true
+            default:
+                return false
+            }
+        }
+    }
+}
+
+/// A text field that says when it has the keys and when they go — on
+/// becoming first responder, not on the first keystroke, and on its
+/// editing ending, whether or not a letter was typed.
+final class FocusReportingTextField: NSTextField {
+    var onFocus: ((Bool) -> Void)?
+
+    override func becomeFirstResponder() -> Bool {
+        let taken = super.becomeFirstResponder()
+        if taken { onFocus?(true) }
+        return taken
+    }
+
+    override func textDidEndEditing(_ notification: Notification) {
+        super.textDidEndEditing(notification)
+        onFocus?(false)
+    }
+}
+
+/// A cell that sets its one line in the middle of its height, and gives
+/// the editor that same rect to edit and select in, so the text stands on
+/// the same line whether the cell or the editor is drawing it.
+private final class CentredTextCell: NSTextFieldCell {
+    override func titleRect(forBounds rect: NSRect) -> NSRect {
+        var title = super.titleRect(forBounds: rect)
+        let lineHeight = cellSize(forBounds: rect).height
+        guard lineHeight < title.height else { return title }
+        title.origin.y += ((title.height - lineHeight) / 2).rounded()
+        title.size.height = lineHeight
+        return title
+    }
+
+    override func drawInterior(withFrame cellFrame: NSRect, in controlView: NSView) {
+        super.drawInterior(withFrame: titleRect(forBounds: cellFrame), in: controlView)
+    }
+
+    override func edit(withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, event: NSEvent?) {
+        super.edit(withFrame: titleRect(forBounds: rect), in: controlView, editor: textObj, delegate: delegate, event: event)
+    }
+
+    override func select(
+        withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, start selStart: Int, length selLength: Int
+    ) {
+        super.select(withFrame: titleRect(forBounds: rect), in: controlView, editor: textObj, delegate: delegate,
+                     start: selStart, length: selLength)
     }
 }
 

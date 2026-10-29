@@ -135,6 +135,10 @@ struct BranchPopover<Footer: View>: View {
     /// branches — rather than being the answer: the popover stays up for
     /// what comes next instead of going away under it.
     var drillsIn: (BranchChoice) -> Bool = { _ in false }
+    /// Whether the list eases to a new height as its rows change — the
+    /// agent chat's picker, whose steps swap one list for another — or
+    /// takes it at once, as every other picker does.
+    var easesHeight = false
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
@@ -276,10 +280,10 @@ struct BranchPopover<Footer: View>: View {
                     .padding(Self.listInset)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
                         // The list opens at its height, and from then on
-                        // eases to a new one — a search narrowing it, its
-                        // rows swapped for the next step's — and the
-                        // popover with it.
-                        withAnimation(contentHeight > 0 ? Self.resize : nil) {
+                        // takes a new one — eased, where the picker asks for
+                        // it, as a search narrows it or its rows are swapped
+                        // for the next step's — and the popover with it.
+                        withAnimation(easesHeight && contentHeight > 0 ? Self.resize : nil) {
                             contentHeight = measured
                         }
                     }

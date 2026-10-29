@@ -319,7 +319,8 @@ struct SessionContextBar: View {
                     }
                     BranchPopover(
                         sections: sections, placeholder: placeholder, pick: pick,
-                        dismiss: { open = false }, actions: nil, drillsIn: { $0.branch == nil }
+                        dismiss: { open = false }, actions: nil, drillsIn: { $0.branch == nil },
+                        easesHeight: true
                     ) {
                         EmptyView()
                     }
