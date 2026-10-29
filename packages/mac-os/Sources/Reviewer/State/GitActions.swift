@@ -99,6 +99,24 @@ extension AppModel {
         }
     }
 
+    /// `branch` checked out in `root`, whichever repository the page is on —
+    /// what a workspace session's branch list picks, for any of its
+    /// repositories. Only that repository is read again after.
+    func checkout(_ branch: String, in root: RootModel) {
+        Task {
+            headMovesInFlight += 1
+            defer { headMovesInFlight -= 1 }
+            await notices.run(
+                "Checking out \(branch) in \(root.name)…", done: "Checked out \(branch) in \(root.name)",
+                failed: "Checkout in \(root.name) failed", report: .command
+            ) {
+                try await root.client.checkout(branch: branch)
+                return nil
+            }
+            await refresh(root: root)
+        }
+    }
+
     func checkoutAndUpdate(_ branch: String) {
         runGit("Checking out \(branch)…", done: "Checked out and updated \(branch)", failed: "Checkout failed") {
             try await self.client.checkout(branch: branch)

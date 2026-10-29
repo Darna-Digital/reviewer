@@ -236,7 +236,8 @@ struct SessionContextBar: View {
     var body: some View {
         HStack(spacing: 4) {
             if let workspace = model.workspace, workspace.isMultiRoot {
-                WorkspaceLabel(workspace: workspace)
+                EnvironmentCrumb(environment: model.environment)
+                WorkspaceBranches(workspace: workspace)
             } else {
                 projectButton
                 BranchPicker()
@@ -256,21 +257,101 @@ struct SessionContextBar: View {
         .padding(.horizontal, 6)
     }
 
-    /// The workspace a session works across: its repositories' avatars and
-    /// its name, the repositories said in full on hover.
-    private struct WorkspaceLabel: View {
-        let workspace: WorkspaceInfo
+    /// Where the session runs, ahead of what it runs across: the machine,
+    /// then a chevron leading on to the workspace — the path down from the
+    /// environment, as the toolbar's chip and its popover read.
+    private struct EnvironmentCrumb: View {
+        let environment: ReviewerEnvironment
 
         var body: some View {
             HStack(spacing: 5) {
-                WorkspaceGlyph(names: workspace.roots.map(\.name), size: 14)
-                Text(workspace.displayName ?? "Workspace")
+                Image(systemName: environment.symbol)
+                    .foregroundStyle(.secondary)
+                Text(environment.detail ?? environment.name)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 1)
             }
             .font(.system(size: 11))
-            .padding(.horizontal, 6)
-            .frame(height: 22)
-            .help(workspace.roots.map(\.name).joined(separator: ", "))
+            .padding(.leading, 6)
+        }
+    }
+
+    /// The workspace a session works across, by its avatars and name, and
+    /// the way to every one of its repositories' branches: a section per
+    /// repository, the branch it is on starred, a pick checking that branch
+    /// out there — the multi-repository branch list JetBrains opens from a
+    /// project of several roots.
+    private struct WorkspaceBranches: View {
+        let workspace: WorkspaceInfo
+        @Environment(AppModel.self) private var model
+        @State private var open = false
+
+        var body: some View {
+            Button { open.toggle() } label: {
+                HStack(spacing: 5) {
+                    WorkspaceGlyph(names: workspace.roots.map(\.name), size: 14)
+                    Text(workspace.displayName ?? "Workspace")
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .font(.system(size: 11))
+            }
+            .buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .help("Branches of \(workspace.roots.map(\.name).joined(separator: ", "))")
+            .popover(isPresented: $open, arrowEdge: .bottom) {
+                BranchPopover(
+                    sections: sections, placeholder: "Search branches", pick: pick,
+                    dismiss: { open = false }, actions: nil
+                ) {
+                    EmptyView()
+                }
+            }
+            .closesOnNavigation($open)
+            .task(id: open) {
+                guard open else { return }
+                await withTaskGroup(of: Void.self) { group in
+                    for root in model.roots {
+                        group.addTask { await root.loadBranches() }
+                    }
+                }
+            }
+        }
+
+        /// A repository's local branches under its name, newest first, the
+        /// one it is on starred — each keyed by its repository too, since
+        /// two repositories share branch names.
+        private var sections: [BranchChoiceSection] {
+            model.roots.map { root in
+                BranchChoiceSection(
+                    id: root.path, title: root.name,
+                    rows: root.branches.map { branch in
+                        let ref = BranchRef(branch)
+                        return BranchChoice(
+                            id: Self.key(root: root.path, branch: branch.name), branch: ref, title: ref.display,
+                            symbol: ref.isCurrent ? "star.fill" : "arrow.triangle.branch",
+                            tint: ref.isCurrent ? .orange : nil, badge: branchDistance(branch), checked: false)
+                    })
+            }
+        }
+
+        private static let separator: Character = "\u{1f}"
+
+        private static func key(root: String, branch: String) -> String {
+            "\(root)\(separator)\(branch)"
+        }
+
+        private func pick(_ choice: BranchChoice) {
+            guard let branch = choice.branch, !branch.isCurrent,
+                  let root = model.root(at: String(choice.id.prefix { $0 != Self.separator }))
+            else { return }
+            model.checkout(branch.ref, in: root)
         }
     }
 
