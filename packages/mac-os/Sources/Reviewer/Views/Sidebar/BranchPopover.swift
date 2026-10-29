@@ -43,6 +43,9 @@ struct BranchChoice: Identifiable, Hashable {
     /// A second line under the name, on one line cut in the middle — the
     /// branch a repository is on, in the repository picker.
     var detail: String? = nil
+    /// What hovering the row says beyond what it shows — where a
+    /// repository lives, which is noise in the row itself.
+    var tooltip: String? = nil
     /// The glyph before `detail` — a branch's, where the detail is one —
     /// or nil for a detail that is no branch.
     var detailSymbol: String? = nil
@@ -429,7 +432,7 @@ private struct ChoiceRow: View {
             in: RoundedRectangle(cornerRadius: 6))
         // The submenu opens where the tooltip would stand, so the tooltip
         // gives way to it.
-        .rowTooltip(clipped ? choice.title : nil, active: reading.key == line.key && !submenuOpen)
+        .rowTooltip(choice.tooltip ?? (clipped ? choice.title : nil), active: reading.key == line.key && !submenuOpen)
         .contentShape(Rectangle())
         .onTapGesture(perform: pick)
         .onHover { inside in

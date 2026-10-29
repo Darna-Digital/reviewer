@@ -464,7 +464,8 @@ private struct ProjectPicker: View {
             .map { row in
                 BranchChoice(
                     id: Self.recentPrefix + row.path, branch: nil, title: row.name, symbol: "folder",
-                    tint: nil, badge: nil, checked: false, detail: row.location, monograms: [row.name])
+                    tint: nil, badge: nil, checked: false, tooltip: RepoRow.fold(row.path, home: NSHomeDirectory()),
+                    monograms: [row.name])
             }
     }
 

@@ -118,7 +118,8 @@ struct WorkspaceEditor: View {
     private func choice(_ row: RepoRow) -> BranchChoice {
         BranchChoice(
             id: row.path, branch: nil, title: row.name, symbol: "folder", tint: nil, badge: nil,
-            checked: draft.roots.contains(row.path), detail: row.location, monograms: [row.name])
+            checked: draft.roots.contains(row.path), tooltip: RepoRow.fold(row.path, home: NSHomeDirectory()),
+            monograms: [row.name])
     }
 
     private func toggle(_ choice: BranchChoice) {
@@ -171,8 +172,9 @@ struct WorkspaceEditor: View {
     }
 }
 
-/// One chosen repository, as the form lists it: its avatar, its name over
-/// the folder it sits in, and — under the pointer — the way to take it out.
+/// One chosen repository, as the form lists it: its avatar and its name —
+/// where it lives is the tooltip's to say — and, under the pointer, the way
+/// to take it out.
 private struct ChosenRepository: View {
     let path: String
     let remove: () -> Void
@@ -182,16 +184,9 @@ private struct ChosenRepository: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            RepoAvatar(name: name, size: 22)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(name)
-                    .lineLimit(1)
-                Text(RepoRow.location(of: path, home: NSHomeDirectory()))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+            RepoAvatar(name: name, size: 20)
+            Text(name)
+                .lineLimit(1)
             Spacer(minLength: 8)
             Button(action: remove) {
                 Image(systemName: "minus.circle.fill")
@@ -205,7 +200,7 @@ private struct ChosenRepository: View {
         .padding(.vertical, 2)
         .contentShape(Rectangle())
         .onHover { hovered = $0 }
-        .help(path)
+        .help(RepoRow.fold(path, home: NSHomeDirectory()))
         .contextMenu {
             Button("Remove from Workspace", action: remove)
         }
