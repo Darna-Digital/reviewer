@@ -308,10 +308,21 @@ struct SessionContextBar: View {
             .controlSize(.small)
             .help("Branches of \(workspace.roots.map(\.name).joined(separator: ", "))")
             .popover(isPresented: $open, arrowEdge: .bottom) {
-                if let root = model.root(at: drilled) {
-                    branches(of: root)
-                } else {
-                    repositories
+                // One list whose rows are the step's — the repositories, or
+                // the one picked's branches — so a move between the steps
+                // is the popover easing to the new rows' height, the way
+                // back fading in above them, and nothing sliding sideways.
+                VStack(spacing: 0) {
+                    if let root = drilledRoot {
+                        back(from: root)
+                            .transition(.opacity)
+                    }
+                    BranchPopover(
+                        sections: sections, placeholder: placeholder, pick: pick,
+                        dismiss: { open = false }, actions: nil, drillsIn: { $0.branch == nil }
+                    ) {
+                        EmptyView()
+                    }
                 }
             }
             .closesOnNavigation($open)
@@ -326,30 +337,40 @@ struct SessionContextBar: View {
             }
         }
 
-        /// The first step: the workspace's repositories, each with the
-        /// branch it is on, a pick moving on to its branches.
-        private var repositories: some View {
-            BranchPopover(
-                sections: [BranchChoiceSection(
-                    id: "repositories", title: nil,
-                    rows: model.roots.map { root in
-                        BranchChoice(
-                            id: root.path, branch: nil, title: root.name, symbol: "folder", tint: nil,
-                            badge: nil, checked: false, detail: root.branch ?? "Detached HEAD",
-                            detailSymbol: "arrow.triangle.branch", monograms: [root.name])
-                    })],
-                placeholder: "Search repositories", pick: { drilled = $0.id }, dismiss: { open = false },
-                actions: nil, drillsIn: { _ in true }
-            ) {
-                EmptyView()
-            }
+        private var drilledRoot: RootModel? { model.root(at: drilled) }
+
+        /// The step's rows: the workspace's repositories, each with the
+        /// branch it is on — or the one picked's branches.
+        private var sections: [BranchChoiceSection] {
+            if let root = drilledRoot { return branchSections(of: root) }
+            return [BranchChoiceSection(
+                id: "repositories", title: nil,
+                rows: model.roots.map { root in
+                    BranchChoice(
+                        id: root.path, branch: nil, title: root.name, symbol: "folder", tint: nil,
+                        badge: nil, checked: false, detail: root.branch ?? "Detached HEAD",
+                        detailSymbol: "arrow.triangle.branch", monograms: [root.name])
+                })]
         }
 
-        /// The second step: one repository's branches — Recent, Local and
-        /// Remote, as the sidebar's switcher has them — under the way back.
-        private func branches(of root: RootModel) -> some View {
+        private var placeholder: String {
+            drilledRoot.map { "Search \($0.name)’s branches" } ?? "Search repositories"
+        }
+
+        /// A repository moves on to its branches; a branch is checked out in
+        /// the repository it is listed under.
+        private func pick(_ choice: BranchChoice) {
+            guard let root = drilledRoot else {
+                return step { drilled = choice.id }
+            }
+            guard let branch = choice.branch, !branch.isCurrent else { return }
+            model.checkout(branch.ref, in: root)
+        }
+
+        /// The way back to the repositories, over the branches of one.
+        private func back(from root: RootModel) -> some View {
             VStack(spacing: 0) {
-                Button { drilled = nil } label: {
+                Button { step { drilled = nil } } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 11, weight: .semibold))
@@ -366,15 +387,13 @@ struct SessionContextBar: View {
                 .buttonStyle(.plain)
                 .help("Back to the repositories")
                 ThemedDivider()
-                BranchPopover(
-                    sections: branchSections(of: root), placeholder: "Search \(root.name)’s branches",
-                    pick: { choice in
-                        guard let branch = choice.branch, !branch.isCurrent else { return }
-                        model.checkout(branch.ref, in: root)
-                    },
-                    dismiss: { open = false }
-                )
             }
+        }
+
+        /// A move between the steps: the back row fading, the popover easing
+        /// to the new rows' height.
+        private func step(_ move: () -> Void) {
+            withAnimation(.snappy(duration: 0.25), move)
         }
 
         private func branchSections(of root: RootModel) -> [BranchChoiceSection] {

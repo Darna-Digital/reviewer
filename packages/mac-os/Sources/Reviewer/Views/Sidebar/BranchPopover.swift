@@ -201,6 +201,12 @@ struct BranchPopover<Footer: View>: View {
         // The field is focused only once it is on screen, a turn of the
         // run loop after the popover comes up.
         .onAppear { Task { @MainActor in fieldFocused = true } }
+        // Rows swapped for another step's — a repository's branches after
+        // the repositories — start the search and the walk over.
+        .onChange(of: sections.map(\.id)) {
+            query = ""
+            active = 0
+        }
     }
 
     private func field(_ lines: [Line]) -> some View {
@@ -240,7 +246,14 @@ struct BranchPopover<Footer: View>: View {
                     }
                 }
                 .padding(Self.listInset)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measured in
+                    // The list opens at its height, and from then on eases
+                    // to a new one — a search narrowing it, its rows swapped
+                    // for the next step's — and the popover with it.
+                    withAnimation(contentHeight > 0 ? .snappy(duration: 0.25) : nil) {
+                        contentHeight = measured
+                    }
+                }
             }
             // As tall as its rows, up to the cap: a scroll view takes all the
             // height it is offered, which left a short list scrollable, its
