@@ -121,6 +121,7 @@ import {
   reconcileTabs,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
+import { tabFile, tabKey } from "@/interactions/tabs/functions/tab-key";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   ALL_REFS,
@@ -227,6 +228,14 @@ export function CodeWorkspace() {
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
   const repo = useRepo();
+  const repoRoot = repo.data?.root ?? null;
+  /** A file of the page's repository, as the workspace's strip names it. */
+  const keyOf = (path: string) => tabKey(repoRoot, path);
+  /** Whether a tab is the page's repository's — the ones it can show as is. */
+  const inThisRepo = (key: string) => {
+    const owner = tabFile(key).repo;
+    return owner === null || owner === repoRoot;
+  };
   const chatModels = useChatModels();
   const chats = useRecentChats();
   const files = useFiles();
@@ -511,9 +520,10 @@ export function CodeWorkspace() {
 
   // Only the open file has a buffer, so it is the only one that can be dirty.
   const [dirtyFile, setDirtyFile] = useState<string | null>(null);
-  const dirtyPaths = useMemo(
-    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
-    [dirtyFile]
+  /** The edited file's tab, as the workspace's strip names it. */
+  const dirtyKeys = useMemo(
+    () => new Set(dirtyFile === null ? [] : [tabKey(repoRoot, dirtyFile)]),
+    [dirtyFile, repoRoot]
   );
   const onDirtyChange = useCallback(
     (dirty: boolean) => {
@@ -521,11 +531,11 @@ export function CodeWorkspace() {
       // Editing a file is the clearest possible statement that you are staying
       // in it, so it stops being a preview.
       if (dirty && search.file !== undefined) {
-        const path = search.file;
-        updateTabs((state) => keepTab(state, path));
+        const key = tabKey(repoRoot, search.file);
+        updateTabs((state) => keepTab(state, key));
       }
     },
-    [search.file]
+    [search.file, repoRoot]
   );
 
   /**
@@ -595,7 +605,8 @@ export function CodeWorkspace() {
   const openLocation = (path: string, lineNumber: number) => {
     if (readingDiff) return openInBrowse(path, lineNumber);
     whenMayLeaveFile(path, () => {
-      if (tabbed) updateTabs((state) => openTab(state, path, "permanent"));
+      if (tabbed)
+        updateTabs((state) => openTab(state, keyOf(path), "permanent"));
       setSearch({ file: path });
       revealLine(path, lineNumber);
     });
@@ -639,7 +650,9 @@ export function CodeWorkspace() {
       return;
     }
     if (tabbed)
-      updateTabs((state) => openTab(state, comment.filePath, "permanent"));
+      updateTabs((state) =>
+        openTab(state, keyOf(comment.filePath), "permanent")
+      );
     setSearch({
       file: comment.filePath,
       path: comment.filePath,
@@ -743,53 +756,75 @@ export function CodeWorkspace() {
   // The strip follows the open file rather than owning it: navigation arrives
   // from the tree, the command menu, go-to-definition and restored URLs alike.
   const tabs = useTabs();
-  const repoRoot = repo.data?.root ?? null;
+  // One strip per workspace, every repository's files in it: a saved
+  // workspace by its id, repositories open on their own by their roots — for
+  // one repository, its root alone, which is where its strip was kept before
+  // workspaces were.
+  const roots = workspace.data?.roots;
+  const savedWorkspace = workspace.data?.workspace ?? null;
+  const tabScope =
+    savedWorkspace !== null
+      ? `workspace:${savedWorkspace.id}`
+      : roots !== undefined && roots.length > 0
+        ? roots.map((root) => root.path).join("\n")
+        : null;
+  const multiRoot = (roots?.length ?? 0) > 1;
   useEffect(() => {
-    scopeTabsTo(repoRoot);
-  }, [repoRoot]);
+    if (tabScope === null || repoRoot === null) return;
+    scopeTabsTo(tabScope, repoRoot);
+  }, [tabScope, repoRoot]);
   // Which repository is open is being re-asked, so the answer on hand is not
   // to be acted on: it may still be the one being left. Until it lands, the
-  // strip in the store is the departing repository's, and restoring from it
-  // would put that repository's file on screen inside this one.
-  const repoInDoubt = repo.isFetching;
+  // tabs the store calls this repository's may be the departing one's, and
+  // restoring from them would put that repository's file on screen in this.
+  const repoInDoubt = repo.isFetching || tabScope === null;
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
   const canRestore = mode === "browse" && target === null;
-  /** The repository the strip was last settled against. */
+  /** The workspace the strip was last settled against. */
   const settledFor = useRef<string | null>(null);
   const requestedTab = search.tab;
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
     if (!tabbed || !pageSettled || repoInDoubt) return;
     const switched =
-      settledFor.current !== null && settledFor.current !== repoRoot;
-    settledFor.current = repoRoot;
+      settledFor.current !== null && settledFor.current !== tabScope;
+    settledFor.current = tabScope;
+    // A move between the workspace's repositories keeps the strip; arriving
+    // on one with no file named puts back that repository's own tab, never a
+    // sibling's, which would send the page straight back where it came from.
     const { open, tabs: settled } = reconcileTabs(readTabs(), {
-      viewing,
+      viewing: viewing === null ? null : tabKey(repoRoot, viewing),
       switched,
       canRestore,
       intent: requestedTab,
+      restorable: (key) => {
+        const owner = tabFile(key).repo;
+        return owner === null || owner === repoRoot;
+      },
     });
     updateTabs(() => settled);
+    const openPath = open === null ? null : tabFile(open).path;
     // Replaces rather than pushes, so Back leaves the strip behind instead of
     // returning to a URL that reopens the same file. Done off the repository
     // alone rather than waiting on its file list: the viewer is already asking
     // for whatever the URL names, and a file the last repository had open is a
     // request this one can only answer with an error.
-    if (open !== viewing || requestedTab !== undefined) {
+    if (openPath !== viewing || requestedTab !== undefined) {
       void navigate({
         to: ".",
         search: (prev: Search) => ({
           ...prev,
-          file: open ?? undefined,
+          file: openPath ?? undefined,
           tab: undefined,
         }),
         replace: true,
       });
     }
   }, [
+    tabScope,
     repoRoot,
     repoInDoubt,
     viewing,
@@ -812,45 +847,74 @@ export function CodeWorkspace() {
    * repository it lists (see `FilesPayload`), and the pruning waits for the
    * two to agree. The file on screen is spared whatever the listing says — it
    * is open, so it is there, and an ignored file reached from the tree is in
-   * no listing at all.
+   * no listing at all. In a workspace only this repository's tabs are
+   * pruned: the others are each pruned against their own listing, when the
+   * page is on their repository.
    */
   useEffect(() => {
     if (listing === undefined || listing.root !== repoRoot) return;
     const known = new Set(listing.paths);
     updateTabs((state) =>
-      pruneTabs(state, (path) => known.has(path) || path === state.active)
+      pruneTabs(state, (key) => {
+        const { repo: owner, path } = tabFile(key);
+        const ours = owner === null || owner === repoRoot;
+        return !ours || known.has(path) || key === state.active;
+      })
     );
   }, [listing, repoRoot]);
 
-  const selectTab = (path: string) => {
-    whenMayLeaveFile(path, () => setSearch({ file: path }));
+  /**
+   * A tab's file on screen: by the address alone for one of this
+   * repository's, or the page moved to its repository for one of another's
+   * — the workspace's other repositories are a navigation away, and the
+   * strip, being the workspace's, stays as it is.
+   */
+  const showTab = (key: string | null) => {
+    if (key === null) return void setSearch({ file: undefined });
+    const { repo: owner, path } = tabFile(key);
+    if (owner === null || owner === repoRoot)
+      return void setSearch({ file: path });
+    void navigate({
+      to: ".",
+      search: (prev: Search) => ({ ...prev, file: path, repo: owner }),
+    });
+  };
+
+  const selectTab = (key: string) => {
+    whenMayLeaveFile(inThisRepo(key) ? tabFile(key).path : undefined, () =>
+      showTab(key)
+    );
   };
 
   // Every file in the strip, read and highlighted while the window has nothing
   // else to do. A tab is already open as far as you are concerned — clicking it
   // should show the file, not start rendering it — and waiting for the pointer
   // to reach the tab is too late for a click that follows straight after.
+  // Only this repository's files are read ahead: the page reads the
+  // repository it is on, and another's are a navigation away.
   const prerenderFile = usePrerenderFile();
   const openTabs = tabs.tabs;
   useEffect(() => {
     if (openTabs.length === 0) return;
     const warm = () => {
-      for (const tab of openTabs) prerenderFile(tab.path);
+      for (const tab of openTabs) {
+        const { repo: owner, path } = tabFile(tab.path);
+        if (owner === null || owner === repoRoot) prerenderFile(path);
+      }
     };
     const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
     return () => window.cancelIdleCallback(idle);
-  }, [openTabs, prerenderFile]);
-  const closeTabAt = (path: string) => {
+  }, [openTabs, prerenderFile, repoRoot]);
+  const dirtyKey = dirtyFile === null ? null : keyOf(dirtyFile);
+  const closeTabAt = (key: string) => {
     // Closing another tab leaves the edited file where it is; only closing the
     // one holding the buffer throws it away.
-    whenMayLeaveFile(dirtyFile === path ? undefined : dirtyFile, () =>
+    whenMayLeaveFile(dirtyKey === key ? undefined : dirtyFile, () =>
       updateTabs((state) => {
-        const next = closeTab(state, path);
+        const next = closeTab(state, key);
         // Closing the tab on screen moves the file view to its neighbour, or
         // shuts it when the strip empties.
-        if (state.active === path) {
-          setSearch({ file: next.active ?? undefined });
-        }
+        if (state.active === key) showTab(next.active);
         return next;
       })
     );
@@ -1300,36 +1364,49 @@ export function CodeWorkspace() {
     ? {
         tabs: tabs.tabs,
         active: tabs.active,
-        dirty: dirtyPaths,
+        dirty: dirtyKeys,
         onSelect: selectTab,
-        onIntent: prerenderFile,
-        onKeep: (path) => updateTabs((state) => keepTab(state, path)),
+        onIntent: (key) => {
+          if (inThisRepo(key)) prerenderFile(tabFile(key).path);
+        },
+        onKeep: (key) => updateTabs((state) => keepTab(state, key)),
         onClose: closeTabAt,
-        onTogglePin: (path) => updateTabs((state) => togglePin(state, path)),
-        onCloseOthers: (path) => {
-          whenMayLeaveFile(path, () =>
-            updateTabs((state) => {
-              const next = closeOthers(state, path);
-              setSearch({ file: next.active ?? undefined });
-              return next;
-            })
+        onTogglePin: (key) => updateTabs((state) => togglePin(state, key)),
+        onCloseOthers: (key) => {
+          whenMayLeaveFile(
+            inThisRepo(key) ? tabFile(key).path : undefined,
+            () =>
+              updateTabs((state) => {
+                const next = closeOthers(state, key);
+                showTab(next.active);
+                return next;
+              })
           );
         },
         onCloseAll: () => {
           whenMayLeaveFile(undefined, () =>
             updateTabs((state) => {
               const next = closeAll(state);
-              setSearch({ file: next.active ?? undefined });
+              showTab(next.active);
               return next;
             })
           );
         },
-        onMove: (path, toIndex) =>
-          updateTabs((state) => moveTab(state, path, toIndex)),
+        onMove: (key, toIndex) =>
+          updateTabs((state) => moveTab(state, key, toIndex)),
+        describe: (key) => {
+          const { repo: owner, path } = tabFile(key);
+          return multiRoot && owner !== null
+            ? `${pathName(owner)} · ${path}`
+            : path;
+        },
         // A file's past is asked for from the tab naming it, which is the one
         // thing that goes on naming it once the trail under the pane is the
-        // window's own — see the path bar at the foot of this file.
-        onShowHistory: showFileHistory,
+        // window's own — see the path bar at the foot of this file. Another
+        // repository's file is read from its own page.
+        onShowHistory: (key) => {
+          if (inThisRepo(key)) showFileHistory(tabFile(key).path);
+        },
       }
     : null;
 

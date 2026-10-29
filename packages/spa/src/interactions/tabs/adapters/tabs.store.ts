@@ -3,16 +3,20 @@
  *
  * Which files you have open is view state, not navigation — the URL already
  * carries the one file on screen, and putting the whole strip in it would make
- * every tab click a history entry. It is per repository, since a strip of paths
- * from another checkout would be a list of files that do not exist.
+ * every tab click a history entry. It is per workspace: one strip for all of
+ * its repositories, each tab naming the repository it is in (see `tab-key`),
+ * so moving between them keeps every file open. A strip saved before
+ * workspaces — under one repository's root, of bare paths — is the strip of
+ * that repository on its own, and its tabs are taken as that repository's.
  */
 import { useSyncExternalStore } from "react";
+import { adoptTabKey } from "../functions/tab-key";
 import { EMPTY_TABS } from "../functions/tabs.functions";
 import type { Tab, TabsState } from "../interfaces/tabs.interfaces";
 
 const KEY_PREFIX = "reviewer-tabs:";
 
-/** Which repository the strip in memory belongs to. */
+/** Which workspace the strip in memory belongs to. */
 let scope: string | null = null;
 let state: TabsState = EMPTY_TABS;
 const listeners = new Set<() => void>();
@@ -28,24 +32,24 @@ const isTab = (value: unknown): value is Tab =>
   value !== null &&
   typeof (value as Tab).path === "string";
 
-const load = (repo: string): TabsState => {
+const load = (workspace: string, repo: string | null): TabsState => {
   if (typeof window === "undefined") return EMPTY_TABS;
   try {
-    const raw = window.localStorage.getItem(keyFor(repo));
+    const raw = window.localStorage.getItem(keyFor(workspace));
     if (raw === null) return EMPTY_TABS;
     const parsed = JSON.parse(raw) as Partial<TabsState>;
     const tabs = (parsed.tabs ?? []).filter(isTab).map((tab) => ({
-      path: tab.path,
+      path: adoptTabKey(tab.path, repo),
       pinned: tab.pinned === true,
       // A restored tab is never a preview: coming back to a strip is a
       // deliberate act, and the first click would otherwise throw one away.
       preview: false,
     }));
-    const active =
-      typeof parsed.active === "string" &&
-      tabs.some((tab) => tab.path === parsed.active)
-        ? parsed.active
+    const saved =
+      typeof parsed.active === "string"
+        ? adoptTabKey(parsed.active, repo)
         : null;
+    const active = tabs.some((tab) => tab.path === saved) ? saved : null;
     return { tabs, active };
   } catch {
     return EMPTY_TABS;
@@ -62,13 +66,17 @@ const persist = () => {
 };
 
 /**
- * Point the store at a repository, loading its strip. Called as the shell
- * learns which repository is open; a no-op once it is pointed there.
+ * Point the store at a workspace, loading its strip. Called as the page
+ * learns which workspace is open; a no-op once it is pointed there. `repo`
+ * is the repository a strip saved before workspaces is taken to be of.
  */
-export const scopeTabsTo = (repo: string | null): void => {
-  if (repo === scope) return;
-  scope = repo;
-  state = repo === null ? EMPTY_TABS : load(repo);
+export const scopeTabsTo = (
+  workspace: string | null,
+  repo: string | null
+): void => {
+  if (workspace === scope) return;
+  scope = workspace;
+  state = workspace === null ? EMPTY_TABS : load(workspace, repo);
   emit();
 };
 
