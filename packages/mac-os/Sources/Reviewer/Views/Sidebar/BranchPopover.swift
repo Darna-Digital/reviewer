@@ -127,6 +127,10 @@ struct BranchPopover<Footer: View>: View {
     /// The row's submenu — what can be done to the branch besides picking
     /// it — or nil where a pick is all a row is for.
     let actions: ((BranchRef) -> [BranchAction])?
+    /// A row whose pick leads further in — a repository, opening its
+    /// branches — rather than being the answer: the popover stays up for
+    /// what comes next instead of going away under it.
+    var drillsIn: (BranchChoice) -> Bool = { _ in false }
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
@@ -297,8 +301,9 @@ struct BranchPopover<Footer: View>: View {
 
     private func pick(at index: Int, in lines: [Line]) {
         guard lines.indices.contains(index) else { return }
-        dismiss()
-        pick(lines[index].choice)
+        let choice = lines[index].choice
+        if !drillsIn(choice) { dismiss() }
+        pick(choice)
     }
 }
 

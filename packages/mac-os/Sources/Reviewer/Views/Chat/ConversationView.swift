@@ -281,14 +281,16 @@ struct SessionContextBar: View {
     }
 
     /// The workspace a session works across, by its avatars and name, and
-    /// the way to every one of its repositories' branches: a section per
-    /// repository, the branch it is on starred, a pick checking that branch
-    /// out there — the multi-repository branch list JetBrains opens from a
-    /// project of several roots.
+    /// the way to any of its repositories' branches, one step at a time:
+    /// the repositories first, each with the branch it is on, then — the
+    /// popover moving on in place, with the way back at its head — the one
+    /// picked's branches, a pick checking that branch out there.
     private struct WorkspaceBranches: View {
         let workspace: WorkspaceInfo
         @Environment(AppModel.self) private var model
         @State private var open = false
+        /// The repository whose branches the popover has moved on to.
+        @State private var drilled: String?
 
         var body: some View {
             Button { open.toggle() } label: {
@@ -306,14 +308,14 @@ struct SessionContextBar: View {
             .controlSize(.small)
             .help("Branches of \(workspace.roots.map(\.name).joined(separator: ", "))")
             .popover(isPresented: $open, arrowEdge: .bottom) {
-                BranchPopover(
-                    sections: sections, placeholder: "Search branches", pick: pick,
-                    dismiss: { open = false }, actions: nil
-                ) {
-                    EmptyView()
+                if let root = model.root(at: drilled) {
+                    branches(of: root)
+                } else {
+                    repositories
                 }
             }
             .closesOnNavigation($open)
+            .onChange(of: open) { if !open { drilled = nil } }
             .task(id: open) {
                 guard open else { return }
                 await withTaskGroup(of: Void.self) { group in
@@ -324,34 +326,64 @@ struct SessionContextBar: View {
             }
         }
 
-        /// A repository's local branches under its name, newest first, the
-        /// one it is on starred — each keyed by its repository too, since
-        /// two repositories share branch names.
-        private var sections: [BranchChoiceSection] {
-            model.roots.map { root in
-                BranchChoiceSection(
-                    id: root.path, title: root.name,
-                    rows: root.branches.map { branch in
-                        let ref = BranchRef(branch)
-                        return BranchChoice(
-                            id: Self.key(root: root.path, branch: branch.name), branch: ref, title: ref.display,
-                            symbol: ref.isCurrent ? "star.fill" : "arrow.triangle.branch",
-                            tint: ref.isCurrent ? .orange : nil, badge: branchDistance(branch), checked: false)
-                    })
+        /// The first step: the workspace's repositories, each with the
+        /// branch it is on, a pick moving on to its branches.
+        private var repositories: some View {
+            BranchPopover(
+                sections: [BranchChoiceSection(
+                    id: "repositories", title: nil,
+                    rows: model.roots.map { root in
+                        BranchChoice(
+                            id: root.path, branch: nil, title: root.name, symbol: "folder", tint: nil,
+                            badge: nil, checked: false, detail: root.branch ?? "Detached HEAD",
+                            detailSymbol: "arrow.triangle.branch", monograms: [root.name])
+                    })],
+                placeholder: "Search repositories", pick: { drilled = $0.id }, dismiss: { open = false },
+                actions: nil, drillsIn: { _ in true }
+            ) {
+                EmptyView()
             }
         }
 
-        private static let separator: Character = "\u{1f}"
-
-        private static func key(root: String, branch: String) -> String {
-            "\(root)\(separator)\(branch)"
+        /// The second step: one repository's branches — Recent, Local and
+        /// Remote, as the sidebar's switcher has them — under the way back.
+        private func branches(of root: RootModel) -> some View {
+            VStack(spacing: 0) {
+                Button { drilled = nil } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        RepoAvatar(name: root.name, size: 16)
+                        Text(root.name)
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 34)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Back to the repositories")
+                ThemedDivider()
+                BranchPopover(
+                    sections: branchSections(of: root), placeholder: "Search \(root.name)’s branches",
+                    pick: { choice in
+                        guard let branch = choice.branch, !branch.isCurrent else { return }
+                        model.checkout(branch.ref, in: root)
+                    },
+                    dismiss: { open = false }
+                )
+            }
         }
 
-        private func pick(_ choice: BranchChoice) {
-            guard let branch = choice.branch, !branch.isCurrent,
-                  let root = model.root(at: String(choice.id.prefix { $0 != Self.separator }))
-            else { return }
-            model.checkout(branch.ref, in: root)
+        private func branchSections(of root: RootModel) -> [BranchChoiceSection] {
+            let local = root.branches.map { BranchChoice.branch(BranchRef($0), badge: branchDistance($0)) }
+            return [
+                BranchChoiceSection(id: "recent", title: "Recent", rows: Array(local.prefix(5)), hiddenWhileSearching: true),
+                BranchChoiceSection(id: "local", title: "Local", rows: local),
+                BranchChoiceSection(id: "remote", title: "Remote", rows: root.remoteBranches.map { .branch(BranchRef($0)) }),
+            ]
         }
     }
 
