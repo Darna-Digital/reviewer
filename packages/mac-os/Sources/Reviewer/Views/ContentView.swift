@@ -83,9 +83,18 @@ struct ContentView: View {
             SaveWorkspaceSheet()
                 .environment(model)
         }
+        // A new workspace is made over the window it was asked for in, not
+        // in the opener: a sheet asked of a window still coming up is
+        // dropped, which made the first ask go unanswered.
+        .onChange(of: model.newWorkspaceRequests) { newWorkspace = WorkspaceDraft(roots: []) }
+        .sheet(item: $newWorkspace) { draft in
+            WorkspaceEditor(draft: draft)
+                .environment(model)
+        }
     }
 
     @State private var savingWorkspace = false
+    @State private var newWorkspace: WorkspaceDraft?
 
     /// The system's column state as the model's one switch, so the sidebar
     /// button on the bar, ⌃⌘S and the View menu all move the same thing,
@@ -383,7 +392,9 @@ private struct ProjectPicker: View {
         .buttonStyle(BarChipStyle(height: 30))
         .toolbarGlassLabel("Switch workspace", hint: "⌘O")
         .popover(isPresented: $open, arrowEdge: .bottom) { popover }
-        .task(id: open) { if open { await model.catalog.loadWorkspaces() } }
+        // The workspaces and the recents as they stand now — another
+        // window may have saved one or opened another since.
+        .onChange(of: open) { if open { model.catalog.load() } }
     }
 
     /// The workspaces under the environment they run in — one group while
@@ -391,7 +402,10 @@ private struct ProjectPicker: View {
     /// without a saved workspace stand first, as what is open now.
     private var popover: some View {
         BranchPopover(
-            sections: [BranchChoiceSection(id: "environment", title: environment.detail ?? environment.name, rows: rows)],
+            sections: [
+                BranchChoiceSection(id: "environment", title: environment.detail ?? environment.name, rows: rows),
+                BranchChoiceSection(id: "recent", title: "Recent Repositories", rows: recentRows),
+            ],
             placeholder: "Search workspaces", pick: pick, dismiss: { open = false }, actions: nil
         ) {
             ThemedDivider()
@@ -399,8 +413,7 @@ private struct ProjectPicker: View {
                 Button("Open…") { open = false; openWindow(id: ReviewerWindow.opener) }
                 Button("New workspace…") {
                     open = false
-                    model.newWorkspaceAsked = true
-                    openWindow(id: ReviewerWindow.opener)
+                    model.askForNewWorkspace()
                 }
                 Spacer(minLength: 0)
                 if model.hasProject, model.workspace?.workspace == nil {
@@ -429,10 +442,32 @@ private struct ProjectPicker: View {
         return rows
     }
 
+    /// The repositories opened lately, each to open on its own again, as
+    /// Xcode lists recent projects under its workspaces — newest first,
+    /// the few that fit, leaving out the one open on its own right now.
+    private var recentRows: [BranchChoice] {
+        let openAlone = model.workspace?.workspace == nil ? Set(model.workspace?.roots.map(\.path) ?? []) : []
+        return model.catalog.recents
+            .filter { !openAlone.contains($0.path) }
+            .prefix(Self.recentLimit)
+            .map { row in
+                BranchChoice(
+                    id: Self.recentPrefix + row.path, branch: nil, title: row.name, symbol: "folder",
+                    tint: nil, badge: nil, checked: false, detail: row.location, monograms: [row.name])
+            }
+    }
+
     private static let unsavedId = "unsaved"
+    private static let recentPrefix = "recent:"
+    private static let recentLimit = 8
 
     private func pick(_ choice: BranchChoice) {
         open = false
+        if choice.id.hasPrefix(Self.recentPrefix) {
+            let path = String(choice.id.dropFirst(Self.recentPrefix.count))
+            Task { await model.openProject(path: path) }
+            return
+        }
         guard choice.id != Self.unsavedId, choice.id != model.workspace?.workspace?.id else { return }
         Task { await model.openWorkspace(id: choice.id) }
     }

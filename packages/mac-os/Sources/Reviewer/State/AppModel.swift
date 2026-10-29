@@ -30,10 +30,14 @@ final class AppModel {
     /// Where the window's code runs — the server above; this Mac until
     /// cloud environments are.
     let environment = ReviewerEnvironment.thisMac
-    /// A new workspace asked for from outside the opener — the toolbar
-    /// chip's popover — which the opener takes up when it comes up (see
-    /// `RepoOpener`).
-    var newWorkspaceAsked = false
+    /// How many times a new workspace has been asked for from the window —
+    /// the toolbar chip's popover — which the window answers with the
+    /// editor as a sheet of its own (see `ContentView`).
+    private(set) var newWorkspaceRequests = 0
+
+    func askForNewWorkspace() {
+        newWorkspaceRequests += 1
+    }
 
     var connection: ConnectionState = .starting
     var workspace: WorkspaceInfo?
