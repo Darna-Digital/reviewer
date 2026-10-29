@@ -401,12 +401,23 @@ private struct ProjectPicker: View {
     /// this Mac is the only one — the open one ticked; repositories open
     /// without a saved workspace stand first, as what is open now.
     private var popover: some View {
+        VStack(spacing: 0) {
+            EnvironmentBar(environment: environment)
+            ThemedDivider()
+            choices
+        }
+    }
+
+    /// What the environment holds: its workspaces, and the repositories
+    /// opened in it lately — two lists of one place, under the bar that
+    /// names the place.
+    private var choices: some View {
         BranchPopover(
             sections: [
-                BranchChoiceSection(id: "environment", title: environment.detail ?? environment.name, rows: rows),
-                BranchChoiceSection(id: "recent", title: "Recent Repositories", rows: recentRows),
+                BranchChoiceSection(id: "workspaces", title: "Workspaces", rows: rows),
+                BranchChoiceSection(id: "recent", title: "Recent", rows: recentRows),
             ],
-            placeholder: "Search workspaces", pick: pick, dismiss: { open = false }, actions: nil
+            placeholder: "Search workspaces and repositories", pick: pick, dismiss: { open = false }, actions: nil
         ) {
             ThemedDivider()
             HStack(spacing: 2) {
@@ -470,6 +481,36 @@ private struct ProjectPicker: View {
         }
         guard choice.id != Self.unsavedId, choice.id != model.workspace?.workspace?.id else { return }
         Task { await model.openWorkspace(id: choice.id) }
+    }
+}
+
+/// The head of the workspace popover: the environment everything under it
+/// belongs to — its glyph, the machine's own name, and what kind of place
+/// it is — so the lists below read as its contents rather than as places
+/// of their own. With cloud environments it becomes the switch between
+/// them; with only this Mac it says where, and offers nothing to pick.
+private struct EnvironmentBar: View {
+    let environment: ReviewerEnvironment
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: environment.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+            Text(environment.detail ?? environment.name)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 8)
+            if environment.detail != nil {
+                Text(environment.name)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 36)
     }
 }
 
