@@ -1,4 +1,5 @@
 import * as React from 'react';
+import type { Store } from '../store/createStore';
 import { loadUiState, saveUiState } from '../store/uiState';
 import type { UiState } from '../store/uiState';
 
@@ -27,16 +28,20 @@ const SAVE_DELAY_MS = 400;
 
 /** Which surface is up, and where the panes sit; restored per repository. */
 export function useWorkspace(
+  store: Store,
   root: string,
   screen: { width: number; height: number },
 ) {
-  const [state, setState] = React.useState(() => loadUiState(root));
+  const [state, setState] = React.useState(() => loadUiState(store, root));
   const [sidebarVisible, setSidebarVisible] = React.useState(true);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => saveUiState(root, state), SAVE_DELAY_MS);
+    const timer = setTimeout(
+      () => saveUiState(store, root, state),
+      SAVE_DELAY_MS,
+    );
     return () => clearTimeout(timer);
-  }, [root, state]);
+  }, [store, root, state]);
 
   const update = (patch: Partial<UiState>) =>
     setState((prev) => ({ ...prev, ...patch }));

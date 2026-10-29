@@ -134,10 +134,13 @@ export const closeDatabase = (): void => {
 /**
  * Run `f` inside a transaction. Feature writes that touch more than one row —
  * a chat and its messages, a board and its cards — go through here so a reader
- * never sees half of one.
+ * never sees half of one. A transaction asked for inside another joins it —
+ * SQLite has no nested BEGIN — so a write that is one step of a larger one
+ * (an import made of several) commits or rolls back with the whole.
  */
 export const transact = <A>(f: (db: DatabaseSync) => A): A => {
   const db = database();
+  if (db.isTransaction) return f(db);
   db.exec("BEGIN");
   try {
     const result = f(db);

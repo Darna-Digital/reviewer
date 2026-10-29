@@ -52,14 +52,14 @@ const terminal = values['terminal-bg']
       ansi: null,
     }
   : null;
+const store = openStore(values.db);
 const start = {
-  settings: loadSettings(),
+  settings: loadSettings(store),
   system: schemeOf(terminalBg),
   terminal,
   override: values.theme,
 };
 const look = await resolveLook(start);
-const store = openStore(values.db);
 const initial: Comparison = values.commit
   ? { kind: 'commit', sha: values.commit }
   : values.against

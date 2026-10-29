@@ -284,6 +284,54 @@ CREATE TABLE workspace_root (
 CREATE INDEX workspace_root_path ON workspace_root (path);
 `;
 
+/**
+ * What reviewer kept in JSON files beside this database — `state.json`,
+ * `repos.json`, `tui.json`, `tui-settings.json` — so every window, the TUI and
+ * every server instance read and write one store, and two of them writing
+ * at once is SQLite's to settle rather than a read-merge-write of a file.
+ *
+ * A slot table holds one row (`slot = 0`): a value the app has one of, such
+ * as which saved workspace is open, rather than one per repository.
+ */
+const appState = `
+CREATE TABLE opened_repo (
+  path      TEXT PRIMARY KEY,
+  opened_at TEXT NOT NULL
+);
+CREATE INDEX opened_repo_recent ON opened_repo (opened_at DESC);
+
+CREATE TABLE open_root (
+  path     TEXT PRIMARY KEY,
+  position INTEGER NOT NULL
+);
+
+CREATE TABLE open_workspace (
+  slot         INTEGER PRIMARY KEY CHECK (slot = 0),
+  workspace_id TEXT REFERENCES workspace (id) ON DELETE SET NULL
+);
+
+CREATE TABLE scanned_repo (
+  path   TEXT PRIMARY KEY,
+  name   TEXT NOT NULL,
+  branch TEXT
+);
+
+CREATE TABLE repo_scan (
+  slot       INTEGER PRIMARY KEY CHECK (slot = 0),
+  scanned_at TEXT
+);
+
+CREATE TABLE tui_settings (
+  slot INTEGER PRIMARY KEY CHECK (slot = 0),
+  data TEXT NOT NULL
+);
+
+CREATE TABLE tui_ui_state (
+  repo_path TEXT PRIMARY KEY,
+  data      TEXT NOT NULL
+);
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
@@ -300,4 +348,5 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
     up: (db) => db.exec(dropCloudConnection),
   },
   { id: "0009_workspaces", up: (db) => db.exec(workspaces) },
+  { id: "0010_app_state", up: (db) => db.exec(appState) },
 ];

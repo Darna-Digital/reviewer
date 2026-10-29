@@ -53,7 +53,8 @@ moving through it previews each theme live, `tab` cycles the appearance —
 **System**, Light, Dark — and a theme is kept for its own scheme, as in the
 Mac app's settings (a light theme and a dark theme). With System it follows
 the OS appearance as it changes, and terminals that report colour-scheme
-changes repaint at once. Saved in `~/.reviewer/tui-settings.json`.
+changes repaint at once. Saved in `~/.reviewer/reviewer.db`, beside the
+layout each repository was left in.
 
 ### File icons
 
@@ -405,7 +406,7 @@ second entry point by `build:bin`), so a large file never freezes a frame.
 | ------------- | ----------------------------------------------------------------- |
 | `diff/`       | Parsing, inline changes, layout, highlighting — pure              |
 | `git/`        | One module per git concern: `exec`, `repo`, `diff`, `refs`, `log` |
-| `store/`      | The shared SQLite store, and the TUI's layout and settings files  |
+| `store/`      | The shared SQLite store — comments, layouts and settings          |
 | `theme/`      | Terminal colours, OS appearance, resolving the look               |
 | `search/`     | The palette's modes and fuzzy matching — pure                     |
 | `process/`    | Shells, services, and starting the Reviewer server                |

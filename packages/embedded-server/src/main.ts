@@ -3,8 +3,8 @@
  * /api. Replaces the darna-stack Cloudflare worker: same HttpApi, served with
  * `@effect/platform-node` instead of a Worker runtime. No Postgres, no
  * Cloudflare — feature state lives in one local SQLite file
- * (~/.reviewer/reviewer.db), and the repository is selected at runtime and
- * persisted to ~/.reviewer/state.json (REVIEWER_REPO / cwd seed the initial
+ * (~/.reviewer/reviewer.db), and the repositories are opened at runtime and
+ * remembered in that same file (REVIEWER_REPO / cwd seed the initial
  * selection).
  *
  * Composition mirrors darna's worker: feature controllers are provided to the

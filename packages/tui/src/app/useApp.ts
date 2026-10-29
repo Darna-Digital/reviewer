@@ -162,14 +162,14 @@ const HISTORY_SETTLE_MS = 120;
 export function useApp(props: AppProps) {
   const { root, store } = props;
   const renderer = useRenderer();
-  const themes = useTheme(renderer, props.themeStart);
+  const themes = useTheme(renderer, store, props.themeStart);
   const { palette, theme, themeName } = themes.look;
   const icons = React.useMemo(
     () => fileIcons(palette, themes.settings.fileIcons),
     [palette, themes.settings.fileIcons],
   );
   const screen = useTerminalDimensions();
-  const workspace = useWorkspace(root, screen);
+  const workspace = useWorkspace(store, root, screen);
   const review = useReview(
     root,
     store,

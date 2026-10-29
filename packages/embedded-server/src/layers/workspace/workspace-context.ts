@@ -8,17 +8,17 @@
  * its roots — and, when they are a saved workspace, which one. Which root a
  * request runs against is the request's to say (`requested-repo.ts`);
  * `current` and `requireCurrent` answer with that root, or the workspace's
- * first for a request that names none. What is open is persisted to
- * ~/.reviewer/state.json together with the repositories opened before and
- * when each was, and seeded at boot from REVIEWER_REPO / cwd. Only primitives
- * (paths, timestamps, ids) cross this boundary — domain shapes live in the
- * workspace feature's schema.
+ * first for a request that names none. What is open is kept in the database
+ * together with the repositories opened before and when each was (see
+ * `db/app-state.ts`), and seeded at boot from REVIEWER_REPO / cwd. Only
+ * primitives (paths, timestamps, ids) cross this boundary — domain shapes
+ * live in the workspace feature's schema.
  *
  * Several servers can be up at once — one per Reviewer window, each on its
- * own port — sharing the one state file, so a write folds into what the
- * file holds by then rather than replacing it. A server booted on an
- * explicit REVIEWER_REPO is a window opened beside the main one, and leaves
- * the remembered workspace to that one: the next plain launch comes back to
+ * own port — sharing the one database, so each open is recorded as its own
+ * write rather than a copy of the whole. A server booted on an explicit
+ * REVIEWER_REPO is a window opened beside the main one, and leaves the
+ * remembered workspace to that one: the next plain launch comes back to
  * where the main window was, not to whichever window wrote last.
  */
 import * as Context from "effect/Context";
@@ -32,17 +32,21 @@ import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import { homedir } from "node:os";
 import { NoRepoSelected } from "@reviewer/core/shared";
 import { folderName, InvalidRepo } from "@reviewer/core/workspace";
+import {
+  importStateFile,
+  type OpenedRepo,
+  readOpened,
+  readOpenWorkspace,
+  recordOpened,
+  writeOpenWorkspace,
+} from "../db/app-state.ts";
 import { importLegacyJson } from "../db/legacy-import.ts";
 import { rememberProject } from "../db/scope.ts";
-import { getCurrentRepo, getOpenRoots, setOpenRoots } from "./current-repo.ts";
+import { getOpenRoots, setOpenRoots } from "./current-repo.ts";
 import { RequestedRepo } from "./requested-repo.ts";
 import { findWorkspace } from "./saved-workspaces.ts";
 
-/** A repository opened before, and when it last was. */
-export interface OpenedRepo {
-  readonly path: string;
-  readonly openedAt: string;
-}
+export type { OpenedRepo } from "../db/app-state.ts";
 
 export interface WorkspaceContextShape {
   /**
@@ -113,20 +117,8 @@ const requireCurrentOf = (roots: Effect.Effect<ReadonlyArray<string>>) =>
         )
   );
 
-const STATE_DIR = `${homedir()}/.reviewer`;
-const STATE_FILE = `${STATE_DIR}/state.json`;
-const MAX_RECENTS = 20;
-
-interface PersistedState {
-  /** The workspace's first root — what states written before workspaces kept. */
-  readonly current: string | null;
-  /** Every root open side by side. */
-  readonly roots: ReadonlyArray<string>;
-  /** The saved workspace those roots are, or null. */
-  readonly workspace: string | null;
-  /** Repositories opened before, most-recent first, each with its last open. */
-  readonly recents: ReadonlyArray<OpenedRepo>;
-}
+/** Where what is open was kept before the database — imported once. */
+const STATE_FILE = `${homedir()}/.reviewer/state.json`;
 
 export interface InitialSelection {
   readonly path: string;
@@ -181,102 +173,33 @@ export const resolveRepo = (
   });
 
 /**
- * State written before opens were dated listed recents as bare paths. Those
- * are dated from when the file was last written, a second apart so the order
- * they were kept in survives — the file was written at the newest open.
+ * A write of the app's state that fails is logged and let go: the open it
+ * records has already happened, and is still one the user can work in.
  */
-const readRecents = (
-  raw: unknown,
-  writtenAt: Date
-): ReadonlyArray<OpenedRepo> => {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((entry: unknown, index): OpenedRepo[] => {
-    if (typeof entry === "string") {
-      return [
-        {
-          path: entry,
-          openedAt: new Date(writtenAt.getTime() - index * 1000).toISOString(),
-        },
-      ];
+const remembering = (write: () => void) =>
+  Effect.sync(() => {
+    try {
+      write();
+    } catch (error) {
+      console.warn(
+        "reviewer: could not remember what is open —",
+        error instanceof Error ? error.message : error
+      );
     }
-    if (
-      typeof entry === "object" &&
-      entry !== null &&
-      typeof (entry as { path?: unknown }).path === "string" &&
-      typeof (entry as { openedAt?: unknown }).openedAt === "string"
-    ) {
-      const { openedAt, path } = entry as OpenedRepo;
-      return [{ path, openedAt }];
-    }
-    return [];
   });
-};
-
-/** Two windows' opens as one list, each repository at its latest, newest first. */
-const mergeOpened = (
-  ours: ReadonlyArray<OpenedRepo>,
-  theirs: ReadonlyArray<OpenedRepo>
-): ReadonlyArray<OpenedRepo> => {
-  const latest = new Map<string, string>();
-  for (const entry of [...ours, ...theirs]) {
-    const known = latest.get(entry.path);
-    if (known === undefined || known < entry.openedAt) {
-      latest.set(entry.path, entry.openedAt);
-    }
-  }
-  return [...latest]
-    .map(([path, openedAt]) => ({ path, openedAt }))
-    .sort((a, b) => b.openedAt.localeCompare(a.openedAt))
-    .slice(0, MAX_RECENTS);
-};
 
 export const make = (initial: InitialSelection | null) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
-    const EMPTY_STATE: PersistedState = {
-      current: null,
-      roots: [],
-      workspace: null,
-      recents: [],
-    };
-
-    const readState: Effect.Effect<PersistedState> = Effect.gen(function* () {
-      const present = yield* fs.exists(STATE_FILE);
-      if (!present) return EMPTY_STATE;
-      const raw = yield* fs.readFileString(STATE_FILE);
-      const writtenAt = yield* fs.stat(STATE_FILE).pipe(
-        Effect.map((info) => Option.getOrElse(info.mtime, () => new Date())),
-        Effect.catch(() => Effect.succeed(new Date()))
-      );
-      try {
-        const parsed = JSON.parse(raw);
-        const current =
-          typeof parsed?.current === "string" ? parsed.current : null;
-        const roots: ReadonlyArray<string> = Array.isArray(parsed?.roots)
-          ? parsed.roots.filter(
-              (root: unknown): root is string => typeof root === "string"
-            )
-          : [];
-        return {
-          current,
-          // A state written before workspaces kept the one repository only.
-          roots: roots.length > 0 ? roots : current === null ? [] : [current],
-          workspace:
-            typeof parsed?.workspace === "string" ? parsed.workspace : null,
-          recents: readRecents(parsed?.recents, writtenAt),
-        };
-      } catch {
-        return EMPTY_STATE;
-      }
-    }).pipe(Effect.catch(() => Effect.succeed(EMPTY_STATE)));
-
-    const writeState = (state: PersistedState) =>
-      Effect.gen(function* () {
-        yield* fs.makeDirectory(STATE_DIR, { recursive: true });
-        yield* fs.writeFileString(STATE_FILE, JSON.stringify(state, null, 2));
-      }).pipe(Effect.catch(() => Effect.void));
+    // What `state.json` held before the database did, taken across once.
+    // A recents list of bare paths is dated from when the file was written.
+    const stateWrittenAt = yield* fs.stat(STATE_FILE).pipe(
+      Effect.map((info) => Option.getOrElse(info.mtime, () => new Date())),
+      Effect.catch(() => Effect.succeed(new Date()))
+    );
+    yield* remembering(() => importStateFile(STATE_FILE, stateWrittenAt));
 
     const validOrNull = (path: string | null) =>
       path === null ? Effect.succeed(null) : resolveRepo(fs, spawner, path);
@@ -291,7 +214,7 @@ export const make = (initial: InitialSelection | null) =>
     // guess. A remembered root that has gone from disk is dropped rather than
     // failing the rest; a saved workspace stays the one open only while it
     // still exists.
-    const persisted = yield* readState;
+    const persisted = readOpenWorkspace();
     const explicitValid =
       initial !== null && initial.explicit
         ? yield* validOrNull(initial.path)
@@ -315,31 +238,20 @@ export const make = (initial: InitialSelection | null) =>
             : [];
     const initialSaved =
       persistedRoots.length > 0 &&
-      persisted.workspace !== null &&
-      findWorkspace(persisted.workspace) !== undefined
-        ? persisted.workspace
+      persisted.workspaceId !== null &&
+      findWorkspace(persisted.workspaceId) !== undefined
+        ? persisted.workspaceId
         : null;
-    const recentsRef = yield* Ref.make<ReadonlyArray<OpenedRepo>>(
-      persisted.recents
-    );
     const savedIdRef = yield* Ref.make<string | null>(initialSaved);
 
     const remembersCurrent = explicitValid === null;
 
+    /** What is open now kept for the next plain launch — by the main window. */
     const persist = Effect.gen(function* () {
-      const onDisk = yield* readState;
-      yield* writeState(
-        remembersCurrent
-          ? {
-              current: getCurrentRepo(),
-              roots: getOpenRoots(),
-              workspace: yield* Ref.get(savedIdRef),
-              recents: mergeOpened(yield* Ref.get(recentsRef), onDisk.recents),
-            }
-          : {
-              ...onDisk,
-              recents: mergeOpened(yield* Ref.get(recentsRef), onDisk.recents),
-            }
+      if (!remembersCurrent) return;
+      const workspaceId = yield* Ref.get(savedIdRef);
+      yield* remembering(() =>
+        writeOpenWorkspace({ roots: getOpenRoots(), workspaceId })
       );
     });
 
@@ -389,14 +301,19 @@ export const make = (initial: InitialSelection | null) =>
           path,
           openedAt: new Date(now - index).toISOString(),
         }));
-        yield* Ref.update(recentsRef, (existing) =>
-          [
-            ...dated,
-            ...existing.filter((entry) => !next.includes(entry.path)),
-          ].slice(0, MAX_RECENTS)
-        );
+        yield* remembering(() => recordOpened(dated));
         yield* persist;
       });
+
+    // Read from the database each time rather than held: another window's
+    // opens belong in this one's recents too.
+    const opened = Effect.sync(() => {
+      try {
+        return readOpened();
+      } catch {
+        return [];
+      }
+    });
 
     return WorkspaceContext.of({
       home: homedir(),
@@ -404,10 +321,10 @@ export const make = (initial: InitialSelection | null) =>
       requireCurrent: requireCurrentOf(roots),
       roots,
       savedId: Ref.get(savedIdRef),
-      recents: Effect.map(Ref.get(recentsRef), (recents) =>
+      recents: Effect.map(opened, (recents) =>
         recents.map((entry) => entry.path)
       ),
-      opened: Ref.get(recentsRef),
+      opened,
       selectRepo: (repo) => openRoots([repo], null),
       openRoots,
     });

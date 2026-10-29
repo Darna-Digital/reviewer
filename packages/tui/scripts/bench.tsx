@@ -24,7 +24,7 @@ const { values } = parseArgs({
 
 const root = await repoRoot(resolve(values.repo ?? '.'));
 const store = openStore(values.db);
-const start = { settings: loadSettings(), system: null, terminal: null };
+const start = { settings: loadSettings(store), system: null, terminal: null };
 const look = await resolveLook(start);
 const setup = await testRender(
   <App

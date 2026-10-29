@@ -10,7 +10,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { SavedWorkspace } from "@reviewer/core/workspace";
-import { allRows, database, execute, oneRow } from "../db/database.ts";
+import { allRows, execute, oneRow, transact } from "../db/database.ts";
 
 interface WorkspaceRow {
   readonly id: string;
@@ -61,25 +61,12 @@ const writeRoots = (id: string, roots: ReadonlyArray<string>): void => {
   );
 };
 
-const inTransaction = <A>(write: () => A): A => {
-  const db = database();
-  db.exec("BEGIN");
-  try {
-    const result = write();
-    db.exec("COMMIT");
-    return result;
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
-};
-
 export const createWorkspace = (
   name: string,
   roots: ReadonlyArray<string>
 ): SavedWorkspace => {
   const id = randomUUID();
-  inTransaction(() => {
+  transact(() => {
     execute(
       "INSERT INTO workspace (id, name, created_at, opened_at) VALUES (?, ?, ?, NULL)",
       id,
@@ -97,7 +84,7 @@ export const updateWorkspace = (
   patch: { readonly name?: string; readonly roots?: ReadonlyArray<string> }
 ): SavedWorkspace | undefined => {
   if (findWorkspace(id) === undefined) return undefined;
-  inTransaction(() => {
+  transact(() => {
     if (patch.name !== undefined) {
       execute("UPDATE workspace SET name = ? WHERE id = ?", patch.name, id);
     }
