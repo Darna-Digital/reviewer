@@ -167,7 +167,9 @@ struct BranchesPane: View {
                     Rectangle()
                         .fill(Color(nsColor: IslandPalette.hairline))
                         .frame(height: 1)
-                        .padding(.vertical, 4)
+                        // As far from the rows as the list keeps it from
+                        // the pane's sides.
+                        .padding(.vertical, PaneMetrics.barInset)
                         .headerRow()
                 case .repository(let root, let open):
                     RepositoryHeader(root: root, open: open) { toggle(root.path) }
