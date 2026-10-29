@@ -1,8 +1,8 @@
 // The Terminal surface, laid out as the system's own Terminal is: the
-// project's shells as tabs — on the pane's bar, in one capsule of glass,
-// the one in front lit as the pane's own tabs light theirs, its ✕ at the
-// leading edge as the system puts it — and the mark that opens one beside
-// them (see `TerminalControls`). Nothing else: a shell is opened, picked
+// project's shells as a row of tabs on the bar over the shell — the
+// repository's pop-up first while the workspace holds several, the tab in
+// front filled, its ✕ at the leading edge as the system puts it — and the
+// mark that opens one at the trailing end (see `ShellTabBar`). Nothing else: a shell is opened, picked
 // and closed, and that is the whole of it. A double-click on a tab, or its
 // menu, renames it in place the way Finder renames a file. A repository
 // with no shell of its own opens one on the way in, so the surface comes
@@ -25,8 +25,11 @@ struct TerminalPane: View {
     private var shells: [ThreadSummary] { threads.shells }
 
     var body: some View {
-        terminal
-            .task(id: model.focusedRootPath) { await openFirstSession() }
+        VStack(spacing: 0) {
+            ShellTabBar()
+            terminal
+        }
+        .task(id: model.focusedRootPath) { await openFirstSession() }
     }
 
     /// The shells of the project being opened, and one opened for it if it
@@ -98,9 +101,9 @@ private final class ThreadRename {
     }
 }
 
-/// The surface's controls on the pane's bar: the repository, the shells
-/// as tabs in one capsule of glass, and the mark that opens one.
-struct TerminalControls: View {
+/// The bar over the shell: the repository, the shells as tabs, and the
+/// mark that opens one at the trailing end.
+private struct ShellTabBar: View {
     @Environment(AppModel.self) private var model
     @State private var rename = ThreadRename()
 
@@ -108,9 +111,12 @@ struct TerminalControls: View {
     private var shells: [ThreadSummary] { threads.shells }
 
     var body: some View {
-        RepositoryPicker(look: .glass)
-        if !shells.isEmpty {
-            HStack(spacing: 0) {
+        PaneBar {
+            if model.roots.count > 1 {
+                RepositoryPicker(look: .bar)
+                PaneBarSeparator()
+            }
+            HStack(spacing: 2) {
                 ForEach(shells) { thread in
                     ShellTab(thread: thread,
                              isSelected: threads.selectedId == thread.id,
@@ -118,13 +124,10 @@ struct TerminalControls: View {
                              close: { close(id: thread.id) })
                 }
             }
-            .padding(.horizontal, 2)
-            .frame(height: PaneGlass.height)
-            .glassEffect(.regular, in: Capsule())
             .environment(rename)
+            Spacer(minLength: 0)
+            PaneBarButton(symbol: "plus", help: "New session", action: open)
         }
-        PaneGlassButton(symbol: "plus", help: "New session", action: open)
-        Spacer(minLength: 0)
     }
 
     private func open() {
@@ -146,7 +149,7 @@ struct TerminalControls: View {
 }
 
 enum ShellTabMetrics {
-    static let height: CGFloat = PaneGlass.height - 4
+    static let height: CGFloat = 20
     static let minWidth: CGFloat = 72
     static let maxWidth: CGFloat = 170
     /// The ✕ stands in this much room at the leading edge, and the same is
@@ -173,8 +176,8 @@ private struct ShellTab: View {
                 .frame(minWidth: ShellTabMetrics.minWidth, maxWidth: ShellTabMetrics.maxWidth)
                 .padding(.horizontal, ShellTabMetrics.closeSlot)
                 .frame(height: ShellTabMetrics.height)
-                .background(fill, in: Capsule())
-                .contentShape(Capsule())
+                .background(fill, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .simultaneousGesture(TapGesture(count: 2).onEnded { rename.begin(thread) })
@@ -204,7 +207,7 @@ private struct ShellTab: View {
             }
         } else {
             Text(thread.displayTitle)
-                .font(.system(size: PaneGlass.fontSize, weight: isSelected ? .medium : .regular))
+                .font(.system(size: 11, weight: isSelected ? .medium : .regular))
                 .foregroundStyle(isSelected || isHovering ? .primary : .secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -259,7 +262,7 @@ private struct RenameField: View {
     var body: some View {
         TextField("Title", text: $text)
             .textFieldStyle(.plain)
-            .font(.system(size: PaneGlass.fontSize))
+            .font(.system(size: 11))
             .multilineTextAlignment(.center)
             .focused($focused)
             .onSubmit(commit)

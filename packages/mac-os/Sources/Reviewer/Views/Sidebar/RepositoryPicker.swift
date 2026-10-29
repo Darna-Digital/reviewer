@@ -1,9 +1,9 @@
 // The one way the repository the window is on is picked, wherever it is
 // picked — beside the branch chip at the sidebar's head, on the session
-// bar's strip, on the bottom pane's bar — while the workspace holds more
-// than one. It is the branch picker's twin, so the two read as a pair
+// bar's strip, on the bottom pane's filter bars — while the workspace holds
+// more than one. It is the branch picker's twin, so the two read as a pair
 // wherever they stand: the same chip where the branch chip is a chip, the
-// same glass where the pane's pickers are glass, and the same popover
+// same pop-up where the pane's pickers are pop-ups, and the same popover
 // under both (`BranchPopover`) —
 // a search over the repositories, ↑/↓ to walk them, Return to pick, each
 // row naming the branch it is on and the one the window is on ticked. A
@@ -16,11 +16,11 @@
 import SwiftUI
 
 struct RepositoryPicker: View {
-    /// How the picker stands: as the toolbar's chips do, or in the glass
-    /// the pane bar's controls wear.
+    /// How the picker stands: as the toolbar's chips do, or as a pop-up on
+    /// a bottom pane surface's filter bar.
     enum Look {
         case chip
-        case glass
+        case bar
     }
 
     var look: Look = .chip
@@ -30,14 +30,14 @@ struct RepositoryPicker: View {
 
     private var name: String { model.focusedRoot?.name ?? "Repository" }
 
-    /// The longest a repository's name runs on the pane bar before it is
+    /// The longest a repository's name runs on a filter bar before it is
     /// cut — a folder's name, rarely a branch's length.
-    private static let glassWidth: CGFloat = 140
+    private static let barWidth: CGFloat = 140
 
     var body: some View {
         if model.roots.count > 1 {
             label
-                .popover(isPresented: $open, arrowEdge: .bottom) { popover }
+                .popover(isPresented: $open, arrowEdge: look == .bar ? .top : .bottom) { popover }
                 .closesOnNavigation($open)
         }
     }
@@ -62,22 +62,12 @@ struct RepositoryPicker: View {
             }
             .buttonStyle(.accessoryBar)
             .help("Repository — the one the page is on")
-        case .glass:
-            Button { open.toggle() } label: {
-                HStack(spacing: 6) {
-                    RepoAvatar(name: name, size: 14)
-                    Text(name)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .clipHelp(name, font: .systemFont(ofSize: PaneGlass.fontSize))
-                        .frame(maxWidth: Self.glassWidth)
-                    MenuChevron()
-                }
-                .paneGlass()
-                .fixedSize()
+        case .bar:
+            PaneBarPopUp(title: name, help: "Repository — the one the page is on", maxWidth: Self.barWidth) {
+                RepoAvatar(name: name, size: 13)
+            } action: {
+                open.toggle()
             }
-            .buttonStyle(.plain)
-            .help("Repository — the one the page is on")
         }
     }
 

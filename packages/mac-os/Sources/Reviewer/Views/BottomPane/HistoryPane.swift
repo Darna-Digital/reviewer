@@ -2,8 +2,8 @@
 // commits, newest first, each row its lane in the graph, its refs, its
 // subject, its author and its date, with the next page pulled in as the
 // list nears its end. What the log follows and is narrowed by stands on
-// the pane's bar (see `HistoryControls`) — the repository, the branch, the
-// search over messages and the filter menu — and whatever narrows it
+// the bar over it (see `HistoryBar`) — the repository, the branch, the
+// filter menu and the search over messages — and whatever narrows it
 // besides the search is said once more over the list, as Finder's scope
 // bar says where a search is looking, each with its own way out (see
 // `HistoryScopeBar`). A commit picked out of the list opens on the page
@@ -25,6 +25,7 @@ struct HistoryPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HistoryBar()
             if history.query.narrowsBeyondSearch {
                 HistoryScopeBar()
             }
@@ -64,25 +65,26 @@ struct HistoryPane: View {
     }
 }
 
-/// The surface's controls on the pane's bar: the repository and the
-/// branch the log is of, then at the trailing edge the filter menu and the
-/// search over messages, which applies on Return, on the field letting the
-/// keys go and on clearing.
-struct HistoryControls: View {
+/// The bar over the log: the repository and the branch it is of, the
+/// filter menu, and at the trailing edge the search over messages, which
+/// applies on Return, on the field letting the keys go and on clearing.
+private struct HistoryBar: View {
     @Environment(AppModel.self) private var model
     @State private var text = ""
 
     private var history: CommitHistory { model.history }
 
     var body: some View {
-        RepositoryPicker(look: .glass)
-        RefPicker()
-        Spacer(minLength: 0)
-        HistoryFilterMenu()
-        PaneGlassSearchField(prompt: "Search commit messages", text: $text, submit: search)
-            .frame(maxWidth: PaneMetrics.searchWidth)
-            .onAppear { text = history.query.grep ?? "" }
-            .onChange(of: history.query.grep) { _, grep in text = grep ?? "" }
+        PaneBar {
+            RepositoryPicker(look: .bar)
+            RefPicker()
+            PaneBarSeparator()
+            HistoryFilterMenu()
+            Spacer(minLength: 0)
+            PaneFilterField(prompt: "Search commit messages", text: $text, submit: search)
+        }
+        .onAppear { text = history.query.grep ?? "" }
+        .onChange(of: history.query.grep) { _, grep in text = grep ?? "" }
     }
 
     private func search() {
@@ -107,22 +109,12 @@ private struct RefPicker: View {
     private var label: String { current == allRefs ? "All branches" : current }
 
     var body: some View {
-        Button { open.toggle() } label: {
-            HStack(spacing: 6) {
-                Image(systemName: current == allRefs ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
-                    .foregroundStyle(.secondary)
-                Text(label)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .clipHelp(label, font: .systemFont(ofSize: PaneGlass.fontSize))
-                    .frame(maxWidth: refNameWidth)
-                MenuChevron()
-            }
-            .paneGlass()
-            .fixedSize()
+        PaneBarPopUp(title: label, help: "Branch", maxWidth: refNameWidth) {
+            Image(systemName: current == allRefs ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
+                .foregroundStyle(.secondary)
+        } action: {
+            open.toggle()
         }
-        .buttonStyle(.plain)
-        .help("Branch")
         .popover(isPresented: $open, arrowEdge: .bottom) {
             BranchPopover(sections: sections, placeholder: "Search branches", pick: { choice in
                 history.ref = choice.branch?.ref ?? choice.id
@@ -189,18 +181,15 @@ private struct HistoryFilterMenu: View {
             Button("Clear Filters") { history.query = query.cleared }
                 .disabled(!query.hasFilters)
         } label: {
-            Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+            Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(active ? Color(nsColor: IslandPalette.accent) : .primary)
-                .frame(width: PaneGlass.height, height: PaneGlass.height)
-                .contentShape(Circle())
+                .foregroundStyle(active ? Color(nsColor: IslandPalette.accent) : .secondary)
+                .frame(width: 24, height: 20)
+                .contentShape(Rectangle())
         }
-        // A menu takes no glass style of its own, so it is drawn plain and
-        // the glass laid round it, as the other controls on the bar wear it.
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .paneGlassCircle()
         .fixedSize()
         .help("Filter")
         .popover(isPresented: $pickingDate, arrowEdge: .bottom) {
@@ -305,7 +294,8 @@ private struct HistoryScopeBar: View {
             }
             Spacer(minLength: 0)
             Button("Clear") { history.query = history.query.cleared }
-                .buttonStyle(.accessoryBar)
+                .font(.system(size: 11))
+                .buttonStyle(PaneBarButtonStyle())
         }
     }
 

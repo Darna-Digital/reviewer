@@ -3,10 +3,9 @@
 // system's own table down the left — name under its dot, the repository
 // it belongs to while there are several, the command it runs, whether it
 // is up, the folder it runs in (the root, or a package of a monorepo) —
-// sortable on any column, its rows plain rather than striped. Its
-// controls stand on the pane's bar (see `RunControls`): add and remove in
-// one group, start all and stop all in another, the search at the
-// trailing edge. A command is a shell command line the server runs in the
+// sortable on any column, its rows plain rather than striped, under a bar
+// (see `RunBar`) with add and remove, start all and stop all, and the
+// filter at its trailing edge. A command is a shell command line the server runs in the
 // project. With nothing to list the table gives way to a placeholder,
 // header and all. A click picks a command, a double-click or Return starts
 // or stops it, Delete removes it, and the row's menu holds the same, with
@@ -59,9 +58,9 @@ private struct RunRow: Identifiable {
     var repository: String { root.name }
 }
 
-/// The surface's controls on the pane's bar: add and remove, start all
-/// and stop all — across every repository's commands — and the search.
-struct RunControls: View {
+/// The bar over the table: add and remove, start all and stop all —
+/// across every repository's commands — and the filter.
+private struct RunBar: View {
     @Environment(AppModel.self) private var model
     @Environment(BottomPaneQueries.self) private var queries
 
@@ -70,25 +69,23 @@ struct RunControls: View {
 
     var body: some View {
         @Bindable var queries = queries
-        PaneGlassGroup {
-            PaneGroupButton(symbol: "plus", help: multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command") {
+        PaneBar {
+            PaneBarButton(symbol: "plus", help: multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command") {
                 queries.addingCommand = true
             }
-            PaneGroupButton(symbol: "minus", help: "Remove the selected command", action: removeSelected)
+            PaneBarButton(symbol: "minus", help: "Remove the selected command", action: removeSelected)
                 .disabled(model.runRoot.services.selected == nil)
-        }
-        PaneGlassGroup {
-            PaneGroupButton(symbol: "play.fill", help: multiRoot ? "Start every repository's commands" : "Start all") {
+            PaneBarSeparator()
+            PaneBarButton(symbol: "play.fill", help: multiRoot ? "Start every repository's commands" : "Start all") {
                 model.runProject()
             }
             .disabled(commands.isEmpty)
-            PaneGroupButton(symbol: "stop.fill", help: multiRoot ? "Stop every repository's commands" : "Stop all",
-                            action: stopAll)
+            PaneBarButton(symbol: "stop.fill", help: multiRoot ? "Stop every repository's commands" : "Stop all",
+                          action: stopAll)
                 .disabled(!commands.contains(where: \.isRunning))
+            Spacer(minLength: 0)
+            PaneFilterField(text: $queries.commands)
         }
-        Spacer(minLength: 0)
-        PaneGlassSearchField(prompt: "Search commands", text: $queries.commands)
-            .frame(maxWidth: PaneMetrics.searchWidth)
     }
 
     private func removeSelected() {
@@ -138,10 +135,13 @@ private struct CommandTable: View {
     }
 
     var body: some View {
-        if rows.isEmpty && !isLoading {
-            placeholder
-        } else {
-            table
+        VStack(spacing: 0) {
+            RunBar()
+            if rows.isEmpty && !isLoading {
+                placeholder
+            } else {
+                table
+            }
         }
     }
 
