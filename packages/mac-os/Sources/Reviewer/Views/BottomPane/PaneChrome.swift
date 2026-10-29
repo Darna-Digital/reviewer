@@ -128,16 +128,18 @@ enum PaneFieldSize {
     var fontSize: CGFloat { self == .regular ? 12 : 11 }
 }
 
-/// The quiet input the web bar draws, as a modifier so a picker, a chip and
-/// a text field on the same bar come out the same height and radius.
+/// The quiet control a pane bar is made of, as a modifier so a picker, a
+/// chip and a text field on the same bar come out the same height and the
+/// same shape: a capsule, the shape the system's own search field and
+/// filter buttons take, so a bar reads as one row of pills.
 private struct PaneFieldChrome: ViewModifier {
     let size: PaneFieldSize
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 9)
             .frame(height: size.height)
-            .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
+            .background(.quaternaryWash(0.5), in: Capsule())
     }
 }
 

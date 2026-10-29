@@ -30,8 +30,8 @@ struct RepositoryPicker: View {
 
     private var name: String { model.focusedRoot?.name ?? "Repository" }
 
-    /// Narrower than the branch field beside it: a repository's name is a
-    /// folder's, rarely a branch's length.
+    /// The longest a repository's name runs on a pane bar's pill before it
+    /// is cut — a folder's name, rarely a branch's length.
     private static let paneFieldWidth: CGFloat = 140
 
     var body: some View {
@@ -69,14 +69,14 @@ struct RepositoryPicker: View {
                     Text(name)
                         .font(.system(size: 11))
                         .lineLimit(1)
-                        .truncationMode(.middle)
+                        .truncationMode(.tail)
                         .clipHelp(name, font: .systemFont(ofSize: 11))
-                    Spacer(minLength: 0)
+                        .frame(maxWidth: Self.paneFieldWidth)
                     MenuChevron()
                 }
                 .paneField()
-                .frame(width: Self.paneFieldWidth)
-                .contentShape(Rectangle())
+                .fixedSize()
+                .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .help("Repository — the one the page is on")

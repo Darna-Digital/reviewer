@@ -144,14 +144,14 @@ private struct RefPicker: View {
                 Text(label)
                     .font(.system(size: 11))
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .truncationMode(.tail)
                     .clipHelp(label, font: .systemFont(ofSize: 11))
-                Spacer(minLength: 0)
+                    .frame(maxWidth: FilterWidths.chipName)
                 MenuChevron()
             }
             .paneField()
-            .frame(width: FilterWidths.picker)
-            .contentShape(Rectangle())
+            .fixedSize()
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help("Branch")
@@ -182,7 +182,7 @@ private struct RefPicker: View {
 /// field's trailing edge whatever the pick's length.
 struct MenuChevron: View {
     var body: some View {
-        Image(systemName: "chevron.up.chevron.down")
+        Image(systemName: "chevron.down")
             .font(.system(size: 8, weight: .semibold))
             .foregroundStyle(.secondary)
     }
@@ -287,10 +287,11 @@ private struct SinceDateButton: View {
                     .font(.system(size: 11))
                     .foregroundStyle(date == nil ? .secondary : .primary)
                     .lineLimit(1)
-                Spacer(minLength: 0)
+                MenuChevron()
             }
             .paneField()
-            .frame(width: FilterWidths.narrow)
+            .fixedSize()
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help("Since date")
