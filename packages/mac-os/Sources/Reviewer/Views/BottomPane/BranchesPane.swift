@@ -58,12 +58,16 @@ struct BranchesPane: View {
         guard multiRoot else {
             return model.roots.first.map { sectionRows(of: $0, indent: 0) } ?? []
         }
-        return model.roots.flatMap { root -> [BranchRow] in
+        let groups = model.roots.compactMap { root -> [BranchRow]? in
             let children = sectionRows(of: root, indent: 1)
-            if searching && children.isEmpty { return [] }
+            if searching && children.isEmpty { return nil }
             let open = searching || isOpen(root.path, byDefault: true)
             let header = BranchRow.repository(root, open: open)
             return open ? [header] + children : [header]
+        }
+        return groups.enumerated().flatMap { index, group -> [BranchRow] in
+            guard index > 0, case .repository(let root, _) = group.first else { return group }
+            return [.rule(before: root.path)] + group
         }
     }
 
@@ -156,6 +160,10 @@ struct BranchesPane: View {
             ListEdgeSpacer()
             ForEach(rows) { row in
                 switch row {
+                case .rule:
+                    ThemedDivider()
+                        .padding(.vertical, 4)
+                        .headerRow()
                 case .repository(let root, let open):
                     RepositoryHeader(root: root, open: open) { toggle(root.path) }
                         .headerRow()
@@ -207,6 +215,8 @@ struct BranchesPane: View {
 /// ref, since Recent repeats Local's branches, two repositories can share a
 /// branch's name, and the list's diff misplaces rows whose ids collide.
 private enum BranchRow: Identifiable {
+    /// The hairline parting one repository's rows from the next's.
+    case rule(before: String)
     case repository(RootModel, open: Bool)
     case section(id: String, title: String, count: Int, open: Bool, indent: Int)
     case folder(id: String, name: String, open: Bool, indent: Int)
@@ -214,6 +224,7 @@ private enum BranchRow: Identifiable {
 
     var id: String {
         switch self {
+        case .rule(let path): return "rule:\(path)"
         case .repository(let root, _): return "repository:\(root.path)"
         case .section(let id, _, _, _, _): return "section:\(id)"
         case .folder(let id, _, _, _): return "folder:\(id)"
