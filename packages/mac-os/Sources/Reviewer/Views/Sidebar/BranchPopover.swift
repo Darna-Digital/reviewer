@@ -116,7 +116,11 @@ private struct Submenu: Equatable {
 private final class RowReading {
     var hovered: String?
     var walked: String?
-    var key: String? { hovered ?? walked }
+    /// The rows are being swapped for another step's, and the popover is
+    /// still easing to their height: whatever row the still pointer lands
+    /// on is not one being read, and says nothing until the list settles.
+    var settling = false
+    var key: String? { settling ? nil : hovered ?? walked }
 }
 
 struct BranchPopover<Footer: View>: View {
@@ -213,8 +217,20 @@ struct BranchPopover<Footer: View>: View {
         .onChange(of: sections.map(\.id)) {
             query = ""
             active = 0
+            reading.settling = true
+        }
+        // The tooltips wait out the ease to the new step's height, a
+        // little past it, and the row under the pointer speaks once the
+        // list has come to rest.
+        .task(id: stepKey) {
+            guard reading.settling else { return }
+            try? await Task.sleep(for: Self.settleTime)
+            guard !Task.isCancelled else { return }
+            reading.settling = false
         }
     }
+
+    private static var settleTime: Duration { .milliseconds(380) }
 
     private func field(_ lines: [Line]) -> some View {
         HStack(spacing: 6) {
