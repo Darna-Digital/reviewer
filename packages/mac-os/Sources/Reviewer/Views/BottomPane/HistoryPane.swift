@@ -191,7 +191,7 @@ private struct HistoryFilterMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Filter")
+        .controlTooltip("Filter")
         .popover(isPresented: $pickingDate, arrowEdge: .bottom) {
             SinceCalendar(after: query.after) { after in
                 pickingDate = false

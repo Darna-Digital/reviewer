@@ -36,11 +36,13 @@ final class RowTooltip {
     /// tooltip shifts back over the row rather than squeezing further.
     private static let narrowest: CGFloat = 160
     private static let screenMargin: CGFloat = 8
+    /// The air between a control and the name hung under it.
+    private static let controlGap: CGFloat = 6
 
     private let panel: NSPanel
     private let label: NSTextField
     private weak var owner: NSView?
-    private var shown: (text: String, beside: NSRect)?
+    private var shown: (text: String, beside: NSRect, under: Bool)?
     private var menuOpen = false
 
     private init() {
@@ -83,12 +85,16 @@ final class RowTooltip {
 
     /// `row` — a rect on screen — has `text` to say: the tooltip comes up
     /// beside it at once, or moves to it from whichever row had it.
-    fileprivate func show(_ text: String, beside row: NSRect, in window: NSWindow, for anchor: NSView) {
+    fileprivate func show(_ text: String, beside row: NSRect, under: Bool, in window: NSWindow, for anchor: NSView) {
         guard !menuOpen else { return }
         owner = anchor
-        if let shown, shown.text == text, shown.beside == row, panel.isVisible { return }
-        shown = (text, row)
-        present(text, beside: row, in: window)
+        if let shown, shown.text == text, shown.beside == row, shown.under == under, panel.isVisible { return }
+        shown = (text, row, under)
+        if under {
+            present(text, under: row, in: window)
+        } else {
+            present(text, beside: row, in: window)
+        }
     }
 
     /// Brought down by the row that put it up; a row it has since moved
@@ -133,7 +139,30 @@ final class RowTooltip {
         var origin = NSPoint(x: side.leading ? row.minX - size.width : row.maxX, y: row.midY - size.height / 2)
         origin.x = max(min(origin.x, screen.maxX - Self.screenMargin - size.width), screen.minX + Self.screenMargin)
         origin.y = min(max(origin.y, screen.minY + Self.screenMargin), screen.maxY - Self.screenMargin - size.height)
-        panel.setFrame(NSRect(origin: origin, size: size), display: true)
+        put(NSRect(origin: origin, size: size), in: window)
+    }
+
+    /// A control's name, on one line centred under it as the system's
+    /// tooltip stands — over it where the screen has no room below, as a
+    /// bar along the foot of the window often has not.
+    private func present(_ text: String, under control: NSRect, in window: NSWindow) {
+        label.stringValue = text
+        let screen = (window.screen ?? NSScreen.main)?.visibleFrame ?? .infinite
+        let padding = Self.padding
+        let textSize = measure(width: Self.widest - padding.width * 2)
+        let size = NSSize(
+            width: ceil(textSize.width + padding.width * 2), height: ceil(textSize.height + padding.height * 2))
+        label.frame = NSRect(x: padding.width, y: padding.height, width: ceil(textSize.width), height: ceil(textSize.height))
+
+        let below = control.minY - Self.controlGap - size.height
+        let fitsBelow = below >= screen.minY + Self.screenMargin
+        var origin = NSPoint(x: control.midX - size.width / 2, y: fitsBelow ? below : control.maxY + Self.controlGap)
+        origin.x = max(min(origin.x, screen.maxX - Self.screenMargin - size.width), screen.minX + Self.screenMargin)
+        put(NSRect(origin: origin, size: size), in: window)
+    }
+
+    private func put(_ frame: NSRect, in window: NSWindow) {
+        panel.setFrame(frame, display: true)
         if panel.parent !== window {
             panel.parent?.removeChildWindow(panel)
             window.addChildWindow(panel, ordered: .above)
@@ -154,6 +183,7 @@ final class RowTooltip {
 private struct RowTooltipAnchor: NSViewRepresentable {
     let text: String?
     let active: Bool
+    var under = false
 
     func makeNSView(context: Context) -> RowTooltipAnchorView {
         RowTooltipAnchorView()
@@ -162,6 +192,7 @@ private struct RowTooltipAnchor: NSViewRepresentable {
     func updateNSView(_ view: RowTooltipAnchorView, context: Context) {
         view.text = text
         view.active = active
+        view.under = under
         view.sync()
     }
 
@@ -173,6 +204,7 @@ private struct RowTooltipAnchor: NSViewRepresentable {
 private final class RowTooltipAnchorView: NSView {
     var text: String?
     var active = false
+    var under = false
     private var scrollObserver: NSObjectProtocol?
 
     /// Less of the row than this on screen and it is scrolled out of
@@ -204,7 +236,7 @@ private final class RowTooltipAnchorView: NSView {
             return
         }
         let row = window.convertToScreen(convert(bounds, to: nil))
-        RowTooltip.shared.show(text, beside: row, in: window, for: self)
+        RowTooltip.shared.show(text, beside: row, under: under, in: window, for: self)
     }
 
     func retract() {
@@ -233,10 +265,44 @@ private final class RowTooltipAnchorView: NSView {
     }
 }
 
+/// A bar control's name, in the same panel, under it once the pointer has
+/// rested on it a moment — sooner than the system's `.help`, which waits
+/// a second and more, and in the material the rows' names come up in. A
+/// press puts it away, as it does the system's.
+private struct ControlTooltip: ViewModifier {
+    let text: String
+    @State private var hovering = false
+    @State private var shown = false
+
+    private static let rest: Duration = .milliseconds(450)
+
+    func body(content: Content) -> some View {
+        content
+            .background(RowTooltipAnchor(text: text, active: shown, under: true))
+            .onHover { hovering = $0 }
+            .simultaneousGesture(TapGesture().onEnded { shown = false })
+            .task(id: hovering) {
+                guard hovering else {
+                    shown = false
+                    return
+                }
+                try? await Task.sleep(for: Self.rest)
+                if !Task.isCancelled { shown = true }
+            }
+    }
+}
+
 extension View {
     /// This row's cut `text` said whole in a `RowTooltip` at its trailing
     /// edge while `active` — nil `text` for a row with nothing cut.
     func rowTooltip(_ text: String?, active: Bool) -> some View {
         background(RowTooltipAnchor(text: text, active: active))
+    }
+
+    /// This control's name under it while the pointer rests on it, read by
+    /// VoiceOver as its label too.
+    func controlTooltip(_ text: String) -> some View {
+        modifier(ControlTooltip(text: text))
+            .accessibilityLabel(text)
     }
 }

@@ -111,8 +111,8 @@ private struct CornerButton: View {
                 .frame(width: Self.size, height: Self.size)
         }
         .buttonStyle(CornerButtonStyle())
+        .controlTooltip(help)
         .padding(.trailing, Self.inset)
-        .help(help)
     }
 }
 

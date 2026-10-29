@@ -157,7 +157,7 @@ struct PaneBarPopUp<Leading: View>: View {
             .fixedSize()
         }
         .buttonStyle(PaneBarButtonStyle())
-        .help(help)
+        .controlTooltip(help)
     }
 }
 
@@ -430,8 +430,7 @@ struct PaneBarButton: View {
                 .frame(width: 16, height: 16)
         }
         .buttonStyle(PaneBarButtonStyle())
-        .help(help)
-        .accessibilityLabel(help)
+        .controlTooltip(help)
     }
 }
 

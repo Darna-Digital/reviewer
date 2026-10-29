@@ -340,7 +340,8 @@ struct ChangesHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
+            PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard,
+                            controlSize: .small)
             if scoped, let comparison = model.sidebar.comparison {
                 ComparePicker(comparison: comparison)
                     .transition(.opacity)
