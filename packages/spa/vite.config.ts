@@ -4,7 +4,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-const SERVER_URL = process.env.REVIEWER_SERVER_URL ?? "http://localhost:41811";
+const SERVER_URL = process.env.REVIEWER_SERVER_URL ?? "http://127.0.0.1:41811";
 const isProduction = process.env.NODE_ENV === "production";
 
 // Assets are always referenced from the root of the origin, never relative to

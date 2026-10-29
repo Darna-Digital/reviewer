@@ -291,7 +291,7 @@ const startSessionCapture = (
  */
 const buildSessionEnv = (threadId: string): Record<string, string> => ({
   REVIEWER_THREAD_ID: threadId,
-  REVIEWER_API: `http://localhost:${process.env["REVIEWER_PORT"] ?? 41811}`,
+  REVIEWER_API: `http://127.0.0.1:${process.env["REVIEWER_PORT"] ?? 41811}`,
 });
 
 /** Wire a client socket to a session: replay scrollback, then stream both ways. */

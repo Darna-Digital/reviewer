@@ -16,7 +16,7 @@
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
 import * as Layer from "effect/Layer";
 import { commitDraftsLayer } from "@reviewer/core/git-message";
-import { FetchHttpClient, HttpRouter } from "effect/http";
+import { FetchHttpClient, HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/http-api";
 import { createServer } from "node:http";
 import { Api } from "./api.ts";
@@ -46,6 +46,11 @@ import { layer as databaseLayer } from "./layers/db/db.service.ts";
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
 import { layer as gitHubLoginLayer } from "./layers/github/github-login.ts";
+import {
+  guardLocalRequests,
+  isAllowedOrigin,
+  LOOPBACK_HOST,
+} from "./layers/http/local-only.ts";
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
 import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts";
 import { resetProviders } from "./layers/language/language.providers.ts";
@@ -125,17 +130,15 @@ const InfraLive = gitHubClientLayer.pipe(
   Layer.provide(FetchHttpClient.layer)
 );
 
-/**
- * The macOS shell loads the SPA from the `reviewer://app` protocol and calls
- * the API at `http://localhost:<port>`, so every request is cross-origin.
- * Allow all origins — this server is local-only and never credentialed.
- */
-// Wrap node's createServer so every server instance also hosts the live-terminal
-// PTY WebSocket, attached to its `upgrade` event, alongside the Effect HttpApi.
+// Wrap node's createServer so every server instance refuses requests from off
+// this machine (see `layers/http/local-only.ts`) and also hosts the
+// live-terminal PTY WebSocket, attached to its `upgrade` event, alongside the
+// Effect HttpApi.
 const createServerWithPty: typeof createServer = ((
   ...args: Parameters<typeof createServer>
 ) => {
   const server = createServer(...args);
+  guardLocalRequests(server);
   attachPtyServer(server);
   return server;
 }) as typeof createServer;
@@ -143,11 +146,20 @@ const createServerWithPty: typeof createServer = ((
 const HttpLive = HttpRouter.serve(
   Layer.mergeAll(
     ApiLive.pipe(HttpRouter.provideRequest(FeatureServices)),
-    HttpRouter.cors()
+    // The macOS shell loads the SPA from the `reviewer://app` protocol and
+    // calls the API at `http://127.0.0.1:<port>`, so its requests are
+    // cross-origin; the Vite dev server's are too when the SPA dials the API
+    // directly.
+    HttpRouter.middleware(
+      HttpMiddleware.cors({ allowedOrigins: isAllowedOrigin }),
+      { global: true }
+    )
   )
 ).pipe(
   Layer.provide(InfraLive),
-  Layer.provide(NodeHttpServer.layer(createServerWithPty, { port }))
+  Layer.provide(
+    NodeHttpServer.layer(createServerWithPty, { port, host: LOOPBACK_HOST })
+  )
 );
 
 /**

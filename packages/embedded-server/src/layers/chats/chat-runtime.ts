@@ -455,7 +455,7 @@ const launchTurn = (input: {
       ...process.env,
       ...program.env,
       REVIEWER_CHAT_ID: chat.id,
-      REVIEWER_API: `http://localhost:${process.env["REVIEWER_PORT"] ?? 41811}`,
+      REVIEWER_API: `http://127.0.0.1:${process.env["REVIEWER_PORT"] ?? 41811}`,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
