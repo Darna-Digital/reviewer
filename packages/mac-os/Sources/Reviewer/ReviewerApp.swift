@@ -50,7 +50,7 @@ struct ReviewerApp: App {
                 .environment(model)
         }
 
-        Window("Open repository", id: ReviewerWindow.opener) {
+        Window("Open workspace", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
                 .environment(model)
         }
@@ -100,8 +100,13 @@ struct ReviewerCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New agent session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
-            Button("Open repository…") { model.showOpener() }
+            Button("Open workspace…") { model.showOpener() }
                 .keyboardShortcut("o", modifiers: .command)
+            Button("Add repository to workspace…") { model.chooseRootToAdd() }
+                .keyboardShortcut("o", modifiers: [.command, .option])
+                .disabled(!model.hasProject)
+            Button("Save as workspace…") { model.askToSaveWorkspace() }
+                .disabled(!model.hasProject || model.workspace?.workspace != nil)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Close tab") { model.closeCurrentTab() }

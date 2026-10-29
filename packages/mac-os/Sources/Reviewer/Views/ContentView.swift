@@ -78,7 +78,14 @@ struct ContentView: View {
         .onChange(of: model.settingsRequests) {
             openSettings()
         }
+        .onChange(of: model.saveWorkspaceRequests) { savingWorkspace = true }
+        .sheet(isPresented: $savingWorkspace) {
+            SaveWorkspaceSheet()
+                .environment(model)
+        }
     }
+
+    @State private var savingWorkspace = false
 
     /// The system's column state as the model's one switch, so the sidebar
     /// button on the bar, ⌃⌘S and the View menu all move the same thing,
@@ -335,9 +342,10 @@ private struct ToolbarItems: ToolbarContent {
     }
 }
 
-/// The project the window is on, as the web bar's chip — its avatar and
-/// its name — and the way to any other: pressing it brings up the opener,
-/// where every repository the machine holds is listed (see
+/// The workspace the window is on, as the web bar's chip — its glyph and
+/// its name, or a lone repository's avatar and name — and the way to any
+/// other: pressing it brings up the opener, where the saved workspaces and
+/// every repository the machine holds are listed (see
 /// `RepoOpenerWindow`). Level with the
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
@@ -351,8 +359,12 @@ private struct ProjectPicker: View {
             openWindow(id: ReviewerWindow.opener)
         } label: {
             HStack(spacing: 6) {
-                if let name = model.workspace?.projectName {
-                    RepoAvatar(name: name)
+                if let workspace = model.workspace, let name = workspace.displayName {
+                    if workspace.isMultiRoot {
+                        WorkspaceGlyph(names: workspace.roots.map(\.name))
+                    } else {
+                        RepoAvatar(name: name)
+                    }
                     Text(name)
                         .font(.system(size: 13))
                         .lineLimit(1)
@@ -360,7 +372,7 @@ private struct ProjectPicker: View {
                 } else {
                     Image(systemName: "folder")
                         .font(.system(size: 12, weight: .medium))
-                    Text("Choose project")
+                    Text("Choose workspace")
                         .font(.system(size: 13))
                 }
             }
@@ -371,7 +383,7 @@ private struct ProjectPicker: View {
         }
         // The toggle's air above and below its glyph, around the avatar.
         .buttonStyle(BarChipStyle(height: 30))
-        .toolbarGlassLabel("Switch project", hint: "⌘O")
+        .toolbarGlassLabel("Switch workspace", hint: "⌘O")
     }
 }
 

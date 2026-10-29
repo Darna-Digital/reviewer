@@ -517,6 +517,9 @@ private final class FileTreeCellView: NSTableCellView {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func show(_ node: FileTreeNode, status: GitFileStatus?, hasChanges: Bool, expanded: Bool, dark: Bool) {
+        if let root = node.root { return show(root: root, hasChanges: hasChanges) }
+        isRootHeader = false
+        nameField.font = .systemFont(ofSize: 13)
         isDirectory = node.isDirectory
         let ignored = status == .ignored
         nameField.stringValue = node.name
@@ -552,14 +555,45 @@ private final class FileTreeCellView: NSTableCellView {
         needsLayout = true
     }
 
+    /// A repository's header in a workspace: its name in bold and the
+    /// branch it is on beside it, the way a JetBrains project tree names
+    /// each root — under the repository's own glyph rather than a folder's,
+    /// and with the changes dot when anything in it changed.
+    private func show(root: TreeRoot, hasChanges: Bool) {
+        isRootHeader = true
+        isDirectory = true
+        let name = NSMutableAttributedString(
+            string: root.name,
+            attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: IslandPalette.text])
+        if let branch = root.branch {
+            name.append(NSAttributedString(
+                string: "  \(branch)",
+                attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]))
+        }
+        nameField.attributedStringValue = name
+        iconView.image = Self.repository
+        iconView.contentTintColor = .secondaryLabelColor
+        iconView.alphaValue = 1
+        badgeField.isHidden = true
+        dotView.isHidden = !hasChanges
+        dotView.layer?.backgroundColor = NSColor.secondaryLabelColor.cgColor
+        tip = root.branch.map { "\(root.path) — on \($0)" } ?? root.path
+        needsLayout = true
+    }
+
+    private var isRootHeader = false
+
     private func paintName() {
+        guard !isRootHeader else { return }
         nameField.textColor = nameColor
     }
 
     func setExpanded(_ expanded: Bool) {
-        guard isDirectory else { return }
+        guard isDirectory, !isRootHeader else { return }
         iconView.image = expanded ? Self.openFolder : Self.closedFolder
     }
+
+    private static let repository = folderSymbol("square.stack.3d.up")
 
     override func layout() {
         super.layout()
@@ -626,31 +660,69 @@ private struct TreeRowMenu: View {
         return [path]
     }
 
+    /// The row's repository and its path inside it.
+    private var located: (root: String, path: String)? { tree.locate(path) }
+
     var body: some View {
+        if let root = node?.root, let repository = model.root(at: root.path) {
+            RootHeaderMenu(root: repository)
+        } else {
+            rowMenu
+        }
+    }
+
+    @ViewBuilder
+    private var rowMenu: some View {
         if !isDirectory {
             Button("Show history") { model.act(onTree: .history(path)) }
             Divider()
         }
-        Button("Copy path") { copy(path) }
-        if let project = listing?.projectPath {
-            Button("Copy absolute path") { copy(absolute(in: project)) }
+        if let located {
+            Button("Copy path") { copy(located.path) }
+            Button("Copy absolute path") { copy(absolute(located)) }
             Button("Reveal in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: absolute(in: project))])
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: absolute(located))])
             }
         }
         if !discardable.isEmpty {
             Divider()
-            Button("Discard changes…") { prompt = .discard(paths: discardable, of: path) }
+            Button("Discard changes…") { prompt = .discard(paths: discardable, of: located?.path ?? path) }
         }
     }
 
-    private func absolute(in project: String) -> String {
-        URL(fileURLWithPath: project).appendingPathComponent(path).path
+    private func absolute(_ located: (root: String, path: String)) -> String {
+        URL(fileURLWithPath: located.root).appendingPathComponent(located.path).path
     }
 
     private func copy(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+}
+
+/// A repository's header's menu: the page turned to it, its dev commands
+/// run, where it is on disk, and taking it out of the workspace.
+struct RootHeaderMenu: View {
+    let root: RootModel
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Button("Open in page") { model.focus(root: root) }
+            .disabled(root === model.focusedRoot)
+        Button("Show history") { model.showHistory(in: root) }
+        Button("Run dev commands") { model.run(root) }
+            .disabled(root.services.commands.isEmpty)
+        Divider()
+        Button("Copy path") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(root.path, forType: .string)
+        }
+        Button("Reveal in Finder") {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: root.path)])
+        }
+        Divider()
+        Button("Remove from workspace") { Task { await model.removeRoot(root) } }
+            .disabled(model.roots.count < 2)
     }
 }
 

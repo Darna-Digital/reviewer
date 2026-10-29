@@ -201,7 +201,9 @@ final class CommandPalette {
     @ObservationIgnored var commandSource: (() -> [PaletteCommand])?
     @ObservationIgnored var branchSource: (() -> [PaletteBranch])?
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — turned with it, before
+    /// `projectChanged` drops what the last one listed.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private var paths: [String] = []
     @ObservationIgnored private var pathsLoaded = false
     @ObservationIgnored private var grepTask: Task<Void, Never>?

@@ -87,10 +87,7 @@ extension AppModel {
     var recentBranches: [BranchInfo] { Array(branches.prefix(5)) }
 
     func loadBranches() async {
-        async let local = client.branches()
-        async let remote = client.remoteBranches()
-        branches = (try? await local) ?? []
-        remoteBranches = (try? await remote) ?? []
+        await focused.loadBranches()
     }
 
     // MARK: actions

@@ -26,10 +26,32 @@ struct RepoIndex: Codable, Sendable {
     let scannedAt: String?
 }
 
+/// One repository open in the workspace — a root, as a JetBrains project
+/// calls each version-controlled folder it holds side by side.
+struct WorkspaceRoot: Codable, Sendable, Hashable, Identifiable {
+    let path: String
+    let name: String
+    let branch: String?
+
+    var id: String { path }
+}
+
+/// The saved workspace the open roots are.
+struct OpenWorkspaceRef: Codable, Sendable, Hashable {
+    let id: String
+    let name: String
+}
+
 struct WorkspaceInfo: Codable, Sendable {
-    /// The open repository — the project — or nil while nothing is open.
+    /// The repository the request was about — the workspace's first, for
+    /// a request that named none — or nil while nothing is open.
     let project: String?
     let branch: String?
+    /// Every repository open side by side, in the workspace's order.
+    let roots: [WorkspaceRoot]
+    /// The saved workspace the roots are, or nil for a repository opened
+    /// on its own.
+    let workspace: OpenWorkspaceRef?
     let recents: [String]
     let home: String
 
@@ -37,22 +59,66 @@ struct WorkspaceInfo: Codable, Sendable {
         project.map { URL(fileURLWithPath: $0).lastPathComponent }
     }
 
-    /// "name — ~/…/parent/folder": the repository's name, then where it
-    /// lives with the home folder shortened and only the last two folders
-    /// kept, enough to tell same-named checkouts apart in the window previews.
+    /// Whether more than one repository is open — when the tree, the
+    /// changes and the panes stand each repository under a header of its own.
+    var isMultiRoot: Bool { roots.count > 1 }
+
+    /// What the window is named: the saved workspace's name over how many
+    /// repositories it holds, or for a repository open on its own, "name —
+    /// ~/…/parent/folder": its name, then where it lives with the home
+    /// folder shortened and only the last two folders kept, enough to tell
+    /// same-named checkouts apart in the window previews.
     var windowTitle: String? {
-        guard let project, let projectName else { return nil }
-        let parent = URL(fileURLWithPath: project).deletingLastPathComponent().path
+        if let workspace {
+            return roots.count == 1 ? workspace.name : "\(workspace.name) — \(roots.count) repositories"
+        }
+        guard let root = roots.first?.path ?? project else { return nil }
+        let name = URL(fileURLWithPath: root).lastPathComponent
+        let parent = URL(fileURLWithPath: root).deletingLastPathComponent().path
         let shortened = parent.hasPrefix(home) ? "~" + parent.dropFirst(home.count) : parent
         let folders = shortened.split(separator: "/", omittingEmptySubsequences: true)
         let kept = folders.suffix(2).joined(separator: "/")
         let truncated = folders.count > 2 ? "…/" + kept : shortened
-        return "\(projectName) — \(truncated)"
+        return "\(name) — \(truncated)"
+    }
+
+    /// What the window's chip reads: the workspace's name, or the
+    /// repository's own for one open on its own.
+    var displayName: String? {
+        workspace?.name ?? roots.first?.name ?? projectName
+    }
+}
+
+/// A workspace kept to come back to: a name over an ordered set of
+/// repositories, opened together.
+struct SavedWorkspace: Codable, Sendable, Hashable, Identifiable {
+    let id: String
+    let name: String
+    let roots: [String]
+    let createdAt: String
+    let openedAt: String?
+
+    var rootNames: [String] {
+        roots.map { URL(fileURLWithPath: $0).lastPathComponent }
     }
 }
 
 struct SetWorkspace: Encodable {
     let path: String
+}
+
+struct SetRoots: Encodable {
+    let roots: [String]
+}
+
+struct CreateWorkspace: Encodable {
+    let name: String
+    let roots: [String]
+}
+
+struct UpdateWorkspace: Encodable {
+    var name: String?
+    var roots: [String]?
 }
 
 struct FileContent: Decodable, Sendable {

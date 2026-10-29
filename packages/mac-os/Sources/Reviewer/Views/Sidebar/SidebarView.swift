@@ -135,6 +135,9 @@ private struct SidebarHeader: View {
 
     var body: some View {
         HStack(spacing: 4) {
+            if model.workspace?.isMultiRoot == true {
+                RootPicker()
+            }
             BranchPicker()
             Spacer(minLength: 0)
             if let comparison = model.sidebar.comparison {
@@ -283,12 +286,21 @@ private struct FilesLayout: View {
                 }
                 .slid(changes, by: CGSize(width: 0, height: searchBandHeight))
             Band(edge: .bottom, shown: tree.commit != nil) {
-                if let commit = tree.commit {
-                    CommitComposer(composer: commit, project: tree.listing?.projectPath ?? "")
+                if let commit = tree.workspaceCommit {
+                    CommitComposer(composer: commit, project: composerScope)
                 }
             }
         }
         .clipped()
+    }
+
+    /// What the composer keeps its message under: the workspace, while the
+    /// changes are several repositories', or the one repository's.
+    private var composerScope: String {
+        if model.sidebar.isMultiRoot, let workspace = model.workspace {
+            return workspace.workspace.map { "workspace:\($0.id)" } ?? workspace.roots.map(\.path).joined(separator: "\n")
+        }
+        return model.sidebar.listing?.projectPath ?? ""
     }
 }
 
