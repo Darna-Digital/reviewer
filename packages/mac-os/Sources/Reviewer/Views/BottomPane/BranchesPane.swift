@@ -288,7 +288,9 @@ private struct OutlineRow<Content: View>: View {
     /// What the list's own margin leaves to take the outermost chevron
     /// under the + on the bar above.
     private static var inset: CGFloat { 4 }
-    private static var height: CGFloat { 24 }
+    /// One step of the outline's grid, down and across alike: each row is
+    /// this tall, and each level stands this far in from the one above.
+    private static var step: CGFloat { 20 }
 
     init(indent: Int, open: Bool? = nil, toggle: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
         self.indent = indent
@@ -302,8 +304,8 @@ private struct OutlineRow<Content: View>: View {
             Chevron(open: open)
             content
         }
-        .padding(.leading, CGFloat(indent) * PaneMetrics.indentUnit)
-        .frame(height: Self.height)
+        .padding(.leading, CGFloat(indent) * Self.step)
+        .frame(height: Self.step)
         .padding(.horizontal, Self.inset)
         .contentShape(Rectangle())
         if let toggle {
