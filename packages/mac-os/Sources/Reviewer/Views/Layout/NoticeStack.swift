@@ -1,6 +1,6 @@
-// The notices on the window (see `Notices`): the web toaster's stack, drawn
-// natively at the bottom trailing corner of the window, over the islands.
-// Each is the web toast's card — the glyph on the first line, the text
+// The notices on the window (see `Notices`), stacked at the bottom
+// trailing corner of the window, over the islands. Each is a card — the
+// glyph on the first line, the text
 // beside it, the close under the pointer — on the islands' own sheet, so
 // it reads as one more panel standing on the frame rather than as a system
 // alert. A loading notice wears the orb, which is how the app says
@@ -11,7 +11,8 @@ import SwiftUI
 struct NoticeStack: View {
     @Environment(AppModel.self) private var model
 
-    /// The web toaster's `--width`: 23rem.
+    /// Wide enough for a path or a line of git's on two lines rather than
+    /// four, narrow enough to leave the page its corner.
     static let width: CGFloat = 368
     /// Its offset from the viewport's edge.
     private static let inset: CGFloat = 16
@@ -40,8 +41,8 @@ enum NoticeMotion {
     }
 }
 
-/// The card's type, on the web toaster's scale — `type-ui` for the
-/// headline, `type-body` for the prose under it: one size, told apart by
+/// The card's type, on the web app's scale — `type-ui` for the headline,
+/// `type-body` for the prose under it: one size, told apart by
 /// weight and colour rather than by a step down, both set on the web's
 /// 20pt line. A semibold headline shouted a path or a sentence of git's at
 /// the reader; medium names the outcome without raising its voice, and
