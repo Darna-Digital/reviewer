@@ -342,48 +342,101 @@ private struct ToolbarItems: ToolbarContent {
     }
 }
 
-/// The workspace the window is on, as the web bar's chip — its glyph and
-/// its name, or a lone repository's avatar and name — and the way to any
-/// other: pressing it brings up the opener, where the saved workspaces and
-/// every repository the machine holds are listed (see
-/// `RepoOpenerWindow`). Level with the
+/// Where the window is: the environment its code runs in, by its glyph —
+/// a laptop or a desktop for this Mac, a cloud next — and the workspace
+/// open there, by name, or the environment's own name for repositories
+/// opened without one. Never a repository: that is the sidebar's title to
+/// say, so the two never say the same thing. Pressing it lists the
+/// environment's workspaces to switch to, as Xcode's destination menu
+/// lists devices, with the opener and a new workspace at its foot. Level with the
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
 /// its line.
 private struct ProjectPicker: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @State private var open = false
+
+    private var environment: ReviewerEnvironment { model.environment }
+    /// The saved workspace open, by name; repositories opened without one
+    /// are the environment's own, and the chip says only where they run —
+    /// the repository is the sidebar's title to name, not this.
+    private var name: String { model.workspace?.workspace?.name ?? environment.name }
 
     var body: some View {
-        Button {
-            openWindow(id: ReviewerWindow.opener)
-        } label: {
+        Button { open.toggle() } label: {
             HStack(spacing: 6) {
-                if let workspace = model.workspace, let name = workspace.displayName {
-                    if workspace.isMultiRoot {
-                        WorkspaceGlyph(names: workspace.roots.map(\.name))
-                    } else {
-                        RepoAvatar(name: name)
-                    }
-                    Text(name)
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } else {
-                    Image(systemName: "folder")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("Choose workspace")
-                        .font(.system(size: 13))
-                }
+                Image(systemName: environment.symbol)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text(name)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             // A little more than the air above and below: the capsule's
             // rounded ends cut into the sides.
             .padding(.horizontal, 8)
             .frame(maxWidth: 176)
         }
-        // The toggle's air above and below its glyph, around the avatar.
+        // The toggle's air above and below its glyph.
         .buttonStyle(BarChipStyle(height: 30))
         .toolbarGlassLabel("Switch workspace", hint: "⌘O")
+        .popover(isPresented: $open, arrowEdge: .bottom) { popover }
+        .task(id: open) { if open { await model.catalog.loadWorkspaces() } }
+    }
+
+    /// The workspaces under the environment they run in — one group while
+    /// this Mac is the only one — the open one ticked; repositories open
+    /// without a saved workspace stand first, as what is open now.
+    private var popover: some View {
+        BranchPopover(
+            sections: [BranchChoiceSection(id: "environment", title: environment.detail ?? environment.name, rows: rows)],
+            placeholder: "Search workspaces", pick: pick, dismiss: { open = false }, actions: nil
+        ) {
+            ThemedDivider()
+            HStack(spacing: 2) {
+                Button("Open…") { open = false; openWindow(id: ReviewerWindow.opener) }
+                Button("New workspace…") {
+                    open = false
+                    model.newWorkspaceAsked = true
+                    openWindow(id: ReviewerWindow.opener)
+                }
+                Spacer(minLength: 0)
+                if model.hasProject, model.workspace?.workspace == nil {
+                    Button("Save as workspace…") { open = false; model.askToSaveWorkspace() }
+                }
+            }
+            .buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .padding(6)
+        }
+    }
+
+    private var rows: [BranchChoice] {
+        let openId = model.workspace?.workspace?.id
+        var rows: [BranchChoice] = []
+        if let roots = model.workspace?.roots, !roots.isEmpty, openId == nil {
+            rows.append(BranchChoice(
+                id: Self.unsavedId, branch: nil, title: roots.map(\.name).joined(separator: ", "),
+                symbol: "folder", tint: nil, badge: nil, checked: true,
+                detail: "Not saved as a workspace", monograms: roots.map(\.name)))
+        }
+        rows += model.catalog.workspaces.map { workspace in
+            BranchChoice(
+                id: workspace.id, branch: nil, title: workspace.name, symbol: "folder",
+                tint: nil, badge: nil, checked: workspace.id == openId,
+                detail: workspace.rootNames.joined(separator: ", "), monograms: workspace.rootNames)
+        }
+        return rows
+    }
+
+    private static let unsavedId = "unsaved"
+
+    private func pick(_ choice: BranchChoice) {
+        open = false
+        guard choice.id != Self.unsavedId, choice.id != model.workspace?.workspace?.id else { return }
+        Task { await model.openWorkspace(id: choice.id) }
     }
 }
 

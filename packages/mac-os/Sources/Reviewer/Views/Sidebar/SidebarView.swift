@@ -365,18 +365,20 @@ extension View {
 /// What an empty tree says — a glyph, a title, and a short line on why —
 /// at the sidebar's own scale, the way Xcode's navigators say an empty
 /// list: quiet enough that a clean tree reads as rest, not as a problem.
+/// The glyph is what the list would hold, as Mail's empty mailbox wears a
+/// tray — a change wears the Review rail's ±, not a verdict like a tick.
 struct TreeEmpty {
     let title: String
     let symbol: String
     var detail: String? = nil
 
     static let noFiles = TreeEmpty(title: "No Files", symbol: "folder")
-    static let noChanges = TreeEmpty(title: "No Changes", symbol: "checkmark.circle")
+    static let noChanges = TreeEmpty(title: "No Changes", symbol: CodeSurface.review.symbol)
 
     /// Nothing to commit or review, and against what.
     static func clean(against: String?) -> TreeEmpty {
         TreeEmpty(
-            title: "No Changes", symbol: "checkmark.circle",
+            title: "No Changes", symbol: CodeSurface.review.symbol,
             detail: against.map { "Nothing differs from \($0)" } ?? "Nothing to commit")
     }
 

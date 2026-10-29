@@ -30,9 +30,10 @@ struct BranchChoice: Identifiable, Hashable {
     /// A second line under the name, on one line cut in the middle — the
     /// branch a repository is on, in the repository picker.
     var detail: String? = nil
-    /// The name whose monogram stands in the glyph's place — a
-    /// repository's, so a row wears the colour it wears everywhere else.
-    var monogram: String? = nil
+    /// The names whose monograms stand in the glyph's place — a
+    /// repository's, so a row wears the colour it wears everywhere else, or
+    /// a workspace's repositories', overlapping.
+    var monograms: [String] = []
 
     static func branch(_ ref: BranchRef, badge: String? = nil, checked: Bool = false) -> BranchChoice {
         BranchChoice(
@@ -338,7 +339,9 @@ private struct ChoiceRow: View {
     var body: some View {
         let hovered = reading.hovered == line.key
         HStack(spacing: 8) {
-            if let monogram = choice.monogram {
+            if choice.monograms.count > 1 {
+                WorkspaceGlyph(names: choice.monograms, size: 18)
+            } else if let monogram = choice.monograms.first {
                 RepoAvatar(name: monogram, size: 18)
             } else {
                 Image(systemName: choice.symbol)

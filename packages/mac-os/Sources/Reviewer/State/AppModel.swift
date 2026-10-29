@@ -27,6 +27,13 @@ final class AppModel {
     /// The server, unscoped — for what is about no one repository: the
     /// workspace itself, the index of repositories, the sessions.
     let server: ReviewerClient
+    /// Where the window's code runs — the server above; this Mac until
+    /// cloud environments are.
+    let environment = ReviewerEnvironment.thisMac
+    /// A new workspace asked for from outside the opener — the toolbar
+    /// chip's popover — which the opener takes up when it comes up (see
+    /// `RepoOpener`).
+    var newWorkspaceAsked = false
 
     var connection: ConnectionState = .starting
     var workspace: WorkspaceInfo?

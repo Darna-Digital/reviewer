@@ -96,6 +96,11 @@ private struct RepoOpener: View {
                 .environment(model)
         }
         .task { catalog.load() }
+        .onChange(of: model.newWorkspaceAsked, initial: true) { _, asked in
+            guard asked else { return }
+            model.newWorkspaceAsked = false
+            editing = WorkspaceDraft(roots: [])
+        }
         // Workspaces is the list the window opens on; with none saved yet,
         // the recent repositories are, and with none of those either,
         // everything is the list to pick the first one from.

@@ -107,7 +107,7 @@ struct RepositoryPicker: View {
             BranchChoice(
                 id: root.path, branch: nil, title: root.name, symbol: "folder",
                 tint: nil, badge: nil, checked: root === model.focusedRoot,
-                detail: root.branch ?? "Detached HEAD", monogram: root.name)
+                detail: root.branch ?? "Detached HEAD", monograms: [root.name])
         }
     }
 
