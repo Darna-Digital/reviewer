@@ -51,11 +51,11 @@ struct WorkspaceEditor: View {
                 } header: {
                     Text("Repositories")
                 } footer: {
-                    Text(draft.roots.count > 1
-                         ? "They open together, listed in this order. Drag to reorder."
-                         : "They open together in one window.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    if draft.roots.count > 1 {
+                        Text("Drag to reorder.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .formStyle(.grouped)

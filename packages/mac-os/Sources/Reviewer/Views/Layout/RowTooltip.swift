@@ -7,11 +7,12 @@
 // rows beside it, and gone the moment the pointer moves — too slow and
 // too far away to read one branch name after another down a list.
 //
-// It stays on the trailing side wherever the row is on screen: left to
-// flip, a list near the screen's right edge would speak from its left and
-// the same list in the middle from its right. Its width is capped to the
-// room on that side, so it wraps into the space it has, and only when
-// even that is too little does it shift back over the row.
+// It says the name on one line, off the row's trailing edge when it fits
+// there, and off its leading edge when only that side has the room — a
+// path is read whole or not at all, and one broken over four lines beside
+// a list at the screen's right edge was the second. Only where neither
+// side has the room does it wrap, into the wider of the two, and only
+// when even that is too little does it shift back over the row.
 //
 // A row speaks only for text the layout cut (see `measuringClip`), and
 // only while it is the row being read — pointed at, or lit by the keys.
@@ -108,17 +109,29 @@ final class RowTooltip {
         label.stringValue = text
         let screen = (window.screen ?? NSScreen.main)?.visibleFrame ?? .infinite
         let padding = Self.padding
-        let room = screen.maxX - Self.screenMargin - row.maxX
-        let width = min(Self.widest, max(room, Self.narrowest))
-        let textSize = label.cell?.cellSize(
-            forBounds: NSRect(x: 0, y: 0, width: width - padding.width * 2, height: .greatestFiniteMagnitude))
-            ?? label.fittingSize
+        let trailingRoom = screen.maxX - Self.screenMargin - row.maxX
+        let leadingRoom = row.minX - screen.minX - Self.screenMargin
+        // The text on one line, as wide as it needs up to the cap: said
+        // whole where it fits beside the row — on the trailing side, else
+        // the leading — and wrapped only where neither side has the room,
+        // into the wider of the two.
+        let oneLine = min(Self.widest, ceil(measure(width: .greatestFiniteMagnitude).width) + padding.width * 2)
+        let side: (leading: Bool, width: CGFloat)
+        if oneLine <= trailingRoom {
+            side = (false, oneLine)
+        } else if oneLine <= leadingRoom {
+            side = (true, oneLine)
+        } else {
+            let leading = leadingRoom > trailingRoom
+            side = (leading, min(Self.widest, max(max(leadingRoom, trailingRoom), Self.narrowest)))
+        }
+        let textSize = measure(width: side.width - padding.width * 2)
         let size = NSSize(
             width: ceil(textSize.width + padding.width * 2), height: ceil(textSize.height + padding.height * 2))
         label.frame = NSRect(x: padding.width, y: padding.height, width: ceil(textSize.width), height: ceil(textSize.height))
 
-        var origin = NSPoint(x: row.maxX, y: row.midY - size.height / 2)
-        origin.x = min(origin.x, screen.maxX - Self.screenMargin - size.width)
+        var origin = NSPoint(x: side.leading ? row.minX - size.width : row.maxX, y: row.midY - size.height / 2)
+        origin.x = max(min(origin.x, screen.maxX - Self.screenMargin - size.width), screen.minX + Self.screenMargin)
         origin.y = min(max(origin.y, screen.minY + Self.screenMargin), screen.maxY - Self.screenMargin - size.height)
         panel.setFrame(NSRect(origin: origin, size: size), display: true)
         if panel.parent !== window {
@@ -126,6 +139,12 @@ final class RowTooltip {
             window.addChildWindow(panel, ordered: .above)
         }
         panel.orderFront(nil)
+    }
+
+    /// The label's text laid out within `width`.
+    private func measure(width: CGFloat) -> NSSize {
+        label.cell?.cellSize(forBounds: NSRect(x: 0, y: 0, width: width, height: .greatestFiniteMagnitude))
+            ?? label.fittingSize
     }
 }
 
