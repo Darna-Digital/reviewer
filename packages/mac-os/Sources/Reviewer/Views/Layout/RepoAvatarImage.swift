@@ -1,6 +1,6 @@
 // A repository's avatar as an image, for the AppKit surfaces that draw
-// rows by hand — the tree's repository headers, the palette — so a
-// repository wears the same tile there as `RepoAvatar` draws in SwiftUI:
+// rows by hand — the palette — so a repository wears the same tile there
+// as `RepoAvatar` draws in SwiftUI:
 // two letters on the name's own colour, at the same proportions.
 import AppKit
 import ReviewerShared

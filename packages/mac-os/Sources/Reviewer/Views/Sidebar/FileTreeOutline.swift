@@ -519,6 +519,7 @@ private final class FileTreeCellView: NSTableCellView {
     func show(_ node: FileTreeNode, status: GitFileStatus?, hasChanges: Bool, expanded: Bool, dark: Bool) {
         if let root = node.root { return show(root: root, hasChanges: hasChanges) }
         isRootHeader = false
+        iconView.isHidden = false
         nameField.font = .systemFont(ofSize: 13)
         isDirectory = node.isDirectory
         let ignored = status == .ignored
@@ -555,29 +556,21 @@ private final class FileTreeCellView: NSTableCellView {
         needsLayout = true
     }
 
-    /// A repository's header in a workspace: its name in bold and the
-    /// branch it is on beside it, the way a JetBrains project tree names
-    /// each root — under the repository's own avatar rather than a folder,
-    /// and with the changes dot when anything in it changed.
+    /// A repository's header in a workspace: its name in bold and nothing
+    /// more — no glyph, no branch, which the sidebar's title already says
+    /// for the repository in front — with the changes dot when anything in
+    /// it changed.
     private func show(root: TreeRoot, hasChanges: Bool) {
         isRootHeader = true
         isDirectory = true
-        let name = NSMutableAttributedString(
+        nameField.attributedStringValue = NSAttributedString(
             string: root.name,
             attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: IslandPalette.text])
-        if let branch = root.branch {
-            name.append(NSAttributedString(
-                string: "  \(branch)",
-                attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]))
-        }
-        nameField.attributedStringValue = name
-        iconView.image = RepoAvatarImage.image(for: root.name, size: Self.iconSize)
-        iconView.contentTintColor = nil
-        iconView.alphaValue = 1
+        iconView.isHidden = true
         badgeField.isHidden = true
         dotView.isHidden = !hasChanges
         dotView.layer?.backgroundColor = NSColor.secondaryLabelColor.cgColor
-        tip = root.branch.map { "\(root.path) — on \($0)" } ?? root.path
+        tip = root.path
         needsLayout = true
     }
 
@@ -608,7 +601,7 @@ private final class FileTreeCellView: NSTableCellView {
             dotView.frame = NSRect(x: trailing - 8, y: (height - 6) / 2, width: 6, height: 6)
             trailing -= 14
         }
-        let nameX = iconSize + 4
+        let nameX = iconView.isHidden ? 0 : iconSize + 4
         let nameHeight = ceil(nameField.font!.ascender - nameField.font!.descender) + 2
         nameField.frame = NSRect(
             x: nameX, y: (height - nameHeight) / 2, width: max(0, trailing - nameX), height: nameHeight)
