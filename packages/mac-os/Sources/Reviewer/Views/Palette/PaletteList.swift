@@ -350,8 +350,13 @@ private final class PaletteRowCell: NSTableCellView {
         iconView.isHidden = false
         iconView.contentTintColor = .secondaryLabelColor
         switch row.content {
-        case .command(let text, let symbol):
-            iconView.image = PaletteGlyph.symbol(symbol, size: 13)
+        case .command(let text, let symbol, let monogram):
+            if let monogram {
+                iconView.image = RepoAvatarImage.image(for: monogram, size: 15)
+                iconView.contentTintColor = nil
+            } else {
+                iconView.image = PaletteGlyph.symbol(symbol, size: 13)
+            }
             label.attributedStringValue = NSAttributedString(
                 string: text, attributes: [.font: Self.textFont, .foregroundColor: IslandPalette.text])
             label.lineBreakMode = .byTruncatingTail

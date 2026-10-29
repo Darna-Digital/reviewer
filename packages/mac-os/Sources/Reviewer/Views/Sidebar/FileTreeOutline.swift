@@ -557,7 +557,7 @@ private final class FileTreeCellView: NSTableCellView {
 
     /// A repository's header in a workspace: its name in bold and the
     /// branch it is on beside it, the way a JetBrains project tree names
-    /// each root — under the repository's own glyph rather than a folder's,
+    /// each root — under the repository's own avatar rather than a folder,
     /// and with the changes dot when anything in it changed.
     private func show(root: TreeRoot, hasChanges: Bool) {
         isRootHeader = true
@@ -571,8 +571,8 @@ private final class FileTreeCellView: NSTableCellView {
                 attributes: [.font: NSFont.systemFont(ofSize: 12), .foregroundColor: NSColor.secondaryLabelColor]))
         }
         nameField.attributedStringValue = name
-        iconView.image = Self.repository
-        iconView.contentTintColor = .secondaryLabelColor
+        iconView.image = RepoAvatarImage.image(for: root.name, size: Self.iconSize)
+        iconView.contentTintColor = nil
         iconView.alphaValue = 1
         badgeField.isHidden = true
         dotView.isHidden = !hasChanges
@@ -592,8 +592,6 @@ private final class FileTreeCellView: NSTableCellView {
         guard isDirectory, !isRootHeader else { return }
         iconView.image = expanded ? Self.openFolder : Self.closedFolder
     }
-
-    private static let repository = folderSymbol("square.stack.3d.up")
 
     override func layout() {
         super.layout()

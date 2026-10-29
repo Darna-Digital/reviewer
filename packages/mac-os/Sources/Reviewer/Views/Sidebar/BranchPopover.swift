@@ -27,6 +27,12 @@ struct BranchChoice: Identifiable, Hashable {
     let badge: String?
     /// Ticked — the branch the picker is on, where the pick is a setting.
     let checked: Bool
+    /// A second line under the name, on one line cut in the middle — the
+    /// branch a repository is on, in the repository picker.
+    var detail: String? = nil
+    /// The name whose monogram stands in the glyph's place — a
+    /// repository's, so a row wears the colour it wears everywhere else.
+    var monogram: String? = nil
 
     static func branch(_ ref: BranchRef, badge: String? = nil, checked: Bool = false) -> BranchChoice {
         BranchChoice(
@@ -121,7 +127,12 @@ struct BranchPopover<Footer: View>: View {
         var index = 0
         return sections.compactMap { section in
             if searching, section.hiddenWhileSearching { return nil }
-            let rows = searching ? section.rows.filter { $0.title.localizedCaseInsensitiveContains(needle) } : section.rows
+            let rows = searching
+                ? section.rows.filter {
+                    $0.title.localizedCaseInsensitiveContains(needle)
+                        || ($0.detail?.localizedCaseInsensitiveContains(needle) ?? false)
+                }
+                : section.rows
             guard !rows.isEmpty else { return nil }
             let lines = rows.map { choice in
                 defer { index += 1 }
@@ -327,18 +338,38 @@ private struct ChoiceRow: View {
     var body: some View {
         let hovered = reading.hovered == line.key
         HStack(spacing: 8) {
-            Image(systemName: choice.symbol)
-                .foregroundStyle(choice.tint ?? Color.secondary)
-                .frame(width: 14)
-            Text(choice.title)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .measuringClip(choice.title, font: rowFont, into: $clipped)
+            if let monogram = choice.monogram {
+                RepoAvatar(name: monogram, size: 18)
+            } else {
+                Image(systemName: choice.symbol)
+                    .foregroundStyle(choice.tint ?? Color.secondary)
+                    .frame(width: 14)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(choice.title)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .measuringClip(choice.title, font: rowFont, into: $clipped)
+                if let detail = choice.detail {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .font(.system(size: 9))
+                        Text(detail)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .help(detail)
+                }
+            }
             Spacer(minLength: 4)
             if let badge = choice.badge {
                 Text(badge)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             if choice.checked {
                 Image(systemName: "checkmark")

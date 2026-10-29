@@ -114,6 +114,9 @@ struct PaletteCommand: Identifiable {
     /// The heading the command is grouped under — Navigation, Git, View.
     let group: String
     let symbol: String
+    /// The repository whose avatar the row wears in the symbol's place —
+    /// a command about one repository of the workspace.
+    var monogram: String? = nil
     /// Extra search terms not shown in the label.
     var keywords = ""
     /// A current value or a chord, on the row's trailing edge.
@@ -162,7 +165,7 @@ struct PaletteBranch: Identifiable, Hashable, Sendable {
 /// so the list can put one over each run of the same.
 struct PaletteRow: Identifiable {
     enum Content {
-        case command(label: String, symbol: String)
+        case command(label: String, symbol: String, monogram: String? = nil)
         case file(path: String)
         case match(path: String, line: Int, text: String)
         case branch(name: String)
@@ -368,7 +371,7 @@ final class CommandPalette {
             .map { command in
                 PaletteRow(
                     id: "command:\(command.id)", group: command.group,
-                    content: .command(label: command.label, symbol: command.symbol),
+                    content: .command(label: command.label, symbol: command.symbol, monogram: command.monogram),
                     hint: command.hint, run: command.run)
             }
         let keywords = openerKeywords.merging(commands.map { ("command:\($0.id)", $0.keywords) }) { first, _ in first }
@@ -376,7 +379,7 @@ final class CommandPalette {
         guard !needle.isEmpty else { return rows }
         return rows.lazy
             .compactMap { row -> (PaletteRow, Double)? in
-                guard case .command(let label, _) = row.content else { return nil }
+                guard case .command(let label, _, _) = row.content else { return nil }
                 let haystack = "\(label) \(keywords[row.id] ?? "") \(row.group)"
                 return Self.fuzzyScore(haystack, needle).map { (row, $0) }
             }

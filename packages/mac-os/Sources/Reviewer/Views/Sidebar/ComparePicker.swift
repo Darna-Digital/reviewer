@@ -1,8 +1,9 @@
 // What your own changes are read against, said out loud and changed from
 // there — the web header's compare picker, which stands over the diff in
-// the browser; here it stands beside the branch picker at the head of the
-// sidebar, since that is where the shell keeps the commit view's controls.
-// The branch picker names the branch the tree is a tree of; this names
+// the browser; here it stands at the end of the changes' filter row, a
+// scope over the list it measures, the way Finder's scope bar stands over
+// its results. The sidebar's title names the branch the tree is a tree
+// of; this names
 // what its changes are measured from: the branch as it is committed,
 // or the merge base with another branch, so "how does this branch differ
 // from main" can be asked before there is a pull request to ask it for you.
@@ -27,6 +28,9 @@ struct ComparePicker: View {
         ComparisonLabels(against: comparison.against, branch: model.currentBranch)
     }
 
+    /// The filter beside it keeps the row's width; a long base is cut.
+    private static let maxWidth: CGFloat = 130
+
     private var symbol: String {
         guard let against = comparison.against else { return "arrow.left.arrow.right" }
         return against.contains("/") ? "cloud" : "arrow.triangle.branch"
@@ -39,11 +43,14 @@ struct ComparePicker: View {
                     .foregroundStyle(.secondary)
                 Text(labels.chip)
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .truncationMode(.tail)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
+            .font(.system(size: 11))
+            .frame(maxWidth: Self.maxWidth)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(.accessoryBar)
         .help(labels.summary)
@@ -94,7 +101,7 @@ struct ComparisonLabels {
 
     init(against: String?, branch: String?) {
         let here = branch.flatMap { $0.isEmpty ? nil : $0 } ?? "this checkout"
-        chip = against ?? "Uncommitted"
+        chip = against.map { "vs \($0)" } ?? "Uncommitted"
         summary = "Comparing ‘\(against ?? here)’ against ‘\(here) with changes’"
     }
 }

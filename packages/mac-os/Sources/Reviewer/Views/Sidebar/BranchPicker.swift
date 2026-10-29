@@ -8,6 +8,17 @@
 import SwiftUI
 
 struct BranchPicker: View {
+    /// How the picker stands: a chip naming the branch, as on the session
+    /// bar's strip; or the sidebar's title — the repository over its
+    /// branch, the way Xcode's toolbar names a project over the branch it
+    /// is on — whose popover lists the workspace's repositories above the
+    /// branches, so one control says and switches both.
+    enum Look {
+        case chip
+        case title
+    }
+
+    var look: Look = .chip
     @Environment(AppModel.self) private var model
     @Environment(\.controlSize) private var controlSize
     /// Sidebar pages kept up behind the one in front carry pickers of their
@@ -19,59 +30,133 @@ struct BranchPicker: View {
     /// The accessory bar's type at the size the chip is cut to — named,
     /// so the tooltip measures the name in the font the chip sets it in.
     private var font: NSFont { .systemFont(ofSize: controlSize == .small ? 11 : 13) }
+    private var listsRepositories: Bool { look == .title && model.roots.count > 1 }
 
     var body: some View {
-        Button { open.toggle() } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "arrow.triangle.branch")
-                Text(name)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .clipHelp(name, font: font)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .font(Font(font))
-        }
-        .buttonStyle(.accessoryBar)
-        .disabled(!model.hasProject)
-        .popover(isPresented: $open, arrowEdge: .bottom) {
-            BranchPopover(
-                sections: sections, placeholder: "Search branches", pick: checkout, dismiss: { open = false },
-                actions: model.branchActions(for:)
-            ) {
-                ThemedDivider()
-                HStack(spacing: 2) {
-                    Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
-                    Button("Update") { open = false; model.fetch() }
-                    Button("Push…") { open = false; model.push() }
-                    Spacer(minLength: 0)
+        label
+            .disabled(!model.hasProject)
+            .popover(isPresented: $open, arrowEdge: .bottom) {
+                BranchPopover(
+                    sections: sections, placeholder: listsRepositories ? "Search repositories and branches" : "Search branches",
+                    pick: pick, dismiss: { open = false }, actions: model.branchActions(for:)
+                ) {
+                    ThemedDivider()
+                    HStack(spacing: 2) {
+                        Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
+                        Button("Update") { open = false; model.fetch() }
+                        Button("Push…") { open = false; model.push() }
+                        Spacer(minLength: 0)
+                        if look == .title {
+                            Button("Add repository…") { open = false; model.chooseRootToAdd() }
+                        }
+                    }
+                    .buttonStyle(.accessoryBar)
+                    .controlSize(.small)
+                    .padding(6)
                 }
-                .buttonStyle(.accessoryBar)
-                .controlSize(.small)
-                .padding(6)
             }
-        }
-        .closesOnNavigation($open)
-        .onChange(of: model.branchPickerRequests) {
-            if inFront { open.toggle() }
+            .closesOnNavigation($open)
+            .onChange(of: model.branchPickerRequests) {
+                if inFront { open.toggle() }
+            }
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        switch look {
+        case .chip:
+            Button { open.toggle() } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.triangle.branch")
+                    Text(name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .clipHelp(name, font: font)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .font(Font(font))
+            }
+            .buttonStyle(.accessoryBar)
+        case .title:
+            Button { open.toggle() } label: { SourceControlTitle(repository: model.focusedRoot?.name, branch: name) }
+                .buttonStyle(.accessoryBar)
+                .help(model.focusedRoot.map { "\($0.name) — \(name)" } ?? name)
         }
     }
 
     private var sections: [BranchChoiceSection] {
         let local = model.branches.map { BranchChoice.branch(BranchRef($0), badge: branchDistance($0)) }
-        return [
+        let branches = [
             BranchChoiceSection(id: "recent", title: "Recent", rows: Array(local.prefix(model.recentBranches.count)),
                                 hiddenWhileSearching: true),
             BranchChoiceSection(id: "local", title: "Local", rows: local),
             BranchChoiceSection(id: "remote", title: "Remote", rows: model.remoteBranches.map { .branch(BranchRef($0)) }),
         ]
+        guard listsRepositories else { return branches }
+        let repositories = model.roots.map { root in
+            BranchChoice(
+                id: Self.repositoryPrefix + root.path, branch: nil, title: root.name, symbol: "folder",
+                tint: nil, badge: nil, checked: root === model.focusedRoot,
+                detail: root.branch ?? "Detached HEAD", monogram: root.name)
+        }
+        return [BranchChoiceSection(id: "repositories", title: "Repositories", rows: repositories)] + branches
     }
 
-    private func checkout(_ choice: BranchChoice) {
+    /// Repository rows' ids, kept apart from branch names, which a path
+    /// could otherwise be taken for.
+    private static let repositoryPrefix = "repository:"
+
+    private func pick(_ choice: BranchChoice) {
+        if choice.id.hasPrefix(Self.repositoryPrefix) {
+            if let root = model.root(at: String(choice.id.dropFirst(Self.repositoryPrefix.count))) {
+                model.focus(root: root)
+            }
+            return
+        }
         guard let branch = choice.branch, !branch.isCurrent else { return }
         model.checkout(branch.ref)
+    }
+}
+
+/// The sidebar's title: the repository's avatar and name over the branch
+/// it is on, cut at the end rather than the middle — a branch name's
+/// meaning is at its front, the ticket and the kind of change, the way
+/// Xcode keeps it.
+private struct SourceControlTitle: View {
+    let repository: String?
+    let branch: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let repository {
+                RepoAvatar(name: repository, size: 22)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                if let repository {
+                    Text(repository)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                }
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.system(size: 9, weight: .medium))
+                    Text(branch)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 

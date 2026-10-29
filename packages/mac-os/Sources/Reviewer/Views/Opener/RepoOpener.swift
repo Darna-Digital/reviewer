@@ -223,7 +223,7 @@ private struct OpenerSidebar: View {
                     }
                 }
             } icon: {
-                Image(systemName: "square.stack.3d.up")
+                Image(systemName: "square.on.square")
             }
             .tag(OpenerList.workspaces)
             Label("Recents", systemImage: "clock")

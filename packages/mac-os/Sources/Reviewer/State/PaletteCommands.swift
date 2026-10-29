@@ -139,14 +139,14 @@ extension AppModel {
         if workspace?.workspace == nil {
             commands.append(PaletteCommand(
                 id: "project-save-workspace", label: "Save as workspace…", group: "Project",
-                symbol: "square.stack.3d.up", keywords: "save keep workspace name repositories"
+                symbol: "plus.square.on.square", keywords: "save keep workspace name repositories"
             ) { [weak self] in self?.askToSaveWorkspace() })
         }
         // Each repository of the workspace, to turn the page to.
         for root in roots.count > 1 ? roots : [] where root !== focusedRoot {
             commands.append(PaletteCommand(
                 id: "project-focus-\(root.path)", label: "Go to repository \(root.name)", group: "Project",
-                symbol: "square.stack.3d.up", keywords: "switch repository root focus \(root.name)"
+                symbol: "folder", monogram: root.name, keywords: "switch repository root focus \(root.name)"
             ) { [weak self] in self?.focus(root: root) })
         }
         return commands

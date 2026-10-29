@@ -122,30 +122,18 @@ extension View {
     }
 }
 
-/// The band along the island's top: the web header's 36pt around a 28pt
-/// chip, with the branch picker leading it and, while the changes are your
-/// own, the compare picker at the trailing edge — the branch the tree is a
-/// tree of, and what its changes are measured from, each at its own width
-/// and the room between them the sidebar's to give. The web app puts the
-/// compare picker at the head of the band over the diff; the shell's
-/// sidebar is where its commit view keeps its controls. Over the tree only
-/// — the sessions list is not one branch's.
+/// The band along the island's top: the title of what the tree is a tree
+/// of — the repository over the branch it is on, the whole width the
+/// sidebar has, the way Xcode titles a project over its branch — and the
+/// one way to another repository or branch. What the changes are measured
+/// from is not the tree's identity but a scope over its list, and stands
+/// in the changes' filter row (see `ChangesHeader`). Over the tree only —
+/// the sessions list is not one branch's.
 private struct SidebarHeader: View {
-    @Environment(AppModel.self) private var model
-
     var body: some View {
-        HStack(spacing: 4) {
-            RepositoryPicker()
-            BranchPicker()
-            Spacer(minLength: 0)
-            if let comparison = model.sidebar.comparison {
-                ComparePicker(comparison: comparison)
-                    .transition(.opacity)
-            }
-        }
-        .padding(.horizontal, 4)
-        .frame(height: 36)
-        .animation(SidebarMotion.change, value: model.sidebar.comparison == nil)
+        BranchPicker(look: .title)
+            .padding(.horizontal, 4)
+            .frame(height: 44)
     }
 }
 
@@ -269,7 +257,7 @@ private struct FilesLayout: View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
             Band(edge: .top, shown: changes) {
-                ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard)
+                ChangesHeader(query: $tree.query, wantsKeyboard: $tree.filterWantsKeyboard, scoped: true)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchBandHeight = $0 }
             }
             FileTreeOutline()
@@ -328,10 +316,22 @@ private struct Band<Content: View>: View {
 struct ChangesHeader: View {
     @Binding var query: String
     @Binding var wantsKeyboard: Bool
+    /// Whether the compare picker stands at the row's trailing edge — over
+    /// your own changes, where what they are measured from is yours to
+    /// pick, the way Finder's scope bar stands over its results.
+    var scoped = false
+    @Environment(AppModel.self) private var model
 
     var body: some View {
-        PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
-            .sidebarSearchBand()
+        HStack(spacing: 6) {
+            PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
+            if scoped, let comparison = model.sidebar.comparison {
+                ComparePicker(comparison: comparison)
+                    .transition(.opacity)
+            }
+        }
+        .animation(SidebarMotion.change, value: model.sidebar.comparison == nil)
+        .sidebarSearchBand()
     }
 }
 

@@ -105,8 +105,9 @@ struct RepositoryPicker: View {
     private var rows: [BranchChoice] {
         model.roots.map { root in
             BranchChoice(
-                id: root.path, branch: nil, title: root.name, symbol: "square.stack.3d.up",
-                tint: nil, badge: root.branch, checked: root === model.focusedRoot)
+                id: root.path, branch: nil, title: root.name, symbol: "folder",
+                tint: nil, badge: nil, checked: root === model.focusedRoot,
+                detail: root.branch ?? "Detached HEAD", monogram: root.name)
         }
     }
 
