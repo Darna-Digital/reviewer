@@ -1,10 +1,10 @@
 // The one way the repository the window is on is picked, wherever it is
 // picked — beside the branch chip at the sidebar's head, on the session
-// bar's strip, at the leading edge of the Branches, History and Terminal
-// bars — while the workspace holds more than one. It is the branch
-// picker's twin, so the two read as a pair wherever they stand: the same
-// chip where the branch chip is a chip, the same field where the pane's
-// pickers are fields, and the same popover under both (`BranchPopover`) —
+// bar's strip, on the bottom pane's bar — while the workspace holds more
+// than one. It is the branch picker's twin, so the two read as a pair
+// wherever they stand: the same chip where the branch chip is a chip, the
+// same glass where the pane's pickers are glass, and the same popover
+// under both (`BranchPopover`) —
 // a search over the repositories, ↑/↓ to walk them, Return to pick, each
 // row naming the branch it is on and the one the window is on ticked. A
 // pick turns the page to that repository (`AppModel.focus(root:)`), which
@@ -16,11 +16,11 @@
 import SwiftUI
 
 struct RepositoryPicker: View {
-    /// How the picker stands: as the toolbar's chips do, or as the pane
-    /// bars' fields do — the branch pickers' two looks.
+    /// How the picker stands: as the toolbar's chips do, or in the glass
+    /// the pane bar's controls wear.
     enum Look {
         case chip
-        case paneField
+        case glass
     }
 
     var look: Look = .chip
@@ -30,9 +30,9 @@ struct RepositoryPicker: View {
 
     private var name: String { model.focusedRoot?.name ?? "Repository" }
 
-    /// The longest a repository's name runs on a pane bar's pill before it
-    /// is cut — a folder's name, rarely a branch's length.
-    private static let paneFieldWidth: CGFloat = 140
+    /// The longest a repository's name runs on the pane bar before it is
+    /// cut — a folder's name, rarely a branch's length.
+    private static let glassWidth: CGFloat = 140
 
     var body: some View {
         if model.roots.count > 1 {
@@ -62,21 +62,19 @@ struct RepositoryPicker: View {
             }
             .buttonStyle(.accessoryBar)
             .help("Repository — the one the page is on")
-        case .paneField:
+        case .glass:
             Button { open.toggle() } label: {
-                HStack(spacing: 5) {
-                    RepoAvatar(name: name, size: 12)
+                HStack(spacing: 6) {
+                    RepoAvatar(name: name, size: 14)
                     Text(name)
-                        .font(.system(size: 11))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .clipHelp(name, font: .systemFont(ofSize: 11))
-                        .frame(maxWidth: Self.paneFieldWidth)
+                        .clipHelp(name, font: .systemFont(ofSize: PaneGlass.fontSize))
+                        .frame(maxWidth: Self.glassWidth)
                     MenuChevron()
                 }
-                .paneField()
+                .paneGlass()
                 .fixedSize()
-                .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .help("Repository — the one the page is on")

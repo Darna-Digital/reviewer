@@ -1,38 +1,27 @@
 // The pieces the bottom pane's surfaces are built from, so they read as
-// one instrument: the 28pt bar a column wears along its top — the tab
-// strip, the filters, a detail's title all stand at that height, with the
-// same 8pt inset the rows below keep — the footer a source list wears
-// along its bottom (the system's own add and remove marks, as in Settings
-// and Xcode), the flat bar button both carry, the one shape every field on
-// a bar takes, and the dot that says whether a process is up. The pane is
-// set at the small control size throughout: 11pt text in 22pt fields, the
-// proportion of the system's own small controls, three points of air above
-// and below in the bar.
-//
-// The Run surface is the exception: it is laid out as the opener is (see
-// `RepoOpener`) — a Finder window's proportions inside the island — so it
-// carries the taller toolbar at the regular control size, with the
-// system's own search field at its trailing edge and the actions grouped
-// at its leading edge, and a table of plain rows under it. The Terminal
-// beside it keeps none of that: a shell is opened, picked and closed from
-// a row of tabs, nothing more (see `TerminalPane`).
+// one instrument. A surface's controls stand on the pane's own bar, beside
+// the glass tabs, rather than on a second bar under it (see `BottomPane`):
+// each control a piece of glass at the tabs' height — a capsule that hugs
+// a picker's name, a circle round a lone glyph, one capsule round a group
+// of related actions — the search at the trailing edge, as a window's
+// toolbar has it. Liquid Glass is for the controls layer only; what the
+// controls act on — the lists, the table, the output — stays flat under
+// them. The rest are the slim bar a column's detail wears, the flat bar
+// button it carries, and the dot that says whether a process is up.
 import AppKit
 import SwiftUI
 
 enum PaneMetrics {
     static let barHeight: CGFloat = 28
     static let barInset: CGFloat = 8
-    static let footerHeight: CGFloat = 24
     static let rowHeight: CGFloat = 22
     /// One level of an outline, the sidebar's own `indentationPerLevel`.
     static let indentUnit: CGFloat = 16
     static let listMinWidth: CGFloat = 200
     static let listIdealWidth: CGFloat = 240
     static let listMaxWidth: CGFloat = 380
-    /// The toolbar a table column wears: regular controls, 22pt tall, with
-    /// seven points of air above and below, as a window's toolbar gives them.
-    static let toolbarHeight: CGFloat = 36
-    static let toolbarSearchWidth: CGFloat = 180
+    /// The search at the trailing edge of the pane's bar.
+    static let searchWidth: CGFloat = 220
     /// A table column stands wider than a source list: it has columns of
     /// its own to show, and the output beside it reflows to what is left.
     static let tableMinWidth: CGFloat = 300
@@ -118,50 +107,157 @@ struct ColumnResizeHandle: View {
     }
 }
 
-/// The two sizes a field comes in: the sidebar's, and the pane bar's a
-/// step smaller, in the ratio the system's regular and small controls keep.
-enum PaneFieldSize {
-    case regular
-    case small
-
-    var height: CGFloat { self == .regular ? 24 : 22 }
-    var fontSize: CGFloat { self == .regular ? 12 : 11 }
+/// The height every control on the pane's bar stands at — the glass
+/// tabs' own at the large size — so a picker, a search field and a group
+/// of buttons beside them read as one row of glass.
+enum PaneGlass {
+    static let height: CGFloat = 28
+    static let fontSize: CGFloat = 12
+    /// Interactive glass on the Mac answers a press but not a hover, so the
+    /// hover is laid under the label by hand.
+    static let hoverWash = Color.primary.opacity(0.07)
 }
 
-/// The quiet control a pane bar is made of, as a modifier so a picker, a
-/// chip and a text field on the same bar come out the same height and the
-/// same shape: a capsule, the shape the system's own search field and
-/// filter buttons take, so a bar reads as one row of pills.
-private struct PaneFieldChrome: ViewModifier {
-    let size: PaneFieldSize
+private struct PaneGlassChrome<S: Shape>: ViewModifier {
+    let shape: S
+    let padding: CGFloat
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovering = false
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 9)
-            .frame(height: size.height)
-            .background(.quaternaryWash(0.5), in: Capsule())
-    }
-}
-
-/// The glyph that leads a field — a magnifier, a branch, a calendar — at
-/// the field's own text size.
-private struct PaneFieldGlyph: ViewModifier {
-    let size: PaneFieldSize
-
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size: size.fontSize, weight: .medium))
-            .foregroundStyle(.secondary)
+            .font(.system(size: PaneGlass.fontSize))
+            .foregroundStyle(isEnabled ? .primary : .tertiary)
+            .padding(.horizontal, padding)
+            .frame(minWidth: PaneGlass.height, minHeight: PaneGlass.height, maxHeight: PaneGlass.height)
+            .background(shape.fill(hovering && isEnabled ? PaneGlass.hoverWash : .clear))
+            .contentShape(shape)
+            .glassEffect(.regular.interactive(isEnabled), in: shape)
+            .onHover { hovering = $0 }
     }
 }
 
 extension View {
-    func paneField(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldChrome(size: size)) }
-    func paneFieldGlyph(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldGlyph(size: size)) }
+    /// A control on the pane's bar in glass: a capsule hugging its label.
+    func paneGlass() -> some View { modifier(PaneGlassChrome(shape: Capsule(), padding: 11)) }
+    /// A lone glyph on the pane's bar, in a circle of glass.
+    func paneGlassCircle() -> some View { modifier(PaneGlassChrome(shape: Circle(), padding: 0)) }
 }
 
-/// The bar along the top of a detail column: what is shown, and what can
-/// be done to it, on one line, parted from the content by a rule.
+/// A lone action on the pane's bar.
+struct PaneGlassButton: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .paneGlassCircle()
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(help)
+    }
+}
+
+/// Related actions in one capsule of glass, the way a toolbar groups
+/// them: each glyph lit on its own under the pointer.
+struct PaneGlassGroup<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 0) { content }
+            .padding(.horizontal, 2)
+            .frame(height: PaneGlass.height)
+            .glassEffect(.regular, in: Capsule())
+            .fixedSize()
+    }
+}
+
+/// One action of a `PaneGlassGroup`.
+struct PaneGroupButton: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(isEnabled ? .primary : .tertiary)
+                .frame(width: 30, height: PaneGlass.height - 4)
+                .background(Capsule().fill(hovering && isEnabled ? PaneGlass.hoverWash : .clear))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
+        .accessibilityLabel(help)
+    }
+}
+
+/// The search on the pane's bar, in the same glass as the controls beside
+/// it. The text follows every keystroke; a surface that searches on demand
+/// passes `submit`, which fires on Return, on the field letting the keys
+/// go and on clearing. Escape clears what is typed, then lets the field go.
+struct PaneGlassSearchField: View {
+    let prompt: String
+    @Binding var text: String
+    var submit: (() -> Void)? = nil
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField("", text: $text, prompt: Text(prompt))
+                .textFieldStyle(.plain)
+                .focused($focused)
+                .onSubmit { submit?() }
+                .onExitCommand {
+                    if text.isEmpty { focused = false } else { clear() }
+                }
+            if !text.isEmpty {
+                Button(action: clear) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear")
+            }
+        }
+        .paneGlass()
+        .overlay {
+            if focused {
+                Capsule().strokeBorder(Color(nsColor: IslandPalette.accent).opacity(0.7), lineWidth: 1.5)
+            }
+        }
+        .onTapGesture { focused = true }
+        .onChange(of: focused) { if !focused { submit?() } }
+    }
+
+    private func clear() {
+        text = ""
+        submit?()
+    }
+}
+
+/// The chevron a picker on the bar ends in.
+struct MenuChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.down")
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(.secondary)
+    }
+}
+
+/// The slim bar along the top of a detail column: what is shown, and what
+/// can be done to it, on one line, parted from the content by a rule.
 struct PaneBar<Content: View>: View {
     @ViewBuilder let content: Content
 
@@ -170,25 +266,6 @@ struct PaneBar<Content: View>: View {
             .controlSize(.small)
             .padding(.horizontal, PaneMetrics.barInset)
             .frame(height: PaneMetrics.barHeight)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .bottom) { ThemedDivider() }
-    }
-}
-
-/// The bar along the top of a table column, and of the detail beside it,
-/// at a window toolbar's proportions: regular controls, the actions
-/// grouped at the leading edge, the search at the trailing one. Both
-/// columns wear it at the same height, so the rule under the one runs on
-/// into the rule under the other.
-struct PaneToolbar<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        HStack(spacing: 8) { content }
-            .controlSize(.regular)
-            .labelStyle(.iconOnly)
-            .padding(.horizontal, PaneMetrics.barInset)
-            .frame(height: PaneMetrics.toolbarHeight)
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottom) { ThemedDivider() }
     }
@@ -389,20 +466,6 @@ final class ReleasingSearchField: NSSearchField {
     override func textDidEndEditing(_ notification: Notification) {
         super.textDidEndEditing(notification)
         onFocus?(false)
-    }
-}
-
-/// The footer along the bottom of a source list: a rule, then the marks —
-/// add and remove leading, the list's own actions trailing.
-struct PaneFooter<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        HStack(spacing: 2) { content }
-            .padding(.horizontal, 4)
-            .frame(height: PaneMetrics.footerHeight)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) { ThemedDivider() }
     }
 }
 

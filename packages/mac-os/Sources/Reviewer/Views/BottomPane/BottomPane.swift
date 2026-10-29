@@ -1,41 +1,50 @@
-// The bottom pane: a bar with the tabs between its four surfaces —
-// Branches, History, Terminal and Run, the web dock's own strip — and the
-// mark that puts the pane away, then the surface beneath, the way Xcode's
-// debug area is laid out. The tabs are the system's own (see
-// `SegmentedTabs`), as the settings' appearance is: each surface's icon and
-// name in a segment, the glass puck on the one that is up, at the bar's
-// leading edge in the large size whose capsule stands as tall as the mark
-// at its end. The bar stands at the web dock's own height — the 36pt strip
-// the Find-symbol drawer beside it wears — at the pane bar's inset, so
-// the two islands' bars line up along the foot of the window and the
-// surface's own 28pt bar under it reads as a second line of the same
-// instrument rather than a different one. The rail reaches the same
-// surfaces (see `AppRail`); the switch here is for when the pane is
-// already up. The window decides whether the pane is shown and how tall it stands, and
+// The bottom pane: one bar with the tabs between its four surfaces —
+// Branches, History, Terminal and Run — then the surface's own controls,
+// then the mark that puts the pane away, and the surface beneath, the way
+// Xcode's debug area is laid out. The tabs are the system's own (see
+// `SegmentedTabs`): each surface's icon and name in a segment, the glass
+// puck on the one that is up, in the large size. The surface's controls
+// stand on the same bar in the same glass (see `PaneGlass`) rather than on
+// a second bar of their own under it, so the pane wears one row of chrome
+// and the rest of its height is the surface. On a pane too narrow for the
+// tabs' names and the controls both, the tabs give up their names first.
+// The bar stands at the web dock's own height — the 36pt strip the
+// Find-symbol drawer beside it wears — so the two islands' bars line up
+// along the foot of the window. The rail reaches the same surfaces (see
+// `AppRail`); the switch here is for when the pane is already up. The
+// window decides whether the pane is shown and how tall it stands, and
 // resizes it by the seam above it. Put away, the pane leaves nothing
 // behind; the shells behind the Terminal keep running, and the history
 // keeps its place.
+import Observation
 import SwiftUI
 
 struct BottomPane: View {
     @Environment(AppModel.self) private var model
+    @State private var queries = BottomPaneQueries()
+    @State private var width: CGFloat = 0
 
     /// The web dock's strip height, so the corner button's 28pt sits in
     /// four points of air above and below, as the drawer's does.
     static let barHeight: CGFloat = 36
+    /// Below this the tabs show their icons alone, leaving the room to the
+    /// surface's controls.
+    private static let namedTabsMinWidth: CGFloat = 940
 
     var body: some View {
         VStack(spacing: 0) {
             header
             content
         }
+        .environment(queries)
     }
 
     private var header: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 10) {
             SegmentedTabs(
                 segments: BottomPaneTab.allCases.map {
-                    SegmentedTabs.Segment(id: $0.rawValue, title: $0.title, symbol: $0.symbol, showsTitle: true)
+                    SegmentedTabs.Segment(id: $0.rawValue, title: $0.title, symbol: $0.symbol,
+                                          showsTitle: width >= Self.namedTabsMinWidth)
                 },
                 selection: model.bottomTab.rawValue,
                 select: { id in
@@ -43,16 +52,32 @@ struct BottomPane: View {
                 }
             )
             .controlSize(.large)
+            .fixedSize()
             .accessibilityLabel("Bottom pane")
             .padding(.leading, PaneMetrics.barInset)
-            Spacer(minLength: 8)
+            HStack(spacing: 8) { controls }
+                .frame(maxWidth: .infinity, alignment: .leading)
             CornerButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
                 model.toggleBottomPane()
             }
         }
-        .controlSize(.small)
         .frame(height: Self.barHeight)
         .overlay(alignment: .bottom) { ThemedDivider() }
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        switch model.bottomTab {
+        case .branches:
+            BranchesControls()
+        case .history:
+            HistoryControls()
+        case .terminal:
+            TerminalControls()
+        case .run:
+            RunControls()
+        }
     }
 
     @ViewBuilder
@@ -68,7 +93,16 @@ struct BottomPane: View {
             RunPane()
         }
     }
+}
 
+/// What the surfaces' searches hold, shared by the bar the field stands on
+/// and the surface it narrows.
+@MainActor
+@Observable
+final class BottomPaneQueries {
+    var branches = ""
+    var commands = ""
+    var addingCommand = false
 }
 
 /// The one motion the pane comes and goes with: a short settle with no

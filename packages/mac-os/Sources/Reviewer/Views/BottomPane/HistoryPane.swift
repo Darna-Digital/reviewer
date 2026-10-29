@@ -1,10 +1,12 @@
 // The History surface, laid out as the web app's history dock is: the
-// filter bar along the top — the branch the log follows; the file it is
-// narrowed to, when it is; a text or hash, with the regex and case toggles; an author; a date
-// to start from; and Clear once anything narrows it — then the commits
-// under it, newest first, each row its lane in the graph, its refs, its
+// commits, newest first, each row its lane in the graph, its refs, its
 // subject, its author and its date, with the next page pulled in as the
-// list nears its end. A commit picked out of the list opens on the page
+// list nears its end. What the log follows and is narrowed by stands on
+// the pane's bar (see `HistoryControls`) — the repository, the branch, the
+// search over messages and the filter menu — and whatever narrows it
+// besides the search is said once more over the list, as Finder's scope
+// bar says where a search is looking, each with its own way out (see
+// `HistoryScopeBar`). A commit picked out of the list opens on the page
 // and its details stand beside the list — see `CommitDetails`.
 import SwiftUI
 
@@ -23,7 +25,9 @@ struct HistoryPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HistoryFilterBar()
+            if history.query.narrowsBeyondSearch {
+                HistoryScopeBar()
+            }
             GeometryReader { proxy in
                 let range = Self.detailsRange(in: proxy.size.width)
                 let width = detailsWidth(in: proxy.size.width, range: range)
@@ -60,69 +64,35 @@ struct HistoryPane: View {
     }
 }
 
-/// The bar: the web history toolbar's controls, on the pane's own bar, each
-/// in the pane's field shape. The text fields apply on Return and on losing
-/// focus; the pickers, the toggles and the date apply at once.
-private struct HistoryFilterBar: View {
+/// The surface's controls on the pane's bar: the repository and the
+/// branch the log is of, then at the trailing edge the filter menu and the
+/// search over messages, which applies on Return, on the field letting the
+/// keys go and on clearing.
+struct HistoryControls: View {
     @Environment(AppModel.self) private var model
-    @State private var grep = ""
-    @State private var author = ""
-    @State private var pickingDate = false
+    @State private var text = ""
 
     private var history: CommitHistory { model.history }
 
     var body: some View {
-        PaneBar {
-            RepositoryPicker(look: .paneField)
-            RefPicker()
-            if let path = history.query.path {
-                PathChip(path: path) { apply { $0.path = nil; $0.follow = false } }
-            }
-            GrepField(text: $grep, regex: history.query.regex, caseSensitive: history.query.caseSensitive,
-                      commit: { apply { $0.grep = blank(grep) } },
-                      toggleRegex: { apply { $0.grep = blank(grep); $0.regex.toggle() } },
-                      toggleCase: { apply { $0.grep = blank(grep); $0.caseSensitive.toggle() } })
-                .frame(minWidth: FilterWidths.picker, maxWidth: .infinity)
-            PaneSearchField(prompt: "User", text: $author, submit: { apply { $0.author = blank(author) } })
-                .frame(width: FilterWidths.narrow)
-            SinceDateButton(after: history.query.after, presented: $pickingDate) { date in
-                apply { $0.after = date }
-            }
-            if history.query.hasFilters {
-                Button {
-                    history.query = history.query.cleared
-                } label: {
-                    Label("Clear", systemImage: "xmark")
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.accessoryBar)
-            }
-        }
-        .onChange(of: history.query.grep, initial: true) { _, value in grep = value ?? "" }
-        .onChange(of: history.query.author, initial: true) { _, value in author = value ?? "" }
+        RepositoryPicker(look: .glass)
+        RefPicker()
+        Spacer(minLength: 0)
+        HistoryFilterMenu()
+        PaneGlassSearchField(prompt: "Search commit messages", text: $text, submit: search)
+            .frame(maxWidth: PaneMetrics.searchWidth)
+            .onAppear { text = history.query.grep ?? "" }
+            .onChange(of: history.query.grep) { _, grep in text = grep ?? "" }
     }
 
-    private func apply(_ change: (inout LogQuery) -> Void) {
-        var query = history.query
-        change(&query)
-        history.query = query
-    }
-
-    private func blank(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
-        return trimmed.isEmpty ? nil : trimmed
+    private func search() {
+        let needle = text.trimmingCharacters(in: .whitespaces)
+        history.query.grep = needle.isEmpty ? nil : needle
     }
 }
 
-/// The widths the bar's fields are cut to, on one scale: the pickers and
-/// the least the search gets — the search takes whatever the bar has left,
-/// holding the two short fields, author and date, against the trailing
-/// edge as a pair.
-private enum FilterWidths {
-    static let picker: CGFloat = 176
-    static let narrow: CGFloat = 120
-    static let chipName: CGFloat = 160
-}
+/// The longest a branch's name runs on the bar before it is cut.
+private let refNameWidth: CGFloat = 160
 
 /// The ref the log follows: every branch, or one of them — the same
 /// `BranchPopover` the sidebar's pickers open, with "All branches" at its
@@ -138,20 +108,18 @@ private struct RefPicker: View {
 
     var body: some View {
         Button { open.toggle() } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: current == allRefs ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
-                    .paneFieldGlyph()
+                    .foregroundStyle(.secondary)
                 Text(label)
-                    .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .clipHelp(label, font: .systemFont(ofSize: 11))
-                    .frame(maxWidth: FilterWidths.chipName)
+                    .clipHelp(label, font: .systemFont(ofSize: PaneGlass.fontSize))
+                    .frame(maxWidth: refNameWidth)
                 MenuChevron()
             }
-            .paneField()
+            .paneGlass()
             .fixedSize()
-            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help("Branch")
@@ -178,139 +146,267 @@ private struct RefPicker: View {
     }
 }
 
-/// The up-and-down chevron a picker on the bar ends in, held at the
-/// field's trailing edge whatever the pick's length.
-struct MenuChevron: View {
-    var body: some View {
-        Image(systemName: "chevron.down")
-            .font(.system(size: 8, weight: .semibold))
-            .foregroundStyle(.secondary)
-    }
-}
+/// The filters the search leaves out, in the system's own menu: an author
+/// picked from the ones in the log, a day to start from — a span back
+/// from today, or one picked on a calendar — and how the search matches.
+/// The glyph fills while anything here narrows the log.
+private struct HistoryFilterMenu: View {
+    @Environment(AppModel.self) private var model
+    @State private var pickingDate = false
 
-/// The file the log is narrowed to, wearing its own type icon, with the
-/// mark that widens the log to every file again. The chip hugs its
-/// content — sized to the bar it would centre the name in a wide box —
-/// with only the name capped, so a long one truncates in the middle.
-private struct PathChip: View {
-    let path: String
-    let clear: () -> Void
+    private var history: CommitHistory { model.history }
+    private var query: LogQuery { history.query }
+    private var active: Bool { query.author != nil || query.after != nil || query.regex || query.caseSensitive }
 
     var body: some View {
-        HStack(spacing: 5) {
-            FileIconView(path: path)
-                .frame(width: 12, height: 12)
-            Text(path.split(separator: "/").last.map(String.init) ?? path)
-                .font(.system(size: 11))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: FilterWidths.chipName)
-            Button(action: clear) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+        Menu {
+            Picker("Author", selection: binding(\.author)) {
+                Text("Any Author").tag(String?.none)
+                Divider()
+                ForEach(authors, id: \.self) { Text($0).tag(Optional($0)) }
             }
-            .buttonStyle(.plain)
-            .help("Show all files")
-        }
-        .paneField()
-        .fixedSize(horizontal: true, vertical: false)
-        .help("History of \(path)")
-    }
-}
-
-/// A text or hash to look for, in the search field the Terminal and Run
-/// surfaces carry, with the web bar's two toggles beside it — `.*` for a
-/// regular expression, `Cc` to match case.
-private struct GrepField: View {
-    @Binding var text: String
-    let regex: Bool
-    let caseSensitive: Bool
-    let commit: () -> Void
-    let toggleRegex: () -> Void
-    let toggleCase: () -> Void
-
-    var body: some View {
-        HStack(spacing: 5) {
-            PaneSearchField(prompt: "Text or hash", text: $text, submit: commit)
-            HStack(spacing: 2) {
-                FilterToggle(label: ".*", help: "Regular expression", isOn: regex, action: toggleRegex)
-                FilterToggle(label: "Cc", help: "Match case", isOn: caseSensitive, action: toggleCase)
+            Menu("Since") {
+                Picker("Since", selection: binding(\.after)) {
+                    Text("Any Time").tag(String?.none)
+                    Divider()
+                    ForEach(SinceSpan.allCases) { span in
+                        Text(span.title).tag(Optional(span.after))
+                    }
+                    if let after = query.after, !SinceSpan.allCases.contains(where: { $0.after == after }) {
+                        Divider()
+                        Text(SinceSpan.title(of: after)).tag(Optional(after))
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+                Divider()
+                Button("Choose a Date…") { pickingDate = true }
             }
+            Divider()
+            Toggle("Regular Expression", isOn: binding(\.regex))
+            Toggle("Match Case", isOn: binding(\.caseSensitive))
+            Divider()
+            Button("Clear Filters") { history.query = query.cleared }
+                .disabled(!query.hasFilters)
+        } label: {
+            Image(systemName: active ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(active ? Color(nsColor: IslandPalette.accent) : .primary)
+                .frame(width: PaneGlass.height, height: PaneGlass.height)
+                .contentShape(Circle())
         }
-    }
-}
-
-private struct FilterToggle: View {
-    let label: String
-    let help: String
-    let isOn: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(isOn ? Color.white : Color.secondary)
-                .frame(width: 20, height: 16)
-                .background(isOn ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 4))
-        }
+        // A menu takes no glass style of its own, so it is drawn plain and
+        // the glass laid round it, as the other controls on the bar wear it.
+        .menuStyle(.button)
         .buttonStyle(.plain)
-        .help(help)
+        .menuIndicator(.hidden)
+        .paneGlassCircle()
+        .fixedSize()
+        .help("Filter")
+        .popover(isPresented: $pickingDate, arrowEdge: .bottom) {
+            SinceCalendar(after: query.after) { after in
+                pickingDate = false
+                history.query.after = after
+            }
+        }
+    }
+
+    /// The authors in the log as far as it has been read, the most
+    /// prolific first, and the one the log is narrowed to whatever it is.
+    private var authors: [String] {
+        var counts: [String: Int] = [:]
+        for commit in history.commits { counts[commit.author, default: 0] += 1 }
+        var authors = counts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .prefix(20).map(\.key)
+        if let author = query.author, !authors.contains(author) { authors.insert(author, at: 0) }
+        return authors
+    }
+
+    private func binding<Value>(_ key: WritableKeyPath<LogQuery, Value>) -> Binding<Value> {
+        Binding(get: { history.query[keyPath: key] }, set: { history.query[keyPath: key] = $0 })
     }
 }
 
-/// The date the log starts from, as a chip that opens a calendar; set, it
-/// names the day, and the calendar carries the mark that unsets it.
-private struct SinceDateButton: View {
+/// The spans back from today the Since menu offers, each as the day it
+/// starts from in the form the server reads.
+private enum SinceSpan: CaseIterable, Identifiable {
+    case day, week, month, halfYear, year
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .day: return "Last 24 Hours"
+        case .week: return "Last 7 Days"
+        case .month: return "Last 30 Days"
+        case .halfYear: return "Last 6 Months"
+        case .year: return "Last Year"
+        }
+    }
+
+    @MainActor
+    var after: String {
+        let calendar = Calendar.current
+        let now = Date()
+        let start: Date? = switch self {
+        case .day: calendar.date(byAdding: .day, value: -1, to: now)
+        case .week: calendar.date(byAdding: .day, value: -7, to: now)
+        case .month: calendar.date(byAdding: .day, value: -30, to: now)
+        case .halfYear: calendar.date(byAdding: .month, value: -6, to: now)
+        case .year: calendar.date(byAdding: .year, value: -1, to: now)
+        }
+        return SinceCalendar.wire.string(from: start ?? now)
+    }
+
+    /// A day picked on the calendar, as the menu and the scope bar name it.
+    @MainActor
+    static func title(of after: String) -> String {
+        guard let date = SinceCalendar.wire.date(from: after) else { return after }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+}
+
+/// The calendar a day to start from is picked on.
+private struct SinceCalendar: View {
     let after: String?
-    @Binding var presented: Bool
     let pick: (String?) -> Void
 
-    @MainActor private static let wire: DateFormatter = {
+    @MainActor static let wire: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
 
-    private var date: Date? { after.flatMap(Self.wire.date(from:)) }
+    var body: some View {
+        DatePicker("Since", selection: Binding(
+            get: { after.flatMap(Self.wire.date(from:)) ?? Date() },
+            set: { pick(Self.wire.string(from: $0)) }
+        ), in: ...Date(), displayedComponents: .date)
+        .datePickerStyle(.graphical)
+        .labelsHidden()
+        .padding(10)
+    }
+}
+
+/// What narrows the log besides the search, said over the list while
+/// anything does: each as a token naming what it narrows by, with the mark
+/// that takes it back out, and Clear at the trailing edge for all of them.
+private struct HistoryScopeBar: View {
+    @Environment(AppModel.self) private var model
+
+    private var history: CommitHistory { model.history }
 
     var body: some View {
-        Button {
-            presented = true
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "calendar")
-                    .paneFieldGlyph()
-                Text(date.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Since date")
-                    .font(.system(size: 11))
-                    .foregroundStyle(date == nil ? .secondary : .primary)
-                    .lineLimit(1)
-                MenuChevron()
+        PaneBar {
+            ForEach(tokens) { token in
+                ScopeToken(token: token) { history.query = token.removing(from: history.query) }
             }
-            .paneField()
-            .fixedSize()
-            .contentShape(Capsule())
+            Spacer(minLength: 0)
+            Button("Clear") { history.query = history.query.cleared }
+                .buttonStyle(.accessoryBar)
         }
-        .buttonStyle(.plain)
-        .help("Since date")
-        .popover(isPresented: $presented, arrowEdge: .bottom) {
-            VStack(spacing: 8) {
-                DatePicker("Since", selection: Binding(
-                    get: { date ?? Date() },
-                    set: { pick(Self.wire.string(from: $0)); presented = false }
-                ), displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                if after != nil {
-                    Button("Clear date") { pick(nil); presented = false }
-                        .controlSize(.small)
-                }
+    }
+
+    private var tokens: [Scope] {
+        let query = history.query
+        var tokens: [Scope] = []
+        if let path = query.path {
+            tokens.append(Scope(id: "file", kind: "File", value: (path as NSString).lastPathComponent,
+                                help: "History of \(path)", symbol: "doc") {
+                $0.path = nil
+                $0.follow = false
+            })
+        }
+        if let author = query.author {
+            tokens.append(Scope(id: "author", kind: "Author", value: author, help: author, symbol: "person") {
+                $0.author = nil
+            })
+        }
+        if let after = query.after {
+            let title = SinceSpan.allCases.first { $0.after == after }?.title ?? SinceSpan.title(of: after)
+            tokens.append(Scope(id: "since", kind: "Since", value: title, help: "Commits since \(after)",
+                                symbol: "calendar") {
+                $0.after = nil
+            })
+        }
+        if query.regex {
+            tokens.append(Scope(id: "regex", kind: "Match", value: "Regular expression", help: "The search is a regular expression",
+                                symbol: "asterisk") { $0.regex = false })
+        }
+        if query.caseSensitive {
+            tokens.append(Scope(id: "case", kind: "Match", value: "Case", help: "The search matches case",
+                                symbol: "textformat") { $0.caseSensitive = false })
+        }
+        return tokens
+    }
+}
+
+/// One thing the log is narrowed by, as the scope bar shows it.
+private struct Scope: Identifiable {
+    let id: String
+    let kind: String
+    let value: String
+    let help: String
+    let symbol: String
+    let remove: (inout LogQuery) -> Void
+
+    func removing(from query: LogQuery) -> LogQuery {
+        var query = query
+        remove(&query)
+        return query
+    }
+}
+
+/// A token of the scope bar: what it narrows by over its value, in a
+/// capsule tinted with the accent as the system's search tokens are, and
+/// the mark that takes it back out.
+private struct ScopeToken: View {
+    let token: Scope
+    let remove: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let accent = Color(nsColor: IslandPalette.accent)
+        HStack(spacing: 5) {
+            Image(systemName: token.symbol)
+                .font(.system(size: 10, weight: .medium))
+            Text(token.kind)
+                .foregroundStyle(accent.opacity(0.8))
+            Text(token.value)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(maxWidth: 180)
+            Button(action: remove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .frame(width: 14, height: 14)
+                    .background(Circle().fill(accent.opacity(hovering ? 0.25 : 0)))
+                    .contentShape(Circle())
             }
-            .padding(10)
+            .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .help("Remove")
+            .accessibilityLabel("Remove \(token.kind) \(token.value)")
         }
-        .closesOnNavigation($presented)
+        .font(.system(size: 11))
+        .foregroundStyle(accent)
+        .padding(.leading, 8)
+        .padding(.trailing, 4)
+        .frame(height: 20)
+        .background(accent.opacity(0.14), in: Capsule())
+        .fixedSize()
+        .help(token.help)
+    }
+}
+
+private extension LogQuery {
+    /// Whether anything narrows the log that the search field does not
+    /// already show.
+    var narrowsBeyondSearch: Bool {
+        path != nil || author != nil || after != nil || regex || caseSensitive
     }
 }
 

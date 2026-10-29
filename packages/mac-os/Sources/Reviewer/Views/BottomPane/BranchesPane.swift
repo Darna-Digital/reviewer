@@ -1,38 +1,31 @@
-// The Branches surface, laid out as the web app's branches dock is: a
-// search over every branch along the top — the field Terminal and Run
-// carry, at the bar's leading edge — then the switcher's own model as
-// a list — Recent, Local folded by folder, Remote folded by remote, each
-// section and folder collapsing on its header — with the branch you are on
-// starred and the others carrying their distance from upstream. A row
-// selects; a double-click checks out; a right click opens the switcher's
-// own row menu at the pointer (see `BranchActionMenu`), and the empty
-// space under the rows has the surface's context menu — a new branch,
-// update, push.
+// The Branches surface, laid out as the web app's branches dock is: the
+// switcher's own model as a list — Recent, Local folded by folder, Remote
+// folded by remote, each section and folder collapsing on its header —
+// with the branch you are on starred and the others carrying their
+// distance from upstream. Its controls stand on the pane's bar (see
+// `BranchesControls`): the repository, a new branch, update and push, and
+// the search over every branch. A row selects; a double-click checks out;
+// a right click opens the switcher's own row menu at the pointer (see
+// `BranchActionMenu`), and the empty space under the rows has the
+// surface's context menu — a new branch, update, push.
 import ReviewerShared
 import SwiftUI
 
 struct BranchesPane: View {
     @Environment(AppModel.self) private var model
-    @State private var query = ""
+    @Environment(BottomPaneQueries.self) private var queries
     @State private var selected: String?
     /// Sections folded shut — Remote to begin with, as the switcher has it.
     @State private var closedSections: Set<String> = ["remote"]
     /// Folders opened, everything else being shut to begin with.
     @State private var openFolders: Set<String> = []
 
+    private var query: String { queries.branches }
     private var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
-        VStack(spacing: 0) {
-            PaneBar {
-                RepositoryPicker(look: .paneField)
-                PaneSearchField(prompt: "Search", text: $query)
-                    .frame(width: PaneMetrics.toolbarSearchWidth)
-                Spacer(minLength: 0)
-            }
-            list
-        }
-        .task(id: model.focusedRootPath) { await model.loadBranches() }
+        list
+            .task(id: model.focusedRootPath) { await model.loadBranches() }
     }
 
     private var rows: [BranchRow] {
@@ -154,6 +147,28 @@ struct BranchesPane: View {
                 }
             }
         }
+    }
+}
+
+/// The surface's controls on the pane's bar: the repository, the actions
+/// the list's context menu holds as one group, and the search.
+struct BranchesControls: View {
+    @Environment(AppModel.self) private var model
+    @Environment(BottomPaneQueries.self) private var queries
+
+    var body: some View {
+        @Bindable var queries = queries
+        RepositoryPicker(look: .glass)
+        PaneGlassGroup {
+            PaneGroupButton(symbol: "plus", help: "New branch…") {
+                model.branchPrompt = .create(startPoint: nil)
+            }
+            PaneGroupButton(symbol: "arrow.down", help: "Update") { model.fetch() }
+            PaneGroupButton(symbol: "arrow.up", help: "Push…") { model.push() }
+        }
+        Spacer(minLength: 0)
+        PaneGlassSearchField(prompt: "Search branches", text: $queries.branches)
+            .frame(maxWidth: PaneMetrics.searchWidth)
     }
 }
 

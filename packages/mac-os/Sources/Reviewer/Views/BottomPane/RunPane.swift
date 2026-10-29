@@ -3,29 +3,30 @@
 // system's own table down the left — name under its dot, the repository
 // it belongs to while there are several, the command it runs, whether it
 // is up, the folder it runs in (the root, or a package of a monorepo) —
-// sortable on any column, its rows plain
-// rather than striped, under a toolbar with add and remove grouped at its
-// leading edge, start all and stop all beside them, and a search at its
+// sortable on any column, its rows plain rather than striped. Its
+// controls stand on the pane's bar (see `RunControls`): add and remove in
+// one group, start all and stop all in another, the search at the
 // trailing edge. A command is a shell command line the server runs in the
 // project. With nothing to list the table gives way to a placeholder,
 // header and all. A click picks a command, a double-click or Return starts
 // or stops it, Delete removes it, and the row's menu holds the same, with
 // a restart while it runs. The selected one's output stands on the right
-// under a bar of the toolbar's height naming it and its state,
-// with stop and restart while it runs. Starting, stopping and restarting
-// are the server's doing — a restart is a start, which replaces the live
-// process; the output is its process's socket drawn by SwiftTerm, so a
-// command that asks a question can be answered here too.
+// under a slim bar naming it and its state, with stop and restart while it
+// runs. Starting, stopping and restarting are the server's doing — a
+// restart is a start, which replaces the live process; the output is its
+// process's socket drawn by SwiftTerm, so a command that asks a question
+// can be answered here too.
 import AppKit
 import SwiftUI
 
 struct RunPane: View {
     @Environment(AppModel.self) private var model
-    @State private var adding = false
+    @Environment(BottomPaneQueries.self) private var queries
 
     var body: some View {
+        @Bindable var queries = queries
         TableSplit {
-            CommandTable(adding: $adding)
+            CommandTable()
         } detail: {
             CommandDetail()
         }
@@ -36,7 +37,7 @@ struct RunPane: View {
                 }
             }
         }
-        .sheet(isPresented: $adding) {
+        .sheet(isPresented: $queries.addingCommand) {
             NewCommandSheet(repository: model.runRoot.path) { command in
                 Task { await model.runRoot.services.create(command) }
             }
@@ -58,10 +59,58 @@ private struct RunRow: Identifiable {
     var repository: String { root.name }
 }
 
-private struct CommandTable: View {
-    @Binding var adding: Bool
+/// The surface's controls on the pane's bar: add and remove, start all
+/// and stop all — across every repository's commands — and the search.
+struct RunControls: View {
     @Environment(AppModel.self) private var model
-    @State private var query = ""
+    @Environment(BottomPaneQueries.self) private var queries
+
+    private var multiRoot: Bool { model.roots.count > 1 }
+    private var commands: [DevCommandView] { model.roots.flatMap(\.services.commands) }
+
+    var body: some View {
+        @Bindable var queries = queries
+        PaneGlassGroup {
+            PaneGroupButton(symbol: "plus", help: multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command") {
+                queries.addingCommand = true
+            }
+            PaneGroupButton(symbol: "minus", help: "Remove the selected command", action: removeSelected)
+                .disabled(model.runRoot.services.selected == nil)
+        }
+        PaneGlassGroup {
+            PaneGroupButton(symbol: "play.fill", help: multiRoot ? "Start every repository's commands" : "Start all") {
+                model.runProject()
+            }
+            .disabled(commands.isEmpty)
+            PaneGroupButton(symbol: "stop.fill", help: multiRoot ? "Stop every repository's commands" : "Stop all",
+                            action: stopAll)
+                .disabled(!commands.contains(where: \.isRunning))
+        }
+        Spacer(minLength: 0)
+        PaneGlassSearchField(prompt: "Search commands", text: $queries.commands)
+            .frame(maxWidth: PaneMetrics.searchWidth)
+    }
+
+    private func removeSelected() {
+        let services = model.runRoot.services
+        guard let id = services.selectedId else { return }
+        Task { await services.remove(id: id) }
+    }
+
+    private func stopAll() {
+        Task {
+            await withTaskGroup(of: Void.self) { group in
+                for root in model.roots {
+                    group.addTask { await root.services.stopAll() }
+                }
+            }
+        }
+    }
+}
+
+private struct CommandTable: View {
+    @Environment(AppModel.self) private var model
+    @Environment(BottomPaneQueries.self) private var queries
     @State private var sortOrder = [KeyPathComparator(\RunRow.name)]
 
     /// The commands of the repository picked — what the actions on one
@@ -70,9 +119,10 @@ private struct CommandTable: View {
     private var allRows: [RunRow] {
         model.roots.flatMap { root in root.services.commands.map { RunRow(root: root, command: $0) } }
     }
-    private var anyRunning: Bool { allRows.contains { $0.command.isRunning } }
     private var isLoading: Bool { model.roots.contains { $0.services.isLoading } }
     private var multiRoot: Bool { model.roots.count > 1 }
+
+    private var query: String { queries.commands }
 
     private var rows: [RunRow] {
         let needle = query.trimmingCharacters(in: .whitespaces)
@@ -88,50 +138,10 @@ private struct CommandTable: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            if rows.isEmpty && !isLoading {
-                placeholder
-            } else {
-                table
-            }
-        }
-    }
-
-    private var toolbar: some View {
-        PaneToolbar {
-            ControlGroup {
-                Button { adding = true } label: { Label("Add command", systemImage: "plus") }
-                    .help(multiRoot ? "Add a command to \(model.runRoot.name)" : "Add a command")
-                Button(action: removeSelected) { Label("Remove command", systemImage: "minus") }
-                    .help("Remove the selected command")
-                    .disabled(services.selected == nil)
-            }
-            ControlGroup {
-                Button { startAll() } label: { Label("Start all", systemImage: "play.fill") }
-                    .help(multiRoot ? "Start every repository's commands" : "Start all")
-                    .disabled(allRows.isEmpty)
-                Button { stopAll() } label: { Label("Stop all", systemImage: "stop.fill") }
-                    .help(multiRoot ? "Stop every repository's commands" : "Stop all")
-                    .disabled(!anyRunning)
-            }
-            Spacer(minLength: 8)
-            PaneSearchField(prompt: "Search", text: $query)
-                .frame(width: PaneMetrics.toolbarSearchWidth)
-        }
-    }
-
-    private func startAll() {
-        model.runProject()
-    }
-
-    private func stopAll() {
-        Task {
-            await withTaskGroup(of: Void.self) { group in
-                for root in model.roots {
-                    group.addTask { await root.services.stopAll() }
-                }
-            }
+        if rows.isEmpty && !isLoading {
+            placeholder
+        } else {
+            table
         }
     }
 
@@ -210,7 +220,7 @@ private struct CommandTable: View {
                             detail: multiRoot
                                 ? "Add a dev server or a watcher to run in \(model.runRoot.name)."
                                 : "Add a dev server or a watcher to run in this project.") {
-                Button("Add command…") { adding = true }
+                Button("Add command…") { queries.addingCommand = true }
             }
         } else {
             PanePlaceholder("No commands match “\(query)”", symbol: "magnifyingglass")
@@ -312,19 +322,19 @@ private struct CommandDetail: View {
     }
 
     private func bar(for command: DevCommandView) -> some View {
-        PaneToolbar {
+        PaneBar {
             ProcessDot(status: command.status, exitCode: command.exitCode)
             Text(command.name)
-                .fontWeight(.medium)
+                .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
-            CommandText(command: command, size: 12)
+            CommandText(command: command, size: 11)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
             if !command.cwd.isEmpty {
                 Label(command.cwd, systemImage: "folder")
                     .labelStyle(.titleAndIcon)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -332,23 +342,21 @@ private struct CommandDetail: View {
             }
             Spacer(minLength: 8)
             Text(command.statusLabel)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(command.exitedBadly ? .red : .secondary)
+            let services = model.runRoot.services
             if command.isRunning {
-                Button { Task { await model.runRoot.services.start(id: command.id) } } label: {
-                    Label("Restart", systemImage: "arrow.clockwise")
+                PaneBarButton(symbol: "arrow.clockwise", help: "Restart") {
+                    Task { await services.start(id: command.id) }
                 }
-                .help("Restart")
-                Button { Task { await model.runRoot.services.stop(id: command.id) } } label: {
-                    Label("Stop", systemImage: "stop.fill")
+                PaneBarButton(symbol: "stop.fill", help: "Stop") {
+                    Task { await services.stop(id: command.id) }
                 }
-                .help("Stop")
             } else {
-                Button { Task { await model.runRoot.services.start(id: command.id) } } label: {
-                    Label(command.status == .exited ? "Restart" : "Start",
-                          systemImage: command.status == .exited ? "arrow.clockwise" : "play.fill")
+                PaneBarButton(symbol: command.status == .exited ? "arrow.clockwise" : "play.fill",
+                              help: command.status == .exited ? "Restart" : "Start") {
+                    Task { await services.start(id: command.id) }
                 }
-                .help(command.status == .exited ? "Restart" : "Start")
             }
         }
     }
