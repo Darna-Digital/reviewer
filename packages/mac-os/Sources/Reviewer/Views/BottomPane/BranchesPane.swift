@@ -75,7 +75,7 @@ struct BranchesPane: View {
         let recent = Array(locals.prefix(5))
         var rows: [BranchRow] = []
         rows += section("recent", in: root, title: "Recent", indent: indent, count: recent.count) { id in
-            recent.map { .branch(BranchRef($0), root: root, in: id, name: $0.name, indent: indent + 1, trailing: distance(of: $0)) }
+            recent.map { .branch(BranchRef($0), root: root, in: id, name: $0.name, indent: indent, trailing: distance(of: $0)) }
         }
         rows += section("local", in: root, title: "Local", indent: indent, count: locals.count) { id in
             foldered(id, root: root, indent: indent, refs: locals.map(BranchRef.init)) { ref in
@@ -108,15 +108,15 @@ struct BranchesPane: View {
         refs.groupedByFolder().flatMap { folder -> [BranchRow] in
             guard let name = folder.name else {
                 return folder.items.map {
-                    .branch($0, root: root, in: section, name: $0.display, indent: indent + 1, trailing: trailing($0))
+                    .branch($0, root: root, in: section, name: $0.display, indent: indent, trailing: trailing($0))
                 }
             }
             let id = "\(section)/\(name)"
             let open = searching || isOpen(id, byDefault: false)
-            let header = BranchRow.folder(id: id, name: name, open: open, indent: indent + 1)
+            let header = BranchRow.folder(id: id, name: name, open: open, indent: indent)
             guard open else { return [header] }
             return [header] + folder.items.map {
-                .branch($0, root: root, in: section, name: $0.leaf, indent: indent + 2, trailing: trailing($0))
+                .branch($0, root: root, in: section, name: $0.leaf, indent: indent + 1, trailing: trailing($0))
             }
         }
     }
@@ -175,6 +175,8 @@ struct BranchesPane: View {
             }
         }
         .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
+        .contentMargins(.horizontal, 0, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .selectionInk()
         .themedRows()
@@ -271,13 +273,21 @@ private extension View {
 /// the chevron for a row that folds, kept empty for one that does not, so
 /// a folder and a branch beside it start their icons on one line and a
 /// child's icon stands one level in from its parent's label — then the
-/// row's own content. A row that folds toggles on a click; a leaf takes
-/// no gesture of its own, so the list's selection gets the click.
+/// row's own content. A section's header is no level of its own: it names
+/// the rows under it, which start where its name does, the way a source
+/// list's group headers stand over their items. The rows keep the bar's
+/// inset, so the chevrons stand in the column of the bar's buttons above.
+/// A row that folds toggles on a click; a leaf takes no gesture of its
+/// own, so the list's selection gets the click.
 private struct OutlineRow<Content: View>: View {
     let indent: Int
     let open: Bool?
     let toggle: (() -> Void)?
     @ViewBuilder let content: Content
+
+    /// The bar's own inset and its buttons' padding, so a chevron stands
+    /// under the + above it.
+    private static var inset: CGFloat { 14 }
 
     init(indent: Int, open: Bool? = nil, toggle: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
         self.indent = indent
@@ -293,6 +303,7 @@ private struct OutlineRow<Content: View>: View {
         }
         .padding(.leading, CGFloat(indent) * PaneMetrics.indentUnit)
         .frame(height: PaneMetrics.rowHeight)
+        .padding(.horizontal, Self.inset)
         .contentShape(Rectangle())
         if let toggle {
             row.onTapGesture(perform: toggle)
@@ -358,11 +369,14 @@ private struct RepositoryHeader: View {
             }
             Spacer(minLength: 0)
         }
+        .padding(.top, 4)
         .help(root.path)
     }
 }
 
-/// A section's header: the chevron, its name, and how many it holds.
+/// A section's header: its name, how many it holds, and the chevron that
+/// folds it after them, with a little air above to part it from the
+/// section before.
 private struct SectionHeader: View {
     let title: String
     let count: Int
@@ -371,15 +385,17 @@ private struct SectionHeader: View {
     let toggle: () -> Void
 
     var body: some View {
-        OutlineRow(indent: indent, open: open, toggle: toggle) {
+        OutlineRow(indent: indent, toggle: toggle) {
             Text(title)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
             Text("\(count)")
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(.tertiary)
+            Chevron(open: open)
             Spacer(minLength: 0)
         }
+        .padding(.top, 6)
     }
 }
 

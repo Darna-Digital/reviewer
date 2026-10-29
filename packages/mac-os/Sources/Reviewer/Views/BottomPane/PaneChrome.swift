@@ -259,6 +259,7 @@ struct PaneSearchField: View {
                        focusesOnAppear: focusesOnAppear, command: command,
                        ringsItself: themed, editing: $editing, takesKeyboard: takesKeyboard,
                        controlSize: controlSize)
+            .controlSize(controlSize.swiftUI)
             .overlay {
                 if themed && editing {
                     Capsule().strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
@@ -284,6 +285,18 @@ struct PaneSearchField: View {
     @MainActor
     static func releaseKeyboard() {
         releaseKeyboard(from: NSApp.keyWindow ?? NSApp.mainWindow)
+    }
+}
+
+private extension NSControl.ControlSize {
+    var swiftUI: ControlSize {
+        switch self {
+        case .mini: return .mini
+        case .small: return .small
+        case .large: return .large
+        case .extraLarge: return .extraLarge
+        default: return .regular
+        }
     }
 }
 
@@ -322,6 +335,10 @@ private struct SearchFieldBox: NSViewRepresentable {
         context.coordinator.command = command
         field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
         field.focusRingType = ringsItself ? .none : .default
+        if field.controlSize != controlSize {
+            field.controlSize = controlSize
+            field.font = .systemFont(ofSize: NSFont.systemFontSize(for: controlSize))
+        }
         if field.stringValue != text { field.stringValue = text }
         if takesKeyboard {
             field.takeKeyboard()
