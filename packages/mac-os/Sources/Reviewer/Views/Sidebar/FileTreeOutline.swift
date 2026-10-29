@@ -455,7 +455,7 @@ private final class FileTreeRowView: NSTableRowView {
     override func drawSelection(in dirtyRect: NSRect) {
         guard isSelected else { return }
         TreeSelection.fill.setFill()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: 10, dy: 0), xRadius: 5, yRadius: 5).fill()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: SidebarInsets.side, dy: 0), xRadius: 5, yRadius: 5).fill()
     }
 }
 

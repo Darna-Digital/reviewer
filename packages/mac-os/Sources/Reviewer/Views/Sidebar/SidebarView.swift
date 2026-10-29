@@ -132,9 +132,16 @@ extension View {
 private struct SidebarHeader: View {
     var body: some View {
         BranchPicker(look: .title)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, SidebarInsets.side)
             .frame(height: 44)
     }
+}
+
+/// The one line the sidebar's bands keep from its edges — the title, the
+/// changes' filter row, and the tree's row highlights — so they stand flush
+/// with one another down the column.
+enum SidebarInsets {
+    static let side: CGFloat = 10
 }
 
 /// The layout for the surface the page is on — the merge requests, its
@@ -340,7 +347,7 @@ struct ChangesHeader: View {
 /// its shape as the surface under it changes.
 extension View {
     func sidebarSearchBand() -> some View {
-        padding(.horizontal, 10)
+        padding(.horizontal, SidebarInsets.side)
             .padding(.top, 8)
             .padding(.bottom, 6)
     }
