@@ -407,9 +407,7 @@ private struct ProjectPicker: View {
                     Button("Save as workspace…") { open = false; model.askToSaveWorkspace() }
                 }
             }
-            .buttonStyle(.accessoryBar)
-            .controlSize(.small)
-            .padding(6)
+            .popoverFooterBar()
         }
     }
 

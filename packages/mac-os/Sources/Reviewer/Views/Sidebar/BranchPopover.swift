@@ -13,6 +13,19 @@
 // keys walked to (see `RowTooltip`).
 import SwiftUI
 
+extension View {
+    /// The row of buttons at a picker popover's foot: their pills lined up
+    /// with the rows' highlight above, and clear of the popover's rounded
+    /// corners below.
+    func popoverFooterBar() -> some View {
+        buttonStyle(.accessoryBar)
+            .controlSize(.small)
+            .padding(.horizontal, BranchPopover<EmptyView>.listInset)
+            .padding(.top, 6)
+            .padding(.bottom, 9)
+    }
+}
+
 /// A row the popover offers: a branch, or one of the answers that needs
 /// none — "Uncommitted changes", "All branches" — which stands at the
 /// head of the list and steps aside while a search is on, since a filter
@@ -30,6 +43,9 @@ struct BranchChoice: Identifiable, Hashable {
     /// A second line under the name, on one line cut in the middle — the
     /// branch a repository is on, in the repository picker.
     var detail: String? = nil
+    /// The glyph before `detail` — a branch's, where the detail is one —
+    /// or nil for a detail that is no branch.
+    var detailSymbol: String? = nil
     /// The names whose monograms stand in the glyph's place — a
     /// repository's, so a row wears the colour it wears everywhere else, or
     /// a workspace's repositories', overlapping.
@@ -118,6 +134,10 @@ struct BranchPopover<Footer: View>: View {
 
     private static var width: CGFloat { 320 }
     private static var listHeight: CGFloat { 360 }
+    /// The air between the rows' highlight and the popover's edges.
+    static var listInset: CGFloat { 6 }
+
+    @State private var contentHeight: CGFloat = 0
 
     private var searching: Bool { !needle.isEmpty }
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
@@ -212,9 +232,14 @@ struct BranchPopover<Footer: View>: View {
                         }
                     }
                 }
-                .padding(4)
+                .padding(Self.listInset)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
-            .frame(maxHeight: Self.listHeight)
+            // As tall as its rows, up to the cap: a scroll view takes all the
+            // height it is offered, which left a short list scrollable, its
+            // indicator over the rows and its last row against the footer.
+            .frame(height: min(max(contentHeight, 1), Self.listHeight))
+            .scrollBounceBehavior(.basedOnSize)
             .onChange(of: active) { _, index in
                 guard lines.indices.contains(index) else { return }
                 proxy.scrollTo(lines[index].key)
@@ -355,8 +380,10 @@ private struct ChoiceRow: View {
                     .measuringClip(choice.title, font: rowFont, into: $clipped)
                 if let detail = choice.detail {
                     HStack(spacing: 3) {
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(.system(size: 9))
+                        if let symbol = choice.detailSymbol {
+                            Image(systemName: symbol)
+                                .font(.system(size: 9))
+                        }
                         Text(detail)
                             .lineLimit(1)
                             .truncationMode(.middle)

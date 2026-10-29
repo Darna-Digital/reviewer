@@ -50,9 +50,7 @@ struct BranchPicker: View {
                             Button("Add repository…") { open = false; model.chooseRootToAdd() }
                         }
                     }
-                    .buttonStyle(.accessoryBar)
-                    .controlSize(.small)
-                    .padding(6)
+                    .popoverFooterBar()
                 }
             }
             .closesOnNavigation($open)
@@ -99,7 +97,8 @@ struct BranchPicker: View {
             BranchChoice(
                 id: Self.repositoryPrefix + root.path, branch: nil, title: root.name, symbol: "folder",
                 tint: nil, badge: nil, checked: root === model.focusedRoot,
-                detail: root.branch ?? "Detached HEAD", monograms: [root.name])
+                detail: root.branch ?? "Detached HEAD", detailSymbol: "arrow.triangle.branch",
+                monograms: [root.name])
         }
         return [BranchChoiceSection(id: "repositories", title: "Repositories", rows: repositories)] + branches
     }

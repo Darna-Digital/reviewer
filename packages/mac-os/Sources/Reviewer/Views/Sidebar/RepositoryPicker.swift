@@ -96,9 +96,7 @@ struct RepositoryPicker: View {
                 }
                 Spacer(minLength: 0)
             }
-            .buttonStyle(.accessoryBar)
-            .controlSize(.small)
-            .padding(6)
+            .popoverFooterBar()
         }
     }
 
@@ -107,7 +105,8 @@ struct RepositoryPicker: View {
             BranchChoice(
                 id: root.path, branch: nil, title: root.name, symbol: "folder",
                 tint: nil, badge: nil, checked: root === model.focusedRoot,
-                detail: root.branch ?? "Detached HEAD", monograms: [root.name])
+                detail: root.branch ?? "Detached HEAD", detailSymbol: "arrow.triangle.branch",
+                monograms: [root.name])
         }
     }
 
