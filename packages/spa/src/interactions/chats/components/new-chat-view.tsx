@@ -11,7 +11,7 @@
  */
 import { useNavigate } from "@tanstack/react-router";
 import { useRef } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type {
   ChatImage,
@@ -72,7 +72,7 @@ export function NewChatView() {
         });
       }
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof Error ? error.message : "failed to start the session"
       );
       throw error;

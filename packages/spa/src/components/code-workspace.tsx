@@ -41,7 +41,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { confirm } from "@/components/ui/alerts";
 import { CommitPanel } from "@/components/commit-panel";
@@ -500,10 +500,10 @@ export function CodeWorkspace() {
       await Promise.all(
         openComments.map((comment) => comments.remove(null, comment))
       );
-      toast.success(`Assigned ${count} comment${plural}`);
+      notify.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof Error ? error.message : "could not assign comments"
       );
     }
@@ -977,7 +977,7 @@ export function CodeWorkspace() {
       await comments.submit(ctx, location, body);
     } catch (error) {
       setDraft({ ...location, body });
-      toast.error(errorReason(error, "Could not save the comment"));
+      notify.error(errorReason(error, "Could not save the comment"));
     }
   };
 
@@ -998,7 +998,7 @@ export function CodeWorkspace() {
     try {
       await comments.remove(selectedPull, comment);
     } catch (error) {
-      toast.error(errorReason(error, "Could not delete the comment"));
+      notify.error(errorReason(error, "Could not delete the comment"));
     }
   };
   const editComment = async (comment: ReviewComment, body: string) => {
@@ -1014,7 +1014,7 @@ export function CodeWorkspace() {
     try {
       await comments.setResolved(selectedPull, comment, resolved);
     } catch (error) {
-      toast.error(
+      notify.error(
         errorReason(
           error,
           resolved
@@ -1196,7 +1196,7 @@ export function CodeWorkspace() {
             git.startCommitMessage(p, agent),
           onDraftSettled: (settled: CommitDraft) => {
             if (settled.status === "error" && settled.error !== null)
-              toast.error(settled.error);
+              notify.error(settled.error);
             void git.clearCommitDraft();
           },
         }

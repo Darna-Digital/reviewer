@@ -285,6 +285,16 @@ struct NoticeSample {
             refused("Merge #42 refused", "Merging #42…", done: "Merged #42", failed: "Merge of #42 failed", reason: "Pull Request is not mergeable: the base branch policy prohibits the merge"),
             prose("Closed #42", "Closing #42…", done: "Closed #42", failed: "Could not close #42"),
         ]),
+        // What the code island raises over the bridge (`notice`), worded as
+        // the page words it.
+        NoticeSampleGroup(title: "From the page", samples: [
+            instant("Discarded a file", .success, "Discarded changes in packages/spa/src/components/code-workspace.tsx"),
+            instant("Discarded a hunk", .success, "Discarded a change in packages/spa/src/app.tsx"),
+            instant("Saved", .success, "Saved"),
+            instant("Assigned comments", .success, "Assigned 3 comments"),
+            instant("Full file failed", .error, "Couldn't load the rest of NoticeStack.swift", detail: "The server couldn't provide this file's full contents."),
+            instant("Image too large", .error, "screenshot-2026-10-29.png is too large (max 15 MB)"),
+        ]),
         NoticeSampleGroup(title: "Other", samples: [
             instant("Info", .info, "Open a project before starting an agent session"),
             instant("Server refused", .error, "NoRepoSelected"),

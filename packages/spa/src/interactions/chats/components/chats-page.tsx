@@ -47,7 +47,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { confirm } from "@/components/ui/alerts";
@@ -254,7 +254,7 @@ export function ChatsPage() {
     const failed = await actions.removeMany(ids);
     if (failed.length > 0) {
       const [first] = failed;
-      toast.error(
+      notify.error(
         failed.length === 1
           ? (first?.message ?? "delete failed")
           : `${failed.length} sessions could not be deleted`

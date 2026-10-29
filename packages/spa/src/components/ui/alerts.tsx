@@ -35,9 +35,8 @@ import { nativeConfirm } from "@/lib/desktop";
  * Asking is imperative on purpose. Most of these questions are the first line
  * of an async handler — "delete this?", "discard that?" — and threading open
  * state and a pending callback through the component that happens to own the
- * handler is a lot of ceremony for a yes or no. Like `toast`, the ask goes to a
- * store outside React and `<Alerts />`, mounted once at the root, is what
- * draws it.
+ * handler is a lot of ceremony for a yes or no. So the ask goes to a store
+ * outside React and `<Alerts />`, mounted once at the root, is what draws it.
  */
 
 export interface ConfirmOptions {
@@ -138,7 +137,7 @@ export function askForText(options: AskForTextOptions): Promise<string | null> {
 
 // --- the host --------------------------------------------------------------
 
-/** Draws whatever has been asked. Mount once, beside `<Toaster />`. */
+/** Draws whatever has been asked. Mount once, at the root. */
 export function Alerts() {
   const next = useSyncExternalStore(subscribe, peek, peekOnServer);
   // The ask on screen is held here rather than read straight off the queue, so

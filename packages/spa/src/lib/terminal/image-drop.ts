@@ -6,7 +6,7 @@
  * them to a temp file and types that path into the PTY (see pty-socket.ts). The
  * agent then reads the image exactly as if a path had been dragged in natively.
  */
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 /** Reject anything larger than this so a stray huge file can't wedge the socket. */
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
@@ -74,25 +74,26 @@ export const attachImageDrop = (
     const files = Array.from(e.dataTransfer?.files ?? []);
     const images = files.filter(isImage);
     if (images.length === 0) {
-      if (files.length > 0) toast.error("Only image files can be dropped here");
+      if (files.length > 0)
+        notify.error("Only image files can be dropped here");
       return;
     }
     void (async () => {
       for (const file of images) {
         if (file.size > MAX_IMAGE_BYTES) {
-          toast.error(`${file.name || "image"} is too large (max 15 MB)`);
+          notify.error(`${file.name || "image"} is too large (max 15 MB)`);
           continue;
         }
         const socket = options.getSocket();
         if (socket === null || socket.readyState !== WebSocket.OPEN) {
-          toast.error("Terminal is not connected");
+          notify.error("Terminal is not connected");
           return;
         }
         try {
           const data = await readAsBase64(file);
           socket.send(JSON.stringify({ img: { name: file.name, data } }));
         } catch {
-          toast.error(`Could not read ${file.name || "image"}`);
+          notify.error(`Could not read ${file.name || "image"}`);
         }
       }
     })();

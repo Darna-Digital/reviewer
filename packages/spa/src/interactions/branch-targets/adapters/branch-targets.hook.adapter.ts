@@ -7,7 +7,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { fetchClient } from "@/lib/api/client";
 
 const failureText = (error: unknown): string => {
@@ -36,7 +36,7 @@ export function useBranchTargetActions() {
           body: { branch, target },
         });
         if (error !== undefined) {
-          toast.error(failureText(error));
+          notify.error(failureText(error));
           return false;
         }
         await queryClient.invalidateQueries({

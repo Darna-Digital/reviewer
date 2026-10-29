@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notify";
 import { api, fetchClient } from "@/lib/api/client";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { CommitAgent } from "@/lib/ui-prefs";
@@ -31,7 +31,7 @@ const unwrap = async <T>(
 const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
 
 /**
- * All imperative git actions, wired to the typed API, sonner toasts and
+ * All imperative git actions, wired to the typed API, the app's toasts and
  * TanStack Query invalidation. Components call these; the pure flow logic
  * (commit→push messaging, op notices) lives in the functions layer.
  */

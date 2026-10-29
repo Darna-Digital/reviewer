@@ -18,7 +18,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal";
@@ -126,7 +126,7 @@ export function LocalDevPage() {
     try {
       await action();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : fallback);
+      notify.error(error instanceof Error ? error.message : fallback);
     }
   };
 
@@ -161,7 +161,7 @@ export function LocalDevPage() {
           ? await actions.create(draft)
           : await actions.update(draft.id, draft);
       if (result === null) {
-        toast.error("Enter a command to run");
+        notify.error("Enter a command to run");
         return;
       }
       if (draft.id === null) setActiveId(result.id);

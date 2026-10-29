@@ -40,6 +40,35 @@ enum NoticeMotion {
     }
 }
 
+/// The card's type, on the web toaster's scale — `type-ui` for the
+/// headline, `type-body` for the prose under it: one size, told apart by
+/// weight and colour rather than by a step down, both set on the web's
+/// 20pt line. A semibold headline shouted a path or a sentence of git's at
+/// the reader; medium names the outcome without raising its voice, and
+/// the same weight before and after a notice settles keeps the card from
+/// jumping as "Pushing…" becomes "Pushed".
+enum NoticeType {
+    static let size: CGFloat = 13
+    static let title = Font.system(size: size, weight: .medium)
+    static let body = Font.system(size: size)
+    /// What `lineSpacing` adds to SF's own line at `size` to reach 20pt.
+    static let leading: CGFloat = {
+        let font = NSFont.systemFont(ofSize: size)
+        let natural = (font.ascender - font.descender + font.leading).rounded(.up)
+        return max(0, 20 - natural)
+    }()
+    /// Between the headline and what is under it: less than a line's
+    /// leading would read as a paragraph break.
+    static let gap: CGFloat = 2
+
+    /// A view with no baseline of its own — the glyph, the close — centred
+    /// on the headline's first line: its baseline put half SF's x-height
+    /// below its middle, so its middle sits where a lowercase letter's does.
+    static func onFirstLine(_ dimensions: ViewDimensions) -> CGFloat {
+        dimensions[VerticalAlignment.center] + NSFont.systemFont(ofSize: size).xHeight / 2
+    }
+}
+
 private struct NoticeCard: View {
     let notice: Notice
     let dismiss: () -> Void
@@ -50,26 +79,28 @@ private struct NoticeCard: View {
     private static let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             glyph
-                // Centred on the title's first line rather than the block.
-                .frame(width: 16, height: 18)
-            VStack(alignment: .leading, spacing: 3) {
+                .frame(width: 16)
+                .alignmentGuide(.firstTextBaseline, computeValue: NoticeType.onFirstLine)
+            VStack(alignment: .leading, spacing: NoticeType.gap) {
                 Text(notice.title)
-                    .font(.system(size: 13, weight: notice.kind == .loading ? .regular : .semibold))
+                    .font(NoticeType.title)
+                    .lineSpacing(NoticeType.leading)
                     .lineLimit(3)
                 if let detail = notice.detail {
                     Text(detail)
-                        .font(.system(size: 12))
+                        .font(NoticeType.body)
+                        .lineSpacing(NoticeType.leading)
                         .foregroundStyle(.secondary)
-                        .lineLimit(4)
+                        .lineLimit(6)
                 }
                 if notice.output != nil {
                     Button("Details") { showsDetails = true }
                         .buttonStyle(.plain)
-                        .font(.system(size: 12))
+                        .font(NoticeType.title)
                         .foregroundStyle(.tint)
-                        .padding(.top, 3)
+                        .padding(.top, 2)
                         .popover(isPresented: $showsDetails, arrowEdge: .leading) {
                             NoticeDetails(notice: notice)
                         }
@@ -87,6 +118,7 @@ private struct NoticeCard: View {
                     .background(Color.primary.opacity(isHovering ? 0.06 : 0), in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
+            .alignmentGuide(.firstTextBaseline, computeValue: NoticeType.onFirstLine)
             .opacity(isHovering ? 1 : 0)
             .help("Dismiss")
         }

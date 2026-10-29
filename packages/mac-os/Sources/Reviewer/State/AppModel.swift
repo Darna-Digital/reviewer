@@ -154,6 +154,9 @@ final class AppModel {
         page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
         page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }
         page.onOpenRequested = { [weak self] target in self?.open(target) }
+        page.onNoticeRequested = { [weak self] kind, title, detail in
+            self?.notices.post(kind, title, detail: detail)
+        }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
         catalog.onChanged = { [weak self] in self?.publishWidgetFeed() }
         ProjectLinks.shared.handler = { [weak self] request in self?.open(link: request) }

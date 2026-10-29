@@ -28,6 +28,7 @@ import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window
 import type { AppMode } from "@/lib/api/types";
 import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
+import type { NotifyKind } from "@/lib/notify";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
@@ -89,7 +90,15 @@ export type ShellIntent =
    * said each time it arrives there or leaves. The shell scrolls a header of
    * its own away over the page (a pull request's overview) and needs to know,
    * the moment a wheel turns, whether the page has any further up to go. */
-  | { readonly type: "scroll"; readonly atTop: boolean };
+  | { readonly type: "scroll"; readonly atTop: boolean }
+  /** A toast, which inside the shell is one of its own notices — see
+   * `lib/notify`. */
+  | {
+      readonly type: "notice";
+      readonly kind: NotifyKind;
+      readonly title: string;
+      readonly detail: string | null;
+    };
 
 /** What the shell opens for the page: one of its palette's lists, or the
  * settings window — the same four the page's empty pane lists with their

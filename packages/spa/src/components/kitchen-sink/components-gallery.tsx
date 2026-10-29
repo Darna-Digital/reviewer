@@ -5,10 +5,8 @@ import {
   IconGitBranch,
   IconPlus,
   IconSearch,
-  IconSparkles,
   IconTrash,
 } from "@tabler/icons-react";
-import { toast } from "sonner";
 import { askForText, confirm } from "@/components/ui/alerts";
 
 import {
@@ -66,91 +64,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 const RADIO_CLASSES =
   "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
 
 const REVIEWERS = ["Anyone on the team", "Only me", "Nobody yet"];
-
-const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
-  {
-    label: "Success",
-    fire: () => toast.success("Pushed to origin/master"),
-  },
-  {
-    label: "Error",
-    fire: () =>
-      toast.error("Push rejected", {
-        description: "The remote has commits you do not have.",
-      }),
-  },
-  {
-    label: "Warning",
-    fire: () => toast.warning("Working tree has uncommitted changes"),
-  },
-  {
-    label: "Info",
-    fire: () =>
-      toast.info("Branch is up to date", {
-        description: "Nothing to fetch from origin.",
-      }),
-  },
-  {
-    label: "Plain",
-    fire: () =>
-      toast("Drafting a commit message", {
-        icon: <IconSparkles className="size-4" />,
-      }),
-  },
-  {
-    label: "Loading",
-    fire: () => toast.loading("Rebasing onto master…"),
-  },
-  {
-    label: "With action",
-    fire: () =>
-      toast.error("Could not switch branch", {
-        description: "Stash or commit your changes first.",
-        action: { label: "Stash", onClick: () => toast.success("Stashed") },
-      }),
-  },
-  {
-    label: "Long line",
-    fire: () =>
-      toast.warning(
-        "warning: fetch updated the current branch head. fast-forwarding your working tree from commit fb863a957b2935d84b7f1528cb862b4170f895e2."
-      ),
-  },
-  {
-    label: "Long + description",
-    fire: () =>
-      toast.error(
-        "failed to push some refs to git@github.com:darna-digital/reviewer.git",
-        {
-          description:
-            "Updates were rejected because the tip of your current branch is behind its remote counterpart. Integrate the remote changes (e.g. 'git pull --rebase') before pushing again. See the 'Note about fast-forwards' section of 'git push --help' for details.",
-        }
-      ),
-  },
-  {
-    label: "Unbroken token",
-    fire: () =>
-      toast.error("Cannot resolve path", {
-        description:
-          "packages/spa/src/interactions/find-usages/components/announce-move-into-the-deepest-possible-directory.ts",
-      }),
-  },
-  {
-    label: "Stack of four",
-    fire: () => {
-      toast.success("Fetched origin");
-      toast.info("Rebased 3 commits");
-      toast.warning("1 file left conflicted");
-      toast.error("Push rejected");
-    },
-  },
-];
 
 /** Remounts on a beat that shares no factor with the orb's, so the fresh orb
  *  lands on an arbitrary point of the cycle — it should still come up in step
@@ -168,7 +88,7 @@ const ALERT_MOCKS: ReadonlyArray<{
         title: "Switch to master?",
         description: "The three stashed changes stay where they are.",
         confirmLabel: "Switch",
-      }).then((ok) => toast.info(ok ? "Switched" : "Stayed put")),
+      }).then((ok) => notify.info(ok ? "Switched" : "Stayed put")),
   },
   {
     label: "Confirm — destructive",
@@ -180,7 +100,7 @@ const ALERT_MOCKS: ReadonlyArray<{
           "It has six commits that are on no other branch. This cannot be undone.",
         confirmLabel: "Delete",
         destructive: true,
-      }).then((ok) => toast[ok ? "success" : "info"](ok ? "Deleted" : "Kept")),
+      }).then((ok) => notify[ok ? "success" : "info"](ok ? "Deleted" : "Kept")),
   },
   {
     // The case the subject line exists for: a path long enough that naming it
@@ -196,7 +116,7 @@ const ALERT_MOCKS: ReadonlyArray<{
         confirmLabel: "Discard",
         destructive: true,
       }).then((ok) =>
-        toast[ok ? "success" : "info"](ok ? "Discarded" : "Kept")
+        notify[ok ? "success" : "info"](ok ? "Discarded" : "Kept")
       ),
   },
   {
@@ -209,7 +129,7 @@ const ALERT_MOCKS: ReadonlyArray<{
         defaultValue: "feature/",
         confirmLabel: "Create",
       }).then((name) =>
-        toast.info(name === null ? "Cancelled" : `Branched to ${name}`)
+        notify.info(name === null ? "Cancelled" : `Branched to ${name}`)
       ),
   },
 ];
@@ -820,23 +740,6 @@ export function ComponentsGallery() {
           </div>
         </Subsection>
 
-        <Subsection
-          title="Toasts"
-          hint="Fire one of each. The long ones are the interesting cases: a toast never grows past its own width, and an unbroken sha or path breaks rather than pushing the card open."
-        >
-          <div className="flex flex-wrap gap-2">
-            {TOAST_MOCKS.map((mock) => (
-              <Button
-                key={mock.label}
-                size="sm"
-                variant="outline"
-                onClick={mock.fire}
-              >
-                {mock.label}
-              </Button>
-            ))}
-          </div>
-        </Subsection>
       </Section>
     </>
   );

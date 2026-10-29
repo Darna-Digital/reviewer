@@ -30,7 +30,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
 import { useCodeThemes } from "@/components/editor/highlighter";
@@ -586,7 +586,7 @@ export function DiffPane({
           newFile,
         };
       } catch (failure) {
-        toast.error(`Couldn't load the rest of ${file.name}`, {
+        notify.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
               ? "Its commits couldn't be fetched from origin — check the connection, then expand again."

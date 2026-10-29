@@ -23,7 +23,7 @@ import {
   type EditorType,
 } from "@pierre/diffs/edit";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import {
   EDITOR_KEYMAP,
   LANGUAGE_COMMENTS,
@@ -252,10 +252,10 @@ export function useFileEditing({
       const settled = valueRef.current === contents;
       setDirty(!settled);
       setBufferForAnalysis(settled ? null : valueRef.current);
-      toast.success("Saved");
+      notify.success("Saved");
       onSaved();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : String(cause));
+      notify.error(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setSaving(false);
     }
