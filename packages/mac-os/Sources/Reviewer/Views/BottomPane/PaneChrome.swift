@@ -117,16 +117,82 @@ struct PaneBarSeparator: View {
     }
 }
 
-/// The filter field at a bar's trailing edge: the system's small search
-/// field, taking what room the bar has left up to its widest.
+/// The filter field at a bar's trailing edge, taking what room the bar
+/// has left up to its widest.
 struct PaneFilterField: View {
     var prompt = "Filter"
     @Binding var text: String
     var submit: (() -> Void)? = nil
 
     var body: some View {
-        PaneSearchField(prompt: prompt, text: $text, submit: submit, controlSize: .small)
+        MinimalSearchField(prompt: prompt, text: $text, submit: submit)
             .frame(minWidth: 100, maxWidth: PaneMetrics.filterWidth)
+    }
+}
+
+/// The quiet search the bars and the sidebar's heads share: a magnifier,
+/// the text, and the mark that clears it, on a faint wash. Drawn here
+/// rather than taken from the system, whose field paints itself after
+/// what stands behind it — a pale pill on the sidebar's translucent
+/// column, a dark one on the pane's solid island — and sets its magnifier
+/// hard against the text, so the same field read as two. The text follows
+/// every keystroke; a surface that searches on demand passes `submit`,
+/// which fires on Return, on the field letting the keys go and on
+/// clearing. Escape clears what is typed, then lets the field go. Raising
+/// `takesKeyboard` hands it the keys.
+struct MinimalSearchField: View {
+    let prompt: String
+    @Binding var text: String
+    var submit: (() -> Void)? = nil
+    var takesKeyboard: Binding<Bool> = .constant(false)
+    @FocusState private var focused: Bool
+
+    private static let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField("", text: $text, prompt: Text(prompt))
+                .textFieldStyle(.plain)
+                .font(.system(size: 11))
+                .focused($focused)
+                .onSubmit { submit?() }
+                .onExitCommand {
+                    if text.isEmpty { focused = false } else { clear() }
+                }
+            if !text.isEmpty {
+                Button(action: clear) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear")
+            }
+        }
+        .padding(.horizontal, 7)
+        .frame(height: 22)
+        .background(Color.primary.opacity(0.06), in: Self.shape)
+        .overlay {
+            Self.shape.strokeBorder(
+                focused ? Color(nsColor: IslandPalette.accent).opacity(0.8) : Color.primary.opacity(0.05),
+                lineWidth: focused ? 1.5 : 1)
+        }
+        .contentShape(Self.shape)
+        .onTapGesture { focused = true }
+        .onChange(of: focused) { if !focused { submit?() } }
+        .onChange(of: takesKeyboard.wrappedValue) { _, wanted in
+            guard wanted else { return }
+            focused = true
+            takesKeyboard.wrappedValue = false
+        }
+    }
+
+    private func clear() {
+        text = ""
+        submit?()
     }
 }
 

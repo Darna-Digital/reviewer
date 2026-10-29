@@ -75,7 +75,7 @@ struct BranchesPane: View {
         let recent = Array(locals.prefix(5))
         var rows: [BranchRow] = []
         rows += section("recent", in: root, title: "Recent", indent: indent, count: recent.count) { id in
-            recent.map { .branch(BranchRef($0), root: root, in: id, name: $0.name, indent: indent, trailing: distance(of: $0)) }
+            recent.map { .branch(BranchRef($0), root: root, in: id, name: $0.name, indent: indent + 1, trailing: distance(of: $0)) }
         }
         rows += section("local", in: root, title: "Local", indent: indent, count: locals.count) { id in
             foldered(id, root: root, indent: indent, refs: locals.map(BranchRef.init)) { ref in
@@ -108,15 +108,15 @@ struct BranchesPane: View {
         refs.groupedByFolder().flatMap { folder -> [BranchRow] in
             guard let name = folder.name else {
                 return folder.items.map {
-                    .branch($0, root: root, in: section, name: $0.display, indent: indent, trailing: trailing($0))
+                    .branch($0, root: root, in: section, name: $0.display, indent: indent + 1, trailing: trailing($0))
                 }
             }
             let id = "\(section)/\(name)"
             let open = searching || isOpen(id, byDefault: false)
-            let header = BranchRow.folder(id: id, name: name, open: open, indent: indent)
+            let header = BranchRow.folder(id: id, name: name, open: open, indent: indent + 1)
             guard open else { return [header] }
             return [header] + folder.items.map {
-                .branch($0, root: root, in: section, name: $0.leaf, indent: indent + 1, trailing: trailing($0))
+                .branch($0, root: root, in: section, name: $0.leaf, indent: indent + 2, trailing: trailing($0))
             }
         }
     }
@@ -273,10 +273,10 @@ private extension View {
 /// the chevron for a row that folds, kept empty for one that does not, so
 /// a folder and a branch beside it start their icons on one line and a
 /// child's icon stands one level in from its parent's label — then the
-/// row's own content. A section's header is no level of its own: it names
-/// the rows under it, which start where its name does, the way a source
-/// list's group headers stand over their items. The rows keep the bar's
-/// inset, so the chevrons stand in the column of the bar's buttons above.
+/// row's own content. Every level is laid out alike — a repository, a
+/// section, a folder, a branch — so each steps in by the same amount, as
+/// the Source Control navigator's do. The rows keep the bar's inset, so
+/// the outermost chevrons stand in the column of the bar's buttons above.
 /// A row that folds toggles on a click; a leaf takes no gesture of its
 /// own, so the list's selection gets the click.
 private struct OutlineRow<Content: View>: View {
@@ -285,9 +285,10 @@ private struct OutlineRow<Content: View>: View {
     let toggle: (() -> Void)?
     @ViewBuilder let content: Content
 
-    /// The bar's own inset and its buttons' padding, so a chevron stands
-    /// under the + above it.
-    private static var inset: CGFloat { 14 }
+    /// What the list's own margin leaves to take the outermost chevron
+    /// under the + on the bar above.
+    private static var inset: CGFloat { 4 }
+    private static var height: CGFloat { 24 }
 
     init(indent: Int, open: Bool? = nil, toggle: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
         self.indent = indent
@@ -302,7 +303,7 @@ private struct OutlineRow<Content: View>: View {
             content
         }
         .padding(.leading, CGFloat(indent) * PaneMetrics.indentUnit)
-        .frame(height: PaneMetrics.rowHeight)
+        .frame(height: Self.height)
         .padding(.horizontal, Self.inset)
         .contentShape(Rectangle())
         if let toggle {
@@ -369,14 +370,13 @@ private struct RepositoryHeader: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.top, 4)
         .help(root.path)
     }
 }
 
-/// A section's header: its name, how many it holds, and the chevron that
-/// folds it after them, with a little air above to part it from the
-/// section before.
+/// A section's header, laid out as a folder is: the chevron, the
+/// section's own glyph — Recent's clock, Local's machine, Remote's
+/// network — its name, and how many it holds.
 private struct SectionHeader: View {
     let title: String
     let count: Int
@@ -384,18 +384,25 @@ private struct SectionHeader: View {
     let indent: Int
     let toggle: () -> Void
 
+    private var symbol: String {
+        switch title {
+        case "Recent": return "clock"
+        case "Local": return "laptopcomputer"
+        default: return "network"
+        }
+    }
+
     var body: some View {
-        OutlineRow(indent: indent, toggle: toggle) {
+        OutlineRow(indent: indent, open: open, toggle: toggle) {
+            RowGlyph(symbol: symbol)
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
             Text("\(count)")
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(.tertiary)
-            Chevron(open: open)
             Spacer(minLength: 0)
         }
-        .padding(.top, 6)
     }
 }
 

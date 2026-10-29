@@ -61,7 +61,7 @@ private struct SessionsHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            PaneSearchField(prompt: "Search sessions", text: $query, controlSize: .small)
+            MinimalSearchField(prompt: "Search sessions", text: $query)
             SessionFilterMenu(filters: filters)
         }
         .sidebarSearchBand()

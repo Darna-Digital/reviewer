@@ -130,7 +130,7 @@ private struct PullListHeader: View {
     var body: some View {
         @Bindable var pulls = model.pullRequests
         HStack(spacing: 6) {
-            PaneSearchField(prompt: "Search merge requests", text: $pulls.query, controlSize: .small)
+            MinimalSearchField(prompt: "Search merge requests", text: $pulls.query)
             PullFilterMenu()
         }
         .sidebarSearchBand()

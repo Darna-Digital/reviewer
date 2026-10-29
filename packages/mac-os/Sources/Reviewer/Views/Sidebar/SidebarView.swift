@@ -326,9 +326,9 @@ private struct Band<Content: View>: View {
     }
 }
 
-/// The search over the changed files — the system's own field, the one
-/// the merge-requests list stands its search in (see `PullRequestList`),
-/// so the two columns search alike.
+/// The search over the changed files — the field the merge-requests list
+/// and the bottom pane's bars stand their searches in (see
+/// `MinimalSearchField`), so every column searches alike.
 struct ChangesHeader: View {
     @Binding var query: String
     @Binding var wantsKeyboard: Bool
@@ -340,8 +340,7 @@ struct ChangesHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            PaneSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard,
-                            controlSize: .small)
+            MinimalSearchField(prompt: "Filter changed files", text: $query, takesKeyboard: $wantsKeyboard)
             if scoped, let comparison = model.sidebar.comparison {
                 ComparePicker(comparison: comparison)
                     .transition(.opacity)
