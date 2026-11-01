@@ -1179,9 +1179,7 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      return (
-        <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
-      );
+      return <EmptyPane />;
     }
     return (
       <DiffPane

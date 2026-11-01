@@ -24,14 +24,13 @@ import SwiftUI
 
 struct RepoOpenerWindow: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         RepoOpener()
             .serverErrorAlert()
             .onChange(of: model.projectOpens) {
-                openWindow(id: ReviewerWindow.workspace)
+                WorkspaceWindow.show()
                 dismissWindow(id: ReviewerWindow.opener)
             }
     }
@@ -352,11 +351,10 @@ private struct OpenerTable: View {
         }
     }
 
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
 
     private func dismissToWorkspace() {
-        openWindow(id: ReviewerWindow.workspace)
+        WorkspaceWindow.show()
         dismissWindow(id: ReviewerWindow.opener)
     }
 

@@ -46,6 +46,7 @@ import {
 } from "@/interactions/language/functions/anchors";
 import { pathName } from "@/lib/display-path";
 import { cn } from "@/lib/utils";
+import { tabFile } from "../functions/tab-key";
 import { orderTabs } from "../functions/tabs.functions";
 import type { Tab } from "../interfaces/tabs.interfaces";
 
@@ -205,7 +206,7 @@ export function TabStrip({
                     aria-label="Pinned"
                   />
                 ) : (
-                  <FileTypeIcon path={tab.path} />
+                  <FileTypeIcon path={tabFile(tab.path).path} />
                 )}
                 <span
                   // The italic's slant overhangs its glyph box, so the last
@@ -214,10 +215,10 @@ export function TabStrip({
                   // A preview tab is one the next single click may replace; the
                   // italic says so without needing a legend.
                 >
-                  {pathName(tab.path)}
+                  {pathName(tabFile(tab.path).path)}
                 </span>
                 <TabClose
-                  label={`Close ${pathName(tab.path)}`}
+                  label={`Close ${pathName(tabFile(tab.path).path)}`}
                   active={isActive}
                   dirty={dirty.has(tab.path)}
                   onClose={() => onClose(tab.path)}

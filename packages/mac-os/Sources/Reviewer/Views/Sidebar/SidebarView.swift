@@ -60,9 +60,7 @@ enum SidebarLayout: Equatable {
     case nothing
 }
 
-/// What the system lets the sidebar's column be. Shared with the tab row,
-/// which gives the column's widest back to the bar before the column comes
-/// out to take it (see `SessionTabRow`).
+/// What the system lets the sidebar's column be.
 enum SidebarWidths {
     static let min: CGFloat = 240
     static let ideal: CGFloat = 320

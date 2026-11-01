@@ -27,7 +27,6 @@ struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var openSettings
-    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         // The window's width is read here, over the split, for the detail
@@ -38,18 +37,13 @@ struct ContentView: View {
                 SidebarColumn()
                     .navigationSplitViewColumnWidth(
                         min: SidebarWidths.min, ideal: SidebarWidths.ideal, max: SidebarWidths.max)
-                    // Declared on the column rather than the window, so the
-                    // system lays it out in the sidebar's own run of the bar,
-                    // beside the toggle it puts there.
-                    .toolbar { SidebarToolbarItems() }
             } detail: {
                 DetailColumn(windowWidth: window.size.width)
             }
+            // The window's title, which the hosting controller hands its
+            // window — the toolbar is the window's own (see
+            // `WorkspaceWindow`).
             .navigationTitle(model.workspace?.windowTitle ?? "Reviewer")
-            .toolbar(removing: .title)
-            .toolbar { ToolbarItems() }
-            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-            .background { BorderlessSidebarToggle(sidebarShown: model.sidebarShown) }
             .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
             // The notices over the islands, under the palette: a push's
             // outcome is worth seeing, but not over a search in progress.
@@ -70,7 +64,7 @@ struct ContentView: View {
         .onChange(of: model.awaitingProject) { _, awaiting in
             guard awaiting else { return }
             openWindow(id: ReviewerWindow.opener)
-            dismissWindow(id: ReviewerWindow.workspace)
+            WorkspaceWindow.close()
         }
         .onChange(of: model.openerRequests) {
             openWindow(id: ReviewerWindow.opener)
@@ -160,19 +154,6 @@ private struct SidebarColumn: View {
         // above it (see `ThemeInk`).
         .themeInk()
         .floatingSidebarPane()
-    }
-}
-
-/// The sidebar's run of the toolbar: the project picker, trailing, beside
-/// the toggle the system puts at the end of that run — where Notes keeps
-/// its folder button. It goes with the sidebar: a column's items are the
-/// column's, and the chip is on the bar only while the pane it names is.
-private struct SidebarToolbarItems: ToolbarContent {
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .primaryAction) {
-            ProjectPicker()
-        }
-        .sharedBackgroundVisibility(.hidden)
     }
 }
 
@@ -332,25 +313,6 @@ private final class IslandGauge {
     var sidebarWidth: CGFloat = 0
 }
 
-/// The toolbar over the detail: the window tabs — the web app's window bar,
-/// on the window's own bar, so nothing on it is drawn a second time inside
-/// the island. The tabs' pinned pair are the system's own glass tabs control (see
-/// `TabStripItems`); every other item wears the web bar's chip instead, the
-/// glass put away per item (see `BarChipStyle`). The sidebar's toggle is the
-/// system's, standing in the sidebar's own pane beside the traffic lights
-/// rather than here, and the project chip stands with it (see
-/// `SidebarToolbarItems`). The branch picker is the sidebar's, over the
-/// tree it names, as the web header has it.
-private struct ToolbarItems: ToolbarContent {
-    @Environment(AppModel.self) private var model
-
-    var body: some ToolbarContent {
-        if model.hasProject {
-            TabStripItems(model: model)
-        }
-    }
-}
-
 /// Where the window is: the environment its code runs in, by its glyph —
 /// a laptop or a desktop for this Mac, a cloud next — and the workspace
 /// open there, by name, or the environment's own name for repositories
@@ -361,9 +323,8 @@ private struct ToolbarItems: ToolbarContent {
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
 /// its line.
-private struct ProjectPicker: View {
+struct ProjectPicker: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openWindow) private var openWindow
     @State private var open = false
 
     private var environment: ReviewerEnvironment { model.environment }
@@ -438,7 +399,7 @@ private struct ProjectPicker: View {
         ) {
             ThemedDivider()
             HStack(spacing: 2) {
-                Button("Open…") { open = false; openWindow(id: ReviewerWindow.opener) }
+                Button("Open…") { open = false; model.showOpener() }
                 Button("New workspace…") {
                     open = false
                     model.askForNewWorkspace()

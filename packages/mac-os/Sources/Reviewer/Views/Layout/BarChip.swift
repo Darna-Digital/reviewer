@@ -7,7 +7,7 @@
 // `sharedBackgroundVisibility` where the items are declared). The chip is
 // cut to the glass it stands in for — the height and the capsule of the
 // system's own toolbar buttons — so a chip beside the glass tabs control
-// (the tabs' pinned pair, see `TabStripItems`) reads as its equal on one line, not a
+// (the tabs' pinned pair, see `ModeSwitch`) reads as its equal on one line, not a
 // smaller square next to a pill. The rail's buttons wear the same tints,
 // so the two bars read as one instrument.
 import SwiftUI

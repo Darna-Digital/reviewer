@@ -2,7 +2,7 @@
 // selection is a glass puck that can be grabbed and dragged from segment
 // to segment, rather than the flat fill a value picker wears — held
 // directly rather than through a `Picker`. It stands where the toolbar
-// switches between Code and Sessions (see `TabStripItems`), where the
+// switches between Code and Sessions (see `ModeSwitch`), where the
 // settings pick the window's appearance (see `SettingsView`) and across the
 // bottom pane's bar (see `BottomPane`).
 //

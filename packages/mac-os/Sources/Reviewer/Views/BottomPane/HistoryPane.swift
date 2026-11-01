@@ -120,7 +120,7 @@ private struct RefPicker: View {
         } action: {
             open.toggle()
         }
-        .popover(isPresented: $open, arrowEdge: .bottom) {
+        .popover(isPresented: $open, arrowEdge: .top) {
             BranchPopover(sections: sections, placeholder: "Search branches", pick: { choice in
                 history.ref = choice.branch?.ref ?? choice.id
             }, dismiss: { open = false })
@@ -196,7 +196,7 @@ private struct HistoryFilterMenu: View {
         .glassCircleControl()
         .fixedSize()
         .controlTooltip("Filter")
-        .popover(isPresented: $pickingDate, arrowEdge: .bottom) {
+        .popover(isPresented: $pickingDate, arrowEdge: .top) {
             SinceCalendar(after: query.after) { after in
                 pickingDate = false
                 history.query.after = after

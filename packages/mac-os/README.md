@@ -113,7 +113,13 @@ What it does today:
   strip lives in the page island — switching is a route change inside it,
   every tab's page primed while the window is idle — and
   sends the toolbar a picture of itself; a tab pressed there, and each menu
-  chord, goes back down to the strip to answer.
+  chord, goes back down to the strip to answer. The toolbar is AppKit's own,
+  on a window AppKit makes (`WorkspaceWindow`, `WindowToolbar`), so the
+  sessions can be one flexible item the bar sizes to the room it has
+  (`SessionTabBar`): tabs of one width on a capsule track, a raised surface
+  that springs to the tab in front, titles that fade rather than truncate,
+  ✕ on hover, ⌘-numbers while ⌘ is held, select on press, drag to reorder
+  with the row scrolling at its ends, middle-click to close.
 - **Page island** — the SPA's routed page, with the window's own chrome and
   file tree off: the diff, the file view, review comments, a
   pull request's diff alone — its overview, its files and the list of them

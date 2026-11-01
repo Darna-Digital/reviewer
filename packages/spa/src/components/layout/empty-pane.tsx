@@ -23,7 +23,7 @@ interface Way {
   readonly run: () => void;
 }
 
-export function EmptyPane({ hint }: { hint: string }) {
+export function EmptyPane() {
   const navigate = useNavigate();
 
   const ways: ReadonlyArray<Way> = [
@@ -75,7 +75,6 @@ export function EmptyPane({ hint }: { hint: string }) {
             <span className="text-muted-foreground/60">{way.keys}</span>
           </button>
         ))}
-        <p className="text-sm text-muted-foreground/60">{hint}</p>
       </div>
     </div>
   );

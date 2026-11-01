@@ -4,7 +4,9 @@
 //
 // Two windows: the workspace, and the opener — the Finder-like list of
 // every repository the machine holds. The server holds one project at a
-// time, so each is a single `Window` rather than a group. Beside them the
+// time, so each is a single window rather than a group: the opener a
+// `Window` scene, and the workspace one AppKit makes, so that its toolbar
+// is AppKit's own (see `WorkspaceWindow`). Beside them the
 // settings scene (⌘,): the theme, and who the app works as. The workspace is
 // the one that opens at launch — the server usually remembers a project,
 // and the opener would only flash ahead of it — and hands over to the
@@ -16,39 +18,28 @@ import AppKit
 import SwiftUI
 
 enum ReviewerWindow {
-    static let workspace = "workspace"
     static let opener = "opener"
 }
 
 @main
 struct ReviewerApp: App {
-    @State private var model = AppModel()
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
-    var body: some Scene {
-        Window("Reviewer", id: ReviewerWindow.workspace) {
-            ContentView()
-                .environment(model)
-                // Re-opened from the opener, the window finds the server
-                // already answering, and only the first opening boots it.
-                .task { if model.connection != .ready { await model.bootstrap() } }
-                .frame(minWidth: 900, minHeight: 560)
-        }
-        .windowStyle(.hiddenTitleBar)
-        // The full-height toolbar, not the compact one: only under it does
-        // the system run the sidebar's pane up to the window's top edge,
-        // with the traffic lights and the sidebar toggle inside it, as
-        // Music has it. Compact keeps a title bar strip above the pane.
-        .windowToolbarStyle(.unified)
-        .defaultSize(width: 1280, height: 800)
-        .commands { ReviewerCommands(model: model) }
+    /// The delegate's, so the workspace window — which AppKit makes, not
+    /// a scene (see `WorkspaceWindow`) — and the scenes share the one.
+    private var model: AppModel { delegate.model }
 
+    var body: some Scene {
         // ⌘, and the app menu's Settings… are the scene's own. The window is
         // sized by its form, so no default size here.
         Settings {
             SettingsView()
                 .environment(model)
         }
+        // The workspace is AppKit's window, opened by the delegate; with
+        // no scene of its own to open at launch, SwiftUI would open this one.
+        .defaultLaunchBehavior(.suppressed)
+        .commands { ReviewerCommands(model: model) }
 
         Window("Open workspace", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
@@ -222,7 +213,9 @@ private struct NoticeLabMenuItem: View {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
     private var appearanceObservation: NSKeyValueObservation?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -235,6 +228,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { DockIcon.follow(app.effectiveAppearance) }
         }
         UpdateCheck.shared.start()
+        WorkspaceWindow.install(model: model)
+        WorkspaceWindow.show()
+    }
+
+    /// The Dock's tile pressed with no window up brings the workspace back,
+    /// which hands over to the opener itself if there is no project. Said
+    /// to be handled, so the system does not open a scene of its own.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows { WorkspaceWindow.show() }
+        return false
     }
 
     /// `reviewer://open` links — the widget's clicks (see `ProjectLinks`).
