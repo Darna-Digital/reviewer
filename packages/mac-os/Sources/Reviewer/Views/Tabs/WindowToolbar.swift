@@ -11,25 +11,27 @@
 // at the size it first fits, so a row of tabs on SwiftUI's bar either runs
 // off the end or has to measure the window to stay short of it.
 //
-// What the bar holds is what SwiftUI's held, in the same runs. In the
-// sidebar's run, beside the traffic lights: the project picker and the
-// sidebar's toggle at its trailing edge, as Music and Notes have them.
-// Then the system's tracking separator, which holds the run to the
-// sidebar's edge as the column is dragged or slides away. Over the
-// detail: the pinned pair, Code and Sessions, the system's segmented
-// control in the toolbar's glass (see `ModeSwitch`), and the session tabs
-// after them. The pair and the tabs
+// What the bar holds, in two runs. The sidebar's: the project picker and
+// the sidebar's toggle at its trailing edge, both on the bar whether the
+// sidebar is open or folded away. Folded, the bar gives the run room for
+// one item beside the traffic lights; the toggle is the one it keeps, and
+// the picker goes to the ›› menu. Between the runs, the system's tracking
+// separator, which holds the sidebar's to the column's edge as it is
+// dragged or slides away. Over the detail: the pinned pair, Code and
+// Sessions, the system's segmented control in the toolbar's glass (see
+// `ModeSwitch`), and the session tabs after them — the pair and the tabs
 // only once there is a project to switch between.
-//
 import AppKit
 import SwiftUI
 
 @MainActor
-final class WindowToolbar: NSObject, NSToolbarDelegate {
+final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
     private let model: AppModel
     private let toolbar = NSToolbar(identifier: "ReviewerWindow")
-    private let sidebarToggle = SidebarToggleButton()
     private var items: [NSToolbarItem.Identifier: NSToolbarItem] = [:]
+    private let sidebarToggle = SidebarToggle()
+    private let modeMenu = NSMenu()
+    private let sessionsMenu = NSMenu()
 
     private static let picker = NSToolbarItem.Identifier("reviewer.projectPicker")
     private static let toggle = NSToolbarItem.Identifier("reviewer.sidebarToggle")
@@ -43,8 +45,10 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
         toolbar.allowsDisplayModeCustomization = false
-        sidebarToggle.target = self
-        sidebarToggle.action = #selector(toggleSidebar)
+        modeMenu.delegate = self
+        sessionsMenu.delegate = self
+        sidebarToggle.button.target = self
+        sidebarToggle.button.action = #selector(toggleSidebar)
         follow()
     }
 
@@ -58,9 +62,9 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
     }
 
     /// Keeps the bar's state with the model's: the pair and the tabs only
-    /// with a project open, the toggle named for what it would do, and the
-    /// project picker on the bar only while the sidebar it heads is — a
-    /// column's items are the column's, as SwiftUI kept them.
+    /// with a project open, and the toggle named for what it would do.
+    /// Nothing is placed for the sidebar: the separator holds the sidebar's
+    /// run to its edge, and the rest to the detail.
     private func follow() {
         let (hasProject, sidebarShown) = withObservationTracking {
             (model.hasProject, model.sidebarShown)
@@ -68,13 +72,9 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
             Task { @MainActor [weak self] in self?.follow() }
         }
         sidebarToggle.sidebarShown = sidebarShown
-        items[Self.picker]?.isHidden = !sidebarShown
+        items[Self.toggle]?.menuFormRepresentation?.title = sidebarToggle.title
         items[Self.mode]?.isHidden = !hasProject
         items[Self.sessions]?.isHidden = !hasProject
-    }
-
-    @objc private func toggleSidebar() {
-        model.toggleSidebar()
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -95,19 +95,24 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
             item.label = "Workspace"
             item.view = hosted(ProjectPicker().environment(model))
             item.isBordered = false
-            item.isHidden = !model.sidebarShown
+            item.menuFormRepresentation = menuItem("Open workspace…", #selector(openWorkspace))
         case Self.toggle:
             item.label = "Sidebar"
             item.view = sidebarToggle
             item.isBordered = false
-        case Self.mode:
+            item.menuFormRepresentation = menuItem(sidebarToggle.title, #selector(toggleSidebar))
+            // The one item the folded sidebar's run has room for is this
+            // one, the way back to the sidebar; the picker goes to ›› first.
+            item.visibilityPriority = .high        case Self.mode:
             item.label = "Code and sessions"
             item.view = ModeSwitch(model: model)
             item.isHidden = !model.hasProject
+            item.menuFormRepresentation = submenuItem(item.label, modeMenu)
         case Self.sessions:
             item.label = "Sessions"
             item.view = SessionTabBar(model: model)
             item.isBordered = false
+            item.menuFormRepresentation = submenuItem(item.label, sessionsMenu)
             item.isHidden = !model.hasProject
             // The tabs give way before anything else on the bar does.
             item.visibilityPriority = .low
@@ -116,6 +121,50 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
         }
         items[identifier] = item
         return item
+    }
+
+    // MARK: The ›› menu
+    //
+    // An item whose view is our own has nothing to show in the bar's ››
+    // menu unless it says what it is as a menu item: the picker as what ⌘O
+    // does, the pair and the tabs as menus of the tabs they hold, read as
+    // the menu opens.
+
+    private func menuItem(_ title: String, _ action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    private func submenuItem(_ title: String, _ menu: NSMenu) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.submenu = menu
+        return item
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let strip = model.windowTabs
+        menu.removeAllItems()
+        let tabs = menu === modeMenu ? strip.tabs.filter(\.pinned) : strip.sessions
+        for tab in tabs {
+            let item = menuItem(tab.title, #selector(selectTab(_:)))
+            item.representedObject = tab.id
+            item.state = strip.lights(tab) ? .on : .off
+            menu.addItem(item)
+        }
+        if menu === sessionsMenu {
+            if !tabs.isEmpty { menu.addItem(.separator()) }
+            menu.addItem(menuItem("New session", #selector(newSession)))
+        }
+    }
+
+    @objc private func openWorkspace() { model.showOpener() }
+    @objc private func toggleSidebar() { model.toggleSidebar() }
+    @objc private func newSession() { model.newSession() }
+
+    @objc private func selectTab(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        model.select(tabId: id)
     }
 
     /// A SwiftUI control as an item's view, at the size it asks for.
@@ -128,37 +177,47 @@ final class WindowToolbar: NSObject, NSToolbarDelegate {
 }
 
 /// The sidebar's toggle as the bar's own chip, a bare glyph on the
-/// sidebar's glass rather than the disc of glass the system's toggle wears
-/// — Tahoe's floating sidebar never had a toggle in glass on its glass —
+/// sidebar's glass rather than the disc of glass a bordered item wears —
+/// Tahoe's floating sidebar never had a toggle in glass on its glass —
 /// named on the bar's glass label rather than in a tooltip (see
-/// `ToolbarGlassLabel`). Asks the model, which asks the split, so the
-/// column slides at AppKit's pace and the binding hears of it.
+/// `ToolbarGlassLabel`). It keeps the islands' margin clear after it, so
+/// the column's edge, where the sidebar is dragged wider, is not under it.
 @MainActor
-private final class SidebarToggleButton: BarChipButton {
+private final class SidebarToggle: NSView {
+    let button = BarChipButton(symbol: "sidebar.left", pointSize: 14, weight: .regular)
     private let label = ToolbarHoverView()
 
     var sidebarShown = true {
         didSet {
-            label.labels = [
-                ToolbarGlassLabel.Text(title: sidebarShown ? "Hide sidebar" : "Show sidebar", hint: "⌃⌘S")
-            ]
-            setAccessibilityLabel(sidebarShown ? "Hide sidebar" : "Show sidebar")
+            label.labels = [ToolbarGlassLabel.Text(title: title, hint: "⌃⌘S")]
+            button.setAccessibilityLabel(title)
         }
     }
+
+    var title: String { sidebarShown ? "Hide sidebar" : "Show sidebar" }
 
     /// The air the picker beside it keeps above and below its own label.
     private static let size: CGFloat = 30
 
     init() {
-        super.init(symbol: "sidebar.left", pointSize: 14, weight: .regular)
+        super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            widthAnchor.constraint(equalToConstant: Self.size),
-            heightAnchor.constraint(equalToConstant: Self.size),
-        ])
-        label.frame = bounds
+        button.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(button)
+        label.frame = button.bounds
         label.autoresizingMask = [.width, .height]
-        addSubview(label)
+        button.addSubview(label)
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: Self.size),
+            button.heightAnchor.constraint(equalToConstant: Self.size),
+            button.leadingAnchor.constraint(equalTo: leadingAnchor),
+            button.topAnchor.constraint(equalTo: topAnchor),
+            button.bottomAnchor.constraint(equalTo: bottomAnchor),
+            trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: IslandMetrics.margin),
+        ])
         sidebarShown = true
     }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("SidebarToggle is not loaded from a nib") }
 }

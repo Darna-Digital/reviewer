@@ -159,10 +159,10 @@ private struct SidebarColumn: View {
 
 /// The islands on the frame — the page and the bottom pane under it; while
 /// a pull request is open, the page is its own, its overview over its files
-/// and the diff (see `PullRequestPage`) — with the rail beside them while the sidebar is
-/// away and the page is on a surface the rail serves; on the sessions
-/// surface it collapses here as it does in the sidebar, and the islands
-/// take the gap it stood in. When the sidebar moves, the web view and the
+/// and the diff (see `PullRequestPage`). With the sidebar away they take the
+/// window's whole width, held off its edges by the margin alone: the rail
+/// is the sidebar's and goes with it, rather than standing as a strip of
+/// its own beside the page. When the sidebar moves, the web view and the
 /// terminals on the islands are told where the page's edge will end up, so
 /// they can hold still for the move instead of following it frame by
 /// frame (see `SidebarHold`).
@@ -179,21 +179,16 @@ private struct DetailColumn: View {
             .themeInk()
     }
 
-    /// Whether the rail stands on the frame ahead of the islands, holding
-    /// them off the window's edge by its own margin; otherwise they keep
-    /// that margin themselves, or the gap from the sidebar's column.
-    private var railed: Bool { !model.sidebarShown && model.railShown }
-
+    /// The gap from the sidebar's column, or with it away, the margin from
+    /// the window's edge.
     private var leading: CGFloat {
-        if railed { return 0 }
-        return model.sidebarShown ? IslandMetrics.gap : IslandMetrics.margin
+        model.sidebarShown ? IslandMetrics.gap : IslandMetrics.margin
     }
 
     /// The run of the detail's width that is not the page island's: the
-    /// rail or the margin ahead of it, and the margin behind it.
+    /// gap or margin ahead of it, and the margin behind it.
     private var aroundIsland: CGFloat {
-        let ahead = railed ? IslandMetrics.margin + AppRail.width : leading
-        return ahead + IslandMetrics.margin
+        leading + IslandMetrics.margin
     }
 
     /// Where the page island's edge ends up once the column has moved —
@@ -219,13 +214,6 @@ private struct DetailColumn: View {
     private var islands: some View {
         @Bindable var model = model
         return HStack(spacing: 0) {
-            if railed {
-                AppRail(inset: IslandMetrics.margin)
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-                    // Over the islands beside it, so the label its tabs hold
-                    // out while one is dragged is not drawn under the page.
-                    .zIndex(1)
-            }
             VStack(spacing: 0) {
                 pageOrPull
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -261,7 +249,6 @@ private struct DetailColumn: View {
         .padding(.trailing, IslandMetrics.margin)
         .padding(.bottom, IslandMetrics.margin)
         .clipped()
-        .animation(SidebarMotion.change, value: railed)
         .environment(\.sidebarHold, sidebarHold)
     }
 
