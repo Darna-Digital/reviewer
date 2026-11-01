@@ -58,7 +58,7 @@ struct ConversationView: View {
             VStack(spacing: 0) {
                 ChatComposer(
                     draftKey: chat.id,
-                    settings: ChatSettings(of: chat),
+                    settings: session.settings ?? ChatSettings(of: chat),
                     onSettingsChange: { change(settings: $0) },
                     running: chat.isRunning,
                     onStop: { Task { await session.stop() } },
@@ -100,8 +100,7 @@ struct ConversationView: View {
         model.chats.remember(settings)
         Task {
             do {
-                try await session.update(
-                    UpdateChat(provider: settings.provider, model: settings.model, effort: settings.effort, access: settings.access))
+                try await session.change(to: settings)
             } catch {
                 model.notices.post(.error, error.localizedDescription)
             }

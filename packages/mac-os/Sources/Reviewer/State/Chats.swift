@@ -73,12 +73,22 @@ struct ComposerDraft: Equatable {
 @MainActor
 @Observable
 final class Chats {
-    static let newSessionKey = "new"
+    /// The composer of a session tab whose first message is still to be
+    /// sent: each tab its own, as each is its own session to be.
+    static func newSessionKey(forTab tabId: String) -> String { "new/\(tabId)" }
 
     private(set) var page: SessionsPage?
     private(set) var session: ChatSession?
     private(set) var catalog: ChatModelCatalog?
     private(set) var drafts: [String: ComposerDraft] = [:]
+    /// Which agent each conversation the window's tabs hold runs on, read
+    /// once for each and kept up with the conversation as it is left.
+    private(set) var agents: [String: ChatProviderKind] = [:]
+    /// The settings each unsent session tab's composer holds, by tab: taken
+    /// from the last session's when the tab opens, and the tab's own from
+    /// then on — a later session's switch is the next tab's to start from,
+    /// not one already open.
+    private(set) var unsent: [String: ChatSettings] = [:]
 
     var favorites: [String] {
         didSet { defaults.set(favorites, forKey: Keys.favorites) }
@@ -100,6 +110,7 @@ final class Chats {
     /// `ChatSession` opens on while its first snapshot is on its way.
     @ObservationIgnored private var recent: [(id: String, chat: Chat)] = []
     @ObservationIgnored private var prefetches: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var agentReads: Set<String> = []
 
     private static let recentLimit = 24
 
@@ -141,6 +152,7 @@ final class Chats {
     private func putDownSession() {
         guard let session else { return }
         if let chat = session.chat { keep(chat, for: session.id) }
+        if let provider = session.settings?.provider { agents[session.id] = provider }
         session.close()
         self.session = nil
     }
@@ -158,9 +170,54 @@ final class Chats {
     }
 
     private func keep(_ chat: Chat, for id: String) {
+        if agents[id] != chat.provider { agents[id] = chat.provider }
         recent.removeAll { $0.id == id }
         recent.append((id, chat))
         if recent.count > Self.recentLimit { recent.removeFirst() }
+    }
+
+    // MARK: agents
+
+    /// The agent a session tab runs on: its conversation's — the open one's
+    /// as it stands, switches included the moment they are made, any
+    /// other's as last read — or, before its first message, its composer's.
+    func agent(of tab: WindowTab) -> ChatProviderKind? {
+        guard let chatId = tab.chatId else { return newSessionSettings(forTab: tab.id).provider }
+        if session?.id == chatId, let settings = session?.settings { return settings.provider }
+        return agents[chatId]
+    }
+
+    /// The window's tabs changed: an unsent tab that opened takes the last
+    /// session's settings as its own, one that closed or has sent its first
+    /// message lets its composer go, and conversations whose agents are not
+    /// known yet are read.
+    func follow(tabs strip: WindowTabStrip) {
+        let unsentIds = Set(strip.sessions.filter { $0.chatId == nil }.map(\.id))
+        for id in unsentIds where unsent[id] == nil { unsent[id] = newSessionSettings }
+        for id in unsent.keys where !unsentIds.contains(id) {
+            unsent.removeValue(forKey: id)
+            drafts.removeValue(forKey: Self.newSessionKey(forTab: id))
+        }
+        learnAgents(of: strip.sessions.compactMap(\.chatId))
+    }
+
+    /// Reads the agents of conversations not yet known: the newest page of
+    /// the list first, which holds most tabs' sessions, and any it does not
+    /// one at a time.
+    private func learnAgents(of ids: [String]) {
+        let unknown = Set(ids).subtracting(agents.keys).subtracting(agentReads)
+        guard !unknown.isEmpty else { return }
+        agentReads.formUnion(unknown)
+        Task { [weak self, client] in
+            let page = try? await client.chats()
+            for chat in page?.items ?? [] where unknown.contains(chat.id) {
+                self?.agents[chat.id] = chat.provider
+            }
+            for id in unknown where self?.agents[id] == nil {
+                if let chat = try? await client.chat(id: id) { self?.agents[id] = chat.provider }
+            }
+            self?.agentReads.subtract(unknown)
+        }
     }
 
     /// The project changed, or the server did: the catalog is re-read, since
@@ -188,6 +245,19 @@ final class Chats {
         var draft = draft(for: key)
         draft.attachments.append(contentsOf: attachments)
         setDraft(draft, for: key)
+    }
+
+    /// What an unsent tab's composer holds — the last session's settings
+    /// for a page the strip has not named a tab for yet.
+    func newSessionSettings(forTab tabId: String) -> ChatSettings {
+        unsent[tabId] ?? newSessionSettings
+    }
+
+    /// An unsent tab's composer changed: the tab's own from now on, and the
+    /// next tab's to open on.
+    func change(_ settings: ChatSettings, forUnsentTab tabId: String) {
+        unsent[tabId] = settings
+        remember(settings)
     }
 
     func remember(_ settings: ChatSettings) {

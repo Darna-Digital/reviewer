@@ -114,6 +114,11 @@ export interface ShellWindowTab {
   readonly title: string;
   readonly kind: WindowTabKind;
   readonly pinned: boolean;
+  /**
+   * The conversation a session tab holds — null until its first message makes
+   * one — so the shell can read which agent it runs on.
+   */
+  readonly chatId: string | null;
   /** Its agent is mid-turn — the tab wears the orb. */
   readonly working: boolean;
   /** Its thread has moved since it was last read — the tab wears the dot. */

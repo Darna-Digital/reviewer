@@ -38,6 +38,7 @@ import {
 } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { useWindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
+  chatIdOf,
   isPinnedTab,
   moveTabBeside,
   nextModeTab,
@@ -60,6 +61,7 @@ const picture = (
     title: tab.title,
     kind: tab.kind,
     pinned: isPinnedTab(tab),
+    chatId: tab.kind === "session" ? chatIdOf(tab.href) : null,
     working: working(tab),
     waiting: waiting(tab),
   })),

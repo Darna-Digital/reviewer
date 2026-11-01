@@ -68,6 +68,9 @@ private struct NewChatView: View {
     @State private var viewport: CGFloat = 0
 
     private var chats: Chats { model.chats }
+    /// The tab this page is in front on, whose composer it is.
+    private var tabId: String { model.windowTabs.activeId }
+    private var draftKey: String { Chats.newSessionKey(forTab: tabId) }
 
     var body: some View {
         ScrollView {
@@ -78,9 +81,9 @@ private struct NewChatView: View {
                     .padding(.bottom, 16)
                 VStack(spacing: 0) {
                     ChatComposer(
-                        draftKey: Chats.newSessionKey,
-                        settings: chats.newSessionSettings,
-                        onSettingsChange: { chats.remember($0) },
+                        draftKey: draftKey,
+                        settings: chats.newSessionSettings(forTab: tabId),
+                        onSettingsChange: { [tabId] in chats.change($0, forUnsentTab: tabId) },
                         running: false,
                         placeholder: "Ask anything, or describe a change…",
                         onSend: start
@@ -96,13 +99,13 @@ private struct NewChatView: View {
             .frame(minHeight: viewport)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewport = $0 }
-        .imageDropZone(draftKey: Chats.newSessionKey)
+        .imageDropZone(draftKey: draftKey)
     }
 
     private func start(_ text: String, _ images: [ComposerAttachment]) async throws {
         do {
             let chat = try await chats.start(
-                settings: chats.newSessionSettings, text: text, images: images,
+                settings: chats.newSessionSettings(forTab: tabId), text: text, images: images,
                 branch: model.currentBranch)
             model.show(chat: chat)
         } catch {

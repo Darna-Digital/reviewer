@@ -26,7 +26,19 @@ enum ChatStreamStatus: Equatable, Sendable {
 @Observable
 final class ChatSession {
     let id: String
-    private(set) var chat: Chat?
+    private(set) var chat: Chat? { didSet { settleSettings() } }
+    /// Settings asked of the server and not yet answered for: shown over
+    /// the chat's own until the server's next snapshot after it accepted
+    /// them, which carries them as it applied them.
+    private var requested: ChatSettings? { didSet { settleSettings() } }
+    /// What the session runs on — agent, model, effort, access — as the
+    /// composer and the window's tab show it: a change asked for is shown
+    /// from the moment it is asked, not once the server's snapshot of it
+    /// comes back over the socket, and holds against any snapshot that
+    /// overtakes it on the way. Kept rather than worked out on each read,
+    /// so what watches it hears of a switch, not of every streamed word.
+    private(set) var settings: ChatSettings?
+    @ObservationIgnored private var accepted: ChatSettings?
     private(set) var error: String?
     private(set) var status: ChatStreamStatus = .connecting
 
@@ -58,6 +70,7 @@ final class ChatSession {
         self.id = id
         self.client = client
         self.chat = seed
+        settings = seed.map(ChatSettings.init(of:))
         connect()
         watch()
         Task { await seedFromRest() }
@@ -93,10 +106,39 @@ final class ChatSession {
         onListChanged?()
     }
 
-    /// The composer's settings changed; the server answers with a snapshot
-    /// over the socket, so nothing is applied here ahead of it.
-    func update(_ patch: UpdateChat) async throws {
-        _ = try await client.updateChat(id: id, patch)
+    private func settleSettings() {
+        let current = requested ?? chat.map(ChatSettings.init(of:))
+        if settings != current { settings = current }
+    }
+
+    /// Asks the server to run the session on `settings`. Shown at once; put
+    /// back if the server refuses.
+    func change(to settings: ChatSettings) async throws {
+        requested = settings
+        let answered: Chat
+        do {
+            answered = try await client.updateChat(
+                id: id,
+                UpdateChat(
+                    provider: settings.provider, model: settings.model, effort: settings.effort,
+                    access: settings.access))
+        } catch {
+            if requested == settings { requested = nil }
+            throw error
+        }
+        // The server broadcasts its snapshot before it answers, so the
+        // snapshot is usually in already; otherwise the next one carries
+        // the change, or, with the socket down, the answer is the chat.
+        if requested == settings {
+            if status != .live {
+                chat = answered
+                requested = nil
+            } else if chat.map(ChatSettings.init(of:)) == ChatSettings(of: answered) {
+                requested = nil
+            } else {
+                accepted = settings
+            }
+        }
         onListChanged?()
     }
 
@@ -142,6 +184,8 @@ final class ChatSession {
         switch frame {
         case .snapshot(let snapshot):
             chat = snapshot
+            if let accepted, accepted == requested { requested = nil }
+            accepted = nil
             noteResting()
         case .event(let event):
             chat = Chat.applying(event, to: chat)

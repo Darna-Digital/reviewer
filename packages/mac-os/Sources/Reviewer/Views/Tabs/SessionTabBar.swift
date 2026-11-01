@@ -129,9 +129,12 @@ final class SessionTabBar: NSView {
     /// Reads the island's strip and keeps reading it: the model is
     /// observable, so the bar is told the moment the strip changes and
     /// takes it on the next turn of the run loop, after the change is made.
+    /// Each tab's agent is read along with it: a session's agent is the
+    /// server's rather than the island's, and changes — switched in the
+    /// composer, or first read — with the strip as it was.
     private func follow() {
         withObservationTracking {
-            _ = model.windowTabs
+            for tab in model.windowTabs.sessions { _ = model.chats.agent(of: tab) }
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.follow()
@@ -164,9 +167,11 @@ final class SessionTabBar: NSView {
         tabs = sessions.map { tab in
             if let view = kept[tab.id] {
                 view.tab = tab
+                view.agent = model.chats.agent(of: tab)
                 return view
             }
             let view = SessionTabView(tab: tab, bar: self)
+            view.agent = model.chats.agent(of: tab)
             self.strip.addSubview(view, positioned: .above, relativeTo: surface)
             arriving.append(view)
             return view
@@ -732,6 +737,12 @@ private final class SessionTabView: NSView {
             needsLayout = true
         }
     }
+    var agent: ChatProviderKind? {
+        didSet {
+            guard agent != oldValue else { return }
+            agentTile.agent = agent
+        }
+    }
     var id: String { tab.id }
     var isDeparting = false
     private weak var bar: SessionTabBar?
@@ -741,6 +752,7 @@ private final class SessionTabView: NSView {
     /// the titles it passes rather than showing them through.
     private let liftSurface = TabSurfaceView()
     private let divider = CALayer()
+    private let agentTile = AgentTile()
     private let titleClip = NSView()
     private let title = NSTextField(labelWithString: "")
     private let titleFade = CAGradientLayer()
@@ -762,9 +774,16 @@ private final class SessionTabView: NSView {
     private var showsChord = false
     private var isWindowActive = false
 
-    private static let leadingInset: CGFloat = 12
-    private static let trailingInset: CGFloat = 6
+    /// How far in from either edge the tab's ink starts — the agent's tile
+    /// at the head, whatever is in the slot at the tail — so the two read
+    /// as the same distance from the hairline between them.
+    private static let edgeInset: CGFloat = 10
+    /// The air between the title and the ink on either side of it.
+    private static let titleSpacing: CGFloat = 7
+    /// The box the slot's controls stand in — the ✕'s pressable circle.
     private static let slot: CGFloat = 20
+    private static let waitingDotSize: CGFloat = 6
+    private static let orbSize: CGFloat = 18
     /// How much of a title too long for its tab is faded out — the last
     /// letter or two, enough to read as running on.
     private static let titleFadeWidth: CGFloat = 20
@@ -792,6 +811,7 @@ private final class SessionTabView: NSView {
         titleFade.endPoint = CGPoint(x: 1, y: 0.5)
         titleFade.colors = [NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
         addSubview(titleClip)
+        addSubview(agentTile)
 
         closeButton.target = self
         closeButton.action = #selector(closeTab)
@@ -909,21 +929,41 @@ private final class SessionTabView: NSView {
         needsLayout = true
     }
 
+    /// How wide what the slot shows is drawn — not the box it stands in —
+    /// so its far edge, not its box's, keeps `edgeInset` from the tab's.
+    private var slotInkWidth: CGFloat {
+        switch accessory {
+        case .none: return 0
+        case .close: return TabCloseButton.inkWidth
+        case .hint: return hintLabel.frame.width
+        case .working: return Self.orbSize
+        case .waiting: return Self.waitingDotSize
+        }
+    }
+
     private func layoutContent(animated: Bool) {
         let height = bounds.height
-        let showsSlot = accessory != .none
-        let slotX = bounds.width - Self.trailingInset - Self.slot
+        hintLabel.sizeToFit()
+        let inkWidth = slotInkWidth
+        let slotMidX = bounds.width - Self.edgeInset - inkWidth / 2
+        let slotFrame = NSRect(
+            x: slotMidX - Self.slot / 2, y: (height - Self.slot) / 2, width: Self.slot, height: Self.slot)
+        let dot = Self.waitingDotSize
 
         CATransaction.begin()
         CATransaction.setDisableActions(!animated)
         liftSurface.frame = bounds
         divider.frame = NSRect(x: -0.5, y: (height - 14) / 2, width: 1, height: 14)
-        waitingDot.frame = NSRect(x: slotX + (Self.slot - 6) / 2, y: (height - 6) / 2, width: 6, height: 6)
+        waitingDot.frame = NSRect(x: slotMidX - dot / 2, y: (height - dot) / 2, width: dot, height: dot)
         waitingDot.opacity = accessory == .waiting ? 1 : 0
         CATransaction.commit()
 
-        let titleX = Self.leadingInset
-        let titleRoom = max(0, bounds.width - titleX - Self.trailingInset - (showsSlot ? Self.slot : 0))
+        agentTile.frame = NSRect(
+            x: Self.edgeInset, y: ((height - AgentTile.size) / 2).rounded(),
+            width: AgentTile.size, height: AgentTile.size)
+        let titleX = Self.edgeInset + AgentTile.size + Self.titleSpacing
+        let titleEnd = bounds.width - Self.edgeInset - (inkWidth > 0 ? inkWidth + Self.titleSpacing : 0)
+        let titleRoom = max(0, titleEnd - titleX)
         let titleSize = title.intrinsicContentSize
         title.frame = NSRect(
             x: 0, y: ((height - titleSize.height) / 2).rounded(),
@@ -932,11 +972,9 @@ private final class SessionTabView: NSView {
         if animated { titleClip.animator().frame = clipFrame } else { titleClip.frame = clipFrame }
         updateTitleFade(overflows: titleSize.width > titleRoom, room: titleRoom)
 
-        let slotFrame = NSRect(x: slotX, y: (height - Self.slot) / 2, width: Self.slot, height: Self.slot)
         closeButton.frame = slotFrame
-        hintLabel.sizeToFit()
         hintLabel.frame.origin = CGPoint(
-            x: bounds.width - Self.trailingInset - hintLabel.frame.width, y: (height - hintLabel.frame.height) / 2)
+            x: bounds.width - Self.edgeInset - hintLabel.frame.width, y: (height - hintLabel.frame.height) / 2)
         setShown(closeButton, accessory == .close, animated: animated)
         setShown(hintLabel, accessory == .hint, animated: animated)
         layoutOrb(in: slotFrame, animated: animated)
@@ -961,7 +999,7 @@ private final class SessionTabView: NSView {
 
     private func layoutOrb(in frame: NSRect, animated: Bool) {
         if accessory == .working, orb == nil {
-            let orb = NSHostingView(rootView: Orb(size: 18, label: "Working"))
+            let orb = NSHostingView(rootView: Orb(size: Self.orbSize, label: "Working"))
             orb.alphaValue = 0
             addSubview(orb)
             self.orb = orb
@@ -983,7 +1021,7 @@ private final class SessionTabView: NSView {
         let hit = super.hitTest(point)
         if hit === closeButton, accessory != .close { return self }
         if let orb, hit?.isDescendant(of: orb) ?? false { return self }
-        let inert: [NSView] = [titleClip, title, hintLabel, liftSurface]
+        let inert: [NSView] = [titleClip, title, hintLabel, liftSurface, agentTile]
         return inert.contains { $0 === hit } ? self : hit
     }
 
@@ -1039,6 +1077,59 @@ private final class SessionTabView: NSView {
         self.frame = NSRect(x: frame.minX, y: frame.minY, width: 0, height: frame.height)
         alphaValue = 0
         NSAnimationContext.animate(TabBarMetrics.fade) { animator().alphaValue = 1 }
+    }
+}
+
+// MARK: - The agent
+
+/// A session's agent as a tile, as Rex marks its tabs: the vendor's mark
+/// in white on a rounded square of the vendor's colour — Claude's orange,
+/// and the ink of the page for the agents whose marks are black and white.
+/// Its place is kept while the agent is still being read, so the title
+/// does not move when it arrives.
+@MainActor
+private final class AgentTile: NSView {
+    var agent: ChatProviderKind? {
+        didSet {
+            mark.image = agent.map(AgentGlyph.image(for:))
+            setAccessibilityLabel(agent?.label)
+            needsDisplay = true
+        }
+    }
+
+    static let size: CGFloat = 18
+    private static let markSize: CGFloat = 12
+    private static let claudeOrange = NSColor(srgbRed: 0.851, green: 0.467, blue: 0.341, alpha: 1)
+
+    private let mark = NSImageView()
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.cornerCurve = .continuous
+        layer?.cornerRadius = 5
+        mark.imageScaling = .scaleProportionallyUpOrDown
+        addSubview(mark)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("AgentTile is not loaded from a nib") }
+
+    override var isFlipped: Bool { true }
+    override var wantsUpdateLayer: Bool { true }
+
+    override func updateLayer() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            let fill: NSColor = agent == .claude ? Self.claudeOrange : .labelColor
+            layer?.backgroundColor = agent == nil ? NSColor.clear.cgColor : fill.cgColor
+            mark.contentTintColor = agent == .claude ? .white : .windowBackgroundColor
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        let inset = (bounds.width - Self.markSize) / 2
+        mark.frame = bounds.insetBy(dx: inset, dy: inset)
     }
 }
 
@@ -1223,6 +1314,30 @@ private final class NewTabButton: BarChipButton {
 @MainActor
 private final class TabCloseButton: BarChipButton {
     init() { super.init(symbol: "xmark", pointSize: 9, weight: .bold) }
+
+    /// How wide the ✕ is drawn. A symbol's image carries side bearings past
+    /// its strokes, and its alignment rect only trims them vertically, so
+    /// the strokes are measured: drawn once and read back for their extent.
+    static let inkWidth: CGFloat = {
+        guard let image = TabCloseButton().image else { return 0 }
+        let scale: CGFloat = 4
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(image.size.width * scale),
+                pixelsHigh: Int(image.size.height * scale), bitsPerSample: 8, samplesPerPixel: 4,
+                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+            let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return image.size.width }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        image.draw(in: NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh))
+        NSGraphicsContext.restoreGraphicsState()
+        let inked = (0..<rep.pixelsWide).filter { x in
+            (0..<rep.pixelsHigh).contains { y in (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.1 }
+        }
+        guard let first = inked.first, let last = inked.last else { return image.size.width }
+        return CGFloat(last + 1 - first) / scale
+    }()
 }
 
 // MARK: - ⌘ held

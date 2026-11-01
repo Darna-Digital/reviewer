@@ -55,6 +55,9 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
     let title: String
     let kind: WindowTabKind
     let pinned: Bool
+    /// The conversation a session's tab holds — none until its first
+    /// message makes one — whose agent the tab wears (see `Chats.agent`).
+    let chatId: String?
     /// Its agent is mid-turn, so the tab wears the orb.
     let working: Bool
     /// Its thread has moved since it was last read, so the tab wears the dot.
@@ -70,12 +73,13 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
         title = try values.decode(String.self, forKey: .title)
         kind = try values.decode(WindowTabKind.self, forKey: .kind)
         pinned = try values.decode(Bool.self, forKey: .pinned)
+        chatId = try values.decodeIfPresent(String.self, forKey: .chatId)
         working = try values.decodeIfPresent(Bool.self, forKey: .working) ?? false
         waiting = try values.decodeIfPresent(Bool.self, forKey: .waiting) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, kind, pinned, working, waiting
+        case id, title, kind, pinned, chatId, working, waiting
     }
 }
 

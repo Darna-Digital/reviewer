@@ -1298,6 +1298,7 @@ final class AppModel {
     /// The strip as the island last drew it.
     private func take(_ strip: WindowTabStrip) {
         windowTabs = strip
+        chats.follow(tabs: strip)
     }
 
     func newSession() {
