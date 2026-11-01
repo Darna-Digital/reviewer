@@ -874,9 +874,39 @@ final class AppModel {
         Href.pullNumber(of: page.href).map { pullRequests.pull(numbered: $0) }
     }
 
+    /// What narrows the merge requests list, every repository's alike.
+    var pullFilter = PullFilter()
+
+    /// The repositories whose pull requests the list shows: every root of
+    /// the workspace on GitHub, in its order — a JetBrains window lists each
+    /// root's own — or the one repository on its own, GitHub or not, so the
+    /// list can say why it is empty.
+    var pullSources: [RootModel] {
+        guard roots.count > 1 else { return [focused] }
+        return roots.filter { $0.pullRequests.hasGitHub }
+    }
+
+    /// Each source's rows as the filter keeps them.
+    var pullSections: [PullRequestSection] {
+        pullSources.map { PullRequestSection(root: $0, rows: $0.pullRequests.rows(pullFilter)) }
+    }
+
+    /// Every base branch any source's open pull requests target, for the
+    /// filter.
+    var pullBaseBranches: [String] {
+        Set(pullSources.flatMap(\.pullRequests.baseBranches)).sorted()
+    }
+
+    /// The row the page is on: the pull request it reads, in its repository.
+    var reviewingPullPick: PullPick? {
+        reviewingPull.map { PullPick(root: focused.path, number: $0.number) }
+    }
+
     /// A row of the sidebar's list picked: the page on that pull request's
-    /// diff, the overview and its files standing up beside it.
-    func show(pull: PullRequestInfo) {
+    /// diff, the overview and its files standing up beside it — in the
+    /// repository it was opened against, which the page moves to.
+    func show(pull: PullRequestInfo, in root: RootModel? = nil) {
+        if let root, root !== focusedRoot { return showOnCodeTab(Href.pull(pull.number), in: root) }
         showOnCodeTab(Href.pull(pull.number))
     }
 
@@ -899,14 +929,17 @@ final class AppModel {
         NSPasteboard.general.setString(pull.url, forType: .string)
     }
 
-    /// Fetch the pull request's head and check it out as its local branch;
-    /// the branch changing under the diff, everything is re-read after.
-    func checkout(pull: PullRequestInfo) {
+    /// Fetch the pull request's head and check it out as its local branch,
+    /// in its own repository — the focused one unless a row of another's
+    /// says otherwise; the branch changing under the diff, everything is
+    /// re-read after.
+    func checkout(pull: PullRequestInfo, in root: RootModel? = nil) {
+        let root = root ?? focused
         Task {
             headMovesInFlight += 1
             defer { headMovesInFlight -= 1 }
             await notices.run("Checking out #\(pull.number)…", done: "Checked out \(pull.localBranch)", failed: "Checkout of #\(pull.number) failed") {
-                _ = try await pullRequests.checkout(pull, as: pull.localBranch)
+                _ = try await root.pullRequests.checkout(pull, as: pull.localBranch)
                 return nil
             }
             await refresh()

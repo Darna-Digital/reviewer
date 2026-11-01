@@ -161,7 +161,6 @@ final class SessionTabBar: NSView {
         let orderChanged = sessions.map(\.id) != tabs.map(\.id)
 
         for view in tabs where !wanted.contains(view.id) { depart(view) }
-        if let hoveredId, !wanted.contains(hoveredId) { self.hoveredId = nil }
 
         var arriving: [SessionTabView] = []
         tabs = sessions.map { tab in
@@ -193,6 +192,7 @@ final class SessionTabBar: NSView {
         }
         layoutRow(animated: animated)
         hasLaidOut = true
+        followPointer()
     }
 
     /// A tab closed: it fades where it stood while the row closes over it.
@@ -428,17 +428,35 @@ final class SessionTabBar: NSView {
         if !event.hasPreciseScrollingDeltas { delta *= TabBarMetrics.lineScroll }
         scrollOffset = min(max(0, scrollOffset - delta), maxScroll)
         layoutRow(animated: false)
+        followPointer()
     }
 
     // MARK: Hover
 
-    fileprivate func pointer(isOver hovering: Bool, _ view: SessionTabView) {
+    /// The bar, not each tab, watches the pointer: a tab only hears it come
+    /// in when the pointer moves, so the tab that slides under a still
+    /// pointer once the one beside it closes would never show its ✕, and a
+    /// click there would pick it instead of closing it.
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(
+            NSTrackingArea(
+                rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeInActiveApp, .inVisibleRect],
+                owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { followPointer() }
+    override func mouseMoved(with event: NSEvent) { followPointer() }
+    override func mouseExited(with event: NSEvent) { followPointer() }
+
+    /// Hovers the tab under the pointer — whenever the pointer moves, and
+    /// whenever the row moves under it.
+    private func followPointer() {
         guard drag == nil else { return }
-        if hovering {
-            hoveredId = view.id
-        } else if hoveredId == view.id {
-            hoveredId = nil
-        }
+        let hovered = tabUnderPointer()?.id
+        guard hovered != hoveredId else { return }
+        hoveredId = hovered
         configureTabs()
     }
 
@@ -503,13 +521,14 @@ final class SessionTabBar: NSView {
         layoutRow(animated: moved)
     }
 
-    /// The tab the pointer is over now — read off where it is rather than
-    /// the tabs' own record of entering and leaving, which the drag's
-    /// tracking loop kept from them while it ran.
+    /// The tab the pointer is over now, by the slot each tab is bound for
+    /// rather than where it stands mid-slide, and only within the strip
+    /// shown — not a tab scrolled out past either end.
     private func tabUnderPointer() -> SessionTabView? {
-        guard let window else { return nil }
-        let point = strip.convert(window.mouseLocationOutsideOfEventStream, from: nil)
-        return tabs.first { $0.frame.contains(point) }
+        guard let window, NSApp.isActive else { return nil }
+        let point = convert(window.mouseLocationOutsideOfEventStream, from: nil)
+        guard point.x >= 0, point.x < stripWidth else { return nil }
+        return tabs.indices.first { target(forSlot: $0).contains(point) }.map { tabs[$0] }
     }
 
     private func translation(of drag: TabDrag) -> CGFloat {
@@ -1045,8 +1064,11 @@ private final class SessionTabView: NSView {
     }
 
     /// Hidden from the pointer while it is faded out, so a click on a quiet
-    /// tab's tail picks the tab rather than closing it.
+    /// tab's tail picks the tab rather than closing it. A tab closing is
+    /// out of reach altogether: it fades over the tab sliding in under it,
+    /// which the next click is for.
     override func hitTest(_ point: NSPoint) -> NSView? {
+        guard !isDeparting else { return nil }
         let hit = super.hitTest(point)
         if hit === closeButton, accessory != .close { return self }
         if let orb, hit?.isDescendant(of: orb) ?? false { return self }
@@ -1055,24 +1077,6 @@ private final class SessionTabView: NSView {
     }
 
     // MARK: Mouse
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        for area in trackingAreas { removeTrackingArea(area) }
-        addTrackingArea(
-            NSTrackingArea(
-                rect: .zero, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
-                owner: self))
-    }
-
-    override func mouseEntered(with event: NSEvent) {
-        guard !isDeparting else { return }
-        bar?.pointer(isOver: true, self)
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        bar?.pointer(isOver: false, self)
-    }
 
     override func mouseDown(with event: NSEvent) {
         guard !isDeparting else { return }

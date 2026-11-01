@@ -131,8 +131,9 @@ private final class ModeButton: NSButton {
     static let size: CGFloat = 28
     private static let glyphPointSize: CGFloat = 15
     /// Air either side of the glyph inside the lit fill: Code's `</>` is
-    /// wide enough to stretch its disc into a pill beside Sessions' circle.
-    private static let glyphMargin: CGFloat = 6
+    /// wide enough to stretch its disc a shade into a pill beside Sessions'
+    /// circle.
+    private static let glyphMargin: CGFloat = 2.5
 
     override var state: NSControl.StateValue {
         didSet { needsDisplay = true }
@@ -181,6 +182,11 @@ private final class ModeButton: NSButton {
     required init?(coder: NSCoder) { fatalError("ModeButton is not loaded from a nib") }
 
     override var wantsUpdateLayer: Bool { true }
+
+    /// None: a symbol's own alignment insets would grow the frame past the
+    /// size it is given, by a different amount for each glyph, and the lit
+    /// fill — drawn to the frame — would run into the glass off-centre.
+    override var alignmentRectInsets: NSEdgeInsets { NSEdgeInsetsZero }
 
     /// Lit in the theme's accent, as the bottom pane's tabs and the diff's
     /// add-a-comment button are — the one colour every lit control shares —
