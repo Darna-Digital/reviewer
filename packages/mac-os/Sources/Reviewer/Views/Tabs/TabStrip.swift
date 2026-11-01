@@ -37,6 +37,7 @@ final class ModeSwitch: NSSegmentedControl {
     private var pinned: [WindowTab] = []
     private var pressed: String?
     private var activeId = ""
+    private var accent: AccentKey?
 
     init(model: AppModel) {
         self.model = model
@@ -111,7 +112,13 @@ final class ModeSwitch: NSSegmentedControl {
 
     /// Lit in the theme's accent, as the pane's tabs and the diff's
     /// add-a-comment button are — the one colour every lit control shares.
+    /// Set only when the themes' accents change, as `SegmentedTabs` does:
+    /// the palette is announced for any change to a theme, and the colour,
+    /// set again, takes the puck off a slide a press has under way.
     @objc private func paletteChanged() {
+        let accent = AccentKey(palette: ChromePalette.shared)
+        guard accent != self.accent else { return }
+        self.accent = accent
         selectedSegmentBezelColor = IslandPalette.accent
     }
 

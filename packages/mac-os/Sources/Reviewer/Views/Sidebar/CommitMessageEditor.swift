@@ -62,10 +62,24 @@ struct CommitMessageEditor: NSViewRepresentable {
         if textView.string != text {
             textView.string = text
             textView.font = Self.font
+            fitToText(textView)
         }
         textView.pointerYieldsToControls = pointerYieldsToControls
         textView.onCommit = onCommit
         textView.onFocusChange = { focused = $0 }
+    }
+
+    /// Text set from outside — a drafted message, a cleared one — is not
+    /// typed, so the view is not grown to it the way typing grows it: it
+    /// keeps the height it had, and a longer message is cut off at the edge
+    /// of the clearance with the band under the controls left empty, until
+    /// a click lays it out. The text is laid out and the view sized to it
+    /// here instead.
+    private func fitToText(_ textView: NSTextView) {
+        if let layout = textView.textLayoutManager {
+            layout.ensureLayout(for: layout.documentRange)
+        }
+        textView.sizeToFit()
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {

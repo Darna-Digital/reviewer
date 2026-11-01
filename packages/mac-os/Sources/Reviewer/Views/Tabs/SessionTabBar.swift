@@ -177,8 +177,7 @@ final class SessionTabBar: NSView {
             return view
         }
 
-        updateWidthConstraints()
-        takeWidth()
+        if updateWidthConstraints() { takeWidth() }
         scrollOffset = min(scrollOffset, maxScroll)
         configureTabs()
         // The first strip is laid out as it stands; after that a tab coming
@@ -244,14 +243,23 @@ final class SessionTabBar: NSView {
     // MARK: Width
 
     /// The floor is one tab at its narrowest — past that the row scrolls —
-    /// and the limit every tab at its widest; with no tabs, the mark alone.
-    private func updateWidthConstraints() {
+    /// and the limit every tab at its full width; with no tabs, the mark
+    /// alone.
+    /// Says whether they moved: a strip that only changes which tab is in
+    /// front — the pair pressed, a tab picked — leaves them as they were,
+    /// and the window is not laid out for it mid-slide.
+    @discardableResult
+    private func updateWidthConstraints() -> Bool {
         let mark = TabBarMetrics.newTab
         let lead = tabs.isEmpty ? 0 : TabBarMetrics.gap
         let count = CGFloat(tabs.count)
-        widthFloor.constant = tabs.isEmpty ? mark : TabBarMetrics.narrowest + lead + mark
-        widthLimit.constant = count * TabBarMetrics.widest + lead + mark
-        widthPreference.constant = widthLimit.constant
+        let floor = tabs.isEmpty ? mark : TabBarMetrics.narrowest + lead + mark
+        let limit = count * fullTabWidth + lead + mark
+        guard floor != widthFloor.constant || limit != widthLimit.constant else { return false }
+        widthFloor.constant = floor
+        widthLimit.constant = limit
+        widthPreference.constant = limit
+        return true
     }
 
     /// Has the toolbar size the item to its new constraints now, rather
@@ -270,14 +278,23 @@ final class SessionTabBar: NSView {
         max(0, bounds.width - TabBarMetrics.newTab - TabBarMetrics.gap)
     }
 
-    /// Every tab's width: an even share of the room, held between the
-    /// narrowest a title can be read in and the widest a tab is worth, and
-    /// rounded down to the point so the tabs' edges — and the hairlines on
-    /// them — fall on whole points.
+    /// The width every tab takes given the room: what the longest title
+    /// needs whole, as long as a tab is worth — so a lone "New session" is
+    /// a short tab, not a long one with the mark adrift at its end — but
+    /// never narrower than a title can be read in. The tabs stay one width,
+    /// so the row reads as one even run.
+    private var fullTabWidth: CGFloat {
+        let longest = tabs.map(\.fittingWidth).max() ?? TabBarMetrics.widest
+        return min(TabBarMetrics.widest, max(TabBarMetrics.narrowest, longest)).rounded(.up)
+    }
+
+    /// Every tab's width: an even share of the room, up to the full width
+    /// and down to the narrowest, rounded down to the point so the tabs'
+    /// edges — and the hairlines on them — fall on whole points.
     private var tabWidth: CGFloat {
-        guard !tabs.isEmpty else { return TabBarMetrics.widest }
+        guard !tabs.isEmpty else { return fullTabWidth }
         let share = (room / CGFloat(tabs.count)).rounded(.down)
-        return min(TabBarMetrics.widest, max(TabBarMetrics.narrowest, share))
+        return min(fullTabWidth, max(TabBarMetrics.narrowest, share))
     }
 
     private var contentWidth: CGFloat { tabWidth * CGFloat(tabs.count) }
@@ -929,6 +946,15 @@ private final class SessionTabView: NSView {
         needsLayout = true
     }
 
+    /// As wide as the tab needs to show its title whole beside its agent,
+    /// with the ✕ at its tail too, so the pointer coming to it does not cut
+    /// the title short.
+    var fittingWidth: CGFloat {
+        let closeReach = max(Self.slot, TabCloseButton.inkWidth) / 2 + TabCloseButton.inkWidth / 2
+        return Self.edgeInset + AgentTile.size + Self.titleSpacing + ceil(title.intrinsicContentSize.width)
+            + Self.titleSpacing + closeReach + Self.edgeInset
+    }
+
     /// How wide what the slot shows is drawn — not the box it stands in —
     /// so its far edge, not its box's, keeps `edgeInset` from the tab's.
     private var slotInkWidth: CGFloat {
@@ -962,7 +988,10 @@ private final class SessionTabView: NSView {
             x: Self.edgeInset, y: ((height - AgentTile.size) / 2).rounded(),
             width: AgentTile.size, height: AgentTile.size)
         let titleX = Self.edgeInset + AgentTile.size + Self.titleSpacing
-        let titleEnd = bounds.width - Self.edgeInset - (inkWidth > 0 ? inkWidth + Self.titleSpacing : 0)
+        // Clear of the slot's box as well as its ink: the ✕ under the
+        // pointer lights the whole circle it is pressed in.
+        let slotStart = min(slotMidX - Self.slot / 2, slotMidX - inkWidth / 2)
+        let titleEnd = inkWidth > 0 ? slotStart - Self.titleSpacing : bounds.width - Self.edgeInset
         let titleRoom = max(0, titleEnd - titleX)
         let titleSize = title.intrinsicContentSize
         title.frame = NSRect(
@@ -1082,32 +1111,30 @@ private final class SessionTabView: NSView {
 
 // MARK: - The agent
 
-/// A session's agent as a tile, as Rex marks its tabs: the vendor's mark
-/// in white on a rounded square of the vendor's colour — Claude's orange,
-/// and the ink of the page for the agents whose marks are black and white.
-/// Its place is kept while the agent is still being read, so the title
-/// does not move when it arrives.
+/// A session's agent as its app icon, as Rex marks its tabs: the vendor's
+/// mark on the vendor's tile (see `AgentIcon`), edged with the hairline a
+/// macOS icon has, so a white tile on a light bar still has an edge. Its place is kept while the agent is
+/// still being read, so the title does not move when it arrives.
 @MainActor
 private final class AgentTile: NSView {
     var agent: ChatProviderKind? {
         didSet {
-            mark.image = agent.map(AgentGlyph.image(for:))
             setAccessibilityLabel(agent?.label)
             needsDisplay = true
         }
     }
 
     static let size: CGFloat = 18
-    private static let markSize: CGFloat = 12
-    private static let claudeOrange = NSColor(srgbRed: 0.851, green: 0.467, blue: 0.341, alpha: 1)
 
+    private let tile = CAGradientLayer()
     private let mark = NSImageView()
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.cornerCurve = .continuous
-        layer?.cornerRadius = 5
+        tile.cornerCurve = .continuous
+        tile.borderWidth = 0.5
+        layer?.addSublayer(tile)
         mark.imageScaling = .scaleProportionallyUpOrDown
         addSubview(mark)
     }
@@ -1119,17 +1146,44 @@ private final class AgentTile: NSView {
     override var wantsUpdateLayer: Bool { true }
 
     override func updateLayer() {
-        effectiveAppearance.performAsCurrentDrawingAppearance {
-            let fill: NSColor = agent == .claude ? Self.claudeOrange : .labelColor
-            layer?.backgroundColor = agent == nil ? NSColor.clear.cgColor : fill.cgColor
-            mark.contentTintColor = agent == .claude ? .white : .windowBackgroundColor
+        guard let agent else {
+            tile.isHidden = true
+            mark.image = nil
+            return
         }
+        let icon = AgentIcon.of(agent)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        tile.isHidden = false
+        tile.colors = [NSColor(hex: icon.top).cgColor, NSColor(hex: icon.bottom).cgColor]
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            tile.borderColor = NSColor.labelColor.withAlphaComponent(0.12).cgColor
+        }
+        CATransaction.commit()
+        mark.image = icon.mark(of: agent)
+        layoutMark(share: icon.markShare)
     }
 
     override func layout() {
         super.layout()
-        let inset = (bounds.width - Self.markSize) / 2
-        mark.frame = bounds.insetBy(dx: inset, dy: inset)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        tile.frame = bounds
+        tile.cornerRadius = bounds.height * AgentIcon.cornerShare
+        // The icon's top colour at the tile's top, whichever way up the
+        // layer's geometry runs in this view.
+        let top: CGFloat = tile.contentsAreFlipped() ? 0 : 1
+        tile.startPoint = CGPoint(x: 0.5, y: top)
+        tile.endPoint = CGPoint(x: 0.5, y: 1 - top)
+        CATransaction.commit()
+        if let agent { layoutMark(share: AgentIcon.of(agent).markShare) }
+    }
+
+    /// The mark's box: the share of the tile's height its icon gives it,
+    /// square, centred — the mark is fitted into it at its own proportions.
+    private func layoutMark(share: CGFloat) {
+        let side = bounds.height * share
+        mark.frame = NSRect(x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side, height: side)
     }
 }
 
