@@ -78,7 +78,12 @@ export type ShellIntent =
   | { readonly type: "sessions"; readonly list: ShellSessions | null }
   /** The page asked for one file's past — from its path bar, a file's tab —
    * and the History surface is the shell's own, so the ask crosses over. */
-  | { readonly type: "history"; readonly path: string }
+  | {
+      readonly type: "history";
+      readonly path: string;
+      /** The root the file is in, when it is not the page's own. */
+      readonly repo?: string;
+    }
   /** The review comments the page is holding for a hand-off, for the shell
    * to float its assign bar over the page; null once there are none. */
   | { readonly type: "review"; readonly review: ShellReview | null }
@@ -166,6 +171,12 @@ export interface ShellTree {
   readonly projectPath: string | null;
   /** Whether a row's working-tree changes can be discarded. */
   readonly discardable: boolean;
+  /**
+   * Whether the diff holds every repository of the workspace's changes, so
+   * a row of another root is a file to scroll to rather than a page to move
+   * to — see `workspace-diff.functions`.
+   */
+  readonly spansWorkspace: boolean;
 }
 
 /**
@@ -174,6 +185,8 @@ export interface ShellTree {
  */
 export interface ShellTreeState {
   readonly selected: string | null;
+  /** The root the selected file is in, when it is not the page's own. */
+  readonly selectedRoot: string | null;
   readonly commit: ShellCommitComposer | null;
   /** What your own changes are read against — a question only your own
    * changes have, so null on every other surface. See `LocalComparison`. */
@@ -202,7 +215,12 @@ export interface ShellCommitComposer {
  * to a discard).
  */
 export type ShellTreeAction =
-  | { readonly kind: "select"; readonly path: string }
+  | {
+      readonly kind: "select";
+      readonly path: string;
+      /** Another root's file, picked while the diff spans the workspace. */
+      readonly root?: string;
+    }
   /** The pointer has reached a file's row in the shell's tree. */
   | { readonly kind: "intent"; readonly path: string }
   | { readonly kind: "history"; readonly path: string }

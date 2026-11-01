@@ -70,15 +70,25 @@ export function useLocalComparison(): LocalComparisonState {
   // A chosen comparison belongs to the branch it was chosen on; once checkout
   // moves to another one, whatever it was pointed at is almost certainly not
   // what you meant to see here. `undefined` marks "haven't seen a branch yet"
-  // so a deep link's own `?target=` survives the first render.
-  const previousBranchRef = useRef<string | null | undefined>(undefined);
+  // so a deep link's own `?target=` survives the first render. Only a move
+  // within one repository is a checkout: in a workspace, the page going to
+  // another root lands on that root's branch, and taking it for a checkout
+  // pulled every such move back to the review.
+  const root = repo.data?.root ?? null;
+  const previousCheckoutRef = useRef<
+    { root: string | null; branch: string | null } | undefined
+  >(undefined);
   useEffect(() => {
-    const previous = previousBranchRef.current;
-    previousBranchRef.current = branch;
-    if (previous !== undefined && previous !== branch) {
+    const previous = previousCheckoutRef.current;
+    previousCheckoutRef.current = { root, branch };
+    if (
+      previous !== undefined &&
+      previous.root === root &&
+      previous.branch !== branch
+    ) {
       compareAgainst(null);
     }
-  }, [branch, compareAgainst]);
+  }, [root, branch, compareAgainst]);
 
   const names = useMemo(
     () => (branches.data ?? []).map((entry) => entry.name),

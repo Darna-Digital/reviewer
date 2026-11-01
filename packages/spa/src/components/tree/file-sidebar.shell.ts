@@ -36,9 +36,14 @@ export interface ShellTreeSource {
   readonly paths: ReadonlyArray<string>;
   readonly gitStatus: ReadonlyArray<GitStatusEntry>;
   readonly selectedFile: string | null;
+  /** The root the selected file is in, when it is not the page's own. */
+  readonly selectedRoot?: string | null;
   readonly loading: boolean;
   readonly projectPath: string | null;
-  readonly onFileSelect: (path: string | null) => void;
+  /** See `ShellTree.spansWorkspace`. */
+  readonly spansWorkspace?: boolean;
+  /** `root` names another repository's file, while the diff spans them all. */
+  readonly onFileSelect: (path: string | null, root?: string) => void;
   /** A file the pointer has reached — read and highlighted ahead of a click. */
   readonly onFileIntent?: (path: string) => void;
   readonly onShowHistory: (path: string) => void;
@@ -73,7 +78,7 @@ let listingsPosted = 0;
 const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
   switch (action.kind) {
     case "select":
-      return source.onFileSelect(action.path);
+      return source.onFileSelect(action.path, action.root);
     case "intent":
       return source.onFileIntent?.(action.path);
     case "history":
@@ -106,9 +111,11 @@ export function useShellTree(source: ShellTreeSource | null): void {
   const paths = source?.paths ?? null;
   const gitStatus = source?.gitStatus ?? null;
   const selected = source?.selectedFile ?? null;
+  const selectedRoot = source?.selectedRoot ?? null;
   const loading = source?.loading ?? false;
   const projectPath = source?.projectPath ?? null;
   const discardable = source?.onDiscardPaths !== undefined;
+  const spansWorkspace = source?.spansWorkspace ?? false;
   const changes = source?.commit?.changes ?? null;
   const draft = source?.commit?.draft ?? null;
   const against = source?.comparison?.against ?? null;
@@ -124,9 +131,10 @@ export function useShellTree(source: ShellTreeSource | null): void {
             loading,
             projectPath,
             discardable,
+            spansWorkspace,
           }
         : null,
-    [mode, paths, gitStatus, loading, projectPath, discardable]
+    [mode, paths, gitStatus, loading, projectPath, discardable, spansWorkspace]
   );
   useEffect(() => {
     if (!shellDrawsTree) return;
@@ -136,10 +144,11 @@ export function useShellTree(source: ShellTreeSource | null): void {
   const state = useMemo<ShellTreeState>(
     () => ({
       selected,
+      selectedRoot,
       commit: changes === null ? null : { changes, draft },
       comparison: comparing ? { against, aim } : null,
     }),
-    [selected, changes, draft, comparing, against, aim]
+    [selected, selectedRoot, changes, draft, comparing, against, aim]
   );
   useEffect(() => {
     if (!shellDrawsTree || listing === null) return;

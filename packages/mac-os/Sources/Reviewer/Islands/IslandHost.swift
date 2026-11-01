@@ -57,7 +57,9 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
-    @ObservationIgnored var onHistoryRequested: ((String) -> Void)?
+    /// A file's past asked for: its path, and its repository when that is
+    /// not the page's own.
+    @ObservationIgnored var onHistoryRequested: ((String, String?) -> Void)?
     @ObservationIgnored var onReviewReported: ((ShellReview?) -> Void)?
     @ObservationIgnored var onOpenRequested: ((OpenTarget) -> Void)?
 
@@ -334,7 +336,7 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             onSessionsReported?(ShellSessions.decode(body["list"]))
             return (nil, nil)
         case "history":
-            if let path = body["path"] as? String { onHistoryRequested?(path) }
+            if let path = body["path"] as? String { onHistoryRequested?(path, body["repo"] as? String) }
             return (nil, nil)
         case "review":
             onReviewReported?(ShellReview.decode(body["review"]))

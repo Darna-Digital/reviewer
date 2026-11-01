@@ -276,12 +276,13 @@ private struct DetailColumn: View {
             // The island stays under the native page: the tab strip and the
             // sessions list are still its, and a web view out of the window
             // would be throttled. On these pages it shows nothing of its own.
+            // The native page stays up behind the island off them, so
+            // crossing between Code and Sessions builds neither: only which
+            // one is in front changes.
             let coveredByNativePage = model.chats.page != nil
             ZStack {
                 IslandView(host: model.page)
-                if coveredByNativePage {
-                    ChatPageView()
-                }
+                KeptPage(inFront: coveredByNativePage) { ChatPageView() }
             }
             .onChange(of: coveredByNativePage, initial: true) { _, covered in
                 model.page.coveredByNativePage = covered

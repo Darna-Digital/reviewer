@@ -133,12 +133,22 @@ final class Chats {
     // MARK: following the island
 
     /// The island moved: the shell's page follows, and the conversation
-    /// with it — put down when the address leaves it, and picked up again,
-    /// from where it was left, when the address comes back.
+    /// with it — put down when the address goes to another page of the
+    /// sessions surface, picked up again from where it was left when the
+    /// address comes back to it.
+    ///
+    /// Gone off the surface altogether — over to Code — the conversation
+    /// open is kept as it stands, behind the page (see `ChatPageView`), so
+    /// the way back is a page already built rather than a conversation
+    /// read and laid out again, message by message, in the frame the
+    /// switch is meant to be moving in. Kept behind, it does not take its
+    /// thread as read (see `ChatSession.isShown`).
     func follow(href: String) {
         let next = SessionsPage.page(for: href)
         page = next
-        guard case .conversation(let id)? = next else {
+        session?.isShown = next != nil
+        guard let next else { return }
+        guard case .conversation(let id) = next else {
             putDownSession()
             return
         }

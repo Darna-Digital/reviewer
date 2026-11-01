@@ -1321,6 +1321,9 @@ class BarChipButton: NSButton {
 
     override var wantsUpdateLayer: Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
+    /// The chip is the whole frame: a symbol image's insets would let
+    /// Auto Layout grow the tinted frame past the size it is given.
+    override var alignmentRectInsets: NSEdgeInsets { NSEdgeInsetsZero }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     var restingInk: NSColor { .secondaryLabelColor }

@@ -171,7 +171,14 @@ final class AppModel {
             // only invalidated by one that moved something.
             if let list, list != self?.sessions { self?.sessions = list }
         }
-        page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
+        page.onHistoryRequested = { [weak self] path, rootPath in
+            guard let self else { return }
+            if let root = root(at: rootPath ?? focusedRootPath) {
+                showHistory(of: path, followingPageTo: root)
+            } else {
+                showHistory(of: path)
+            }
+        }
         page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }
         page.onOpenRequested = { [weak self] target in self?.open(target) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
@@ -284,9 +291,10 @@ final class AppModel {
     }
 
     /// A file of `root` changed on disk: its status and changed files read
-    /// again, and the page told, when it is on that root.
+    /// again, and the page told, when it is on that root or its diff holds
+    /// every root's changes.
     private func worktreeChanged(in root: RootModel) {
-        if root === focusedRoot { page.worktreeChanged() }
+        if root === focusedRoot || sidebar.listing?.spansWorkspace == true { page.worktreeChanged() }
         Task { await root.refreshWorktree() }
     }
 
@@ -708,7 +716,7 @@ final class AppModel {
     /// what is left is the page's to carry out.
     func act(onTree action: TreeAction) {
         switch action {
-        case .select(let id):
+        case .select(let id, _):
             open(treeRow: id)
         case .intent(let id):
             // Only the page's own repository can be read ahead: a row of
@@ -718,8 +726,7 @@ final class AppModel {
             }
         case .history(let id):
             guard let (path, file) = sidebar.locate(id), let root = root(at: path) else { return }
-            if root !== focusedRoot { showOnCodeTab(Href.browseTab(file, line: nil), in: root) }
-            showHistory(of: file, in: root)
+            showHistory(of: file, followingPageTo: root)
         case .commit(let message, let ids, let push):
             commit(message: message, paths: ids, andPush: push)
         case .discard(let ids):
@@ -746,6 +753,11 @@ final class AppModel {
         guard let (path, file) = sidebar.locate(id), let root = root(at: path) else { return }
         if file.isEmpty { return focus(root: root) }
         if root === focusedRoot { return page.send(TreeAction.select(file)) }
+        // The page's diff holds this repository's changes too: the file is
+        // scrolled to where it stands in it, the page staying where it is.
+        if sidebar.listing?.spansWorkspace == true {
+            return page.send(TreeAction.select(file, root: root.path))
+        }
         if sidebarLayout == .files(changes: true) {
             var components = URLComponents()
             components.path = Href.review
@@ -1382,6 +1394,13 @@ final class AppModel {
     func showHistory(of path: String, in root: RootModel) {
         focus(on: root.path)
         showHistory(of: path)
+    }
+
+    /// One file's past in `root`, the page taken to the file first when it
+    /// is another repository's than the one the page is on.
+    private func showHistory(of file: String, followingPageTo root: RootModel) {
+        if root !== focusedRoot { showOnCodeTab(Href.browseTab(file, line: nil), in: root) }
+        showHistory(of: file, in: root)
     }
 
     /// The history turned to another repository of the workspace, the page

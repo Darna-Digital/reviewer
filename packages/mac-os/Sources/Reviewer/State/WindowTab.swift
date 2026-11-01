@@ -4,7 +4,7 @@
 // tab is a route change in a page that has already primed it rather than a
 // trip over the bridge. What the shell holds is a picture of the strip,
 // reported whenever it changes, which the toolbar draws natively (see
-// `ModeSwitch` and `SessionTabBar`) and the menu bar names: the sessions ⌘1–9 reach, the
+// `ModeButtons` and `SessionTabBar`) and the menu bar names: the sessions ⌘1–9 reach, the
 // modes ⌘G crosses between, and
 // whether the tab in front can be closed. See `ShellWindowTabStrip` in the
 // SPA's `lib/shell`.

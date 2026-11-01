@@ -38,6 +38,19 @@ export const scopedRepo = (): string | undefined => {
   return repo !== undefined && repo.length > 0 ? repo : undefined;
 };
 
+/**
+ * The request options that name `repo` outright, for the few requests the
+ * page makes about a repository other than its own — the workspace's stacked
+ * diff reads every root's changes from one page. Nothing for undefined, which
+ * leaves the request to the page's root, cache entry and all.
+ */
+export const repoInit = (
+  repo: string | undefined
+): { headers?: Record<string, string> } =>
+  repo === undefined
+    ? {}
+    : { headers: { [REPO_HEADER]: encodeURIComponent(repo) } };
+
 /** The search param a root is addressed by, read off an untyped search. */
 export const repoFromSearch = (
   search: Record<string, unknown>

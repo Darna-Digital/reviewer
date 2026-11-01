@@ -17,10 +17,11 @@ export const fetchClient = createFetchClient<paths>({
 // Every request names the repository the page is about (see `lib/repo-scope`);
 // the root is read as the request leaves, so one already in flight when the
 // page moves to another repository still answers for the one it asked about.
+// A request that already names one — see `repoInit` — keeps it.
 fetchClient.use({
   onRequest: ({ request }) => {
     const repo = scopedRepo();
-    if (repo !== undefined) {
+    if (repo !== undefined && !request.headers.has(REPO_HEADER)) {
       request.headers.set(REPO_HEADER, encodeURIComponent(repo));
     }
     return request;

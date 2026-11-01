@@ -18,12 +18,18 @@ struct ShellTree: Decodable, Equatable, Sendable {
     let loading: Bool
     let projectPath: String?
     let discardable: Bool
+    /// Whether the page's diff holds every repository's changes, so a row of
+    /// another root is a file of it to scroll to rather than a page to move
+    /// to — see `workspace-diff.functions` in the SPA.
+    let spansWorkspace: Bool
 
     static func decode(_ body: Any?) -> ShellTree? { Wire.decode(body) }
 }
 
 struct ShellTreeState: Decodable, Sendable {
     let selected: String?
+    /// The repository the selected file is in, when it is not the page's.
+    let selectedRoot: String?
     let commit: ShellCommitComposer?
     let comparison: ShellComparison?
 
@@ -81,7 +87,9 @@ enum CommitAgent: String, CaseIterable, Identifiable, Sendable {
 
 /// The tree's actions, in the shape the island's `ShellTreeAction` takes.
 enum TreeAction {
-    case select(String)
+    /// A row picked — or, to the page, a file to show: `root` names
+    /// another repository's, while its diff spans the workspace.
+    case select(String, root: String? = nil)
     /// A file is about to be opened — the pointer has reached its row, or
     /// the palette has it lit — so the page reads and highlights it ahead
     /// of the click or the Return that may follow.
@@ -96,7 +104,10 @@ enum TreeAction {
 
     var payload: [String: Any] {
         switch self {
-        case .select(let path): return ["kind": "select", "path": path]
+        case .select(let path, let root):
+            var payload: [String: Any] = ["kind": "select", "path": path]
+            if let root { payload["root"] = root }
+            return payload
         case .intent(let path): return ["kind": "intent", "path": path]
         case .history(let path): return ["kind": "history", "path": path]
         case .discard(let paths): return ["kind": "discard", "paths": paths]
@@ -269,7 +280,7 @@ final class SidebarTree {
         if commit != state.commit { commit = state.commit }
         if comparison != state.comparison { comparison = state.comparison }
         pageSelected = state.selected
-        let selected = state.selected.map { id(of: $0, in: pageRootPath) }
+        let selected = state.selected.map { id(of: $0, in: state.selectedRoot ?? pageRootPath) }
         guard selected != self.selected else { return }
         self.selected = selected
         reveal(selected)

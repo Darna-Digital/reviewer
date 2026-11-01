@@ -18,8 +18,8 @@
 // the picker goes to the ›› menu. Between the runs, the system's tracking
 // separator, which holds the sidebar's to the column's edge as it is
 // dragged or slides away. Over the detail: the pinned pair, Code and
-// Sessions, the system's segmented control in the toolbar's glass (see
-// `ModeSwitch`), and the session tabs after them — the pair and the tabs
+// Sessions, the system's toggle buttons in one pane of the toolbar's glass
+// (see `ModeButtons`), and the session tabs after them — the pair and the tabs
 // only once there is a project to switch between.
 import AppKit
 import SwiftUI
@@ -30,6 +30,7 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
     private let toolbar = NSToolbar(identifier: "ReviewerWindow")
     private var items: [NSToolbarItem.Identifier: NSToolbarItem] = [:]
     private let sidebarToggle = SidebarToggle()
+    private lazy var modeButtons = ModeButtons(model: model, identifier: Self.mode)
     private let modeMenu = NSMenu()
     private let sessionsMenu = NSMenu()
 
@@ -103,11 +104,13 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
             item.menuFormRepresentation = menuItem(sidebarToggle.title, #selector(toggleSidebar))
             // The one item the folded sidebar's run has room for is this
             // one, the way back to the sidebar; the picker goes to ›› first.
-            item.visibilityPriority = .high        case Self.mode:
-            item.label = "Code and sessions"
-            item.view = ModeSwitch(model: model)
-            item.isHidden = !model.hasProject
-            item.menuFormRepresentation = submenuItem(item.label, modeMenu)
+            item.visibilityPriority = .high
+        case Self.mode:
+            let group = modeButtons.item
+            group.isHidden = !model.hasProject
+            group.menuFormRepresentation = submenuItem(group.label, modeMenu)
+            items[identifier] = group
+            return group
         case Self.sessions:
             item.label = "Sessions"
             item.view = SessionTabBar(model: model)
@@ -196,8 +199,10 @@ private final class SidebarToggle: NSView {
 
     var title: String { sidebarShown ? "Hide sidebar" : "Show sidebar" }
 
-    /// The air the picker beside it keeps above and below its own label.
-    private static let size: CGFloat = 30
+    /// The picker's chip beside it: its height, and the air it keeps either
+    /// side of its label, so the two read as one pair of chips.
+    private static let height: CGFloat = 30
+    private static let sidePadding: CGFloat = 8
 
     init() {
         super.init(frame: .zero)
@@ -208,8 +213,9 @@ private final class SidebarToggle: NSView {
         label.autoresizingMask = [.width, .height]
         button.addSubview(label)
         NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: Self.size),
-            button.heightAnchor.constraint(equalToConstant: Self.size),
+            button.widthAnchor.constraint(
+                equalToConstant: ceil(button.image?.size.width ?? 0) + Self.sidePadding * 2),
+            button.heightAnchor.constraint(equalToConstant: Self.height),
             button.leadingAnchor.constraint(equalTo: leadingAnchor),
             button.topAnchor.constraint(equalTo: topAnchor),
             button.bottomAnchor.constraint(equalTo: bottomAnchor),
@@ -219,5 +225,4 @@ private final class SidebarToggle: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("SidebarToggle is not loaded from a nib") }
-}
+    required init?(coder: NSCoder) { fatalError("SidebarToggle is not loaded from a nib") }}

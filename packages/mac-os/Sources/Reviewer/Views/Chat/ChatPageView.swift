@@ -15,15 +15,15 @@ struct ChatPageView: View {
             switch model.chats.page {
             case .newSession:
                 NewChatView()
-            case .conversation:
+            case .landing:
+                SessionsLanding()
+            // Off the surface, the conversation left open stays built
+            // behind the code page for the way back (see `Chats.follow`).
+            case .conversation, nil:
                 if let session = model.chats.session {
                     ConversationView(session: session)
                         .id(session.id)
                 }
-            case .landing:
-                SessionsLanding()
-            case nil:
-                EmptyView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -75,10 +75,8 @@ private struct NewChatView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Text("What should we work on?")
-                    .font(.system(size: 24, weight: .medium))
-                    .tracking(-0.3)
-                    .padding(.bottom, 16)
+                BlockWordmark()
+                    .padding(.bottom, 20)
                 VStack(spacing: 0) {
                     ChatComposer(
                         draftKey: draftKey,

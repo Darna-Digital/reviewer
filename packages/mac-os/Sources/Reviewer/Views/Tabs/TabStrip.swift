@@ -1,69 +1,66 @@
 // The window tabs' pinned pair, Code and Sessions, as the system's own
-// tabs — the segmented control in its macOS 27 tabs role, whose glass puck
-// can be grabbed and dragged from one segment to the other as well as
-// clicked. It stands on the window's toolbar ahead of the sessions' own
-// tabs (see `SessionTabBar`), both drawn from the picture the island sends
-// up (see `WindowTabStrip`); a press goes back down to the island's strip,
-// which is the one that switches.
+// toggle buttons side by side in one pane of the bar's glass — the way
+// Notes sets its format buttons, and the way SwiftUI's toolbar group had
+// them — the one in front lit. A press lights the
+// button pressed and puts the other out, and that is all it draws: no
+// segment slides or stretches across, so the switch is done the moment it
+// is clicked. They stand on the window's toolbar ahead of the sessions'
+// own tabs (see `SessionTabBar`), both drawn from the picture the island
+// sends up (see `WindowTabStrip`); a press goes back down to the island's
+// strip, which is the one that switches.
 //
-// The control is the toolbar item's own view, not one hosted in SwiftUI:
-// the bar wraps a control it can see in the toolbar's glass, as it does
-// the system's own segmented items, and a hosting view is no control it
-// knows (see `WindowToolbar`).
+// The two are one toolbar item, a row holding both buttons, not a group of
+// two items: the bar sets the items of a group its own gap apart and
+// pads each as an item of its own, which stood them wider than the pair
+// ever stood; a row of its own spaces them as it is told. They
+// are AppKit's buttons, not ones hosted in SwiftUI, so the bar wraps them
+// in its glass as it does a control it knows (see `WindowToolbar`).
 import AppKit
 
-/// The pinned tabs — Code, Sessions — as the system's tabs: an icon a
-/// segment, in the toolbar's glass, the puck on the way of working in
-/// front (see `WindowTabStrip.lights`) and draggable across to the other.
-/// A tab is left by going to another, never by pressing it again, so a
-/// press on the tab in front is ignored; a press on Sessions lit for a
-/// session's own tab is the way back to the list — the control sends its
-/// action on every press, the same segment included, so that press
-/// reaches here even though the puck does not move.
+/// The pinned tabs — Code, Sessions — as a toolbar item of toggles: an
+/// icon each, the one lit the way of working in front (see
+/// `WindowTabStrip.lights`). A tab is left by going to another, never by
+/// pressing it again, so a press on the tab in front is ignored; a press on
+/// Sessions lit for a session's own tab is the way back to the list.
 ///
 /// The tab pressed is held here until the strip comes back with it in
-/// front: the control has already slid its puck there, and a selection
-/// read straight off the strip would still name the old tab for the trip
-/// over the bridge, sending the puck back and then over again. The control
-/// is only touched where something has changed, so a slide the press
-/// started is left to finish.
+/// front: the button is lit at the press, and the strip read straight off
+/// would still name the old tab for the trip over the bridge, lighting the
+/// old one and then the new one again.
 ///
-/// Each segment is named on the glass label under the bar, with ⌘G on the
+/// Each button is named on the glass label under the bar, with ⌘G on the
 /// one it would cross to (see `ToolbarGlassLabel`).
 @MainActor
-final class ModeSwitch: NSSegmentedControl {
+final class ModeButtons: NSObject {
+    let item: NSToolbarItem
     private let model: AppModel
-    private let label = ToolbarHoverView()
+    private let row = NSStackView()
+    private var buttons: [ModeButton] = []
     private var pinned: [WindowTab] = []
     private var pressed: String?
     private var activeId = ""
-    private var accent: AccentKey?
 
-    init(model: AppModel) {
+    /// Air between the two, so the lit one's fill stands clear of the
+    /// other's glyph — the bar's own gap between its items, kept inside
+    /// the one pane of glass.
+    private static let spacing: CGFloat = 6
+    /// The glass round the lit one, the same on every side: the bar wraps
+    /// its glass tight round the row, so the row carries its own margin —
+    /// without it the lit fill runs into the glass's edge.
+    private static let inset: CGFloat = 4
+
+    init(model: AppModel, identifier: NSToolbarItem.Identifier) {
         self.model = model
-        super.init(frame: .zero)
-        trackingMode = .selectOne
-        segmentDistribution = .fillEqually
-        // The tabs role is in the macOS 27 SDK, which comes with the Swift
-        // 6.4 toolchain; a build on Xcode 26 has neither and gets the plain
-        // control. Releases are built on Xcode 27 (see `release.yml`).
-        #if compiler(>=6.4)
-        if #available(macOS 27, *) { role = .tabs }
-        #endif
-        target = self
-        action = #selector(segmentPressed)
-        label.frame = bounds
-        label.autoresizingMask = [.width, .height]
-        addSubview(label)
-        menu = Self.contextMenu(target: self)
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(paletteChanged), name: ChromePalette.didChange, object: nil)
-        paletteChanged()
+        item = NSToolbarItem(itemIdentifier: identifier)
+        super.init()
+        item.label = "Code and sessions"
+        row.orientation = .horizontal
+        row.spacing = Self.spacing
+        row.edgeInsets = NSEdgeInsets(top: Self.inset, left: Self.inset, bottom: Self.inset, right: Self.inset)
+        item.view = row
+        item.isBordered = true
         follow()
     }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("ModeSwitch is not loaded from a nib") }
 
     private func follow() {
         let strip = withObservationTracking {
@@ -82,58 +79,133 @@ final class ModeSwitch: NSSegmentedControl {
         let pinned = strip.tabs.filter(\.pinned)
         if pinned.map(\.id) != self.pinned.map(\.id) || pinned.map(\.kind) != self.pinned.map(\.kind) {
             self.pinned = pinned
-            segmentCount = pinned.count
-            for (index, tab) in pinned.enumerated() {
-                setImage(
-                    NSImage(systemSymbolName: tab.kind.symbol, accessibilityDescription: tab.title),
-                    forSegment: index)
-                setImageScaling(.scaleNone, forSegment: index)
-                setLabel("", forSegment: index)
-            }
-            invalidateIntrinsicContentSize()
+            buttons = pinned.map { ModeButton(tab: $0, target: self) }
+            row.setViews(buttons, in: .leading)
         }
-        let lit = (pressed ?? pinned.first { strip.lights($0) }?.id) ?? ""
-        let selected = pinned.firstIndex { $0.id == lit } ?? -1
-        if selectedSegment != selected { selectedSegment = selected }
-        label.labels = pinned.map { tab in
-            let crossesTo = strip.canSwitchMode && lit != tab.id
-            return ToolbarGlassLabel.Text(title: tab.title, hint: crossesTo ? "⌘G" : nil)
+        light(pressed ?? pinned.first { strip.lights($0) }?.id, canSwitch: strip.canSwitchMode)
+    }
+
+    /// The one tab lit, and ⌘G named on the other, the one it crosses to.
+    private func light(_ lit: String?, canSwitch: Bool) {
+        for button in buttons {
+            button.state = button.tabId == lit ? .on : .off
+            button.hint = canSwitch && button.tabId != lit ? "⌘G" : nil
         }
     }
 
-    @objc private func segmentPressed() {
-        guard pinned.indices.contains(selectedSegment) else { return }
-        let id = pinned[selectedSegment].id
-        guard model.windowTabs.activeId != id else { return }
-        let lit = pinned.first { model.windowTabs.lights($0) }?.id
+    @objc fileprivate func buttonPressed(_ sender: ModeButton) {
+        let id = sender.tabId
+        let strip = model.windowTabs
+        let lit = pinned.first { strip.lights($0) }?.id
+        // A toggle puts itself out when pressed while lit; the press is
+        // a way back to the tab, never a way out of it, so it stays lit.
+        light(id, canSwitch: strip.canSwitchMode)
+        guard strip.activeId != id else { return }
         if id != lit { pressed = id }
         model.select(tabId: id)
     }
 
-    /// Lit in the theme's accent, as the pane's tabs and the diff's
-    /// add-a-comment button are — the one colour every lit control shares.
-    /// Set only when the themes' accents change, as `SegmentedTabs` does:
-    /// the palette is announced for any change to a theme, and the colour,
-    /// set again, takes the puck off a slide a press has under way.
-    @objc private func paletteChanged() {
-        let accent = AccentKey(palette: ChromePalette.shared)
-        guard accent != self.accent else { return }
-        self.accent = accent
-        selectedSegmentBezelColor = IslandPalette.accent
-    }
-
-    /// The control is one view, so its menu cannot know which segment it
-    /// was opened over; what a pinned tab's menu offers is the same for
-    /// either — the sessions closed — so it does not need to.
-    private static func contextMenu(target: ModeSwitch) -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(withTitle: "Close other tabs", action: #selector(closeSessions), keyEquivalent: "").target = target
-        return menu
-    }
-
-    @objc private func closeSessions() {
+    @objc fileprivate func closeSessions() {
         for tab in model.windowTabs.sessions {
             model.closeTab(id: tab.id)
         }
+    }
+}
+
+/// One pinned tab: its icon, on a disc of the theme's accent while its
+/// way of working is in front — the glyph white on it — and bare on the
+/// bar's glass otherwise, named with its chord on the bar's glass label.
+///
+/// Drawn here rather than by the system's toolbar bezel, which lights a
+/// shorter capsule round a smaller glyph than the pair is meant to wear:
+/// a round disc most of the glass's height, the glyph about half of it.
+@MainActor
+private final class ModeButton: NSButton {
+    let tabId: String
+    private let tabTitle: String
+    private let label = ToolbarHoverView()
+    private let disc = CALayer()
+
+    /// The disc: three quarters of the bar's 36pt glass, which leaves the
+    /// glass the same 4pt round it on every side.
+    static let size: CGFloat = 28
+    private static let glyphPointSize: CGFloat = 15
+    /// Air either side of the glyph inside the lit fill: Code's `</>` is
+    /// wide enough to stretch its disc into a pill beside Sessions' circle.
+    private static let glyphMargin: CGFloat = 6
+
+    override var state: NSControl.StateValue {
+        didSet { needsDisplay = true }
+    }
+
+    var hint: String? {
+        didSet {
+            if hint != oldValue { label.labels = [ToolbarGlassLabel.Text(title: tabTitle, hint: hint)] }
+        }
+    }
+
+    init(tab: WindowTab, target: ModeButtons) {
+        tabId = tab.id
+        tabTitle = tab.title
+        super.init(frame: .zero)
+        setButtonType(.pushOnPushOff)
+        isBordered = false
+        image = NSImage(systemSymbolName: tab.kind.symbol, accessibilityDescription: tab.title)?
+            .withSymbolConfiguration(.init(pointSize: Self.glyphPointSize, weight: .regular))
+        imagePosition = .imageOnly
+        imageScaling = .scaleNone
+        wantsLayer = true
+        disc.cornerCurve = .continuous
+        layer?.insertSublayer(disc, at: 0)
+        translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            widthAnchor.constraint(equalToConstant: max(Self.size, (image?.size.width ?? 0) + 2 * Self.glyphMargin)),
+            heightAnchor.constraint(equalToConstant: Self.size),
+        ])
+        self.target = target
+        action = #selector(ModeButtons.buttonPressed(_:))
+        setAccessibilityLabel(tab.title)
+        label.frame = bounds
+        label.autoresizingMask = [.width, .height]
+        addSubview(label)
+        label.labels = [ToolbarGlassLabel.Text(title: tab.title, hint: nil)]
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Close other tabs", action: #selector(ModeButtons.closeSessions), keyEquivalent: "")
+            .target = target
+        self.menu = menu
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(paletteChanged), name: ChromePalette.didChange, object: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("ModeButton is not loaded from a nib") }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    /// Lit in the theme's accent, as the bottom pane's tabs and the diff's
+    /// add-a-comment button are — the one colour every lit control shares —
+    /// rather than the system's blue, and drawn again when a theme changes.
+    @objc private func paletteChanged() {
+        needsDisplay = true
+    }
+
+    override func updateLayer() {
+        let lit = state == .on
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            disc.backgroundColor = lit ? IslandPalette.accent.cgColor : NSColor.clear.cgColor
+            CATransaction.commit()
+        }
+        contentTintColor = lit ? .white : .labelColor
+    }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        disc.frame = bounds
+        disc.cornerRadius = bounds.height / 2
+        CATransaction.commit()
     }
 }

@@ -56,6 +56,12 @@ final class ChatSession {
     @ObservationIgnored private var retry: Task<Void, Never>?
     @ObservationIgnored private var watchdog: Task<Void, Never>?
     @ObservationIgnored private var seenMark: String?
+    /// Whether the conversation is the page in front, or kept behind the
+    /// code page for the way back (see `Chats.follow`): a thread only read
+    /// while it can be read, and taken as read again on coming back.
+    @ObservationIgnored var isShown = true {
+        didSet { if isShown, !oldValue { noteResting() } }
+    }
 
     private static let staleAfter: TimeInterval = 45
     /// The whole conversation arrives as one snapshot frame on every
@@ -240,7 +246,7 @@ final class ChatSession {
     /// yet: the mark is a key rather than a flag, so two visits to the same
     /// point send once.
     private func noteResting() {
-        guard let chat else { return }
+        guard isShown, let chat else { return }
         let mark = "\(chat.id):\(chat.isRunning ? "running" : chat.updatedAt)"
         guard mark != seenMark else { return }
         seenMark = mark
