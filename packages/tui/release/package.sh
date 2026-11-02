@@ -45,8 +45,12 @@ trap 'rm -rf "$work"' EXIT
 stage="${work}/${name}"
 mkdir -p "${stage}/server/node_modules/@lydell" "$out_dir"
 
+# OpenTUI picks its native core at run time; Bun folds the platform and CPU
+# checks for this machine, but the musl branch hangs on OPENTUI_LIBC, so its
+# packages (installed only on musl) are left unresolved — there is no musl build.
 (cd "$tui_dir" && bun build --compile --no-compile-autoload-dotenv --minify \
   --define "REVIEWER_VERSION=\"${version}\"" \
+  --external @opentui/core-linux-x64-musl --external @opentui/core-linux-arm64-musl \
   src/main.tsx src/diff/highlightWorker.ts --outfile "${stage}/reviewer") >&2
 
 # node-pty stays outside the bundle, being native: copied beside it with

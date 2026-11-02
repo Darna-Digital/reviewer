@@ -53,7 +53,10 @@ jobs:
 
       - name: Package the TUI
         id: package
-        run: echo "path=$(packages/tui/release/package.sh "$RUNNER_TEMP/release")" >> "$GITHUB_OUTPUT"
+        run: |
+          # assigned first, so a failed build fails the step
+          path="$(packages/tui/release/package.sh "$RUNNER_TEMP/release")"
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
 
       - name: Smoke-test the tarball
         run: packages/tui/release/smoke.sh "${{ steps.package.outputs.path }}"

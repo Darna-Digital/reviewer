@@ -98,7 +98,10 @@ jobs:
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-        run: echo "path=$(packages/tui/release/package.sh "$RUNNER_TEMP/tui")" >> "$GITHUB_OUTPUT"
+        run: |
+          # assigned first, so a failed build fails the step
+          path="$(packages/tui/release/package.sh "$RUNNER_TEMP/tui")"
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
 
       - name: Smoke-test the tarball
         run: packages/tui/release/smoke.sh "${{ steps.package.outputs.path }}"
