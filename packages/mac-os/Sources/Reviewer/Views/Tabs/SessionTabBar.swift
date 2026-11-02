@@ -135,6 +135,7 @@ final class SessionTabBar: NSView {
     private func follow() {
         withObservationTracking {
             for tab in model.windowTabs.sessions { _ = model.chats.agent(of: tab) }
+            _ = model.windowTabsReported
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 self?.follow()
@@ -160,7 +161,9 @@ final class SessionTabBar: NSView {
         let wanted = Set(sessions.map(\.id))
         let orderChanged = sessions.map(\.id) != tabs.map(\.id)
 
-        for view in tabs where !wanted.contains(view.id) { depart(view) }
+        for view in tabs where !wanted.contains(view.id) {
+            if hasLaidOut { depart(view) } else { view.removeFromSuperview() }
+        }
 
         var arriving: [SessionTabView] = []
         tabs = sessions.map { tab in
@@ -179,7 +182,8 @@ final class SessionTabBar: NSView {
         if updateWidthConstraints() { takeWidth() }
         scrollOffset = min(scrollOffset, maxScroll)
         configureTabs()
-        // The first strip is laid out as it stands; after that a tab coming
+        // The first strip the island reports is laid out as it stands, as is
+        // the one kept from last launch before it; after that a tab coming
         // or going reshares the room between all of them. The tab in front
         // changing moves nothing: the surface is under it at once.
         let animated = hasLaidOut && orderChanged
@@ -191,7 +195,7 @@ final class SessionTabBar: NSView {
             putSurfaceUnderSelectedTab()
         }
         layoutRow(animated: animated)
-        hasLaidOut = true
+        hasLaidOut = model.windowTabsReported
         followPointer()
     }
 
@@ -223,7 +227,7 @@ final class SessionTabBar: NSView {
                 isHovered: drag == nil && view.id == hoveredId,
                 isLifted: drag?.id == view.id,
                 showsDivider: showsDivider(at: slot),
-                chord: slot < 9 ? "⌘\(slot + 1)" : nil,
+                chord: TabSlotChords.hint(forSlot: slot + 1),
                 showsChord: showsHints,
                 isWindowActive: isWindowActive)
         }
@@ -334,7 +338,8 @@ final class SessionTabBar: NSView {
         let lead = tabs.isEmpty ? 0 : TabBarMetrics.gap
         let stripFrame = NSRect(x: 0, y: 0, width: width, height: TabBarMetrics.height)
         let markFrame = NSRect(
-            x: width + lead, y: 0, width: TabBarMetrics.newTab, height: TabBarMetrics.height)
+            x: width + lead, y: (TabBarMetrics.height - TabBarMetrics.newTab) / 2,
+            width: TabBarMetrics.newTab, height: TabBarMetrics.newTab)
 
         var frames: [(NSView, NSRect)] = [(strip, stripFrame), (track, stripFrame), (newTab, markFrame)]
         for (slot, view) in tabs.enumerated() {
@@ -722,12 +727,19 @@ enum TabBarMetrics {
     /// The system's toolbar glass, which the pinned pair beside the row
     /// stand in.
     static let height: CGFloat = BarChipMetrics.height
-    static let newTab: CGFloat = BarChipMetrics.height
-    /// The air between the track and the mark that mints a session.
-    static let gap: CGFloat = 6
+    /// The mark that mints a session: a circle smaller than the bar, lit
+    /// under the pointer clear of the track.
+    static let newTab: CGFloat = 28
+    /// How far the +'s strokes stand from the track's end — OpenCode's air
+    /// between its last tab and its +.
+    static let markSpacing: CGFloat = 14
+    /// The air between the track and the mark's chip: what the chip's side
+    /// leaves of `markSpacing`, and never less than none, so the chip lit
+    /// under the pointer does not stand over the tabs.
+    @MainActor static let gap: CGFloat = max(0, markSpacing - (newTab - NewTabButton.inkWidth) / 2)
     /// The narrowest a tab gets before the row scrolls instead — a short
     /// title's worth beside the slot at its tail.
-    static let narrowest: CGFloat = 112
+    static let narrowest: CGFloat = 120
     /// The widest a tab gets; Rex's own.
     static let widest: CGFloat = 228
     /// How far the pointer travels before a press becomes a drag.
@@ -813,7 +825,7 @@ private final class SessionTabView: NSView {
     /// How far in from either edge the tab's ink starts — the agent's tile
     /// at the head, whatever is in the slot at the tail — so the two read
     /// as the same distance from the hairline between them.
-    private static let edgeInset: CGFloat = 10
+    private static let edgeInset: CGFloat = 14
     /// The air between the title and the ink on either side of it.
     private static let titleSpacing: CGFloat = 7
     /// The box the slot's controls stand in — the ✕'s pressable circle.
@@ -966,12 +978,12 @@ private final class SessionTabView: NSView {
     }
 
     /// As wide as the tab needs to show its title whole beside its agent,
-    /// with the ✕ at its tail too, so the pointer coming to it does not cut
-    /// the title short.
+    /// held off the hairlines by the same inset at both ends, so a quiet
+    /// tab sits even between them. The ✕ is not given room of its own: it
+    /// comes up over the title's tail, which fades out under it, as
+    /// Safari's does.
     var fittingWidth: CGFloat {
-        let closeReach = max(Self.slot, TabCloseButton.inkWidth) / 2 + TabCloseButton.inkWidth / 2
-        return Self.edgeInset + AgentTile.size + Self.titleSpacing + ceil(title.intrinsicContentSize.width)
-            + Self.titleSpacing + closeReach + Self.edgeInset
+        Self.edgeInset + AgentTile.size + Self.titleSpacing + ceil(title.intrinsicContentSize.width) + Self.edgeInset
     }
 
     /// How wide what the slot shows is drawn — not the box it stands in —
@@ -1368,6 +1380,8 @@ class BarChipButton: NSButton {
 @MainActor
 private final class NewTabButton: BarChipButton {
     init() { super.init(symbol: "plus", pointSize: 14, weight: .medium) }
+
+    static let inkWidth = symbolInkWidth(NewTabButton().image)
 }
 
 /// The ✕ in a tab's slot: a smaller circle inside the tab, lit only under
@@ -1376,39 +1390,42 @@ private final class NewTabButton: BarChipButton {
 private final class TabCloseButton: BarChipButton {
     init() { super.init(symbol: "xmark", pointSize: 9, weight: .bold) }
 
-    /// How wide the ✕ is drawn. A symbol's image carries side bearings past
-    /// its strokes, and its alignment rect only trims them vertically, so
-    /// the strokes are measured: drawn once and read back for their extent.
-    static let inkWidth: CGFloat = {
-        guard let image = TabCloseButton().image else { return 0 }
-        let scale: CGFloat = 4
-        guard
-            let rep = NSBitmapImageRep(
-                bitmapDataPlanes: nil, pixelsWide: Int(image.size.width * scale),
-                pixelsHigh: Int(image.size.height * scale), bitsPerSample: 8, samplesPerPixel: 4,
-                hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
-            let context = NSGraphicsContext(bitmapImageRep: rep)
-        else { return image.size.width }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        image.draw(in: NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh))
-        NSGraphicsContext.restoreGraphicsState()
-        let inked = (0..<rep.pixelsWide).filter { x in
-            (0..<rep.pixelsHigh).contains { y in (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.1 }
-        }
-        guard let first = inked.first, let last = inked.last else { return image.size.width }
-        return CGFloat(last + 1 - first) / scale
-    }()
+    static let inkWidth = symbolInkWidth(TabCloseButton().image)
+}
+
+/// How wide a symbol is drawn. Its image carries side bearings past its
+/// strokes, and its alignment rect only trims them vertically, so the
+/// strokes are measured: drawn once and read back for their extent.
+@MainActor
+private func symbolInkWidth(_ image: NSImage?) -> CGFloat {
+    guard let image else { return 0 }
+    let scale: CGFloat = 4
+    guard
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(image.size.width * scale),
+            pixelsHigh: Int(image.size.height * scale), bitsPerSample: 8, samplesPerPixel: 4,
+            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+        let context = NSGraphicsContext(bitmapImageRep: rep)
+    else { return image.size.width }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = context
+    image.draw(in: NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh))
+    NSGraphicsContext.restoreGraphicsState()
+    let inked = (0..<rep.pixelsWide).filter { x in
+        (0..<rep.pixelsHigh).contains { y in (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.1 }
+    }
+    guard let first = inked.first, let last = inked.last else { return image.size.width }
+    return CGFloat(last + 1 - first) / scale
 }
 
 // MARK: - ⌘ held
 
-/// Whether ⌘ is being held on its own, which puts each tab's chord in the
-/// slot at its tail — ⌘1 to ⌘9 — as Rex and Safari do.
+/// Whether ⇧⌘ is being held on its own, which puts each tab's chord in the
+/// slot at its tail — ⇧⌘1 to ⇧⌘9 — as Rex and Safari do with theirs.
 ///
-/// Only after a moment, and only for ⌘ alone: ⌘ is on its way to a chord
+/// Only after a moment, and only for ⇧⌘ alone: it is on its way to a chord
 /// far more often than it is held to look, and a row of numbers flashing up
-/// for every ⌘C would be noise. Any key pressed while it is held makes it a
+/// for every ⇧⌘K would be noise. Any key pressed while it is held makes it a
 /// chord after all, and puts the numbers away; so does the app going to the
 /// back, which takes the ⌘ key's release with it.
 @MainActor
@@ -1441,10 +1458,10 @@ final class CommandHold {
     }
 
     private func observe(_ event: NSEvent) {
-        let commandAlone =
+        let chordHeld =
             event.type == .flagsChanged
-            && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
-        if commandAlone { hold() } else { release() }
+            && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == [.command, .shift]
+        if chordHeld { hold() } else { release() }
     }
 
     private func hold() {

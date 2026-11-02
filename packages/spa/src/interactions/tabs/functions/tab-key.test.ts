@@ -54,6 +54,16 @@ describe("a workspace's strip", () => {
     expect(tabToRestore(strip)).toBe(tabKey(API, "server.ts"));
   });
 
+  it("falls back to the head of the strip when the page's repository has no tab", () => {
+    const docs = (key: string) => tabFile(key).repo === "/work/docs";
+    expect(tabToRestore(strip, docs)).toBe(tabKey(API, "server.ts"));
+    const { open } = reconcileTabs(
+      { ...strip, active: null },
+      { viewing: null, switched: false, canRestore: true, restorable: docs }
+    );
+    expect(open).toBe(tabKey(API, "server.ts"));
+  });
+
   it("keeps every repository's tabs when the page moves between them", () => {
     const { open, tabs } = reconcileTabs(strip, {
       viewing: null,

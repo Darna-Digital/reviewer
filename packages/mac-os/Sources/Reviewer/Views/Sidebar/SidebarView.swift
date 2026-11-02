@@ -21,7 +21,7 @@ struct SidebarView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        let layout = model.sidebarLayout
+        let layout = model.shownSidebarLayout
         Group {
             if model.hasProject {
                 TreeColumn(layout: layout)
@@ -47,7 +47,10 @@ struct SidebarView: View {
 /// animated step here and a bare one there. The address moves once, and
 /// everything that goes with it moves in that one motion; the tree and the
 /// list are drawn from the last picture the page gave until it gives the
-/// next (see `SidebarTree.take`, `AppModel.sessions`).
+/// next (see `SidebarTree.take`, `AppModel.sessions`). The column goes over
+/// once that next picture is in, not with the click, so the bands, the
+/// rows and the composer change in the same frame (see
+/// `AppModel.shownSidebarLayout`).
 enum SidebarLayout: Equatable {
     /// The merge requests, listed; the one open stands beside the sidebar.
     case pulls
@@ -81,9 +84,15 @@ enum SidebarWidths {
 /// from where the layout's last change left things (see `slid(_:by:)`) —
 /// and a page the column has shown is kept up behind the one in front
 /// (see `TreeColumn`), so going back to it builds nothing.
+///
+/// Switched off for now, on trial: every surface change snaps. The
+/// sidebar's own collapse is the split view's, and moves as before.
 enum SidebarMotion {
+    static let isEnabled = false
+
     static var change: Animation? {
-        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeOut(duration: 0.22)
+        guard isEnabled, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return nil }
+        return .easeOut(duration: 0.22)
     }
 }
 

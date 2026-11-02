@@ -169,13 +169,25 @@ private struct SourceControlTitle: View {
                 .foregroundStyle(.secondary)
             }
             Spacer(minLength: 4)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.secondary)
+            TitleChevron()
         }
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+}
+
+/// The title's disclosure, held in from the title's edge by what the
+/// sidebar's pop-up chips keep after theirs, so it stands in one column
+/// with their chevrons and the sidebar's toggle on the bar above.
+private struct TitleChevron: View {
+    private static let trailingInset: CGFloat = 8
+
+    var body: some View {
+        Image(systemName: "chevron.up.chevron.down")
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .padding(.trailing, Self.trailingInset)
     }
 }
 
@@ -201,9 +213,7 @@ private struct WorkspaceTitle: View {
                     .truncationMode(.tail)
             }
             Spacer(minLength: 4)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(.secondary)
+            TitleChevron()
         }
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)

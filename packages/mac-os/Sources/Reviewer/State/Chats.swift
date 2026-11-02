@@ -82,8 +82,12 @@ final class Chats {
     private(set) var catalog: ChatModelCatalog?
     private(set) var drafts: [String: ComposerDraft] = [:]
     /// Which agent each conversation the window's tabs hold runs on, read
-    /// once for each and kept up with the conversation as it is left.
-    private(set) var agents: [String: ChatProviderKind] = [:]
+    /// once for each and kept up with the conversation as it is left. Kept
+    /// across launches too, so the tabs drawn before the island reports
+    /// (see `WindowTabStrip.lastReported`) wear their agents from the start.
+    private(set) var agents: [String: ChatProviderKind] {
+        didSet { defaults.set(agents.mapValues(\.rawValue), forKey: Keys.agents) }
+    }
     /// The settings each unsent session tab's composer holds, by tab: taken
     /// from the last session's when the tab opens, and the tab's own from
     /// then on — a later session's switch is the next tab's to start from,
@@ -118,6 +122,7 @@ final class Chats {
         static let favorites = "chats.favorites"
         static let lastSession = "chats.lastSession"
         static let composerHeight = "chats.composerHeight"
+        static let agents = "chats.agents"
     }
 
     init(client: ReviewerClient) {
@@ -126,6 +131,8 @@ final class Chats {
         let last = defaults.data(forKey: Keys.lastSession).flatMap { try? JSONDecoder().decode(LastSession.self, from: $0) } ?? LastSession()
         let height = defaults.double(forKey: Keys.composerHeight)
         favorites = defaults.stringArray(forKey: Keys.favorites) ?? []
+        agents = (defaults.dictionary(forKey: Keys.agents) as? [String: String] ?? [:])
+            .compactMapValues(ChatProviderKind.init(rawValue:))
         lastSession = last
         composerHeight = height > 0 ? height : 92
     }

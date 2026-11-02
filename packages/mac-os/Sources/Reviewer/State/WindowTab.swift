@@ -4,13 +4,13 @@
 // tab is a route change in a page that has already primed it rather than a
 // trip over the bridge. What the shell holds is a picture of the strip,
 // reported whenever it changes, which the toolbar draws natively (see
-// `ModeButtons` and `SessionTabBar`) and the menu bar names: the sessions ⌘1–9 reach, the
+// `ModeButtons` and `SessionTabBar`) and the menu bar names: the sessions ⇧⌘1–9 reach, the
 // modes ⌘G crosses between, and
 // whether the tab in front can be closed. See `ShellWindowTabStrip` in the
 // SPA's `lib/shell`.
 import Foundation
 
-struct WindowTabStrip: Decodable, Hashable, Sendable {
+struct WindowTabStrip: Codable, Hashable, Sendable {
     var tabs: [WindowTab]
     var activeId: String
 
@@ -28,7 +28,7 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
         return active.id == tab.id || (tab.kind == .sessions && active.kind == .session)
     }
 
-    /// The sessions in strip order, which is what ⌘1–9 count: the pinned
+    /// The sessions in strip order, which is what ⇧⌘1–9 count: the pinned
     /// tabs are ways of working rather than tabs among them, and ⌘G's.
     var sessions: [WindowTab] { tabs.filter { !$0.pinned } }
 
@@ -48,9 +48,24 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
         else { return nil }
         return try? JSONDecoder().decode(WindowTabStrip.self, from: data)
     }
+
+    /// The strip as the island last reported it, kept across launches: the
+    /// island boots well after the window is up, and a toolbar that waited
+    /// for its first report drew an empty bar and then broke the tabs in.
+    /// Drawn from this, the window opens with its tabs; the island's report
+    /// replaces it, and is almost always the same strip.
+    static var lastReported: WindowTabStrip {
+        get {
+            UserDefaults.standard.data(forKey: lastReportedKey)
+                .flatMap { try? JSONDecoder().decode(WindowTabStrip.self, from: $0) } ?? .empty
+        }
+        set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: lastReportedKey) }
+    }
+
+    private static let lastReportedKey = "windowTabs.lastReported"
 }
 
-struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
+struct WindowTab: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let kind: WindowTabKind
@@ -86,7 +101,7 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
 /// What a tab is, as the web strip sorts them — its `WindowTabKind` — with
 /// the web app's icons for each, Tabler's code, git branch, send and
 /// message, in their SF Symbols shapes.
-enum WindowTabKind: String, Decodable, Sendable {
+enum WindowTabKind: String, Codable, Sendable {
     case project
     case sessions
     case session

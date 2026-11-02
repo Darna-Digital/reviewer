@@ -909,18 +909,30 @@ export function CodeWorkspace() {
       },
     });
     updateTabs(() => settled);
-    const openPath = open === null ? null : tabFile(open).path;
+    const opened = open === null ? null : tabFile(open);
+    const openPath = opened?.path ?? null;
+    // With none of this repository's own in the strip, the restored tab is a
+    // sibling's, and showing it moves the page to that repository.
+    const openRepo =
+      opened !== null && opened.repo !== null && opened.repo !== repoRoot
+        ? opened.repo
+        : undefined;
     // Replaces rather than pushes, so Back leaves the strip behind instead of
     // returning to a URL that reopens the same file. Done off the repository
     // alone rather than waiting on its file list: the viewer is already asking
     // for whatever the URL names, and a file the last repository had open is a
     // request this one can only answer with an error.
-    if (openPath !== viewing || requestedTab !== undefined) {
+    if (
+      openPath !== viewing ||
+      openRepo !== undefined ||
+      requestedTab !== undefined
+    ) {
       void navigate({
         to: ".",
         search: (prev: Search) => ({
           ...prev,
           file: openPath ?? undefined,
+          ...(openRepo === undefined ? {} : { repo: openRepo }),
           tab: undefined,
         }),
         replace: true,
@@ -1312,7 +1324,9 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      return <EmptyPane />;
+      // The strip names what belongs here, and the effect above is already
+      // putting it back; the ways into an empty pane would contradict it.
+      return tabbed && tabs.tabs.length > 0 ? null : <EmptyPane />;
     }
     return (
       <DiffPane

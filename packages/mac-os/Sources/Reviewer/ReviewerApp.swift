@@ -48,9 +48,6 @@ struct ReviewerApp: App {
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1040, height: 620)
         .defaultPosition(.center)
-        // Xcode's chord for its welcome, on the Window menu item the system
-        // adds for the scene.
-        .keyboardShortcut("1", modifiers: [.command, .shift])
         // Never the window a relaunch restores, and never the one the
         // launch opens: the workspace decides whether it is wanted.
         .restorationBehavior(.disabled)
@@ -72,9 +69,10 @@ struct ReviewerApp: App {
 /// not only while the page island has the keyboard.
 ///
 /// The chords are the web app's own — ⌘T for a session, ⌘B the bottom
-/// pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so the window
-/// answers the hands that learned it in the browser; the rail's buttons,
-/// which the web app gives no chords, take ⌥⌘1–7 (see `RailShortcut`).
+/// pane, ⌘G across Code and Sessions — so the window answers the hands
+/// that learned it in the browser; the rail's buttons take ⌘1–3 for the
+/// code surfaces and ⌥⌘4–7 for the bottom pane's (see `RailShortcut`), and
+/// the sessions ⇧⌘1–9 (see `TabSlotChords`).
 /// The tab chords are the island's strip's to answer, and a menu
 /// equivalent takes the key before the page sees it, so each of those
 /// items hands its chord back to the strip (`WindowTabAction`) rather than
@@ -158,8 +156,9 @@ struct ReviewerCommands: Commands {
             Divider()
         }
         // ⌘G crosses between the two ways of working the strip leads with,
-        // and the sessions alone take the digits, as on the web strip: the
-        // pinned tabs are ways of working rather than tabs among them.
+        // and the sessions alone take ⇧⌘ and the digits: the pinned tabs are
+        // ways of working rather than tabs among them. The items show the
+        // chords; `TabSlotChords` hears them, by key rather than character.
         CommandMenu("Tabs") {
             Button("Switch between code and sessions") { model.switchMode() }
                 .keyboardShortcut("g", modifiers: .command)
@@ -172,7 +171,7 @@ struct ReviewerCommands: Commands {
             Divider()
             ForEach(Array(model.windowTabs.sessions.prefix(9).enumerated()), id: \.element.id) { slot, tab in
                 Button(tab.title) { model.select(tabId: tab.id) }
-                    .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: .command)
+                    .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: [.command, .shift])
             }
         }
         // The git chords the TUI shares: ⇧⌘B the branch switcher, ⌃G a

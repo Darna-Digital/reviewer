@@ -69,11 +69,11 @@ export interface ShellCommitSource {
 }
 
 /**
- * How many listings this document has posted. A page's take-down waits a
- * tick and is cancelled by a listing posted in the meantime — see
+ * The page whose listing the shell is drawing. A page's take-down waits a
+ * tick and only goes through while it still owns the tree — see
  * `useShellTree`.
  */
-let listingsPosted = 0;
+let treeOwner: object | null = null;
 
 const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
   switch (action.kind) {
@@ -105,6 +105,7 @@ const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
 export function useShellTree(source: ShellTreeSource | null): void {
   const latest = useRef(source);
   latest.current = source;
+  const owner = useRef({}).current;
 
   // The handlers are remade every render; the picture only follows the data.
   const mode = source?.mode ?? null;
@@ -136,11 +137,6 @@ export function useShellTree(source: ShellTreeSource | null): void {
         : null,
     [mode, paths, gitStatus, loading, projectPath, discardable, spansWorkspace]
   );
-  useEffect(() => {
-    if (!shellDrawsTree) return;
-    listingsPosted += 1;
-    void shell.post({ type: "tree", tree: listing });
-  }, [listing]);
   const state = useMemo<ShellTreeState>(
     () => ({
       selected,
@@ -150,26 +146,45 @@ export function useShellTree(source: ShellTreeSource | null): void {
     }),
     [selected, selectedRoot, changes, draft, comparing, against, aim]
   );
+  // A new listing and the state under it go as one message: posted apart,
+  // they reach the shell in separate frames, and the composer under the tree
+  // would land a frame after the rows it belongs to.
+  const postedListing = useRef<ShellTree | null | undefined>(undefined);
   useEffect(() => {
-    if (!shellDrawsTree || listing === null) return;
-    void shell.post({ type: "treeState", state });
-  }, [listing, state]);
+    if (!shellDrawsTree) return;
+    if (postedListing.current !== listing) {
+      postedListing.current = listing;
+      treeOwner = owner;
+      void shell.post({
+        type: "tree",
+        tree: listing,
+        ...(listing === null ? {} : { state }),
+      });
+      return;
+    }
+    if (listing !== null) void shell.post({ type: "treeState", state });
+  }, [listing, state, owner]);
   // The code pages are sibling routes, so browse to review is this page
   // unmounting and the next mounting in the same commit. Taken down here and
   // put up again there, the shell's tree would be emptied for a frame between
   // them; instead the take-down waits a tick, and the next page's listing,
   // posted before it runs, cancels it. A page that leaves for a surface with
-  // no tree posts nothing in that tick, and the take-down goes through.
+  // no tree posts nothing in that tick, and the take-down goes through. A
+  // page that unmounts after the next one has already posted no longer owns
+  // the tree, and leaves it standing. Effects torn down and run again on the
+  // same page — StrictMode, a hidden subtree shown again — post the listing
+  // afresh, which cancels the take-down too.
   useEffect(() => {
     if (!shellDrawsTree) return;
     return () => {
-      const seen = listingsPosted;
+      postedListing.current = undefined;
       queueMicrotask(() => {
-        if (listingsPosted === seen)
-          void shell.post({ type: "tree", tree: null });
+        if (treeOwner !== owner || postedListing.current !== undefined) return;
+        treeOwner = null;
+        void shell.post({ type: "tree", tree: null });
       });
     };
-  }, []);
+  }, [owner]);
 
   useEffect(() => {
     if (!shellDrawsTree) return;

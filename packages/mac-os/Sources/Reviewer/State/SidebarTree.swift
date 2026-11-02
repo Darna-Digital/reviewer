@@ -254,12 +254,54 @@ final class SidebarTree {
 
     // MARK: reports
 
-    /// The tree as the page reports it. A page that shows no tree takes the
-    /// listing down and leaves the rows standing: the sidebar is crossfading
-    /// to another layout over them (see `SidebarLayout`), and rows cleared
-    /// under a fading outline vanish before it does; the next tree reported
+    /// The tree as the page reports it, with the state under it when the
+    /// page sent them together. A page that shows no tree takes the listing
+    /// down and leaves the rows standing: the sidebar is moving to another
+    /// layout over them (see `SidebarLayout`); the next tree reported
     /// replaces them, remade if it is another mode's or project's.
-    func take(_ listing: ShellTree?) {
+    ///
+    /// A page just mounted reports itself loading with nothing in it before
+    /// its rows come. Over rows already standing that report is held back
+    /// (see `pending`) rather than emptying the outline for the moment
+    /// between, so one tree gives way to the next in a single step.
+    func take(_ listing: ShellTree?, state: ShellTreeState? = nil) {
+        if let listing, listing.loading, listing.paths.isEmpty, !roots.isEmpty {
+            pending = (listing, state)
+            return
+        }
+        pending = nil
+        apply(listing)
+        if let state { apply(state) }
+    }
+
+    func take(_ state: ShellTreeState) {
+        if pending != nil {
+            pending?.state = state
+        } else {
+            apply(state)
+        }
+    }
+
+    /// A report held back until the rows it promises are in: a loading,
+    /// empty listing, and whatever state came under it since.
+    private var pending: (listing: ShellTree, state: ShellTreeState?)?
+
+    /// Whether the tree stands in `mode` with nothing held back — what the
+    /// sidebar waits for before it lays itself out for that mode.
+    func holds(_ mode: TreeMode) -> Bool {
+        pending == nil && listing?.mode == mode
+    }
+
+    /// Lets a held-back report through, rows or not: the page took too long
+    /// to fill it, and its loading state is better than the last tree.
+    func showPending() {
+        guard let pending else { return }
+        self.pending = nil
+        apply(pending.listing)
+        if let state = pending.state { apply(state) }
+    }
+
+    private func apply(_ listing: ShellTree?) {
         guard listing != self.listing else { return }
         self.listing = listing
         guard let listing else { return }
@@ -273,7 +315,7 @@ final class SidebarTree {
         rebuild()
     }
 
-    func take(_ state: ShellTreeState) {
+    private func apply(_ state: ShellTreeState) {
         // The state comes with every selection too, and an observed property
         // written notifies whether or not it changed: the composer would
         // redraw its whole file list on each pick.

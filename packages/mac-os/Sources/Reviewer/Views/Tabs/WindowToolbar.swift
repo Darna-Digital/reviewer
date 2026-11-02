@@ -67,15 +67,15 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
     /// Nothing is placed for the sidebar: the separator holds the sidebar's
     /// run to its edge, and the rest to the detail.
     private func follow() {
-        let (hasProject, sidebarShown) = withObservationTracking {
-            (model.hasProject, model.sidebarShown)
+        let (showsProjectItems, sidebarShown) = withObservationTracking {
+            (model.showsProjectChrome, model.sidebarShown)
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in self?.follow() }
         }
         sidebarToggle.sidebarShown = sidebarShown
         items[Self.toggle]?.menuFormRepresentation?.title = sidebarToggle.title
-        items[Self.mode]?.isHidden = !hasProject
-        items[Self.sessions]?.isHidden = !hasProject
+        items[Self.mode]?.isHidden = !showsProjectItems
+        items[Self.sessions]?.isHidden = !showsProjectItems
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -107,7 +107,7 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
             item.visibilityPriority = .high
         case Self.mode:
             let group = modeButtons.item
-            group.isHidden = !model.hasProject
+            group.isHidden = !model.showsProjectChrome
             group.menuFormRepresentation = submenuItem(group.label, modeMenu)
             items[identifier] = group
             return group
@@ -116,7 +116,7 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
             item.view = SessionTabBar(model: model)
             item.isBordered = false
             item.menuFormRepresentation = submenuItem(item.label, sessionsMenu)
-            item.isHidden = !model.hasProject
+            item.isHidden = !model.showsProjectChrome
             // The tabs give way before anything else on the bar does.
             item.visibilityPriority = .low
         default:
@@ -183,8 +183,7 @@ final class WindowToolbar: NSObject, NSToolbarDelegate, NSMenuDelegate {
 /// sidebar's glass rather than the disc of glass a bordered item wears —
 /// Tahoe's floating sidebar never had a toggle in glass on its glass —
 /// named on the bar's glass label rather than in a tooltip (see
-/// `ToolbarGlassLabel`). It keeps the islands' margin clear after it, so
-/// the column's edge, where the sidebar is dragged wider, is not under it.
+/// `ToolbarGlassLabel`).
 @MainActor
 private final class SidebarToggle: NSView {
     let button = BarChipButton(symbol: "sidebar.left", pointSize: 14, weight: .regular)
@@ -216,10 +215,13 @@ private final class SidebarToggle: NSView {
             button.widthAnchor.constraint(
                 equalToConstant: ceil(button.image?.size.width ?? 0) + Self.sidePadding * 2),
             button.heightAnchor.constraint(equalToConstant: Self.height),
+            // The same chip open or folded: anything set apart for the
+            // folded bar moves the glyph the moment the sidebar starts to go,
+            // ahead of the bar's own motion.
             button.leadingAnchor.constraint(equalTo: leadingAnchor),
             button.topAnchor.constraint(equalTo: topAnchor),
             button.bottomAnchor.constraint(equalTo: bottomAnchor),
-            trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: IslandMetrics.margin),
+            trailingAnchor.constraint(equalTo: button.trailingAnchor),
         ])
         sidebarShown = true
     }

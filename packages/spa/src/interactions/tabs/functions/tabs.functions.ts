@@ -194,17 +194,21 @@ export const syncActive = (
  * Which file to put back on screen when the strip has tabs but nothing names an
  * open file — a session restored from storage, where the URL carries no file.
  * The one that was in front, or the head of the strip once that is gone —
- * among the tabs `restorable` allows: in a workspace, the page's own
- * repository's, so arriving on a repository never sends the page back to the
- * one it left.
+ * preferring the tabs `restorable` allows: in a workspace, the page's own
+ * repository's, so arriving on a repository does not send the page back to the
+ * one it left while it has a file of its own to show. With none, the head of
+ * the strip all the same: a strip over an empty pane is never the answer.
  */
 export const tabToRestore = (
   state: TabsState,
   restorable: (path: string) => boolean = () => true
 ): string | null => {
   if (state.active !== null && restorable(state.active)) return state.active;
+  const ordered = orderTabs(state.tabs);
   return (
-    orderTabs(state.tabs).find((tab) => restorable(tab.path))?.path ?? null
+    ordered.find((tab) => restorable(tab.path))?.path ??
+    ordered[0]?.path ??
+    null
   );
 };
 

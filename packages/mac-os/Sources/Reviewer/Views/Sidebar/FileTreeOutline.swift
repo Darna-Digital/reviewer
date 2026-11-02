@@ -131,7 +131,7 @@ final class CrossfadingHost: NSView {
     /// for less motion.
     func crossfade(_ change: () -> Void) {
         guard window != nil, !bounds.isEmpty,
-            !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+            SidebarMotion.change != nil,
             let picture = picture()
         else {
             change()

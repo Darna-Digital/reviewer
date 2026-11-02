@@ -54,7 +54,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
     @ObservationIgnored var onWindowTabsReported: ((WindowTabStrip) -> Void)?
-    @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
+    @ObservationIgnored var onTreeReported: ((ShellTree?, ShellTreeState?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
     /// A file's past asked for: its path, and its repository when that is
@@ -327,7 +327,7 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             if let strip = WindowTabStrip.decode(body["strip"]) { onWindowTabsReported?(strip) }
             return (nil, nil)
         case "tree":
-            onTreeReported?(ShellTree.decode(body["tree"]))
+            onTreeReported?(ShellTree.decode(body["tree"]), ShellTreeState.decode(body["state"]))
             return (nil, nil)
         case "treeState":
             if let state = ShellTreeState.decode(body["state"]) { onTreeStateReported?(state) }

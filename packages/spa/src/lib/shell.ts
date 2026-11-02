@@ -68,8 +68,13 @@ export type ShellIntent =
   /** The window tabs as the strip stands, for the shell's menus to name. */
   | { readonly type: "windowTabs"; readonly strip: ShellWindowTabStrip }
   /** The code page's file tree as it stands, for the shell to draw in its
-   * sidebar; null once the page stops showing one. */
-  | { readonly type: "tree"; readonly tree: ShellTree | null }
+   * sidebar; null once the page stops showing one. A new listing carries its
+   * state with it, so the shell lays the tree and its composer out at once. */
+  | {
+      readonly type: "tree";
+      readonly tree: ShellTree | null;
+      readonly state?: ShellTreeState;
+    }
   /** What moves under the tree without the listing moving — the selection, the
    * commit composer — sent apart so a click does not carry every path again. */
   | { readonly type: "treeState"; readonly state: ShellTreeState }
@@ -106,7 +111,7 @@ export type ShellOpenTarget = "commands" | "files" | "text" | "settings";
  * its menus: the strip in the order it is shown, which of them holds the
  * window, and what each is. The strip itself — the store, the priming, the
  * switch — is the island's; what crosses is the picture, so the toolbar can
- * draw the tabs, the Tabs menu can list the sessions ⌘1–9 reach and Close Tab
+ * draw the tabs, the Tabs menu can list the sessions ⇧⌘1–9 reach and Close Tab
  * can stand down on a pinned one.
  */
 export interface ShellWindowTabStrip {

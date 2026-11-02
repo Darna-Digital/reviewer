@@ -40,7 +40,26 @@ final class AppModel {
     }
 
     var connection: ConnectionState = .starting
-    var workspace: WorkspaceInfo?
+    var workspace: WorkspaceInfo? {
+        didSet {
+            workspaceRead = true
+            UserDefaults.standard.set(hasProject, forKey: Self.hadProjectKey)
+        }
+    }
+    /// Whether the server has said what is open since launch.
+    private var workspaceRead = false
+    private static let hadProjectKey = "workspace.hadProject"
+
+    /// Whether the window wears what only a project has a use for — the
+    /// toolbar's pair and session tabs. Until the server has said what is
+    /// open, it is what the last launch had: a window reopening on its
+    /// project draws them from its first frame, rather than the toolbar
+    /// growing them in once the workspace is read.
+    var showsProjectChrome: Bool {
+        if workspaceRead { return hasProject }
+        if case .failed = connection { return false }
+        return UserDefaults.standard.bool(forKey: Self.hadProjectKey)
+    }
     /// Every repository of the workspace, in its order, each live at once.
     private(set) var roots: [RootModel] = []
     /// The repository the page is on — the one the window's own
@@ -58,7 +77,11 @@ final class AppModel {
     let notices = Notices()
 
     /// The window tabs as the island last reported them, for the menu bar.
-    private(set) var windowTabs: WindowTabStrip = .empty
+    private(set) var windowTabs: WindowTabStrip = .lastReported
+    /// Whether the island has reported its strip since launch. Until it has,
+    /// the strip is the one kept from last time, which the toolbar draws
+    /// without moving anything (see `SessionTabBar.apply`).
+    private(set) var windowTabsReported = false
     /// The code page's file tree, as it last reported it, with the sidebar's
     /// own folds, search and selection over it.
     let sidebar = SidebarTree()
@@ -119,6 +142,7 @@ final class AppModel {
     @ObservationIgnored private var lastCheckouts: [String: String] = [:]
     /// ⇧⇧, the web app's way into the file search, beside ⇧⌘O.
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
+    @ObservationIgnored private var tabSlotChords: TabSlotChords?
     /// What the window's per-repository surfaces stand on while nothing is
     /// open — never watched, never read.
     @ObservationIgnored private let detachedRoot: RootModel
@@ -150,15 +174,18 @@ final class AppModel {
             guard let self, !palette.isShown else { return }
             findFile()
         }
+        tabSlotChords = TabSlotChords { [weak self] slot in self?.selectSession(atSlot: slot) }
         page.onNavigated = { [weak self] href in
             self?.focus(onPageAt: href)
             self?.chats.follow(href: href)
             self?.rememberComparison(on: href)
+            self?.settleSidebarLayout()
         }
         chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
-        page.onTreeReported = { [weak self] listing in
-            self?.sidebar.take(listing)
+        page.onTreeReported = { [weak self] listing, state in
+            self?.sidebar.take(listing, state: state)
+            self?.settleSidebarLayout()
             self?.treeReported()
         }
         page.onTreeStateReported = { [weak self] state in
@@ -170,6 +197,7 @@ final class AppModel {
             // reports carry the list as it already stands; the sidebar is
             // only invalidated by one that moved something.
             if let list, list != self?.sessions { self?.sessions = list }
+            self?.settleSidebarLayout()
         }
         page.onHistoryRequested = { [weak self] path, rootPath in
             guard let self else { return }
@@ -184,6 +212,7 @@ final class AppModel {
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
         catalog.onChanged = { [weak self] in self?.publishWidgetFeed() }
         ProjectLinks.shared.handler = { [weak self] request in self?.open(link: request) }
+        settleSidebarLayout()
     }
 
     var hasProject: Bool { !(workspace?.roots.isEmpty ?? true) }
@@ -702,13 +731,58 @@ final class AppModel {
         }
     }
 
+    /// The layout the sidebar is drawn in: the address's, once the page has
+    /// reported what the sidebar holds there. The address moves with the
+    /// click, the page's tree a little after; a sidebar that followed the
+    /// address laid the new surface's bands around the old surface's rows,
+    /// then swapped the rows, then put the composer in — a shift at every
+    /// step. Held until the page catches up, it goes over in one.
+    private(set) var shownSidebarLayout: SidebarLayout = .nothing
+    @ObservationIgnored private var sidebarLayoutFallback: Task<Void, Never>?
+
+    /// How long the sidebar waits on the page before it lays the new
+    /// surface out with what it has, a loading tree or list included.
+    private static let sidebarLayoutPatience: Duration = .milliseconds(300)
+
+    private func settleSidebarLayout() {
+        let wanted = sidebarLayout
+        if wanted == shownSidebarLayout || shownSidebarLayout == .nothing || sidebarHolds(wanted) {
+            show(sidebarLayout: wanted)
+            return
+        }
+        guard sidebarLayoutFallback == nil else { return }
+        sidebarLayoutFallback = Task { [weak self] in
+            try? await Task.sleep(for: Self.sidebarLayoutPatience)
+            guard !Task.isCancelled, let self else { return }
+            sidebar.showPending()
+            show(sidebarLayout: sidebarLayout)
+        }
+    }
+
+    private func show(sidebarLayout layout: SidebarLayout) {
+        sidebarLayoutFallback?.cancel()
+        sidebarLayoutFallback = nil
+        if shownSidebarLayout != layout { shownSidebarLayout = layout }
+    }
+
+    /// Whether the page has reported what `layout` draws: the tree in its
+    /// mode, or the sessions list. The merge requests are the shell's own.
+    private func sidebarHolds(_ layout: SidebarLayout) -> Bool {
+        switch layout {
+        case .files(let changes): sidebar.holds(changes ? .commit : .browse)
+        case .sessions: sessions != nil
+        case .pulls, .nothing: true
+        }
+    }
+
     /// Whether the rail stands. Its buttons are the code surfaces' and the
     /// bottom pane's; on the sessions surface the web rail carries the
     /// list's own controls instead, and here those stand at the head of
     /// the sidebar's list (see `SessionsList`), so the column has nothing
     /// left to hold and collapses — the way the web rail leaves the
-    /// composer to the window on ⌘T.
-    var railShown: Bool { !onSessions }
+    /// composer to the window on ⌘T. It goes with the sidebar's layout,
+    /// not ahead of it.
+    var railShown: Bool { shownSidebarLayout != .sessions }
 
     /// The sidebar acted on a row of the page's tree — see `TreeAction`. A
     /// file's history is the pane's own to show, and the git actions are
@@ -1342,7 +1416,10 @@ final class AppModel {
 
     /// The strip as the island last drew it.
     private func take(_ strip: WindowTabStrip) {
+        if !windowTabsReported { windowTabsReported = true }
+        guard strip != windowTabs else { return }
         windowTabs = strip
+        WindowTabStrip.lastReported = strip
         chats.follow(tabs: strip)
     }
 
@@ -1373,6 +1450,13 @@ final class AppModel {
     func moveTab(id: String, beside toId: String, after: Bool) {
         guard id != toId else { return }
         page.send(WindowTabAction.move(id: id, toId: toId, after: after))
+    }
+
+    /// ⇧⌘1–9: the session tab in that place, counted among the sessions.
+    func selectSession(atSlot slot: Int) {
+        let sessions = windowTabs.sessions
+        guard sessions.indices.contains(slot - 1) else { return }
+        select(tabId: sessions[slot - 1].id)
     }
 
     func selectNextTab(offset: Int) {
