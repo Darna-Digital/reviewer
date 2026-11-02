@@ -48,12 +48,11 @@ struct BranchPicker: View {
     @ViewBuilder
     private var popover: some View {
         if look == .title {
-            WorkspaceBranchPopover(dismiss: { open = false }, ticksFocused: true,
-                                   actions: { actionsOffered(in: $0) }) { root in
+            WorkspaceBranchPopover(dismiss: { open = false }, actions: { actionsOffered(in: $0) }) { root in
                 ThemedDivider()
                 HStack(spacing: 2) {
-                    if let root, root === model.focusedRoot {
-                        branchFooterButtons
+                    if let root {
+                        branchFooterButtons(in: aimed(at: root))
                     }
                     Spacer(minLength: 0)
                     Button("Add repository…") { open = false; model.chooseRootToAdd() }
@@ -63,11 +62,11 @@ struct BranchPicker: View {
         } else {
             BranchPopover(
                 sections: sections, placeholder: "Search branches",
-                pick: pick, dismiss: { open = false }, actions: model.branchActions(for:)
+                pick: pick, dismiss: { open = false }, actions: { model.branchActions(for: $0) }
             ) {
                 ThemedDivider()
                 HStack(spacing: 2) {
-                    branchFooterButtons
+                    branchFooterButtons(in: nil)
                     Spacer(minLength: 0)
                 }
                 .popoverFooterBar()
@@ -76,18 +75,23 @@ struct BranchPicker: View {
     }
 
     /// What can be done to a branch, and to the repository, act on the
-    /// repository the page is on, so they are offered only over its
-    /// branches.
+    /// repository whose branches are up — whichever one the page is on.
     private func actionsOffered(in root: RootModel) -> ((BranchRef) -> [BranchAction])? {
-        guard root === model.focusedRoot else { return nil }
-        return { [model] branch in model.branchActions(for: branch) }
+        let target = aimed(at: root)
+        return { [model] branch in model.branchActions(for: branch, in: target) }
+    }
+
+    /// The repository an action names: one of a workspace's several, or
+    /// nil for a lone one, whose actions go without naming it.
+    private func aimed(at root: RootModel) -> RootModel? {
+        model.roots.count > 1 ? root : nil
     }
 
     @ViewBuilder
-    private var branchFooterButtons: some View {
-        Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
-        Button("Update") { open = false; model.fetch() }
-        Button("Push…") { open = false; model.push() }
+    private func branchFooterButtons(in root: RootModel?) -> some View {
+        Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil, root: root?.path) }
+        Button("Update") { open = false; model.fetch(in: root) }
+        Button("Push…") { open = false; model.push(in: root) }
     }
 
     @ViewBuilder
@@ -236,28 +240,24 @@ struct BranchAction: Identifiable {
 }
 
 extension AppModel {
-    /// What a workspace's repository offers on its row's menu: the page
-    /// turned to it, and — while the workspace holds others — another
-    /// repository put in its place, or it taken out.
+    /// What a workspace's repository offers on its row's menu while the
+    /// workspace holds others: another repository put in its place, or it
+    /// taken out.
     func repositoryActions(for root: RootModel) -> [BranchAction] {
-        var actions: [BranchAction] = []
-        func item(_ title: String, destructive: Bool = false, _ run: @escaping () -> Void) {
-            actions.append(BranchAction(id: actions.count, kind: .item(title: title, destructive: destructive, run: run)))
-        }
-        if root !== focusedRoot {
-            item("Switch to ‘\(root.name)’") { self.focus(root: root) }
-        }
-        guard roots.count > 1 else { return actions }
-        item("Replace…") { self.chooseReplacement(for: root) }
-        if !actions.isEmpty { actions.append(BranchAction(id: actions.count, kind: .divider)) }
-        item("Remove", destructive: true) { Task { await self.removeRoot(root) } }
-        return actions
+        guard roots.count > 1 else { return [] }
+        return [
+            BranchAction(id: 0, kind: .item(title: "Replace…", destructive: false) { self.chooseReplacement(for: root) }),
+            BranchAction(id: 1, kind: .divider),
+            BranchAction(id: 2, kind: .item(title: "Remove", destructive: true) { Task { await self.removeRoot(root) } }),
+        ]
     }
 
     /// The same actions the web app's switcher gives a branch, in the same
-    /// order, worded against the branch you are on.
-    func branchActions(for branch: BranchRef) -> [BranchAction] {
-        let head = currentBranch ?? "HEAD"
+    /// order, worded against the branch you are on — in `root`, when one of
+    /// a workspace's is named, or the focused one.
+    func branchActions(for branch: BranchRef, in root: RootModel? = nil) -> [BranchAction] {
+        let head = (root?.branch ?? currentBranch) ?? "HEAD"
+        let path = root?.path
         var actions: [BranchAction] = []
         func item(_ title: String, destructive: Bool = false, _ run: @escaping () -> Void) {
             actions.append(BranchAction(id: actions.count, kind: .item(title: title, destructive: destructive, run: run)))
@@ -265,25 +265,26 @@ extension AppModel {
         func divider() { actions.append(BranchAction(id: actions.count, kind: .divider)) }
 
         if !branch.isCurrent {
-            item("Checkout") { self.checkout(branch.ref) }
+            item("Checkout") { self.checkout(branch.ref, in: root) }
         }
-        item("New branch from ‘\(branch.display)’…") { self.branchPrompt = .create(startPoint: branch.ref) }
+        item("New branch from ‘\(branch.display)’…") { self.branchPrompt = .create(startPoint: branch.ref, root: path) }
         if !branch.isCurrent {
-            item("Checkout and update") { self.checkoutAndUpdate(branch.ref) }
+            item("Checkout and update") { self.checkoutAndUpdate(branch.ref, in: root) }
             divider()
-            item("Compare with ‘\(head)’") { self.compare(base: branch.ref, head: head) }
-            item("Review ‘\(head)’ against ‘\(branch.display)’") { self.review(head, against: branch.ref) }
-            item("Merge ‘\(branch.display)’ into ‘\(head)’") { self.merge(branch.ref) }
-            item("Rebase ‘\(head)’ onto ‘\(branch.display)’") { self.rebase(onto: branch.ref) }
+            item("Compare with ‘\(head)’") { self.compare(base: branch.ref, head: head, in: root) }
+            item("Review ‘\(head)’ against ‘\(branch.display)’") { self.review(head, against: branch.ref, in: root) }
+            item("Merge ‘\(branch.display)’ into ‘\(head)’") { self.merge(branch.ref, in: root) }
+            item("Rebase ‘\(head)’ onto ‘\(branch.display)’") { self.rebase(onto: branch.ref, in: root) }
         }
         divider()
-        item("Update") { self.fetch() }
-        item("Push…") { self.push() }
+        item("Update") { self.fetch(in: root) }
+        item("Pull") { self.pull(in: root) }
+        item("Push…") { self.push(in: root) }
         if !branch.isRemote {
             divider()
-            item("Rename…") { self.branchPrompt = .rename(from: branch.ref) }
+            item("Rename…") { self.branchPrompt = .rename(from: branch.ref, root: path) }
             if !branch.isCurrent {
-                item("Delete", destructive: true) { self.branchPrompt = .delete(name: branch.ref) }
+                item("Delete", destructive: true) { self.branchPrompt = .delete(name: branch.ref, root: path) }
             }
         }
         return actions
@@ -303,35 +304,45 @@ private struct BranchPromptModifier: ViewModifier {
             .alert(createTitle, isPresented: isPresented(\.isCreate), presenting: model.branchPrompt) { prompt in
                 TextField("Branch name", text: $name)
                 Button("Create") {
-                    if case .create(let start) = prompt { model.createBranch(named: name, from: start) }
+                    if case .create(let start, let root) = prompt {
+                        model.createBranch(named: name, from: start, in: model.root(at: root))
+                    }
                 }
                 .disabled(name.isEmpty)
                 Button("Cancel", role: .cancel) {}
             } message: { _ in }
-            .alert("Rename branch", isPresented: isPresented(\.isRename), presenting: model.branchPrompt) { prompt in
+            .alert("Rename branch\(inRepository)", isPresented: isPresented(\.isRename), presenting: model.branchPrompt) { prompt in
                 TextField("New name", text: $name)
                 Button("Rename") {
-                    if case .rename(let from) = prompt { model.renameBranch(from, to: name) }
+                    if case .rename(let from, let root) = prompt {
+                        model.renameBranch(from, to: name, in: model.root(at: root))
+                    }
                 }
                 .disabled(name.isEmpty)
                 Button("Cancel", role: .cancel) {}
             } message: { _ in }
             .alert("Delete branch", isPresented: isPresented(\.isDelete), presenting: model.branchPrompt) { prompt in
                 Button("Delete", role: .destructive) {
-                    if case .delete(let target) = prompt { model.deleteBranch(target) }
+                    if case .delete(let target, let root) = prompt { model.deleteBranch(target, in: model.root(at: root)) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: { prompt in
-                if case .delete(let target) = prompt { Text("Delete ‘\(target)’? This cannot be undone.") }
+                if case .delete(let target, _) = prompt { Text("Delete ‘\(target)’\(inRepository)? This cannot be undone.") }
             }
             .onChange(of: model.branchPrompt) { _, prompt in
-                if case .rename(let from)? = prompt { name = from } else { name = "" }
+                if case .rename(let from, _)? = prompt { name = from } else { name = "" }
             }
     }
 
     private var createTitle: String {
-        if case .create(let start?)? = model.branchPrompt { return "New branch from ‘\(start)’" }
-        return "New branch"
+        if case .create(let start?, _)? = model.branchPrompt { return "New branch from ‘\(start)’\(inRepository)" }
+        return "New branch\(inRepository)"
+    }
+
+    /// The repository a prompt asked over one of a workspace's names, so
+    /// the alert says which one it will act in.
+    private var inRepository: String {
+        model.root(at: model.branchPrompt?.root).map { " in \($0.name)" } ?? ""
     }
 
     private func isPresented(_ kind: KeyPath<BranchPrompt, Bool>) -> Binding<Bool> {

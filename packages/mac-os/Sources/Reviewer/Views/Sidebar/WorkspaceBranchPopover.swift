@@ -4,16 +4,12 @@
 // moves on to that one's branches, with the way back above them, and a
 // branch picked is checked out in the repository it is listed under. With
 // one it opens straight on that one's branches. A move between the steps
-// is one list whose rows are the step's, so it is the popover easing to
-// the new rows' height and the way back fading in above them, nothing
-// sliding sideways.
+// swaps the list's rows for the step's at once, the way back standing over
+// a repository's branches.
 import SwiftUI
 
 struct WorkspaceBranchPopover<Footer: View>: View {
     let dismiss: () -> Void
-    /// Whether the repository the page is on is ticked among the others —
-    /// the sidebar's title, which names it; the chat's chip names none.
-    var ticksFocused = false
     /// The row menu of a repository's branches, where the picker offers
     /// one for that repository.
     var actions: ((RootModel) -> ((BranchRef) -> [BranchAction])?)? = nil
@@ -23,35 +19,19 @@ struct WorkspaceBranchPopover<Footer: View>: View {
 
     @Environment(AppModel.self) private var model
     /// The repository whose branches the popover has moved on to.
-    @State private var drilled: String? {
-        didSet { if let drilled { left = drilled } }
-    }
-    /// The last one moved on to, which the way back keeps naming while it
-    /// eases shut.
-    @State private var left: String?
-
-    /// The way back's row and the rule under it.
-    private static var backHeight: CGFloat { 35 }
+    @State private var drilled: String?
 
     private var single: RootModel? { model.roots.count == 1 ? model.roots.first : nil }
-    private var leftRoot: RootModel? { model.root(at: left) }
     private var shownRoot: RootModel? { single ?? model.root(at: drilled) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // The way back eases open on the curve the list grows on, rather
-            // than standing up whole above it: a row appearing at once while
-            // the list eased made the popover jump and then glide.
-            if single == nil {
-                back(from: shownRoot ?? leftRoot)
-                    .frame(height: shownRoot == nil ? 0 : Self.backHeight, alignment: .top)
-                    .clipped()
-                    .opacity(shownRoot == nil ? 0 : 1)
-                    .allowsHitTesting(shownRoot != nil)
+            if single == nil, let shownRoot {
+                back(from: shownRoot)
             }
             BranchPopover(
                 sections: sections, placeholder: placeholder, pick: pick, dismiss: dismiss,
-                actions: rowActions, rowActions: repositoryMenu, drillsIn: { $0.branch == nil }, easesHeight: true
+                actions: rowActions, rowActions: repositoryMenu, drillsIn: { $0.branch == nil }
             ) {
                 footer(shownRoot)
             }
@@ -74,7 +54,7 @@ struct WorkspaceBranchPopover<Footer: View>: View {
             rows: model.roots.map { root in
                 BranchChoice(
                     id: root.path, branch: nil, title: root.name, symbol: "folder", tint: nil,
-                    badge: nil, checked: ticksFocused && root === model.focusedRoot,
+                    badge: nil, checked: false,
                     detail: root.branch ?? "Detached HEAD", detailSymbol: "arrow.triangle.branch",
                     monograms: [root.name])
             })]
@@ -101,7 +81,8 @@ struct WorkspaceBranchPopover<Footer: View>: View {
     /// the repository it is listed under.
     private func pick(_ choice: BranchChoice) {
         guard let root = shownRoot else {
-            return step { drilled = choice.id }
+            drilled = choice.id
+            return
         }
         guard let branch = choice.branch, !branch.isCurrent else { return }
         if model.roots.count > 1 {
@@ -112,18 +93,16 @@ struct WorkspaceBranchPopover<Footer: View>: View {
     }
 
     /// The way back to the repositories, over the branches of one.
-    private func back(from root: RootModel?) -> some View {
+    private func back(from root: RootModel) -> some View {
         VStack(spacing: 0) {
-            Button { step { drilled = nil } } label: {
+            Button { drilled = nil } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    if let root {
-                        RepoAvatar(name: root.name, size: 16)
-                        Text(root.name)
-                            .font(.system(size: 12, weight: .semibold))
-                    }
+                    RepoAvatar(name: root.name, size: 16)
+                    Text(root.name)
+                        .font(.system(size: 12, weight: .semibold))
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 12)
@@ -134,13 +113,6 @@ struct WorkspaceBranchPopover<Footer: View>: View {
             .help("Back to the repositories")
             ThemedDivider()
         }
-    }
-
-    /// A move between the steps: the rows and the back row crossfading,
-    /// the popover easing to the new rows' height — on the curve the
-    /// list's own height moves on, so the two arrive together.
-    private func step(_ move: () -> Void) {
-        withAnimation(BranchPopover<EmptyView>.resize, move)
     }
 
     private static func branchSections(of root: RootModel) -> [BranchChoiceSection] {

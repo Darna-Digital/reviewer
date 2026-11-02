@@ -434,6 +434,7 @@ private struct CommitList: View {
                     CommitRow(commit: commit, graph: layout.rows[index],
                               selected: commit.sha == history.selectedSha) { select(commit) }
                         .id(commit.sha)
+                        .contextMenu { CommitRowMenu(commit: commit) }
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
                         .onAppear {
@@ -542,6 +543,23 @@ private struct CommitRow: View {
 
     private static let authorWidth: CGFloat = 160
     private static let dayWidth: CGFloat = 44
+}
+
+/// A commit row's menu: its sha, full or short, and its subject, each to
+/// the clipboard.
+private struct CommitRowMenu: View {
+    let commit: CommitInfo
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Button("Copy Commit SHA") { model.copy(sha: commit.sha, shortSha: commit.shortSha) }
+        Button("Copy Short SHA") { model.copy(sha: commit.sha, shortSha: commit.shortSha, short: true) }
+        Divider()
+        Button("Copy Subject") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(commit.subject, forType: .string)
+        }
+    }
 }
 
 /// A ref a commit carries, as the small badge the web list wears.

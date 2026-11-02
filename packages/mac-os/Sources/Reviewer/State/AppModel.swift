@@ -1014,6 +1014,20 @@ final class AppModel {
         NSPasteboard.general.setString(pull.url, forType: .string)
     }
 
+    /// A commit's sha on the clipboard, said so in a toast — the full sha
+    /// by default, since it is what `git` and an agent asked to go back to
+    /// it want, as `repo@sha` in a workspace of several repositories so the
+    /// agent knows which one to go back in; the short one, bare, when the
+    /// reader is pasting it into prose.
+    func copy(sha: String, shortSha: String, short: Bool = false) {
+        let repo = roots.count > 1 ? focusedRoot?.name : nil
+        let text = short ? shortSha : repo.map { "\($0)@\(sha)" } ?? sha
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        let shown = short ? shortSha : repo.map { "\($0)@\(shortSha)" } ?? shortSha
+        notices.post(.success, "Copied \(short ? "short " : "")commit \(shown)")
+    }
+
     /// Fetch the pull request's head and check it out as its local branch,
     /// in its own repository — the focused one unless a row of another's
     /// says otherwise; the branch changing under the diff, everything is

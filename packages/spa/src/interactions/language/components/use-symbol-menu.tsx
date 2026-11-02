@@ -7,8 +7,12 @@
  *
  * Fixes are fetched when the menu opens rather than listed optimistically, so
  * the menu only ever offers something that will actually apply.
+ *
+ * The definition is resolved when the menu opens too. Standing on the
+ * declaration itself, going to it would only find its usages — the entry above
+ * it — so the menu leaves it out rather than offer the same thing twice.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor } from "@pierre/diffs/edit";
 import type { CodeActionItem, FileEdits } from "@reviewer/core/language";
 import { pointerAnchor, type VirtualAnchor } from "../functions/anchors";
@@ -17,13 +21,20 @@ import {
   identifierWithin,
   positionOfToken,
 } from "../functions/language.functions";
-import type { TokenSpan } from "../interfaces/language.interfaces";
+import type {
+  NavigationOutcome,
+  TokenSpan,
+} from "../interfaces/language.interfaces";
 import { SymbolMenu, type SymbolMenuEntry } from "./symbol-menu";
 
 interface MenuState {
   readonly anchor: VirtualAnchor;
   readonly token: TokenSpan;
   readonly actions: ReadonlyArray<CodeActionItem>;
+  /** Where going to the definition leads, asked once per right-click. */
+  readonly navigation: Promise<NavigationOutcome>;
+  /** Known to lead nowhere but this symbol's own usages. */
+  readonly onDeclaration: boolean;
 }
 
 export interface SymbolMenuOptions {
@@ -44,7 +55,12 @@ export interface SymbolMenuOptions {
   readonly onOpen: () => void;
   /** Search for the symbol's usages, which opens the Find window. */
   readonly onFindUsages: (token: TokenSpan) => void;
-  readonly onGoToDefinition: (token: TokenSpan, anchor: VirtualAnchor) => void;
+  /** Where going to the definition of `token` leads. */
+  readonly navigate: (token: TokenSpan) => Promise<NavigationOutcome>;
+  readonly onGoToDefinition: (
+    navigation: Promise<NavigationOutcome>,
+    anchor: VirtualAnchor
+  ) => void;
   /** Apply edits that land in files other than the open one. */
   readonly onApplyForeignEdits?: (edits: ReadonlyArray<FileEdits>) => void;
 }
@@ -176,12 +192,19 @@ export function useSymbolMenu({
   getContainer,
   onOpen,
   onFindUsages,
+  navigate,
   onGoToDefinition,
   onApplyForeignEdits,
 }: SymbolMenuOptions): SymbolMenuHandle {
   const [state, setState] = useState<MenuState | null>(null);
 
   const close = useCallback(() => setState(null), []);
+
+  // Read at the moment of the right-click rather than listened on: it is
+  // rebuilt whenever the diagnostics change, and re-binding the listener for
+  // that would cancel a menu that is still waiting on its release.
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     if (!enabled) return;
@@ -213,15 +236,37 @@ export function useSymbolMenu({
       event.preventDefault();
       onOpen();
       const anchor = pointerAnchor(event.clientX, event.clientY);
-      // The fixes may answer before the menu is even mounted, so they are held
-      // here as well as pushed — whichever happens second finds the other.
-      const pending: { actions: ReadonlyArray<CodeActionItem> } = {
-        actions: [],
+      // The fixes and the definition may answer before the menu is even
+      // mounted, so they are held here as well as pushed — whichever happens
+      // second finds the other.
+      const pending = {
+        actions: [] as ReadonlyArray<CodeActionItem>,
+        onDeclaration: false,
       };
+      const navigation = navigateRef.current(token);
       cancelOpen?.();
       cancelOpen = whenGestureEnds(event.buttons !== 0, () =>
-        setState({ anchor, token, actions: pending.actions })
+        setState({ anchor, token, navigation, ...pending })
       );
+
+      // The anchor is this right-click's own, so a slow answer for one symbol
+      // cannot land in the menu of the next one opened.
+      const settle = (patch: Partial<typeof pending>) => {
+        Object.assign(pending, patch);
+        setState((current) =>
+          current !== null && current.anchor === anchor
+            ? { ...current, ...patch }
+            : current
+        );
+      };
+
+      // A failed lookup keeps the entry: choosing it is what reports nothing
+      // was found, the same way a ⌘-click does.
+      navigation
+        .then((outcome) => {
+          if (outcome.kind === "usages") settle({ onDeclaration: true });
+        })
+        .catch(() => {});
 
       if (editor === null) return;
       const position = positionOfToken(token);
@@ -230,16 +275,7 @@ export function useSymbolMenu({
         { start: position, end: position },
         editor.getText()
       )
-        .then((result) => {
-          pending.actions = result.actions;
-          // The anchor is this right-click's own, so a slow answer for one
-          // symbol cannot land in the menu of the next one opened.
-          setState((current) =>
-            current !== null && current.anchor === anchor
-              ? { ...current, actions: result.actions }
-              : current
-          );
-        })
+        .then((result) => settle({ actions: result.actions }))
         .catch(() => {});
     };
 
@@ -283,15 +319,17 @@ export function useSymbolMenu({
           onFindUsages(state.token);
         },
       },
-      {
+    ];
+    if (!state.onDeclaration) {
+      out.push({
         id: "definition",
         label: "Go to definition",
         run: () => {
           close();
-          onGoToDefinition(state.token, state.anchor);
+          onGoToDefinition(state.navigation, state.anchor);
         },
-      },
-    ];
+      });
+    }
     for (const [index, action] of state.actions.entries()) {
       out.push({
         id: `fix:${index}`,

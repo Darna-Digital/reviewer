@@ -64,17 +64,24 @@ extension Array where Element == BranchRef {
 }
 
 /// What the picker asks before it acts: a name for a branch, a new name, or
-/// a yes to a deletion.
+/// a yes to a deletion — in the repository at `root`'s path, when it was
+/// asked over one of a workspace's, or the focused one.
 enum BranchPrompt: Identifiable, Equatable {
-    case create(startPoint: String?)
-    case rename(from: String)
-    case delete(name: String)
+    case create(startPoint: String?, root: String? = nil)
+    case rename(from: String, root: String? = nil)
+    case delete(name: String, root: String? = nil)
 
     var id: String {
         switch self {
-        case .create(let start): return "create:\(start ?? "")"
-        case .rename(let from): return "rename:\(from)"
-        case .delete(let name): return "delete:\(name)"
+        case .create(let start, let root): return "create:\(root ?? ""):\(start ?? "")"
+        case .rename(let from, let root): return "rename:\(root ?? ""):\(from)"
+        case .delete(let name, let root): return "delete:\(root ?? ""):\(name)"
+        }
+    }
+
+    var root: String? {
+        switch self {
+        case .create(_, let root), .rename(_, let root), .delete(_, let root): return root
         }
     }
 }
@@ -92,97 +99,100 @@ extension AppModel {
 
     // MARK: actions
 
-    func checkout(_ branch: String) {
-        runGit("Checking out \(branch)…", done: "Checked out \(branch)", failed: "Checkout failed") {
-            try await self.client.checkout(branch: branch)
+    // Each action runs in `root` when one is named — a repository of a
+    // workspace picked in the switcher, whichever one the page is on — and
+    // in the focused root otherwise.
+
+    func checkout(_ branch: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Checking out \(branch)\(at)…", done: "Checked out \(branch)\(at)", failed: "Checkout\(at) failed") {
+            try await $0.checkout(branch: branch)
             return nil
         }
     }
 
-    /// `branch` checked out in `root`, whichever repository the page is on —
-    /// what a workspace session's branch list picks, for any of its
-    /// repositories. Only that repository is read again after.
-    func checkout(_ branch: String, in root: RootModel) {
-        Task {
-            headMovesInFlight += 1
-            defer { headMovesInFlight -= 1 }
-            await notices.run(
-                "Checking out \(branch) in \(root.name)…", done: "Checked out \(branch) in \(root.name)",
-                failed: "Checkout in \(root.name) failed", report: .command
-            ) {
-                try await root.client.checkout(branch: branch)
-                return nil
-            }
-            await refresh(root: root)
+    func checkoutAndUpdate(_ branch: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Checking out \(branch)\(at)…", done: "Checked out and updated \(branch)\(at)",
+               failed: "Checkout\(at) failed") {
+            try await $0.checkout(branch: branch)
+            return try await $0.pull()
         }
     }
 
-    func checkoutAndUpdate(_ branch: String) {
-        runGit("Checking out \(branch)…", done: "Checked out and updated \(branch)", failed: "Checkout failed") {
-            try await self.client.checkout(branch: branch)
-            return try await self.client.pull()
+    func fetch(in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Fetching\(at)…", done: "Fetched\(at)", failed: "Fetch\(at) failed") { try await $0.fetch() }
+    }
+
+    func pull(in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Pulling\(at)…", done: "Pulled\(at)", failed: "Pull\(at) failed") { try await $0.pull() }
+    }
+
+    func push(in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Pushing\(at)…", done: "Pushed\(at)", failed: "Push\(at) failed") { try await $0.push() }
+    }
+
+    func merge(_ branch: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Merging \(branch)\(at)…", done: "Merged \(branch)\(at)", failed: "Merge of \(branch)\(at) stopped") {
+            try await $0.merge(branch: branch)
         }
     }
 
-    func fetch() {
-        runGit("Fetching…", done: "Fetched", failed: "Fetch failed") { try await self.client.fetch() }
+    func rebase(onto branch: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Rebasing onto \(branch)\(at)…", done: "Rebased onto \(branch)\(at)",
+               failed: "Rebase onto \(branch)\(at) stopped") {
+            try await $0.rebase(onto: branch)
+        }
     }
 
-    func pull() {
-        runGit("Pulling…", done: "Pulled", failed: "Pull failed") { try await self.client.pull() }
-    }
-
-    func push() {
-        runGit("Pushing…", done: "Pushed", failed: "Push failed") { try await self.client.push() }
-    }
-
-    func merge(_ branch: String) {
-        runGit("Merging \(branch)…", done: "Merged \(branch)", failed: "Merge of \(branch) stopped") { try await self.client.merge(branch: branch) }
-    }
-
-    func rebase(onto branch: String) {
-        runGit("Rebasing onto \(branch)…", done: "Rebased onto \(branch)", failed: "Rebase onto \(branch) stopped") { try await self.client.rebase(onto: branch) }
-    }
-
-    func createBranch(named name: String, from startPoint: String?) {
-        runGit("Creating \(name)…", done: "Created branch \(name)", failed: "Could not create \(name)") {
-            try await self.client.createBranch(name: name, startPoint: startPoint)
+    func createBranch(named name: String, from startPoint: String?, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Creating \(name)\(at)…", done: "Created branch \(name)\(at)", failed: "Could not create \(name)\(at)") {
+            try await $0.createBranch(name: name, startPoint: startPoint)
             return nil
         }
     }
 
-    func renameBranch(_ from: String, to: String) {
-        runGit("Renaming \(from)…", done: "Renamed \(from) → \(to)", failed: "Could not rename \(from)") {
-            try await self.client.renameBranch(from: from, to: to)
+    func renameBranch(_ from: String, to: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Renaming \(from)\(at)…", done: "Renamed \(from) → \(to)\(at)", failed: "Could not rename \(from)\(at)") {
+            try await $0.renameBranch(from: from, to: to)
             return nil
         }
     }
 
-    func deleteBranch(_ name: String) {
-        runGit("Deleting \(name)…", done: "Deleted \(name)", failed: "Could not delete \(name)") {
-            try await self.client.deleteBranch(name: name)
+    func deleteBranch(_ name: String, in root: RootModel? = nil) {
+        let at = naming(root)
+        runGit(in: root, "Deleting \(name)\(at)…", done: "Deleted \(name)\(at)", failed: "Could not delete \(name)\(at)") {
+            try await $0.deleteBranch(name: name)
             return nil
         }
     }
 
-    /// Two branches side by side, on the Code tab.
-    func compare(base: String, head: String) {
+    /// Two branches side by side, on the Code tab — of `root`, when one is
+    /// named, the page turning to it.
+    func compare(base: String, head: String, in root: RootModel? = nil) {
         var components = URLComponents()
         components.path = "/modes/code/browse/range"
         components.queryItems = [URLQueryItem(name: "base", value: base), URLQueryItem(name: "head", value: head)]
-        showOnCodeTab(components.string ?? Href.review)
+        showOnCodeTab(components.string ?? Href.review, in: root)
     }
 
     /// The branch you are on, read against what it is aimed at — everything
     /// since the merge base, uncommitted work included. Aiming is remembered
     /// by the server, so the next read of this branch needs no menu.
-    func review(_ head: String, against target: String) {
+    func review(_ head: String, against target: String, in root: RootModel? = nil) {
         Task {
-            try? await client.setBranchTarget(branch: head, target: target)
+            try? await (root?.client ?? client).setBranchTarget(branch: head, target: target)
             var components = URLComponents()
             components.path = Href.review
             components.queryItems = [URLQueryItem(name: "target", value: target)]
-            showOnCodeTab(components.string ?? Href.review)
+            showOnCodeTab(components.string ?? Href.review, in: root)
         }
     }
 
@@ -201,42 +211,28 @@ extension AppModel {
     /// The action as a notice, `pending` while it runs and then `done` or
     /// `failed` over what git said — and the project re-read either way,
     /// since a merge that stopped on a conflict has changed the tree as
-    /// surely as one that went through.
-    func fetch(in root: RootModel) {
-        runGit(in: root, "Fetching", done: "Fetched", failed: "Fetch") { try await $0.fetch() }
-    }
-
-    func pull(in root: RootModel) {
-        runGit(in: root, "Pulling", done: "Pulled", failed: "Pull") { try await $0.pull() }
-    }
-
-    func push(in root: RootModel) {
-        runGit(in: root, "Pushing", done: "Pushed", failed: "Push") { try await $0.push() }
-    }
-
-    /// A git action in `root`, whichever repository the page is on, the
-    /// repository named in its notice; only that one is read again after.
+    /// surely as one that went through. Run in a named root, only that one
+    /// is read again after.
     private func runGit(
-        in root: RootModel, _ pending: String, done: String, failed: String,
+        in root: RootModel?, _ pending: String, done: String, failed: String,
         _ body: @escaping (ReviewerClient) async throws -> String?
     ) {
         Task {
             headMovesInFlight += 1
             defer { headMovesInFlight -= 1 }
-            await notices.run(
-                "\(pending) \(root.name)…", done: "\(done) \(root.name)", failed: "\(failed) of \(root.name) failed",
-                report: .command
-            ) { try await body(root.client) }
-            await refresh(root: root)
+            let client = root?.client ?? self.client
+            await notices.run(pending, done: done, failed: failed, report: .command) { try await body(client) }
+            if let root { await refresh(root: root) } else { await refresh() }
         }
     }
 
-    private func runGit(_ pending: String, done: String, failed: String, _ body: @escaping () async throws -> String?) {
-        Task {
-            headMovesInFlight += 1
-            defer { headMovesInFlight -= 1 }
-            await notices.run(pending, done: done, failed: failed, report: .command, body)
-            await refresh()
-        }
+    /// The repository an action names in its notice, when it was aimed at
+    /// one of several.
+    private func naming(_ root: RootModel?) -> String {
+        root.map { " in \($0.name)" } ?? ""
+    }
+
+    private func showOnCodeTab(_ href: String, in root: RootModel?) {
+        if let root { showOnCodeTab(href, in: root) } else { showOnCodeTab(href) }
     }
 }
