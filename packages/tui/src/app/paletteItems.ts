@@ -1,5 +1,6 @@
 import type { GrepOptions } from '../git/files';
 import { STATUS_LETTER } from '../render/listItems';
+import { branchLabel } from '../render/repoLabels';
 import type { Seg } from '../render/styled';
 import { fuzzyFilter, matchRange } from '../search/fuzzy';
 import type { PaletteMode } from '../search/paletteModes';
@@ -66,14 +67,35 @@ function commandItems({ app, query }: ItemsInput): PaletteItem[] {
     entry('text', 'Search in files…', keyOf('search')),
     entry('git', 'Git…'),
     ...COMMANDS.filter(
-      (command) => command.palette && !ENTRY_IDS.has(command.id),
+      (command) =>
+        command.palette &&
+        !ENTRY_IDS.has(command.id) &&
+        (command.when?.(app) ?? true),
     ).map((command) => commandItem(app, command)),
+    ...repoItems(app),
   ];
   return fuzzyFilter(entries, query, labelText);
 }
 
 function entry(mode: PaletteMode, title: string, hint?: string): PaletteItem {
   return { key: `mode:${mode}`, label: [{ text: title }], hint, opens: mode };
+}
+
+/** "Go to repository X" for each of a workspace's repositories but the focused one. */
+function repoItems(app: App): PaletteItem[] {
+  const { repos, focused } = app.review;
+  if (!repos.spans) return [];
+  return repos.list
+    .filter((repo) => repo !== focused)
+    .map((repo) => {
+      const state = app.review.stateOf(repo);
+      return {
+        key: `repo:${repo.root}`,
+        label: [{ text: `Go to repository ${repo.name}` }],
+        hint: state ? branchLabel(state) : undefined,
+        run: () => app.actions.focusRepo(repo),
+      };
+    });
 }
 
 function commandItem(app: App, command: Command): PaletteItem {

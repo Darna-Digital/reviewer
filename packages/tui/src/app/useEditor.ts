@@ -2,7 +2,7 @@ import type { ReviewComment } from '@reviewer/core/comments';
 import * as React from 'react';
 import type { Theme } from '../diff/highlight';
 import type { FileDiff } from '../diff/parseDiff';
-import { readFile } from '../git/files';
+import { readRepoFile } from '../repos/repoFiles';
 import type { FileContent } from '../git/files';
 import type { FileIcons } from '../render/fileIcons';
 import type { Palette } from '../render/palette';
@@ -46,13 +46,13 @@ export function useEditor(opts: EditorOptions) {
   React.useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    void readFile(review.root, active).then((file) => {
+    void readRepoFile(review.repos, active).then((file) => {
       if (!cancelled) setContent({ path: active, file });
     });
     return () => {
       cancelled = true;
     };
-  }, [active, review.root, review.statusMap]);
+  }, [active, review.repos, review.statusMap]);
 
   const files = React.useMemo(
     () =>

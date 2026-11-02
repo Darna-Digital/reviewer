@@ -51,6 +51,25 @@ export function HistoryPane({
       backgroundColor={bg}
     >
       <box flexDirection="row" height={1} width={width} backgroundColor={bg}>
+        {review.repos.spans ? (
+          <>
+            <Button
+              segs={[
+                {
+                  text: ` ${review.focused.name} `,
+                  fg: palette.accent,
+                  bg: palette.control,
+                  bold: true,
+                },
+                { text: '▾ ', fg: palette.faint, bg: palette.control },
+              ]}
+              bg={palette.control}
+              hoverTint={palette.text}
+              onPress={() => actions.pickRepo()}
+            />
+            <Line segs={[{ text: ' ' }]} width={1} fill={bg} />
+          </>
+        ) : null}
         <TextField
           palette={palette}
           width={Math.min(36, width - 40)}

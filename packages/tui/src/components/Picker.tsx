@@ -42,9 +42,9 @@ export interface PickerProps {
   options: PickerOption[];
   onPick: (option: PickerOption) => void;
   onClose: () => void;
-  /** Extra footer row, e.g. a toggle; clicking it calls `onFooterPress`. */
+  /** Extra footer row, e.g. a toggle; clicking it calls `onFooterPress` with the column clicked. */
   footer?: Seg[];
-  onFooterPress?: () => void;
+  onFooterPress?: (column: number) => void;
   /**
    * Extra keys, given the highlighted option and the cell just right of its
    * row (where a submenu opens); return `true` when handled.
@@ -257,7 +257,7 @@ export function Picker(props: PickerProps) {
             segs={props.footer}
             width={inner}
             fill={palette.popover}
-            onMouseDown={props.onFooterPress}
+            onMouseDown={(event) => props.onFooterPress?.(event.x - left - 1)}
           />
         ) : null}
         <Line

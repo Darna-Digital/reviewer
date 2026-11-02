@@ -9,13 +9,8 @@ const FOOTER = ' ⏎ review · ^x check out · ^g open on GitHub · ^r reload ';
 export function PullsPicker() {
   const app = useAppContext();
   const { pulls, actions, palette, now } = app;
-  const sorted = [...pulls.list].sort((a, b) =>
-    a.baseRef.localeCompare(b.baseRef),
-  );
-  const shown =
-    app.review.comparison.kind === 'pull'
-      ? String(app.review.comparison.number)
-      : undefined;
+  const sorted = pulls.groups.flatMap((group) => group.pulls);
+  const shown = pulls.shown?.key;
 
   return (
     <Picker
@@ -33,8 +28,10 @@ export function PullsPicker() {
       options={sorted.map((pull) => {
         const badges = pullBadges(palette, pull, now);
         return {
-          key: String(pull.number),
-          group: pull.baseRef || 'No branch',
+          key: pull.key,
+          group: app.review.repos.spans
+            ? `${pull.repo.name} › ${pull.baseRef || 'No branch'}`
+            : pull.baseRef || 'No branch',
           label: `#${pull.number}  ${pull.title}`,
           search: pullHaystack(pull),
           labelColor: pull.draft ? palette.muted : undefined,
@@ -45,9 +42,12 @@ export function PullsPicker() {
       })}
       footer={[{ text: FOOTER, fg: palette.faint }]}
       onClose={actions.closeOverlay}
-      onPick={(option) => actions.reviewPull(Number(option.key))}
+      onPick={(option) => {
+        const pull = pulls.byKey(option.key);
+        if (pull) actions.reviewPull(pull);
+      }}
       onKey={(key, option) => {
-        const pull = option ? pulls.byNumber(Number(option.key)) : null;
+        const pull = option ? pulls.byKey(option.key) : null;
         if (key === 'ctrl+r') void pulls.reload();
         else if (key === 'ctrl+x' && pull) {
           actions.closeOverlay();

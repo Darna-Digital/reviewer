@@ -55,7 +55,7 @@ export function CommandPalette({ overlay }: { overlay: PaletteOverlay }) {
   const [index, setIndex] = React.useState(0);
   const options = searchMemory.options;
   const search = useTextSearch(
-    app.review.root,
+    app.review.repos,
     mode === 'text' ? query : '',
     options,
   );

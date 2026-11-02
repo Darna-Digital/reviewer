@@ -3,6 +3,7 @@ import * as React from 'react';
 import { commit, push, summarize } from '../git/actions';
 import { agentLabel, draftCommitMessage } from '../git/commitMessage';
 import type { CommitAgent } from '../git/commitMessage';
+import { byRepo } from '../repos/repos';
 import type { Review } from './useReview';
 import type { Workspace } from './useWorkspace';
 
@@ -73,7 +74,12 @@ export function useCommit(
       setBusy('generating');
       review.notify('info', `Drafting a message with ${agentLabel(agent)}…`);
       try {
-        setMessage(await draftCommitMessage(review.root, included, agent));
+        const parts = byRepo(review.repos, included).map((group) => ({
+          root: group.repo.root,
+          name: group.repo.name,
+          paths: group.paths,
+        }));
+        setMessage(await draftCommitMessage(parts, agent));
         review.notify('success', 'Message drafted');
       } catch (error) {
         review.notify(
@@ -99,14 +105,31 @@ export function useCommit(
       const ok = await review.runGit(
         'Committing…',
         async () => {
-          const sha = await commit(review.root, message.trim(), files);
-          if (!andPush) return `Committed ${sha}`;
-          try {
-            await push(review.root);
-            return `Committed ${sha} and pushed`;
-          } catch {
-            return `Committed ${sha}, but push failed`;
+          const groups = byRepo(review.repos, files);
+          const shas: string[] = [];
+          let pushed = true;
+          for (const { repo, paths: repoPaths } of groups) {
+            const label = review.repos.spans ? `${repo.name} ` : '';
+            try {
+              shas.push(
+                `${label}${await commit(repo.root, message.trim(), repoPaths)}`,
+              );
+            } catch (error) {
+              if (shas.length === 0) throw error;
+              throw new Error(
+                `Committed ${shas.join(', ')}, but not ${repo.name}: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            }
+            if (andPush)
+              pushed =
+                (await push(repo.root).then(
+                  () => true,
+                  () => false,
+                )) && pushed;
           }
+          const done = `Committed ${shas.join(', ')}`;
+          if (!andPush) return done;
+          return pushed ? `${done} and pushed` : `${done}, but push failed`;
         },
         (output) => summarize(output, output),
       );

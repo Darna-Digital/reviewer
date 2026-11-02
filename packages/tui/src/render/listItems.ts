@@ -1,4 +1,4 @@
-import type { DevCommand } from '@reviewer/core/local-dev';
+import type { RepoCommand } from '../app/useServices';
 import type { FileStatus } from '../git/files';
 import { graphWidth } from '../git/graph';
 import type { GraphRow } from '../git/graph';
@@ -48,6 +48,8 @@ export function treeItems(
   icons: FileIcons,
   rows: TreeRow[],
   checkOf: ((node: TreeNode) => Check) | null,
+  /** A workspace's repository folders, by path, with what to say of each: its branch. */
+  repoHints: ReadonlyMap<string, string> = new Map(),
 ): Array<ListItem<TreeNode>> {
   return rows.map(({ node, depth, expanded }) => ({
     key: node.path,
@@ -79,27 +81,35 @@ export function treeItems(
           ? icons.folder(expanded, bg)
           : icons.file(node.path, bg, color)),
       );
+      const repoHint = depth === 0 ? repoHints.get(node.path) : undefined;
       left.push({
         text: node.name,
         fg:
           color ??
-          (node.kind === 'dir'
-            ? palette.muted
-            : mix(palette.frame, palette.text, 0.9)),
+          (repoHint !== undefined
+            ? palette.text
+            : node.kind === 'dir'
+              ? palette.muted
+              : mix(palette.frame, palette.text, 0.9)),
         bg,
-        bold: look.selected,
+        bold: look.selected || repoHint !== undefined,
       });
       const right: Seg[] =
-        node.kind === 'file'
+        repoHint !== undefined
           ? [
-              {
-                text: node.status ? `${STATUS_LETTER[node.status]} ` : '  ',
-                fg: color,
-                bg,
-                bold: true,
-              },
+              { text: `${repoHint} `, fg: palette.faint, bg },
+              { text: node.changed ? '• ' : '  ', fg: palette.faint, bg },
             ]
-          : [{ text: node.changed ? '• ' : '  ', fg: palette.faint, bg }];
+          : node.kind === 'file'
+            ? [
+                {
+                  text: node.status ? `${STATUS_LETTER[node.status]} ` : '  ',
+                  fg: color,
+                  bg,
+                  bold: true,
+                },
+              ]
+            : [{ text: node.changed ? '• ' : '  ', fg: palette.faint, bg }];
       return [spread(left, right, look.width, bg)];
     },
   }));
@@ -233,9 +243,9 @@ export function serviceColumns(width: number): ServiceColumns {
 
 export function serviceItems(
   palette: Palette,
-  commands: DevCommand[],
+  commands: RepoCommand[],
   state: (id: string) => { status: SessionStatus; exitCode: number | null },
-): Array<ListItem<DevCommand>> {
+): Array<ListItem<RepoCommand>> {
   return commands.map((command) => ({
     key: command.id,
     selectable: true,
@@ -266,7 +276,7 @@ export function serviceItems(
               fg: exitCode ? palette.deleted : palette.faint,
               bg,
             },
-            { text: command.cwd || '.', fg: palette.faint, bg },
+            { text: command.folder, fg: palette.faint, bg },
           ],
           look.width,
           bg,

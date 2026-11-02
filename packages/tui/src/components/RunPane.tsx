@@ -1,4 +1,4 @@
-import type { DevCommand } from '@reviewer/core/local-dev';
+import type { RepoCommand } from '../app/useServices';
 import * as React from 'react';
 import {
   SERVICE_NAME_COLUMN,
@@ -211,7 +211,7 @@ function Detail({ width, height }: { width: number; height: number }) {
               fg: palette.muted,
               bg,
             },
-            { text: `  ▸ ${command.cwd || '.'}`, fg: palette.faint, bg },
+            { text: `  ▸ ${command.folder}`, fg: palette.faint, bg },
           ]}
           width={Math.max(10, width - 30)}
           fill={bg}
@@ -355,14 +355,14 @@ function ToolButton({
 }
 
 /** Wide enough that no command or folder is cut: the name column, status and gaps besides. */
-function naturalWidth(commands: DevCommand[]): number {
-  const longest = (pick: (command: DevCommand) => string) =>
+function naturalWidth(commands: RepoCommand[]): number {
+  const longest = (pick: (command: RepoCommand) => string) =>
     Math.max(0, ...commands.map((command) => pick(command).length));
   return (
     longest((c) => c.command) +
     SERVICE_NAME_COLUMN +
     SERVICE_STATUS_COLUMN +
     GAPS +
-    longest((c) => c.cwd || '.')
+    longest((c) => c.folder)
   );
 }

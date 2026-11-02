@@ -2,9 +2,13 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { DEFAULT_LIGHT_THEME } from '@reviewer/themes';
 
-export const USAGE = `Usage: reviewer [path] [options]
+export const USAGE = `Usage: reviewer [path…] [options]
+
+  Several paths open their repositories side by side, as one workspace.
 
 Options:
+  -w, --workspace <name>  open a saved workspace (the Mac app's too)
+  --workspaces      list the saved workspaces
   --against <ref>   review the branch against <ref> (its merge base)
   --commit <sha>    review one commit
   --pr <number>     review a GitHub pull request
@@ -16,8 +20,10 @@ Options:
   -h, --help        show this help`;
 
 export interface CliOptions {
-  /** Any path inside the repository. */
-  path: string;
+  /** Any path inside each repository; one, unless several were given. */
+  paths: string[];
+  workspace?: string;
+  listWorkspaces: boolean;
   against?: string;
   commit?: string;
   pr?: string;
@@ -39,6 +45,8 @@ export function parseCli(argv: string[], env = process.env): CliOptions {
       theme: { type: 'string' },
       light: { type: 'boolean' },
       themes: { type: 'boolean' },
+      workspace: { type: 'string', short: 'w' },
+      workspaces: { type: 'boolean' },
       'no-server': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -47,7 +55,11 @@ export function parseCli(argv: string[], env = process.env): CliOptions {
   // where it was run from. Only trusted when a package script launched us.
   const invokedFrom = env['npm_lifecycle_event'] ? env['INIT_CWD'] : undefined;
   return {
-    path: resolve(positionals[0] ?? invokedFrom ?? '.'),
+    paths: (positionals.length > 0 ? positionals : [invokedFrom ?? '.']).map(
+      (path) => resolve(path),
+    ),
+    workspace: values.workspace,
+    listWorkspaces: values.workspaces ?? false,
     against: values.against,
     commit: values.commit,
     pr: values.pr?.replace(/^#/, ''),

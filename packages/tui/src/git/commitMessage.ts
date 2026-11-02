@@ -39,38 +39,40 @@ function agentCommand(agent: CommitAgent, prompt: string): string {
   }
 }
 
-/** Drafts a commit message for `paths` with an agent CLI — the app's own prompt. */
+/** The files to summarize in one repository; `name` labels its part of a workspace's diff. */
+export interface DraftPart {
+  root: string;
+  name: string;
+  paths: string[];
+}
+
+/**
+ * Drafts one commit message for `parts` with an agent CLI — the app's own
+ * prompt; a workspace's repositories each lead their part of the diff.
+ */
 export async function draftCommitMessage(
-  root: string,
-  paths: string[],
+  parts: DraftPart[],
   agent: CommitAgent = 'claude',
 ): Promise<string> {
-  const pathspec = paths.length > 0 ? ['--', ...paths] : [];
-  const [diff, untracked, branch] = await Promise.all([
-    git(root, ['diff', 'HEAD', ...pathspec]).catch(() => ''),
-    git(root, [
-      'ls-files',
-      '--others',
-      '--exclude-standard',
-      ...pathspec,
-    ]).catch(() => ''),
-    git(root, ['rev-parse', '--abbrev-ref', 'HEAD']).catch(() => ''),
-  ]);
-  const newFiles = untracked.split('\n').filter(Boolean);
-  if (!diff.trim() && newFiles.length === 0)
-    throw new Error('No changes to summarize');
+  const read = await Promise.all(parts.map(readPart));
+  const changed = read.filter((part) => part.text.trim());
+  if (changed.length === 0) throw new Error('No changes to summarize');
+  const labelled = changed.length > 1 || parts.length > 1;
+  const changes = changed
+    .map((part) =>
+      labelled ? `# Repository ${part.name}\n${part.text}` : part.text,
+    )
+    .join('\n\n');
 
   const truncated =
-    diff.length > MAX_DIFF_CHARS
-      ? `${diff.slice(0, MAX_DIFF_CHARS)}\n…[diff truncated]`
-      : diff;
-  const listed = newFiles.length
-    ? `\n\nNew untracked files:\n${newFiles.map((file) => `  ${file}`).join('\n')}`
-    : '';
-  const prompt = buildPrompt(
-    `${truncated}${listed}`.trim(),
-    branchSlug(branch.trim()),
+    changes.length > MAX_DIFF_CHARS
+      ? `${changes.slice(0, MAX_DIFF_CHARS)}\n…[diff truncated]`
+      : changes;
+  const root = parts[0]!.root;
+  const branch = await git(root, ['rev-parse', '--abbrev-ref', 'HEAD']).catch(
+    () => '',
   );
+  const prompt = buildPrompt(truncated.trim(), branchSlug(branch.trim()));
 
   const proc = Bun.spawn(
     [process.env['SHELL'] ?? 'sh', '-lc', agentCommand(agent, prompt)],
@@ -93,4 +95,25 @@ export async function draftCommitMessage(
   const message = cleanMessage(stdout);
   if (!message) throw new Error(`the ${agent} CLI produced no message`);
   return message;
+}
+
+/** One repository's diff of `paths` against HEAD, its new files listed after. */
+async function readPart(
+  part: DraftPart,
+): Promise<{ name: string; text: string }> {
+  const pathspec = part.paths.length > 0 ? ['--', ...part.paths] : [];
+  const [diff, untracked] = await Promise.all([
+    git(part.root, ['diff', 'HEAD', ...pathspec]).catch(() => ''),
+    git(part.root, [
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      ...pathspec,
+    ]).catch(() => ''),
+  ]);
+  const newFiles = untracked.split('\n').filter(Boolean);
+  const listed = newFiles.length
+    ? `\n\nNew untracked files:\n${newFiles.map((file) => `  ${file}`).join('\n')}`
+    : '';
+  return { name: part.name, text: `${diff}${listed}` };
 }

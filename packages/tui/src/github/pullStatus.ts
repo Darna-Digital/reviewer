@@ -126,7 +126,7 @@ export function matchesPull(pull: PullRequestInfo, query: string): boolean {
 }
 
 /** By target branch, the branches in name order and GitHub's order within each. */
-export function groupByBase(pulls: PullRequestInfo[]) {
+export function groupByBase<TPull extends PullRequestInfo>(pulls: TPull[]) {
   return [...new Set(pulls.map((pull) => pull.baseRef))].sort().map((base) => ({
     base,
     pulls: pulls.filter((pull) => pull.baseRef === base),

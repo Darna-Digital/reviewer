@@ -32,9 +32,10 @@ const collator = new Intl.Collator(undefined, {
 
 /**
  * Builds a Finder-ordered tree (folders first) and folds chains of folders
- * that hold a single folder into one `a/b/c` row.
+ * that hold a single folder into one `a/b/c` row. `repos` names a
+ * workspace's top folders: they lead in that order and are never folded.
  */
-export function buildTree(entries: TreeEntry[]): TreeNode[] {
+export function buildTree(entries: TreeEntry[], repos?: string[]): TreeNode[] {
   const root = createDir('', '');
   for (const entry of entries) {
     const parts = entry.path.split('/');
@@ -60,7 +61,13 @@ export function buildTree(entries: TreeEntry[]): TreeNode[] {
       changed: entry.status !== undefined,
     });
   }
-  return root.children.map(finish).sort(byKindThenName);
+  if (!repos) return root.children.map(finish).sort(byKindThenName);
+  return repos.flatMap((name) => {
+    const top = root.children.find(
+      (child) => child.kind === 'dir' && child.path === name,
+    );
+    return top ? [finishChildren(top, top.name)] : [];
+  });
 }
 
 export function flattenTree(
@@ -119,6 +126,10 @@ function finish(node: TreeNode): TreeNode {
     current = current.children[0]!;
     name = `${name}/${current.name}`;
   }
+  return finishChildren(current, name);
+}
+
+function finishChildren(current: TreeNode, name: string): TreeNode {
   const children = current.children.map(finish).sort(byKindThenName);
   return {
     path: current.path,

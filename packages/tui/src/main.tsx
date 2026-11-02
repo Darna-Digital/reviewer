@@ -2,7 +2,7 @@
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
 import { describeThemes, findTheme } from '@reviewer/themes';
-import { App } from './app/App';
+import { Shell } from './app/Shell';
 import { trackCommandKey } from './app/commandKey';
 import { WORKTREE } from './app/comparison';
 import type { Comparison } from './app/comparison';
@@ -16,6 +16,13 @@ import { loadSettings, TERMINAL_THEME } from './store/settings';
 import { resolveLook } from './theme/resolveLook';
 import { readSystemScheme } from './theme/systemAppearance';
 import { openStore } from './store/createStore';
+import { loadUiState } from './store/uiState';
+import { reposOf } from './repos/repos';
+import { ensureServer } from './process/reviewerServer';
+import { workspaces } from './workspace/client';
+import { folderWorkspace } from './workspace/folder';
+import type { SavedWorkspace } from './workspace/client';
+import type { Repos } from './repos/repos';
 import type { Store } from './store/createStore';
 
 const SHIFT_TO_APP = '\x1b[>1s';
@@ -43,10 +50,17 @@ async function main(cli: CliOptions) {
     fail(`no theme named "${cli.themeName}" — see --themes`);
   }
 
-  const root = await repoRoot(cli.path).catch(() =>
-    fail(`not a git repository: ${cli.path}`),
-  );
   const store = openStore();
+  if (cli.listWorkspaces) {
+    const saved = await savedWorkspaces(cli);
+    return exit(
+      saved
+        .map((one) => `${one.name.padEnd(28)} ${one.roots.join('  ')}`)
+        .join('\n') || 'No saved workspaces — open several paths, then ⌘O',
+    );
+  }
+  const { repos, launchRoot } = await openedRepos(cli, store);
+  const root = launchRoot ?? repos.list[0]!.root;
   const initial = await initialComparison({ root, store, cli });
 
   // services belong to this process: never leave them behind
@@ -78,8 +92,10 @@ async function main(cli: CliOptions) {
   const look = await resolveLook(start);
   renderer.setBackgroundColor(look.palette.frame);
   createRoot(renderer).render(
-    <App
-      root={root}
+    <Shell
+      repos={repos}
+      launchRoot={launchRoot}
+      focus={root}
       store={store}
       themeStart={{ ...start, look }}
       initial={initial}
@@ -87,6 +103,100 @@ async function main(cli: CliOptions) {
       commandKey={commandKey}
     />,
   );
+}
+
+/**
+ * The saved workspace named, the paths given side by side, the one
+ * repository started in — reopening the workspace last opened from it — or,
+ * started in a folder of repositories, that folder's workspace.
+ */
+async function openedRepos(
+  cli: CliOptions,
+  store: Store,
+): Promise<{ repos: Repos; launchRoot: string | null }> {
+  if (cli.workspace !== undefined) {
+    const wanted = cli.workspace.toLowerCase();
+    const saved = (await savedWorkspaces(cli)).find(
+      (candidate) =>
+        candidate.id === cli.workspace ||
+        candidate.name.toLowerCase() === wanted,
+    );
+    if (!saved)
+      fail(`no saved workspace named "${cli.workspace}" — see --workspaces`);
+    const roots = await existingRoots([...saved.roots]);
+    if (roots.length === 0)
+      fail(`none of ${saved.name}'s repositories are on disk any more`);
+    return {
+      repos: reposOf(roots, { id: saved.id, name: saved.name }),
+      launchRoot: null,
+    };
+  }
+  if (cli.paths.length === 1) {
+    const folder = cli.paths[0]!;
+    const inRepo = await repoRoot(folder).catch(() => null);
+    if (inRepo === null)
+      return { repos: await folderRepos(cli, folder), launchRoot: null };
+  }
+  const roots = [
+    ...new Set(
+      await Promise.all(
+        cli.paths.map((path) =>
+          repoRoot(path).catch(() => fail(`not a git repository: ${path}`)),
+        ),
+      ),
+    ),
+  ];
+  if (roots.length > 1) return { repos: reposOf(roots), launchRoot: null };
+  const root = roots[0]!;
+  const lastId = loadUiState(store, root).lastWorkspace;
+  const last = lastId ? await lastWorkspace(cli, root, lastId) : null;
+  if (last?.roots.includes(root)) {
+    const saved = await existingRoots([...last.roots]);
+    if (saved.length > 1)
+      return {
+        repos: reposOf(saved, { id: last.id, name: last.name }),
+        launchRoot: root,
+      };
+  }
+  return { repos: reposOf([root]), launchRoot: root };
+}
+
+/** A folder of repositories opens as its workspace; the server is started to keep it. */
+async function folderRepos(cli: CliOptions, folder: string): Promise<Repos> {
+  if (cli.startServer) await ensureServer(folder);
+  const found = await folderWorkspace(folder);
+  if (!found) fail(`not a git repository, nor a folder of them: ${folder}`);
+  return reposOf(found.roots, found.workspace);
+}
+
+/** The server keeps the saved workspaces: started for them when it may be. */
+async function savedWorkspaces(
+  cli: CliOptions,
+): Promise<readonly SavedWorkspace[]> {
+  if (cli.startServer) await ensureServer(cli.paths[0]!);
+  return workspaces
+    .list()
+    .catch((error: unknown) =>
+      fail(error instanceof Error ? error.message : String(error)),
+    );
+}
+
+/** The workspace last opened from `root`, if the server can still say what it is. */
+async function lastWorkspace(
+  cli: CliOptions,
+  root: string,
+  id: string,
+): Promise<SavedWorkspace | null> {
+  if (cli.startServer) await ensureServer(root);
+  return workspaces.find(id).catch(() => null);
+}
+
+/** The repositories still on disk, as their roots; the rest left out. */
+async function existingRoots(paths: string[]): Promise<string[]> {
+  const roots = await Promise.all(
+    paths.map((path) => repoRoot(path).catch(() => null)),
+  );
+  return [...new Set(roots.filter((root): root is string => root !== null))];
 }
 
 /** What was asked for, else the branch's recorded target, else uncommitted work. */

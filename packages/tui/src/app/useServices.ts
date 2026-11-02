@@ -4,22 +4,32 @@ import type { DevCommand } from '@reviewer/core/local-dev';
 import * as React from 'react';
 import { PtySession, forgetSession, trackSession } from '../process/ptySession';
 import type { SessionStatus } from '../process/ptySession';
+import { inRepo } from '../repos/repos';
+import type { Repo, Repos } from '../repos/repos';
 import type { NewDevCommand, Store } from '../store/createStore';
 import type { Review } from './useReview';
 
 export type Services = ReturnType<typeof useServices>;
 
+/** A service and the workspace repository it runs in. */
+export interface RepoCommand extends DevCommand {
+  repo: Repo;
+  /** Where it runs, as a workspace path: `api/web`, or `.` for the root of the only one. */
+  folder: string;
+}
+
 const POLL_MS = 2000;
 
 /**
- * The repository's services — the commands the Mac app's Run pane keeps — run
- * here on pseudo-terminals. Definitions are shared through the database; the
- * processes belong to this TUI and stop when it quits.
+ * Every repository's services — the commands the Mac app's Run pane keeps —
+ * run here on pseudo-terminals. Definitions are shared through the database;
+ * the processes belong to this TUI and stop when it quits. New ones are
+ * added to the focused repository.
  */
 export function useServices(review: Review, store: Store) {
-  const { root } = review;
-  const [commands, setCommands] = React.useState<DevCommand[]>(() =>
-    store.devCommands(root),
+  const { repos, focused } = review;
+  const [commands, setCommands] = React.useState<RepoCommand[]>(() =>
+    readCommands(store, repos),
   );
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [tableScroll, setTableScroll] = React.useState(0);
@@ -30,13 +40,13 @@ export function useServices(review: Review, store: Store) {
   // definitions added or removed in the app show up here too
   React.useEffect(() => {
     const poll = setInterval(() => {
-      const next = store.devCommands(root);
+      const next = readCommands(store, repos);
       setCommands((prev) =>
         JSON.stringify(prev) === JSON.stringify(next) ? prev : next,
       );
     }, POLL_MS);
     return () => clearInterval(poll);
-  }, [root, store]);
+  }, [repos, store]);
 
   const selected =
     commands.find((command) => command.id === selectedId) ?? commands[0];
@@ -76,13 +86,16 @@ export function useServices(review: Review, store: Store) {
     stopAll() {
       for (const session of sessions.current.values()) session.stop();
     },
+    /** The repository a new service is added to. */
+    addsTo: focused,
     add(input: NewDevCommand): string | null {
+      const { root } = focused;
       const folder = join(root, input.cwd ?? '');
       if (!isDirectory(folder) || !folder.startsWith(root)) {
-        return `No folder ${input.cwd} in this repository`;
+        return `No folder ${input.cwd} in ${repos.spans ? focused.name : 'this repository'}`;
       }
       const created = store.addDevCommand(root, input);
-      setCommands(store.devCommands(root));
+      setCommands(readCommands(store, repos));
       setSelectedId(created.id);
       return null;
     },
@@ -90,8 +103,9 @@ export function useServices(review: Review, store: Store) {
       const session = sessions.current.get(id);
       if (session) forgetSession(session);
       sessions.current.delete(id);
-      store.removeDevCommand(root, id);
-      setCommands(store.devCommands(root));
+      const owner = commands.find((command) => command.id === id)?.repo;
+      if (owner) store.removeDevCommand(owner.root, id);
+      setCommands(readCommands(store, repos));
     },
   };
 
@@ -110,11 +124,23 @@ export function useServices(review: Review, store: Store) {
     }
     session.start({
       command: command.command,
-      cwd: join(root, command.cwd),
+      cwd: join(command.repo.root, command.cwd),
       ...size.current,
     });
     setSelectedId(id);
   }
+}
+
+function readCommands(store: Store, repos: Repos): RepoCommand[] {
+  return repos.list.flatMap((repo) =>
+    store.devCommands(repo.root).map((command) => ({
+      ...command,
+      repo,
+      folder: repos.spans
+        ? inRepo(repos, repo, command.cwd).replace(/\/$/, '')
+        : command.cwd || '.',
+    })),
+  );
 }
 
 function isDirectory(path: string): boolean {

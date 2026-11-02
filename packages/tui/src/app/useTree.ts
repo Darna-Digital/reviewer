@@ -25,8 +25,12 @@ const DIFF_STATUS: Record<string, FileStatus> = {
  * the changed files (folders start open, filterable) on Review.
  */
 export function useTree(surface: Surface, review: Review, follow?: string) {
+  // a workspace's repositories start open, so Browse shows what is in each
   const [browseOpen, setBrowseOpen] = React.useState<ReadonlySet<string>>(
-    new Set(),
+    () =>
+      new Set(
+        review.repos.spans ? review.repos.list.map((repo) => repo.name) : [],
+      ),
   );
   const [reviewClosed, setReviewClosed] = React.useState<ReadonlySet<string>>(
     new Set(),
@@ -39,11 +43,16 @@ export function useTree(surface: Surface, review: Review, follow?: string) {
     review: null,
   });
 
-  const { files, projectFiles, statusMap } = review;
+  const { files, projectFiles, statusMap, repos } = review;
+  const repoNames = React.useMemo(
+    () => (repos.spans ? repos.list.map((repo) => repo.name) : undefined),
+    [repos],
+  );
   const nodes = React.useMemo(() => {
     if (surface === 'browse') {
       return buildTree(
         projectFiles.map((path) => ({ path, status: statusMap.get(path) })),
+        repoNames,
       );
     }
     return buildTree(
@@ -54,8 +63,9 @@ export function useTree(surface: Surface, review: Review, follow?: string) {
             ? 'untracked'
             : DIFF_STATUS[file.status],
       })),
+      repoNames,
     );
-  }, [surface, files, projectFiles, statusMap]);
+  }, [surface, files, projectFiles, statusMap, repoNames]);
 
   const isOpen = React.useCallback(
     (node: TreeNode) =>

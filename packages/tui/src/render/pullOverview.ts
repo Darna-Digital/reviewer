@@ -1,4 +1,5 @@
 import type { PullRequestInfo } from '../github/client';
+import type { PullGroup, RepoPull } from '../app/usePulls';
 import {
   blockedReason,
   checksHeadline,
@@ -178,25 +179,25 @@ export function pullOverviewLines(
  */
 export function pullItems(
   palette: Palette,
-  groups: Array<{ base: string; pulls: PullRequestInfo[] }>,
-  shown: number | null,
+  groups: PullGroup[],
+  shown: string | null,
   now: number,
-): Array<ListItem<PullRequestInfo>> {
-  return groups.flatMap(({ base, pulls }) => [
-    heading<PullRequestInfo>(
+): Array<ListItem<RepoPull>> {
+  return groups.flatMap(({ key, pulls, ...group }) => [
+    heading<RepoPull>(
       palette,
-      `base:${base}`,
-      base || 'No branch',
+      `base:${key}`,
+      group.title,
       pulls.length > 1 ? String(pulls.length) : undefined,
     ),
-    ...pulls.map((pull): ListItem<PullRequestInfo> => ({
-      key: String(pull.number),
+    ...pulls.map((pull): ListItem<RepoPull> => ({
+      key: pull.key,
       selectable: true,
       height: 2,
       value: pull,
       rows: (look) => {
         const bg = rowBg(palette, look);
-        const lit = look.selected || pull.number === shown;
+        const lit = look.selected || pull.key === shown;
         const title: Seg[] = [
           bar(palette, look, bg),
           { text: ' ', bg },
@@ -204,7 +205,7 @@ export function pullItems(
           {
             text: pull.title,
             fg: lit ? palette.text : mix(palette.frame, palette.text, 0.85),
-            bold: pull.number === shown,
+            bold: pull.key === shown,
             bg,
           },
         ];

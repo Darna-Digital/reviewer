@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { grep } from '../git/files';
 import type { GrepOptions, GrepResult } from '../git/files';
+import { grepRepos } from '../repos/repoFiles';
+import type { Repos } from '../repos/repos';
 
 const DEBOUNCE_MS = 180;
 export const MIN_QUERY = 2;
@@ -11,9 +12,9 @@ export interface TextSearch {
   failed: boolean;
 }
 
-/** Debounced `git grep`; the last results stay up while the next ones load. */
+/** Debounced `git grep` in every repository; the last results stay up while the next ones load. */
 export function useTextSearch(
-  root: string,
+  repos: Repos,
   query: string,
   options: GrepOptions,
 ): TextSearch {
@@ -32,7 +33,7 @@ export function useTextSearch(
     let cancelled = false;
     setState((prev) => ({ ...prev, searching: true }));
     const timer = setTimeout(() => {
-      grep(root, query, { caseSensitive, wholeWord, regex }).then(
+      grepRepos(repos, query, { caseSensitive, wholeWord, regex }).then(
         (result) =>
           !cancelled && setState({ result, searching: false, failed: false }),
         () =>
@@ -44,7 +45,7 @@ export function useTextSearch(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [root, query, caseSensitive, wholeWord, regex]);
+  }, [repos, query, caseSensitive, wholeWord, regex]);
 
   return state;
 }

@@ -1,4 +1,4 @@
-import type { PullRequestInfo } from '../github/client';
+import type { RepoPull } from './usePulls';
 import type { App } from './useApp';
 
 export type Scope =
@@ -34,6 +34,7 @@ export const HELP_GROUPS: Array<{ title: string; scopes: Scope[] }> = [
   { title: 'Bottom pane', scopes: ['history', 'run', 'pull'] },
 ];
 
+const spansRepos = (app: App) => app.review.repos.spans;
 const onCard = (app: App) => app.activeView.stop?.target.kind === 'comment';
 const onFileHeader = (app: App) => app.diff.stop?.target.kind === 'file';
 const isVisit = (app: App) =>
@@ -50,11 +51,10 @@ const cardComment = (app: App) => {
 };
 const onGitHubCard = (app: App) => cardComment(app)?.source === 'github';
 /** Runs `act` on the pull request under review, if there is one. */
-const withPull =
-  (act: (app: App, pull: PullRequestInfo) => void) => (app: App) => {
-    const pull = app.actions.shownPull();
-    if (pull) act(app, pull);
-  };
+const withPull = (act: (app: App, pull: RepoPull) => void) => (app: App) => {
+  const pull = app.actions.shownPull();
+  if (pull) act(app, pull);
+};
 
 /** What can be done to the pull request under review: pane keys and palette entries. */
 const PULL_ACTIONS: Array<
@@ -198,6 +198,77 @@ export const COMMANDS: Command[] = [
     title: 'switch branch…',
     palette: true,
     run: (app) => app.actions.openBranches(),
+  },
+  {
+    id: 'workspace.open',
+    scope: 'global',
+    keys: ['cmd+o', 'O'],
+    title: 'open workspace…',
+    hint: 'workspace',
+    palette: true,
+    run: (app) => app.actions.openWorkspaces(),
+  },
+  {
+    id: 'workspace.add',
+    scope: 'global',
+    keys: ['alt+cmd+o'],
+    title: 'add repository to workspace…',
+    palette: true,
+    run: (app) => app.actions.addRepoToWorkspace(),
+  },
+  {
+    id: 'workspace.save',
+    scope: 'global',
+    keys: [],
+    title: 'save as workspace…',
+    palette: true,
+    when: (app) => app.review.repos.spans && !app.review.repos.workspace,
+    run: (app) => app.actions.editWorkspace(),
+  },
+  {
+    id: 'workspace.edit',
+    scope: 'global',
+    keys: [],
+    title: 'edit workspace…',
+    palette: true,
+    when: (app) => app.review.repos.workspace !== null,
+    run: (app) => app.actions.editOpenWorkspace(),
+  },
+  {
+    id: 'workspace.new',
+    scope: 'global',
+    keys: [],
+    title: 'new workspace…',
+    palette: true,
+    run: (app) => app.actions.editWorkspace({ roots: [] }),
+  },
+  {
+    id: 'repo.pick',
+    scope: 'global',
+    keys: ['p'],
+    title: 'focus a repository…',
+    hint: 'repo',
+    palette: true,
+    when: spansRepos,
+    run: (app) => app.actions.pickRepo(),
+  },
+  {
+    id: 'repo.next',
+    scope: 'global',
+    keys: ['>'],
+    title: 'focus the next repository',
+    palette: true,
+    when: spansRepos,
+    run: (app, count) => app.actions.stepRepo(count),
+  },
+  {
+    id: 'repo.previous',
+    scope: 'global',
+    keys: ['<'],
+    title: 'focus the previous repository',
+    palette: true,
+    when: spansRepos,
+    run: (app, count) => app.actions.stepRepo(-count),
   },
   {
     id: 'bottom.history',
@@ -1072,8 +1143,8 @@ export const COMMANDS: Command[] = [
     title: 'review its diff',
     hint: 'diff',
     run: (app) => {
-      const pull = app.pulls.byNumber(app.pulls.cursor ?? -1);
-      if (pull) app.actions.reviewPull(pull.number);
+      const pull = app.pulls.byKey(app.pulls.cursor ?? '');
+      if (pull) app.actions.reviewPull(pull);
     },
   },
   {

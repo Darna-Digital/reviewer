@@ -22,6 +22,8 @@ export interface UiState {
   wrap: boolean;
   /** Diffs show whole files instead of the changed hunks. */
   fullFiles: boolean;
+  /** The saved workspace last opened from this repository, reopened by a plain launch in it. */
+  lastWorkspace: string | null;
 }
 
 const BOTTOM_TABS: string[] = ['history', 'usages', 'run', 'pull'];
@@ -40,6 +42,7 @@ export const DEFAULT_UI_STATE: UiState = {
   commitMessage: '',
   wrap: true,
   fullFiles: false,
+  lastWorkspace: null,
 };
 
 /** Kept per repository in the shared database, `tui_ui_state`. */
@@ -51,8 +54,25 @@ export function loadUiState(store: Store, root: string): UiState {
 }
 
 export function saveUiState(store: Store, root: string, state: UiState) {
+  // the workspace last opened from here is the Shell's to write, never a layout's copy of it
+  write(store, root, {
+    ...state,
+    lastWorkspace: loadUiState(store, root).lastWorkspace,
+  });
+}
+
+/** Records which saved workspace `repo` left open, keeping the rest of its layout. */
+export function saveLastWorkspace(
+  store: Store,
+  repo: string,
+  lastWorkspace: string | null,
+) {
+  write(store, repo, { ...loadUiState(store, repo), lastWorkspace });
+}
+
+function write(store: Store, repo: string, state: UiState) {
   try {
-    store.saveUiState(root, state);
+    store.saveUiState(repo, state);
   } catch {
     // losing a layout preference is not worth interrupting the user
   }

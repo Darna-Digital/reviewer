@@ -7,17 +7,21 @@ drawn with [OpenTUI](https://opentui.com) and run on Bun.
 ```bash
 pnpm tui                     # the repository you run it from
 bun packages/tui/src/main.tsx ~/code/app --against main
+reviewer ~/code/web ~/code/api   # two repositories side by side
+reviewer -w platform             # a saved workspace
 ```
 
-| Option            | Does                                                      |
-| ----------------- | --------------------------------------------------------- |
-| `[path]`          | Any path inside the repository (default: here)            |
-| `--against <ref>` | Read the branch against `<ref>`'s merge base              |
-| `--commit <sha>`  | Read one commit                                           |
-| `--pr <number>`   | Review a GitHub pull request                              |
-| `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`) |
-| `--light`         | This run only: the light default theme                    |
-| `--no-server`     | Leave the Reviewer server alone                           |
+| Option            | Does                                                                      |
+| ----------------- | ------------------------------------------------------------------------- |
+| `[path…]`         | Any path inside the repository (default: here); several open side by side |
+| `-w <name>`       | Open a saved workspace (`--workspace`)                                    |
+| `--workspaces`    | List the saved workspaces                                                 |
+| `--against <ref>` | Read the branch against `<ref>`'s merge base                              |
+| `--commit <sha>`  | Read one commit                                                           |
+| `--pr <number>`   | Review a GitHub pull request                                              |
+| `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`)                 |
+| `--light`         | This run only: the light default theme                                    |
+| `--no-server`     | Leave the Reviewer server alone                                           |
 
 ### Install
 
@@ -84,6 +88,39 @@ palette.
   a thread, deleting a comment, merging and closing happen on GitHub; checking
   one out fetches `refs/pull/<n>/head` here. Requests name this repository
   (`?repo=`), so it works whatever project the Mac app has open.
+
+## Workspaces
+
+A workspace is several repositories open side by side — the Mac app's, and
+the same saved ones: they are kept by the Reviewer server
+(`/api/workspaces`), so one made here opens in the Mac app and the reverse.
+
+- **Spanning** — the tree leads with each repository as a folder (its branch
+  beside it), and every path reads `api/src/server.ts`. The uncommitted work
+  of every repository is one review; the commit box commits one message in
+  each repository whose files are ticked (`Committed web 639fa4e, api
+5488217`), and ✦ drafts it from all of their diffs. Go to file, search in
+  files, comments, the pull request list (by repository) and the Run pane
+  span them all.
+- **The focused repository** — a branch, a commit and a pull request are one
+  repository's, as are the branch chip (`api ⎇ main`), history and the branch
+  actions. `p` picks it (or a click on the chip, the history bar's
+  repository, or **Go to repository …** in the palette); `>` / `<` step
+  through them. ⇧⌘B lists the repositories first, then the branches of the one
+  picked (`⇧⇥` or `←` goes back). Fetch, pull and push ask which repository,
+  or every one.
+- **Opening** — `⌘O` or `O`: what is open, the saved workspaces, the
+  repositories opened lately and the rest the Mac app found on disk. `⏎`
+  opens; `→` (or right-click) edits, deletes, adds a repository to this
+  workspace or saves what is open; a typed path (`~/code/app`) opens that
+  folder. `⌥⌘O` adds a repository to the one open.
+- **Editing** — a name over the repositories in order: `⇥` between them,
+  `j` `k` move, `J` `K` (or `⌥↑` `⌥↓`) reorder, `x` removes, `a` adds, `⏎`
+  or `⌃S` saves; every row's ↑ ↓ ✕ and the buttons take a click. A repository
+  folder's right-click menu in the tree removes it from the workspace.
+
+A plain `reviewer` reopens the workspace last opened from the repository it
+is started in. Opening another stops the services this TUI started.
 
 ## Layout
 
@@ -213,38 +250,41 @@ passes ⌘ through (see Keys).
 
 ### Anywhere
 
-| Key               | Does                            |
-| ----------------- | ------------------------------- |
-| `?`               | The keys for where you are      |
-| `⌘K` `⌃K` `:`     | Command palette                 |
-| `⇧⌘O`             | Go to file                      |
-| `⇧⌘F`             | Search in files                 |
-| `@`               | Go to a symbol in the open file |
-| `m`               | All comments                    |
-| `tab` `⇧tab`      | Next · previous pane            |
-| `⌃O` `⌥←`         | Back to where you jumped from   |
-| `⌥→`              | Forward again                   |
-| `⌥⌘1` `⌥⌘2`       | Browse · Review                 |
-| `⌘G`              | Switch Browse ⇄ Review          |
-| `⇧⌘B` `⌥⌘4`       | Switch branch                   |
-| `⌃G`              | Generate the commit message     |
-| `⇧⌘K`             | Commit                          |
-| `⌥⌘K`             | Commit and push                 |
-| `⌥⌘5` `⌥⌘6` `⌥⌘7` | History · Usages · Run pane     |
-| `⌥⌘8`             | Pull request pane               |
-| `M` `⌥⌘3`         | Pull requests (sidebar)         |
-| `⌘B` `⌃B`         | Show / hide the bottom pane     |
-| `⌃⌘S` `\`         | Show / hide the sidebar         |
-| `t`               | Compare against…                |
-| `T`               | Uncommitted ⇄ last branch       |
-| `s`               | Split ⇄ unified diff            |
-| `E`               | Changed hunks ⇄ full files      |
-| `W` `⌥Z`          | Wrap long lines                 |
-| `C`               | Show / hide comments            |
-| `F` `L` `P`       | Fetch · pull · push             |
-| `⌘R` `⌃R` `r`     | Refresh                         |
-| `⌘,` `⌃,` `⌃T`    | Theme & appearance              |
-| `q` `⌃C`          | Quit                            |
+| Key               | Does                                             |
+| ----------------- | ------------------------------------------------ |
+| `?`               | The keys for where you are                       |
+| `⌘K` `⌃K` `:`     | Command palette                                  |
+| `⇧⌘O`             | Go to file                                       |
+| `⇧⌘F`             | Search in files                                  |
+| `@`               | Go to a symbol in the open file                  |
+| `m`               | All comments                                     |
+| `tab` `⇧tab`      | Next · previous pane                             |
+| `⌃O` `⌥←`         | Back to where you jumped from                    |
+| `⌥→`              | Forward again                                    |
+| `⌥⌘1` `⌥⌘2`       | Browse · Review                                  |
+| `⌘G`              | Switch Browse ⇄ Review                           |
+| `⇧⌘B` `⌥⌘4`       | Switch branch                                    |
+| `⌃G`              | Generate the commit message                      |
+| `⇧⌘K`             | Commit                                           |
+| `⌥⌘K`             | Commit and push                                  |
+| `⌥⌘5` `⌥⌘6` `⌥⌘7` | History · Usages · Run pane                      |
+| `⌥⌘8`             | Pull request pane                                |
+| `M` `⌥⌘3`         | Pull requests (sidebar)                          |
+| `⌘B` `⌃B`         | Show / hide the bottom pane                      |
+| `⌃⌘S` `\`         | Show / hide the sidebar                          |
+| `t`               | Compare against…                                 |
+| `T`               | Uncommitted ⇄ last branch                        |
+| `s`               | Split ⇄ unified diff                             |
+| `E`               | Changed hunks ⇄ full files                       |
+| `W` `⌥Z`          | Wrap long lines                                  |
+| `C`               | Show / hide comments                             |
+| `F` `L` `P`       | Fetch · pull · push                              |
+| `⌘R` `⌃R` `r`     | Refresh                                          |
+| `⌘,` `⌃,` `⌃T`    | Theme & appearance                               |
+| `⌘O` `O`          | Open workspace…                                  |
+| `⌥⌘O`             | Add repository to workspace…                     |
+| `p` · `>` `<`     | Focus a repository · next · previous (workspace) |
+| `q` `⌃C`          | Quit                                             |
 
 Create branch, add a service, start / stop all services, cycle the appearance
 and show / hide file icons have no key; they are in the command palette.

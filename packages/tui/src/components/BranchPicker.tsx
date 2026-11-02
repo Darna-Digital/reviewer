@@ -13,6 +13,7 @@ type BranchesOverlay = Extract<Overlay, { kind: 'branches' }>;
 const RECENT = 5;
 const CREATE = 'create';
 const WIDTH = 64;
+const NEW_BRANCH = ' + New branch…';
 
 /**
  * The branch popover under the sidebar's branch chip: Recent, Local and
@@ -56,11 +57,22 @@ export function BranchPicker({
         ]
       : []),
   ];
+  const spans = review.repos.spans;
   const footer: Seg[] = [
-    { text: ' + New branch…', fg: palette.accent },
+    { text: NEW_BRANCH, fg: palette.accent },
     { text: '   →', fg: palette.muted },
     { text: ' actions', fg: palette.faint },
+    ...(spans
+      ? [
+          { text: '   ⇧⇥', fg: palette.muted },
+          { text: ' ← repositories', fg: palette.faint },
+        ]
+      : []),
   ];
+  const backToRepos = () =>
+    actions.openOverlay({ kind: 'repos', at: overlay.at, then: 'branches' });
+  const head = current ? `⎇ ${current}` : 'Branches';
+  const title = spans ? `${review.focused.name} ${head}` : head;
 
   return (
     <Picker
@@ -69,7 +81,7 @@ export function BranchPicker({
       anchor={overlay.at}
       width={WIDTH}
       inert={inert}
-      title={current ? `⎇ ${truncateMiddle(current, WIDTH - 8)}` : 'Branches'}
+      title={truncateMiddle(title, WIDTH - 6)}
       labelCut="middle"
       placeholder="Switch to a branch…"
       options={options}
@@ -79,8 +91,16 @@ export function BranchPicker({
       initialQuery={overlay.query}
       onQueryChange={setQuery}
       footer={footer}
-      onFooterPress={() => actions.newBranch()}
+      onFooterPress={(column) =>
+        spans && column >= NEW_BRANCH.length + 12
+          ? backToRepos()
+          : actions.newBranch()
+      }
       onKey={(key, picked, beside) => {
+        if (spans && (key === 'shift+tab' || (key === 'left' && !query))) {
+          backToRepos();
+          return true;
+        }
         if ((key !== 'right' && key !== 'tab') || !picked) return false;
         openMenu(picked, beside);
         return true;

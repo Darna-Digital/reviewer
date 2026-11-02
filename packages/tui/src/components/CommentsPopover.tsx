@@ -24,7 +24,7 @@ export function CommentsPopover({ overlay }: { overlay: CommentsOverlay }) {
   const comments = commentsToList(app);
   const inDiff = new Set(review.files.map((file) => file.path));
   const fileLines = useFileLines(
-    review.root,
+    review.repos,
     [...new Set(comments.map((c) => c.filePath))].filter(
       (path) => !inDiff.has(path),
     ),

@@ -13,7 +13,8 @@ import type { CapturedFrame } from '@opentui/core';
 import { testRender } from '@opentui/react/test-utils';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { App } from '../src/app/App';
+import { Shell } from '../src/app/Shell';
+import { reposOf } from '../src/repos/repos';
 import { WORKTREE } from '../src/app/comparison';
 import type { Comparison } from '../src/app/comparison';
 import { repoRoot } from '../src/git/repo';
@@ -27,7 +28,7 @@ type Setup = Awaited<ReturnType<typeof testRender>>;
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
-    repo: { type: 'string' },
+    repo: { type: 'string', multiple: true },
     size: { type: 'string' },
     input: { type: 'string' },
     out: { type: 'string' },
@@ -43,7 +44,9 @@ const { values } = parseArgs({
 const [width = 160, height = 45] = (values.size ?? '160x45')
   .split('x')
   .map(Number);
-const root = await repoRoot(resolve(values.repo ?? '.'));
+const roots = await Promise.all(
+  (values.repo ?? ['.']).map((path) => repoRoot(resolve(path))),
+);
 const terminalBg = values['terminal-bg'] ?? '#1b1d23';
 const terminal = values['terminal-bg']
   ? {
@@ -67,8 +70,9 @@ const initial: Comparison = values.commit
     : WORKTREE;
 
 const setup = await testRender(
-  <App
-    root={root}
+  <Shell
+    repos={reposOf(roots)}
+    launchRoot={null}
     store={store}
     themeStart={{ ...start, look }}
     initial={initial}

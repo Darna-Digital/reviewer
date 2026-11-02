@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { readFile } from '../git/files';
+import { readRepoFile } from '../repos/repoFiles';
+import { reposLanguageClient } from '../repos/repoLanguage';
 import type { FileContent } from '../git/files';
-import { languageClient } from '../language/client';
 import type {
   DefinitionResult,
   DocumentSymbol,
@@ -53,8 +53,8 @@ export type Symbols = ReturnType<typeof useSymbols>;
  * its selection, the preview file, the hover card.
  */
 export function useSymbols(review: Review) {
-  const { root, notify } = review;
-  const client = React.useMemo(() => languageClient(root), [root]);
+  const { repos, notify } = review;
+  const client = React.useMemo(() => reposLanguageClient(repos), [repos]);
   const [usages, setUsages] = React.useState<UsagesState | null>(null);
   const [selected, setSelected] = React.useState(0);
   const [preview, setPreview] = React.useState<{
@@ -93,13 +93,13 @@ export function useSymbols(review: Review) {
     const path = selectedUsage?.location.path;
     if (!path) return setPreview(null);
     let cancelled = false;
-    void readFile(root, path).then((file) => {
+    void readRepoFile(repos, path).then((file) => {
       if (!cancelled) setPreview({ path, file });
     });
     return () => {
       cancelled = true;
     };
-  }, [root, selectedUsage?.location.path]);
+  }, [repos, selectedUsage?.location.path]);
 
   return {
     usages,
@@ -227,7 +227,7 @@ export function useSymbols(review: Review) {
   async function fileLines(path: string): Promise<string[]> {
     const cached = lines.current.get(path);
     if (cached && Date.now() - cached.at < LINES_CACHE_MS) return cached.lines;
-    const file = await readFile(root, path);
+    const file = await readRepoFile(repos, path);
     const next = file.text.split('\n');
     lines.current.set(path, { at: Date.now(), lines: next });
     return next;

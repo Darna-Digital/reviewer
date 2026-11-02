@@ -6,7 +6,8 @@
 import { testRender } from '@opentui/react/test-utils';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { App } from '../src/app/App';
+import { Shell } from '../src/app/Shell';
+import { reposOf } from '../src/repos/repos';
 import { repoRoot } from '../src/git/repo';
 import { openStore } from '../src/store/createStore';
 import { loadSettings } from '../src/store/settings';
@@ -27,8 +28,9 @@ const store = openStore(values.db);
 const start = { settings: loadSettings(store), system: null, terminal: null };
 const look = await resolveLook(start);
 const setup = await testRender(
-  <App
-    root={root}
+  <Shell
+    repos={reposOf([root])}
+    launchRoot={null}
     store={store}
     themeStart={{ ...start, look }}
     initial={

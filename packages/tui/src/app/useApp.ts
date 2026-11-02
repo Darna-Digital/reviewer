@@ -2,7 +2,8 @@ import type { TextareaRenderable } from '@opentui/core';
 import { useRenderer, useTerminalDimensions } from '@opentui/react';
 import type { ReviewComment } from '@reviewer/core/comments';
 import type { DevCommand } from '@reviewer/core/local-dev';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import * as React from 'react';
 import { stopKey } from '../diff/buildLayout';
 import type { Anchor } from '../diff/buildLayout';
@@ -20,13 +21,20 @@ import type {
 } from '../language/client';
 import { identifiers } from '../language/identifier';
 import type { Branch } from '../git/refs';
-import type { MergeMethod, PullRequestInfo } from '../github/client';
+import type { MergeMethod } from '../github/client';
 import { mergeBlockedReason, mergeCaution } from '../github/pullStatus';
 import { stopAllSessions } from '../process/ptySession';
 import { fileIcons } from '../render/fileIcons';
 import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
 import { readMacDefault } from '../store/macDefaults';
+import { workspaces } from '../workspace/client';
+import { folderWorkspace } from '../workspace/folder';
+import type { SavedWorkspace } from '../workspace/client';
+import { repoRoot } from '../git/repo';
+import { expandHome } from '../text/paths';
+import { byRepo, locate } from '../repos/repos';
+import type { Repo, Repos } from '../repos/repos';
 import type { TreeNode } from '../tree/fileTree';
 import {
   comparisonOf,
@@ -43,6 +51,7 @@ import { fileAsDiff, useEditor } from './useEditor';
 import type { DiffView } from './useDiffView';
 import { useHistory } from './useHistory';
 import { usePulls } from './usePulls';
+import type { RepoPull } from './usePulls';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
 import { useServices } from './useServices';
@@ -92,6 +101,12 @@ export type Overlay =
   | { kind: 'theme' }
   | { kind: 'comments' }
   | { kind: 'pulls' }
+  /** A workspace's repositories, to focus one — and then show its branches. */
+  | { kind: 'repos'; at?: Cell; then: 'focus' | 'branches' }
+  | { kind: 'workspaces' }
+  | { kind: 'workspaceEditor'; draft: WorkspaceDraft }
+  /** Repositories to add to the workspace being edited. */
+  | { kind: 'addRepo'; draft: WorkspaceDraft }
   | { kind: 'commentsHere'; at: Cell }
   | { kind: 'definitions'; at: Cell; symbol: string; targets: SymbolTarget[] }
   | { kind: 'lineSymbols'; at: Cell; spots: SymbolSpot[] }
@@ -129,11 +144,24 @@ export type Overlay =
       under?: Overlay;
     };
 
+/** A saved workspace being made (`id` null) or edited. */
+export interface WorkspaceDraft {
+  id: string | null;
+  name: string;
+  roots: string[];
+  /** The repository row with the keyboard. */
+  selected: number;
+}
+
 export interface AppProps {
-  root: string;
+  repos: Repos;
   store: Store;
+  /** Opens other repositories in place of these — a saved workspace, or ones on their own. */
+  openRepos: (roots: string[], workspace: Repos['workspace']) => void;
   themeStart: ThemeStart;
   initial: Comparison;
+  /** The repository `initial` is about, when not the first. */
+  focus?: string;
   /** Start the Reviewer server when none answers (off in snapshots). */
   startServer?: boolean;
   /** Whether ⌘ is held, for ⌘-click; absent in snapshots. */
@@ -160,7 +188,7 @@ const HISTORY_SETTLE_MS = 120;
 
 /** Composes every part of the screen and owns the actions that span them. */
 export function useApp(props: AppProps) {
-  const { root, store } = props;
+  const { repos, store } = props;
   const renderer = useRenderer();
   const themes = useTheme(renderer, store, props.themeStart);
   const { palette, theme, themeName } = themes.look;
@@ -169,12 +197,13 @@ export function useApp(props: AppProps) {
     [palette, themes.settings.fileIcons],
   );
   const screen = useTerminalDimensions();
-  const workspace = useWorkspace(store, root, screen);
+  const workspace = useWorkspace(store, layoutKey(repos), screen);
   const review = useReview(
-    root,
+    repos,
     store,
     props.initial,
     workspace.fullFiles ? 'full' : 'hunks',
+    props.focus,
   );
   useServer(review, props.startServer ?? false);
   const pulls = usePulls(review);
@@ -407,9 +436,175 @@ export function useApp(props: AppProps) {
     },
     openOverlay: (next: Overlay) => setOverlay(next),
     openPalette: (mode: PaletteMode) => setOverlay({ kind: 'palette', mode }),
-    /** The branch popover, hanging from `at` or the sidebar's branch chip. */
-    openBranches: (at?: Cell) =>
-      setOverlay({ kind: 'branches', at: at ?? chipAnchor('branch') }),
+    /**
+     * The branch popover, hanging from `at` or the sidebar's branch chip;
+     * over a workspace, its repositories first, to pick whose branches.
+     */
+    openBranches(at?: Cell, { pickRepo = repos.spans } = {}) {
+      const anchor = at ?? chipAnchor('branch');
+      setOverlay(
+        pickRepo
+          ? { kind: 'repos', at: anchor, then: 'branches' }
+          : { kind: 'branches', at: anchor },
+      );
+    },
+    /** The workspace's repositories, to focus one. */
+    pickRepo(at?: Cell) {
+      if (!repos.spans)
+        return notify('info', 'One repository is open — ⌘O opens a workspace');
+      setOverlay({ kind: 'repos', at, then: 'focus' });
+    },
+    focusRepo(repo: Repo) {
+      review.focus(repo);
+      if (repo !== review.focused)
+        notify(
+          'info',
+          `Focused ${repo.name} — branch, history and git act on it`,
+        );
+    },
+    /** Steps the focus through the workspace's repositories. */
+    stepRepo(delta: number) {
+      const at = repos.list.indexOf(review.focused);
+      const next =
+        repos.list[(at + delta + repos.list.length) % repos.list.length];
+      if (next) actions.focusRepo(next);
+    },
+    openWorkspaces: () => setOverlay({ kind: 'workspaces' }),
+    async editOpenWorkspace() {
+      const saved = await openSavedWorkspace();
+      if (saved) actions.editWorkspace(saved);
+      else if (!repos.workspace) actions.editWorkspace();
+    },
+    /** The workspace editor of what is open, straight on to picking a repository to add. */
+    async addRepoToWorkspace() {
+      const saved = repos.workspace ? await openSavedWorkspace() : null;
+      if (repos.workspace && !saved) return;
+      const roots = repos.list.map((repo) => repo.root);
+      setOverlay({
+        kind: 'addRepo',
+        draft: {
+          id: saved?.id ?? null,
+          name: saved?.name ?? '',
+          roots,
+          selected: roots.length,
+        },
+      });
+    },
+    /** Opens `roots` in place of what is open, once any running service is let go. */
+    openRepos(roots: string[], saved: Repos['workspace'] = null) {
+      const open = () => props.openRepos(roots, saved);
+      const running = services.running().length;
+      if (running === 0) return open();
+      actions.confirm(
+        'Open another workspace',
+        `${running} running service${running === 1 ? ' is' : 's are'} stopped first.`,
+        'open',
+        open,
+      );
+    },
+    openSaved(saved: SavedWorkspace) {
+      const roots = saved.roots.filter((root) => existsSync(root));
+      if (roots.length === 0)
+        return notify(
+          'error',
+          `None of ${saved.name}'s repositories are on disk`,
+        );
+      actions.openRepos(roots, { id: saved.id, name: saved.name });
+    },
+    /** Opens the repository `path` is in, on its own or added to what is open. */
+    async openPath(path: string, { add = false } = {}) {
+      const root = await repoRoot(expandHome(path)).catch(() => null);
+      const folder =
+        root || add ? null : await folderWorkspace(expandHome(path));
+      if (folder) return actions.openRepos(folder.roots, folder.workspace);
+      if (!root)
+        return notify(
+          'error',
+          `Not a git repository, nor a folder of them: ${path}`,
+        );
+      if (!add) return actions.openRepos([root]);
+      const roots = repos.list.map((repo) => repo.root);
+      if (roots.includes(root))
+        return notify('info', `${basename(root)} is open already`);
+      actions.setWorkspaceRoots([...roots, root]);
+    },
+    /** What is open, with these repositories — kept in its saved workspace, if it is one. */
+    async setWorkspaceRoots(roots: string[]) {
+      const saved = repos.workspace;
+      if (saved && !(await asked(() => workspaces.update(saved.id, { roots }))))
+        return;
+      actions.openRepos(roots, saved);
+    },
+    removeRepo(repo: Repo) {
+      actions.confirm(
+        'Remove from workspace',
+        `${repo.name} leaves ${repos.workspace?.name ?? 'the workspace'}; the repository stays where it is.`,
+        'remove',
+        () =>
+          actions.setWorkspaceRoots(
+            repos.list
+              .filter((other) => other !== repo)
+              .map((other) => other.root),
+          ),
+      );
+    },
+    /** The editor for a new workspace — of what is open, when several are — or a saved one. */
+    editWorkspace(
+      seed: Partial<Pick<SavedWorkspace, 'id' | 'name' | 'roots'>> = {},
+    ) {
+      const roots = [
+        ...(seed.roots ??
+          (repos.spans ? repos.list.map((repo) => repo.root) : [])),
+      ];
+      setOverlay({
+        kind: 'workspaceEditor',
+        draft: {
+          id: seed.id ?? null,
+          name: seed.name ?? (roots.length === 1 ? basename(roots[0]!) : ''),
+          roots,
+          selected: 0,
+        },
+      });
+    },
+    /**
+     * Saves the draft through the server, then opens it — or, for the one
+     * open, shows the change; the problem with it, if it was not saved.
+     */
+    async saveWorkspace(draft: WorkspaceDraft): Promise<string | null> {
+      const name = draft.name.trim();
+      if (!name) return 'Name the workspace';
+      if (draft.roots.length === 0) return 'Add a repository';
+      try {
+        const saved =
+          draft.id === null
+            ? await workspaces.create(name, draft.roots)
+            : await workspaces.update(draft.id, { name, roots: draft.roots });
+        setOverlay(null);
+        const ref = { id: saved.id, name: saved.name };
+        if (draft.id === null || repos.workspace?.id === saved.id)
+          actions.openRepos([...saved.roots], ref);
+        else notify('success', `Saved ${saved.name}`);
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    },
+    deleteWorkspace(saved: SavedWorkspace) {
+      actions.confirm(
+        'Delete workspace',
+        `${saved.name} is forgotten. Its repositories stay where they are.`,
+        'delete',
+        async () => {
+          if (!(await asked(() => workspaces.remove(saved.id)))) return;
+          if (repos.workspace?.id === saved.id)
+            props.openRepos(
+              repos.list.map((repo) => repo.root),
+              null,
+            );
+          notify('success', `Deleted ${saved.name}`);
+        },
+      );
+    },
     /** The comparison popover, hanging from `at` or the compare chip. */
     openTargets: (at?: Cell) =>
       setOverlay({ kind: 'targets', at: at ?? chipAnchor('target') }),
@@ -473,6 +668,10 @@ export function useApp(props: AppProps) {
       if (!preview) setFocus('main');
     },
     treeMenu(node: TreeNode, at: { x: number; y: number }) {
+      const repo = repos.spans
+        ? repos.list.find((candidate) => candidate.name === node.path)
+        : undefined;
+      if (repo) return actions.repoMenu(repo, at);
       const changed = node.files.filter((path) => review.statusMap.has(path));
       actions.openMenu(at, [
         ...(node.kind === 'file'
@@ -496,7 +695,7 @@ export function useApp(props: AppProps) {
         { label: 'Copy path', run: () => actions.copy(node.path) },
         {
           label: 'Copy absolute path',
-          run: () => actions.copy(join(root, node.path)),
+          run: () => actions.copy(absolutePath(node.path)),
         },
         ...(changed.length > 0
           ? [
@@ -508,6 +707,31 @@ export function useApp(props: AppProps) {
               },
             ]
           : []),
+      ]);
+    },
+    /** A workspace repository's folder in the tree, as the Mac tree's root header. */
+    repoMenu(repo: Repo, at: Cell) {
+      actions.openMenu(at, [
+        {
+          label: `Focus ${repo.name}`,
+          disabled: repo === review.focused,
+          run: () => actions.focusRepo(repo),
+        },
+        {
+          label: 'Show history',
+          run: () => {
+            review.focus(repo);
+            actions.showHistoryFor(null);
+          },
+        },
+        { separator: true },
+        { label: 'Copy path', run: () => actions.copy(repo.root) },
+        { separator: true },
+        {
+          label: 'Remove from workspace…',
+          danger: true,
+          run: () => actions.removeRepo(repo),
+        },
       ]);
     },
     discard(node: TreeNode) {
@@ -524,7 +748,10 @@ export function useApp(props: AppProps) {
         () =>
           void review.runGit(
             `Discarding ${node.name}…`,
-            () => discard(root, paths),
+            async () => {
+              for (const group of byRepo(repos, paths))
+                await discard(group.repo.root, group.paths);
+            },
             () => `Discarded ${node.name}`,
           ),
       );
@@ -569,14 +796,14 @@ export function useApp(props: AppProps) {
       actions.focusPullPart('list');
       const first = pulls.ordered[0];
       if (review.comparison.kind !== 'pull' && first)
-        actions.reviewPull(first.number, { stay: true });
+        actions.reviewPull(first, { stay: true });
     },
     /** Reviews a pull request: its diff and GitHub threads, with its overview below. */
-    reviewPull(number: number, { stay = false } = {}) {
+    reviewPull(pr: RepoPull, { stay = false } = {}) {
       setOverlay(null);
       if (!stay) rememberPlace();
       workspace.setSurface('review');
-      showComparison({ kind: 'pull', number });
+      showComparison({ kind: 'pull', number: pr.number }, undefined, pr.repo);
       if (!workspace.bottomOpen) workspace.openBottom('pull');
       if (!stay) setFocus('main');
     },
@@ -586,12 +813,12 @@ export function useApp(props: AppProps) {
       if (!next) return;
       clearTimeout(historySettle.current);
       historySettle.current = setTimeout(
-        () => latestActions.current.reviewPull(next.number, { stay: true }),
+        () => latestActions.current.reviewPull(next, { stay: true }),
         HISTORY_SETTLE_MS,
       );
     },
     /** The pull request under review, or why there is none to act on. */
-    shownPull(): PullRequestInfo | null {
+    shownPull(): RepoPull | null {
       if (review.comparison.kind !== 'pull') {
         notify('info', 'No pull request under review — press M to pick one');
         return null;
@@ -604,11 +831,11 @@ export function useApp(props: AppProps) {
         );
       return pr;
     },
-    checkoutPull(pr: PullRequestInfo) {
+    checkoutPull(pr: RepoPull) {
       void pulls.checkout(pr);
     },
     /** The merge method, then a confirmation — as the Mac app's merge alert. */
-    mergePull(pr: PullRequestInfo) {
+    mergePull(pr: RepoPull) {
       const blocked = mergeBlockedReason(pr);
       if (blocked) return notify('info', blocked);
       const confirmMerge = (method: MergeMethod, how: string) =>
@@ -638,7 +865,7 @@ export function useApp(props: AppProps) {
         },
       ]);
     },
-    closePull(pr: PullRequestInfo) {
+    closePull(pr: RepoPull) {
       actions.confirm(
         `Close #${pr.number} without merging?`,
         `${pr.headRef} keeps its commits; reopening is done on GitHub.`,
@@ -647,6 +874,7 @@ export function useApp(props: AppProps) {
       );
     },
     showHistoryFor(path: string | null) {
+      if (path !== null) review.focus(locate(repos, path).repo);
       history.setPath(path);
       workspace.openBottom('history');
       setFocus('bottom');
@@ -711,7 +939,13 @@ export function useApp(props: AppProps) {
       workspace.setSurface('review');
       diff.setShowComments(true);
       diff.unfold(comment.filePath);
-      showComparison(target, stopKey.comment(comment.id));
+      showComparison(
+        target,
+        stopKey.comment(comment.id),
+        target.kind === 'worktree'
+          ? review.focused
+          : locate(repos, comment.filePath).repo,
+      );
       setFocus('main');
     },
 
@@ -943,7 +1177,7 @@ export function useApp(props: AppProps) {
         () =>
           onGitHub
             ? review.deletePullComment(comment)
-            : review.removeComment(comment.id),
+            : review.removeComment(comment),
       );
     },
     submitComposer() {
@@ -952,7 +1186,7 @@ export function useApp(props: AppProps) {
       if (body && overlay.replyTo) {
         review.replyToComment(overlay.replyTo, body);
       } else if (body && overlay.editing) {
-        review.updateComment(overlay.editing.id, body);
+        review.updateComment(overlay.editing, body);
         activeView.landOn(stopKey.comment(overlay.editing.id));
       } else if (body) {
         review.addComment({ ...overlay.anchor, body }, overlay.target);
@@ -961,23 +1195,29 @@ export function useApp(props: AppProps) {
       setFocus('main');
     },
 
-    fetch: () =>
-      review.runGit(
-        'Fetching…',
-        () => fetchAll(root),
-        (out) => summarize(out, 'Fetched'),
+    fetch: (only?: Repo) =>
+      inRepos('Fetch', only, (at) =>
+        review.runGit(
+          `Fetching${inName(at)}…`,
+          () => eachRoot(at, fetchAll),
+          (out) => summarize(out, `Fetched${inName(at)}`),
+        ),
       ),
-    pull: () =>
-      review.runGit(
-        'Pulling…',
-        () => pull(root),
-        (out) => summarize(out, 'Pulled'),
+    pull: (only?: Repo) =>
+      inRepos('Pull', only, (at) =>
+        review.runGit(
+          `Pulling${inName(at)}…`,
+          () => eachRoot(at, pull),
+          (out) => summarize(out, `Pulled${inName(at)}`),
+        ),
       ),
-    push: () =>
-      review.runGit(
-        'Pushing…',
-        () => push(root),
-        (out) => summarize(out, 'Pushed'),
+    push: (only?: Repo) =>
+      inRepos('Push', only, (at) =>
+        review.runGit(
+          `Pushing${inName(at)}…`,
+          () => eachRoot(at, push),
+          (out) => summarize(out, `Pushed${inName(at)}`),
+        ),
       ),
 
     checkoutBranch(branch: Branch) {
@@ -1056,8 +1296,11 @@ export function useApp(props: AppProps) {
               ),
           },
           { separator: true },
-          { label: 'Update (fetch)', run: () => void actions.fetch() },
-          { label: 'Push', run: () => void actions.push() },
+          {
+            label: 'Update (fetch)',
+            run: () => void actions.fetch(review.focused),
+          },
+          { label: 'Push', run: () => void actions.push(review.focused) },
           ...(branch.remote
             ? []
             : [
@@ -1083,7 +1326,7 @@ export function useApp(props: AppProps) {
 
     addService() {
       actions.form(
-        'New command',
+        repos.spans ? `New command in ${services.addsTo.name}` : 'New command',
         [
           { key: 'name', label: 'Name', placeholder: 'Frontend' },
           { key: 'command', label: 'Command', placeholder: 'pnpm dev' },
@@ -1152,6 +1395,7 @@ export function useApp(props: AppProps) {
     palette,
     icons,
     themes,
+    store,
     screen,
     now,
     review,
@@ -1235,6 +1479,69 @@ export function useApp(props: AppProps) {
     setFocus('main');
   }
 
+  /** The saved workspace open, as the server has it now, or `null` with why not. */
+  async function openSavedWorkspace(): Promise<SavedWorkspace | null> {
+    const open = repos.workspace;
+    if (!open) return null;
+    const saved = await asked(() => workspaces.find(open.id));
+    if (saved === null) notify('info', `${open.name} is no longer saved`);
+    return saved ?? null;
+  }
+
+  /** A server call's answer, or `undefined` once its failure is shown. */
+  async function asked<TResult>(
+    run: () => Promise<TResult>,
+  ): Promise<TResult | undefined> {
+    try {
+      return await run();
+    } catch (error) {
+      notify('error', error instanceof Error ? error.message : String(error));
+      return undefined;
+    }
+  }
+
+  function absolutePath(path: string): string {
+    const at = locate(repos, path);
+    return join(at.repo.root, at.path);
+  }
+
+  /**
+   * Runs a git action in one repository — over a workspace, the one picked
+   * from a menu of them, or every one — as the Mac palette asks.
+   */
+  function inRepos(
+    verb: string,
+    only: Repo | undefined,
+    run: (at: Repo | null) => void,
+  ) {
+    if (only || !repos.spans) return run(only ?? review.focused);
+    actions.openMenu({ x: mainLeft + 2, y: contentTop + 1 }, [
+      { label: `${verb} every repository`, run: () => run(null) },
+      { separator: true },
+      ...repos.list.map((repo) => ({
+        label: `${verb} ${repo.name}`,
+        hint: review.stateOf(repo)?.info.branch ?? '',
+        run: () => run(repo),
+      })),
+    ]);
+  }
+
+  function inName(at: Repo | null): string {
+    if (at === null) return ' every repository';
+    return repos.spans ? ` ${at.name}` : '';
+  }
+
+  /** One repository's output, or every one's in workspace order. */
+  async function eachRoot(
+    at: Repo | null,
+    git: (root: string) => Promise<string>,
+  ): Promise<string> {
+    if (at) return git(at.root);
+    const outputs: string[] = [];
+    for (const repo of repos.list) outputs.push(await git(repo.root));
+    return outputs.join('\n');
+  }
+
   /** Under the cursor's line, where a menu for it opens. */
   function cursorCell(): Cell {
     const stop = activeView.stop;
@@ -1261,8 +1568,13 @@ export function useApp(props: AppProps) {
     if (review.comparison.kind === 'pull') showComparison(previous);
   }
 
-  function showComparison(next: Comparison, landOn?: string) {
-    if (isSameComparison(next, review.comparison)) {
+  /** `at` is the repository a branch, commit or pull request is in: the focused one unless named. */
+  function showComparison(
+    next: Comparison,
+    landOn?: string,
+    at: Repo = review.focused,
+  ) {
+    if (isSameComparison(next, review.comparison) && at === review.focused) {
       if (landOn) diff.landOn(landOn);
       return;
     }
@@ -1270,7 +1582,7 @@ export function useApp(props: AppProps) {
       setPrevious(review.comparison);
     if (landOn) diff.landOn(landOn);
     diff.moveTo(0);
-    review.setComparison(next);
+    review.setComparison(next, at);
   }
 }
 
@@ -1288,6 +1600,12 @@ const MIN_USAGES_PART = 30;
 const USAGES_CHROME_ROWS = 3;
 
 function keepUnwrapped() {}
+
+/** Where the layout is kept: the saved workspace's, else the repositories' own. */
+function layoutKey(repos: Repos): string {
+  if (repos.workspace) return `workspace:${repos.workspace.id}`;
+  return repos.list.map((repo) => repo.root).join('\n');
+}
 
 /** A commit or pull request opened from elsewhere, which `esc` leaves. */
 function isVisit(comparison: Comparison): boolean {

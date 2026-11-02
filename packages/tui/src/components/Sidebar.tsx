@@ -3,8 +3,10 @@ import { useRenderer } from '@opentui/react';
 import * as React from 'react';
 import { describeComparison } from '../app/comparison';
 import { SIDEBAR_HEADER } from '../app/useApp';
+import { pullKey } from '../app/usePulls';
 import type { Check } from '../render/listItems';
 import type { App } from '../app/useApp';
+import { branchLabel } from '../render/repoLabels';
 import { treeItems } from '../render/listItems';
 import { pullItems } from '../render/pullOverview';
 import { mix } from '../render/palette';
@@ -110,7 +112,13 @@ function FileTree({
         />
       ) : null}
       <List
-        items={treeItems(palette, app.icons, tree.rows, checkOf)}
+        items={treeItems(
+          palette,
+          app.icons,
+          tree.rows,
+          checkOf,
+          repoHints(app),
+        )}
         selected={tree.selected}
         focused={focused}
         width={width}
@@ -153,10 +161,12 @@ function PullList() {
   const { palette, layout, pulls, review, actions, now } = app;
   const width = layout.sidebarWidth;
   const shown =
-    review.comparison.kind === 'pull' ? review.comparison.number : null;
+    review.comparison.kind === 'pull'
+      ? pullKey(review.focused, review.comparison.number)
+      : null;
   const items = pullItems(palette, pulls.groups, shown, now);
   const selected = items.findIndex(
-    (item) => item.value?.number === (pulls.cursor ?? shown),
+    (item) => item.value?.key === (pulls.cursor ?? shown),
   );
   const focused = app.focus === 'sidebar' && app.pullPart === 'list';
   return (
@@ -184,17 +194,15 @@ function PullList() {
         emptyText={pullListEmpty(app)}
         onSelect={(item) => {
           if (!item.value) return actions.focusPullPart('list');
-          actions.reviewPull(item.value.number, { stay: true });
+          actions.reviewPull(item.value, { stay: true });
           actions.focusPullPart('list');
         }}
-        onActivate={(item) =>
-          item.value && actions.reviewPull(item.value.number)
-        }
+        onActivate={(item) => item.value && actions.reviewPull(item.value)}
         onContextMenu={(item, at) => {
           const pull = item.value;
           if (!pull) return;
           actions.openMenu(at, [
-            { label: 'Review', run: () => actions.reviewPull(pull.number) },
+            { label: 'Review', run: () => actions.reviewPull(pull) },
             { label: 'Check out', run: () => actions.checkoutPull(pull) },
             { separator: true },
             { label: 'Open on GitHub', run: () => actions.openUrl(pull.url) },
@@ -289,10 +297,21 @@ function Header() {
     ...(behind ? [{ text: ` ↓${behind}`, fg: palette.warning, bg: chip }] : []),
     ...(ahead ? [{ text: ` ↑${ahead}`, fg: palette.added, bg: chip }] : []),
   ];
+  const repoName: Seg[] = review.repos.spans
+    ? [
+        {
+          text: ` ${truncate(review.focused.name, Math.max(4, Math.floor(half / 3)))}`,
+          fg: palette.accent,
+          bg: chip,
+          bold: true,
+        },
+      ]
+    : [];
   const branchSegs: Seg[] = [
+    ...repoName,
     { text: ' ⎇ ', fg: palette.faint, bg: chip },
     {
-      text: truncate(branch, half - 6 - segsWidth(drift)),
+      text: truncate(branch, half - 6 - segsWidth(drift) - segsWidth(repoName)),
       fg: palette.text,
       bg: chip,
       bold: true,
@@ -343,6 +362,18 @@ function Header() {
       ) : null}
       <Line segs={[{ text: ' ' }]} width={1} fill={bg} />
     </box>
+  );
+}
+
+/** Each repository folder's branch, with how far it is ahead and behind. */
+function repoHints(app: App): ReadonlyMap<string, string> {
+  const { repos } = app.review;
+  if (!repos.spans) return new Map();
+  return new Map(
+    repos.list.map((repo) => {
+      const state = app.review.stateOf(repo);
+      return [repo.name, state ? branchLabel(state) : ''];
+    }),
   );
 }
 

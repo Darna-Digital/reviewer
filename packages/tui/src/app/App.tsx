@@ -21,6 +21,9 @@ import { HelpOverlay } from '../components/HelpOverlay';
 import { CommandPalette } from '../components/CommandPalette';
 import { CommentsPicker, ThemePicker } from '../components/Pickers';
 import { PullsPicker } from '../components/PullsPicker';
+import { RepoPicker } from '../components/RepoPicker';
+import { AddRepoPicker, WorkspaceEditor } from '../components/WorkspaceEditor';
+import { WorkspacePicker } from '../components/WorkspacePicker';
 import { Sidebar } from '../components/Sidebar';
 import { TargetPicker } from '../components/TargetPicker';
 import { findCommand } from './commands';
@@ -101,6 +104,20 @@ export function App(props: AppProps) {
         {overlay?.kind === 'theme' ? <ThemePicker /> : null}
         {overlay?.kind === 'comments' ? <CommentsPicker /> : null}
         {overlay?.kind === 'pulls' ? <PullsPicker /> : null}
+        {overlay?.kind === 'repos' ? <RepoPicker overlay={overlay} /> : null}
+        {overlay?.kind === 'workspaces' ? <WorkspacePicker /> : null}
+        {overlay?.kind === 'menu' && overlay.under?.kind === 'workspaces' ? (
+          <WorkspacePicker inert />
+        ) : null}
+        {overlay?.kind === 'workspaceEditor' ? (
+          <WorkspaceEditor
+            key={`${overlay.draft.roots.join('\0')}:${overlay.draft.selected}`}
+            overlay={overlay}
+          />
+        ) : null}
+        {overlay?.kind === 'addRepo' ? (
+          <AddRepoPicker overlay={overlay} />
+        ) : null}
         {overlay?.kind === 'commentsHere' ? (
           <CommentsPopover overlay={overlay} />
         ) : null}
