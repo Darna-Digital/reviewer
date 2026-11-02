@@ -89,7 +89,9 @@ final class ReviewHandoff {
     /// the web bar reads.
     private(set) var sessions: [ChatSummary] = []
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — the repository the page's
+    /// review is of.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private let chats: Chats
 
     init(client: ReviewerClient, chats: Chats) {

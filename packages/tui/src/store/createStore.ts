@@ -1,5 +1,5 @@
 import { Database } from 'bun:sqlite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { ReviewComment } from '@reviewer/core/comments';
@@ -38,7 +38,73 @@ export function openStore(path = databasePath()): Store {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA busy_timeout = 5000');
   migrate(db);
+  if (path !== ':memory:') importLegacyFiles(db);
   return createStore(db);
+}
+
+/** `legacy_import`'s scope for what was the app's own, not a repository's. */
+const APP_SCOPE = '~';
+
+/** Where the TUI kept its preferences and layouts before the database. */
+export const LEGACY_FILES = {
+  settings: () =>
+    process.env['REVIEWER_TUI_SETTINGS'] ||
+    `${homedir()}/.reviewer/tui-settings.json`,
+  uiState: () =>
+    process.env['REVIEWER_TUI_STATE'] || `${homedir()}/.reviewer/tui.json`,
+};
+
+function readJson(path: string): unknown {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Takes `tui-settings.json` and `tui.json` across once each, marked in
+ * `legacy_import` as the server marks its own; the files stay on disk.
+ */
+export function importLegacyFiles(db: Database) {
+  const once = (feature: string, take: () => void) => {
+    const done = db
+      .query<{ one: number }, [string, string]>(
+        'SELECT 1 AS one FROM legacy_import WHERE repo_path = ? AND feature = ?',
+      )
+      .get(APP_SCOPE, feature);
+    if (done) return;
+    db.transaction(() => {
+      take();
+      db.prepare(
+        `INSERT INTO legacy_import (repo_path, feature, imported_at) VALUES (?, ?, ?)
+         ON CONFLICT (repo_path, feature) DO NOTHING`,
+      ).run(APP_SCOPE, feature, new Date().toISOString());
+    })();
+  };
+  once('tui-settings.json', () => {
+    const saved = readJson(LEGACY_FILES.settings());
+    if (!isRecord(saved)) return;
+    db.prepare(
+      `INSERT INTO tui_settings (slot, data) VALUES (0, ?)
+       ON CONFLICT (slot) DO NOTHING`,
+    ).run(JSON.stringify(saved));
+  });
+  once('tui.json', () => {
+    const saved = readJson(LEGACY_FILES.uiState());
+    if (!isRecord(saved)) return;
+    const put = db.prepare(
+      `INSERT INTO tui_ui_state (repo_path, data) VALUES (?, ?)
+       ON CONFLICT (repo_path) DO NOTHING`,
+    );
+    for (const [repo, state] of Object.entries(saved)) {
+      if (isRecord(state)) put.run(repo, JSON.stringify(state));
+    }
+  });
 }
 
 const decodeComment = Schema.decodeUnknownSync(ReviewComment);
@@ -91,7 +157,47 @@ export function createStore(db: Database) {
     'DELETE FROM dev_command WHERE repo_path = ? AND id = ?',
   );
 
+  const findSettings = db.query<{ data: string }, []>(
+    'SELECT data FROM tui_settings WHERE slot = 0',
+  );
+  const putSettings = db.prepare(
+    `INSERT INTO tui_settings (slot, data) VALUES (0, ?)
+     ON CONFLICT (slot) DO UPDATE SET data = excluded.data`,
+  );
+  const findUiState = db.query<{ data: string }, [string]>(
+    'SELECT data FROM tui_ui_state WHERE repo_path = ?',
+  );
+  const putUiState = db.prepare(
+    `INSERT INTO tui_ui_state (repo_path, data) VALUES (?, ?)
+     ON CONFLICT (repo_path) DO UPDATE SET data = excluded.data`,
+  );
+  const parsed = (row: { data: string } | null) => {
+    try {
+      return row ? (JSON.parse(row.data) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+
   return {
+    /** The TUI's preferences as last saved, shared by every repository. */
+    settings(): Record<string, unknown> | null {
+      return parsed(findSettings.get());
+    },
+
+    saveSettings(settings: object): void {
+      putSettings.run(JSON.stringify(settings));
+    },
+
+    /** The layout last left in `repo`. */
+    uiState(repo: string): Record<string, unknown> | null {
+      return parsed(findUiState.get(repo));
+    },
+
+    saveUiState(repo: string, state: object): void {
+      putUiState.run(repo, JSON.stringify(state));
+    },
+
     comments(repo: string): ReviewComment[] {
       return listComments.all(repo).flatMap(readable);
     },

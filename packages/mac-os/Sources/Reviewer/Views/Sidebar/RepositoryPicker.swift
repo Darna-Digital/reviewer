@@ -1,0 +1,106 @@
+// The one way the repository the window is on is picked, wherever it is
+// picked — beside the branch chip at the sidebar's head, on the session
+// bar's strip, on the bottom pane's filter bars — while the workspace holds
+// more than one. It is the branch picker's twin, so the two read as a pair
+// wherever they stand: the same chip where the branch chip is a chip, the
+// same pop-up where the pane's pickers are pop-ups, and the same popover
+// under both (`BranchPopover`) —
+// a search over the repositories, ↑/↓ to walk them, Return to pick, each
+// row naming the branch it is on and the one the window is on ticked. A
+// pick turns the page to that repository (`AppModel.focus(root:)`), which
+// every one-repository surface follows; the popover's foot adds a
+// repository beside the others.
+//
+// JetBrains' VCS widget does the same with a project of several roots:
+// the branch it shows is the current repository's, named beside it.
+import SwiftUI
+
+struct RepositoryPicker: View {
+    /// How the picker stands: as the toolbar's chips do, or as a pop-up on
+    /// a bottom pane surface's filter bar.
+    enum Look {
+        case chip
+        case bar
+    }
+
+    var look: Look = .chip
+    @Environment(AppModel.self) private var model
+    @Environment(\.controlSize) private var controlSize
+    @State private var open = false
+
+    private var name: String { model.focusedRoot?.name ?? "Repository" }
+
+    /// The longest a repository's name runs on a filter bar before it is
+    /// cut — a folder's name, rarely a branch's length.
+    private static let barWidth: CGFloat = 140
+
+    var body: some View {
+        if model.roots.count > 1 {
+            label
+                .popover(isPresented: $open, arrowEdge: look == .bar ? .top : .bottom) { popover }
+                .closesOnNavigation($open)
+        }
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        switch look {
+        case .chip:
+            let font = NSFont.systemFont(ofSize: controlSize == .small ? 11 : 13)
+            Button { open.toggle() } label: {
+                HStack(spacing: 5) {
+                    RepoAvatar(name: name, size: controlSize == .small ? 12 : 14)
+                    Text(name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .clipHelp(name, font: font)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .font(Font(font))
+            }
+            .buttonStyle(.accessoryBar)
+            .help("Repository — the one the page is on")
+        case .bar:
+            PaneBarPopUp(title: name, help: "Repository — the one the page is on", maxWidth: Self.barWidth) {
+                RepoAvatar(name: name, size: 13)
+            } action: {
+                open.toggle()
+            }
+        }
+    }
+
+    private var popover: some View {
+        BranchPopover(
+            sections: [BranchChoiceSection(id: "repositories", title: nil, rows: rows)],
+            placeholder: "Search repositories", pick: pick, dismiss: { open = false }, actions: nil
+        ) {
+            ThemedDivider()
+            HStack(spacing: 2) {
+                Button("Add repository…") {
+                    open = false
+                    model.chooseRootToAdd()
+                }
+                Spacer(minLength: 0)
+            }
+            .popoverFooterBar()
+        }
+    }
+
+    private var rows: [BranchChoice] {
+        model.roots.map { root in
+            BranchChoice(
+                id: root.path, branch: nil, title: root.name, symbol: "folder",
+                tint: nil, badge: nil, checked: root === model.focusedRoot,
+                detail: root.branch ?? "Detached HEAD", detailSymbol: "arrow.triangle.branch",
+                monograms: [root.name])
+        }
+    }
+
+    private func pick(_ choice: BranchChoice) {
+        open = false
+        guard let root = model.root(at: choice.id) else { return }
+        model.focus(root: root)
+    }
+}

@@ -17,12 +17,17 @@ final class FileTreeNode: Identifiable, Hashable, @unchecked Sendable {
     let name: String
     let isDirectory: Bool
     let children: [FileTreeNode]
+    /// For the header a workspace stands each of its repositories under,
+    /// the repository it is (see `SidebarTree.isMultiRoot`); nil for a
+    /// file or a folder.
+    let root: TreeRoot?
 
-    init(id: String, name: String, isDirectory: Bool, children: [FileTreeNode]) {
+    init(id: String, name: String, isDirectory: Bool, children: [FileTreeNode], root: TreeRoot? = nil) {
         self.id = id
         self.name = name
         self.isDirectory = isDirectory
         self.children = children
+        self.root = root
     }
 
     static func == (lhs: FileTreeNode, rhs: FileTreeNode) -> Bool { lhs === rhs }
@@ -31,7 +36,9 @@ final class FileTreeNode: Identifiable, Hashable, @unchecked Sendable {
 }
 
 enum FileTree {
-    static func build(paths: [String]) -> [FileTreeNode] {
+    /// The tree of `paths`, each node's id under `prefix` when there is one
+    /// — a repository's own tree, beneath its header in a workspace.
+    static func build(paths: [String], prefix: String? = nil) -> [FileTreeNode] {
         let root = Draft(name: "")
         for path in paths {
             let isDirectory = path.hasSuffix("/")
@@ -43,7 +50,10 @@ enum FileTree {
                 cursor = cursor.child(named: component, directory: !last || isDirectory)
             }
         }
-        return root.children.values.map { $0.finished(path: $0.name) }.sorted(by: ordered)
+        let under = prefix.map { "\($0)/" } ?? ""
+        return root.children.values
+            .map { child in child.finished(path: under + child.name) }
+            .sorted(by: ordered)
     }
 
     /// Every node by its path, for what a row's menu needs to know about it.
@@ -68,7 +78,7 @@ enum FileTree {
             if node.isDirectory {
                 let kept = node.children.compactMap(keep)
                 return kept.isEmpty
-                    ? nil : FileTreeNode(id: node.id, name: node.name, isDirectory: true, children: kept)
+                    ? nil : FileTreeNode(id: node.id, name: node.name, isDirectory: true, children: kept, root: node.root)
             }
             return node.id.localizedCaseInsensitiveContains(needle) ? node : nil
         }

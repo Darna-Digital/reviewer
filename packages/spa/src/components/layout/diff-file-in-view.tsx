@@ -34,11 +34,15 @@ export function HeaderDiffFileInView({ route }: { route: ShellRoute }) {
   const prerenderFile = usePrerenderFile();
 
   if (!shown || inView === null) return null;
-  const { path } = inView;
-  const name = pathName(path);
-  const folders = path.slice(0, path.length - name.length);
+  const { name: label, repo, path } = inView;
+  const name = pathName(label);
+  const folders = label.slice(0, label.length - name.length);
+  // Another root's file in a workspace's diff takes the page to that root.
   const open = () =>
-    void navigate({ to: "/modes/code/browse", search: { file: path } });
+    void navigate({
+      to: "/modes/code/browse",
+      search: { file: path, ...(repo === undefined ? {} : { repo }) },
+    });
 
   return (
     <Tooltip>
@@ -47,7 +51,9 @@ export function HeaderDiffFileInView({ route }: { route: ShellRoute }) {
           <button
             type="button"
             onClick={open}
-            onPointerEnter={() => prerenderFile(path)}
+            onPointerEnter={() => {
+              if (repo === undefined) prerenderFile(path);
+            }}
           />
         }
         className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 text-[0.8125rem] outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -63,7 +69,7 @@ export function HeaderDiffFileInView({ route }: { route: ShellRoute }) {
         align="start"
         className="max-w-none whitespace-nowrap"
       >
-        {path}
+        {label}
       </TooltipContent>
     </Tooltip>
   );

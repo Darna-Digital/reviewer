@@ -93,6 +93,21 @@ describe("GitMessageService", () => {
       )
     )
   );
+  it.effect("generate reads each workspace repository into one prompt", () =>
+    Effect.gen(function* () {
+      const svc = yield* GitMessageService;
+      const echoed = yield* svc.generate([], "claude", [
+        { path: "/work/web", name: "web", paths: [] },
+        { path: "/work/api", name: "api", paths: [] },
+      ]);
+      expect(echoed).toContain("=== Repository: web (branch main) ===");
+      expect(echoed).toContain("=== Repository: api (branch main) ===");
+      expect(echoed).toContain("span several repositories");
+    }).pipe(
+      Effect.provide(GitMessageMemory()),
+      Effect.provide(Layer.mergeAll(gitWith("some diff"), agentReturning()))
+    )
+  );
   it.effect("generate fails when there are no changes", () =>
     Effect.gen(function* () {
       const svc = yield* GitMessageService;

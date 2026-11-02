@@ -27,6 +27,7 @@ const LAYOUTS: Array<{ value: LayoutKind; label: string; title: string }> = [
   },
   { value: "stacked", label: "Stacked", title: "Mark above the wordmark" },
   { value: "wordmark", label: "Word", title: "Wordmark only" },
+  { value: "blocks", label: "Blocks", title: "Wordmark in the mark's blocks" },
 ];
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
@@ -37,7 +38,9 @@ const swatch = ({ color, colorTo, angle }: Fill) => ({ color, colorTo, angle });
 export function ControlPanel({ brand }: { brand: Brand }) {
   const { config, update, reset } = brand;
   const hasWordmark = config.layout !== "mark";
-  const hasTile = config.layout === "mark" || config.markTile;
+  const isBlocks = config.layout === "blocks";
+  const hasOutlinedText = hasWordmark && !isBlocks;
+  const hasTile = config.layout === "mark" || (config.markTile && !isBlocks);
 
   const swapColours = () => {
     const background =
@@ -109,11 +112,18 @@ export function ControlPanel({ brand }: { brand: Brand }) {
                 placeholder="Reviewer"
                 onChange={(wordmark) => update({ wordmark })}
               />
-              <Toggle
-                label="Uppercase"
-                checked={config.uppercase}
-                onChange={(uppercase) => update({ uppercase })}
-              />
+              {isBlocks ? (
+                <p className="text-[11px] text-muted">
+                  Spelt in capitals from the letters the block alphabet has — R,
+                  E, V, I and W.
+                </p>
+              ) : (
+                <Toggle
+                  label="Uppercase"
+                  checked={config.uppercase}
+                  onChange={(uppercase) => update({ uppercase })}
+                />
+              )}
             </>
           ) : null}
         </Section>
@@ -126,11 +136,13 @@ export function ControlPanel({ brand }: { brand: Brand }) {
                 fill={config.plate}
                 onChange={(plate) => update({ plate })}
               />
-              <Toggle
-                label="Tile behind the mark"
-                checked={config.markTile}
-                onChange={(markTile) => update({ markTile })}
-              />
+              {isBlocks ? null : (
+                <Toggle
+                  label="Tile behind the mark"
+                  checked={config.markTile}
+                  onChange={(markTile) => update({ markTile })}
+                />
+              )}
             </>
           ) : null}
           {hasTile ? (
@@ -146,7 +158,7 @@ export function ControlPanel({ brand }: { brand: Brand }) {
             allowNone={false}
             onChange={(blocks) => update({ blocks })}
           />
-          {hasWordmark ? (
+          {hasOutlinedText ? (
             <>
               <Toggle
                 label="Wordmark matches blocks"
@@ -245,7 +257,7 @@ export function ControlPanel({ brand }: { brand: Brand }) {
           />
         </Section>
 
-        {hasWordmark ? (
+        {hasOutlinedText ? (
           <Section title="Typography">
             <Field label="Weight" value={`Space Grotesk ${config.fontWeight}`}>
               <Segmented

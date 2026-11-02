@@ -1,22 +1,21 @@
 import { describe, expect, test } from 'bun:test';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { openStore } from './createStore';
 import { DEFAULT_UI_STATE, loadUiState, saveUiState } from './uiState';
 
 describe('uiState', () => {
   test('round-trips per repository and falls back to defaults', () => {
-    const path = join(tmpdir(), `tui-state-${Date.now()}.json`);
-    expect(loadUiState('/a', path)).toEqual(DEFAULT_UI_STATE);
-    saveUiState(
-      '/a',
-      { ...DEFAULT_UI_STATE, bottomOpen: true, commitMessage: 'wip' },
-      path,
-    );
-    saveUiState('/b', DEFAULT_UI_STATE, path);
-    expect(loadUiState('/a', path)).toMatchObject({
+    const store = openStore(':memory:');
+    expect(loadUiState(store, '/a')).toEqual(DEFAULT_UI_STATE);
+    saveUiState(store, '/a', {
+      ...DEFAULT_UI_STATE,
       bottomOpen: true,
       commitMessage: 'wip',
     });
-    expect(loadUiState('/b', path).bottomOpen).toBe(false);
+    saveUiState(store, '/b', DEFAULT_UI_STATE);
+    expect(loadUiState(store, '/a')).toMatchObject({
+      bottomOpen: true,
+      commitMessage: 'wip',
+    });
+    expect(loadUiState(store, '/b').bottomOpen).toBe(false);
   });
 });

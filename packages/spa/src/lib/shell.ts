@@ -69,8 +69,13 @@ export type ShellIntent =
   /** The window tabs as the strip stands, for the shell's menus to name. */
   | { readonly type: "windowTabs"; readonly strip: ShellWindowTabStrip }
   /** The code page's file tree as it stands, for the shell to draw in its
-   * sidebar; null once the page stops showing one. */
-  | { readonly type: "tree"; readonly tree: ShellTree | null }
+   * sidebar; null once the page stops showing one. A new listing carries its
+   * state with it, so the shell lays the tree and its composer out at once. */
+  | {
+      readonly type: "tree";
+      readonly tree: ShellTree | null;
+      readonly state?: ShellTreeState;
+    }
   /** What moves under the tree without the listing moving — the selection, the
    * commit composer — sent apart so a click does not carry every path again. */
   | { readonly type: "treeState"; readonly state: ShellTreeState }
@@ -79,7 +84,12 @@ export type ShellIntent =
   | { readonly type: "sessions"; readonly list: ShellSessions | null }
   /** The page asked for one file's past — from its path bar, a file's tab —
    * and the History surface is the shell's own, so the ask crosses over. */
-  | { readonly type: "history"; readonly path: string }
+  | {
+      readonly type: "history";
+      readonly path: string;
+      /** The root the file is in, when it is not the page's own. */
+      readonly repo?: string;
+    }
   /** The review comments the page is holding for a hand-off, for the shell
    * to float its assign bar over the page; null once there are none. */
   | { readonly type: "review"; readonly review: ShellReview | null }
@@ -110,7 +120,7 @@ export type ShellOpenTarget = "commands" | "files" | "text" | "settings";
  * its menus: the strip in the order it is shown, which of them holds the
  * window, and what each is. The strip itself — the store, the priming, the
  * switch — is the island's; what crosses is the picture, so the toolbar can
- * draw the tabs, the Tabs menu can list the sessions ⌘1–9 reach and Close Tab
+ * draw the tabs, the Tabs menu can list the sessions ⇧⌘1–9 reach and Close Tab
  * can stand down on a pinned one.
  */
 export interface ShellWindowTabStrip {
@@ -123,6 +133,11 @@ export interface ShellWindowTab {
   readonly title: string;
   readonly kind: WindowTabKind;
   readonly pinned: boolean;
+  /**
+   * The conversation a session tab holds — null until its first message makes
+   * one — so the shell can read which agent it runs on.
+   */
+  readonly chatId: string | null;
   /** Its agent is mid-turn — the tab wears the orb. */
   readonly working: boolean;
   /** Its thread has moved since it was last read — the tab wears the dot. */
@@ -170,6 +185,12 @@ export interface ShellTree {
   readonly projectPath: string | null;
   /** Whether a row's working-tree changes can be discarded. */
   readonly discardable: boolean;
+  /**
+   * Whether the diff holds every repository of the workspace's changes, so
+   * a row of another root is a file to scroll to rather than a page to move
+   * to — see `workspace-diff.functions`.
+   */
+  readonly spansWorkspace: boolean;
 }
 
 /**
@@ -178,6 +199,8 @@ export interface ShellTree {
  */
 export interface ShellTreeState {
   readonly selected: string | null;
+  /** The root the selected file is in, when it is not the page's own. */
+  readonly selectedRoot: string | null;
   readonly commit: ShellCommitComposer | null;
   /** What your own changes are read against — a question only your own
    * changes have, so null on every other surface. See `LocalComparison`. */
@@ -206,7 +229,12 @@ export interface ShellCommitComposer {
  * to a discard).
  */
 export type ShellTreeAction =
-  | { readonly kind: "select"; readonly path: string }
+  | {
+      readonly kind: "select";
+      readonly path: string;
+      /** Another root's file, picked while the diff spans the workspace. */
+      readonly root?: string;
+    }
   /** The pointer has reached a file's row in the shell's tree. */
   | { readonly kind: "intent"; readonly path: string }
   | { readonly kind: "history"; readonly path: string }

@@ -2,10 +2,11 @@
 // and one piece of glass — the puck — standing under the one that is on.
 // The system's own tabs are the model (see `SegmentedTabs`), but they only
 // come laid out across, never down, so the rail's are drawn here: the puck
-// springs from icon to icon when the surface changes, and can be taken in
-// hand and slid along the track, swelling a little as it lifts — the
-// system's puck magnifies what is under it; this one, having nothing of
-// the system's lens to borrow, grows instead. A label on glass beside the
+// stands under the new icon the moment the surface changes, with no travel
+// between, and can be taken in hand and slid along the track, a little
+// larger while it is lifted — the system's puck magnifies what is under
+// it; this one, having nothing of the system's lens to borrow, grows
+// instead. Only the label moves on its own. A label on glass beside the
 // rail names the surface and the chord that reaches it: the one under the
 // pointer, once it has rested a moment, and the one under the puck while
 // it is carried, when a trackpad that can tap back also gives one tap for
@@ -146,19 +147,15 @@ struct GlassRailTabs<Extra: View>: View {
             if let offset = puckOffset {
                 Color.clear
                     .frame(width: Self.item, height: Self.item)
-                    .glassEffect(.regular.interactive(), in: Capsule())
+                    .glassEffect(.regular, in: Capsule())
                     .shadow(color: .black.opacity(lifted ? 0.18 : 0), radius: 6, y: 2)
                     .scaleEffect(lifted ? Self.liftedScale : 1)
                     .offset(y: offset)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // In hand it keeps up with the pointer on a short, stiff spring;
-        // let go, or sent to another tab, it travels on a softer one.
-        .animation(RailMotion.of(lifted ? .interactiveSpring(response: 0.16, dampingFraction: 0.86) : .spring(response: 0.34, dampingFraction: 0.78)), value: puckOffset)
-        .animation(RailMotion.of(.spring(response: 0.26, dampingFraction: 0.7)), value: lifted)
-        .animation(RailMotion.of(.snappy(duration: 0.2)), value: puckOffset == nil)
+        // Whatever moves around it, the puck is only ever where it is.
+        .transaction { $0.animation = nil }
     }
 
     /// Where the puck stands down the track: under the pointer while it is

@@ -39,7 +39,9 @@ final class CommitHistory {
     /// The branch the repository is on, which is what a nil `ref` names.
     var head: String?
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — turned with it, before
+    /// `projectChanged` starts the history over on that repository.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private var pageTask: Task<Void, Never>?
     /// Bumped by every reload so a page that lands late is dropped rather
     /// than appended to a different history.

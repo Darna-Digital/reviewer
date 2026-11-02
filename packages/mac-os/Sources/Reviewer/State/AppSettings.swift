@@ -150,7 +150,9 @@ final class AppSettings {
     private(set) var signIn: GitHubSignIn = .idle
     private(set) var languages: SettingsRead<[LanguageProviderInfo]> = .loading
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — whose git identity and language
+    /// servers the settings show.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private let defaults = UserDefaults.standard
     /// The watch over a sign-in under way, so a cancel can call it off.
     @ObservationIgnored private var signInWatch: Task<Void, Never>?

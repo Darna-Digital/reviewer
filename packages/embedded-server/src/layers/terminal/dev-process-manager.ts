@@ -24,7 +24,7 @@
  */
 import type { IncomingMessage } from "node:http";
 import type { WebSocket } from "ws";
-import { onCurrentRepoChange } from "../workspace/current-repo.ts";
+import { onOpenRootsChange } from "../workspace/current-repo.ts";
 import { loadNodePty } from "./node-pty.ts";
 
 export const DEV_PTY_PATH = "/api/local-dev/pty";
@@ -309,10 +309,14 @@ const realSpawn: SpawnFn = (file, args, opts) => {
 /** The production registry, shared across requests and the WebSocket handler. */
 export const devProcessManager = createDevProcessManager({ spawn: realSpawn });
 
-// Each repository owns its running processes: when the user opens a different
-// one, the dev commands of the one being left are stopped.
-onCurrentRepoChange((_next, prev) => {
-  if (prev !== null) devProcessManager.stopRepo(prev);
+// Each repository owns its running processes, and they run for as long as it
+// is open: the workspace's repositories all keep theirs running side by side,
+// and only a repository that leaves the workspace — another workspace opened
+// in its place, or taken out of this one — has its dev commands stopped.
+onOpenRootsChange((next, prev) => {
+  for (const root of prev) {
+    if (!next.includes(root)) devProcessManager.stopRepo(root);
+  }
 });
 
 /**

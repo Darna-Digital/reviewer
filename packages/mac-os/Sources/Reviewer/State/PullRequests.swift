@@ -43,17 +43,33 @@ enum PullDateFilter: CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// The pull requests under the branch they target — the shape of the list,
-/// the branches alphabetical, each group keeping GitHub's order.
-struct PullRequestGroup: Identifiable {
-    let base: String
-    let pulls: [PullRequestInfo]
+/// What narrows the list — the search and the web filter's two — held by
+/// the window rather than by one repository's list, since across a
+/// workspace it narrows every repository's alike.
+struct PullFilter: Equatable {
+    var query = ""
+    /// The base branch the list is narrowed to, or nil for every branch.
+    var base: String?
+    var date: PullDateFilter = .all
 
-    var id: String { base }
+    /// Whether anything narrows the list beyond the search, for the filter
+    /// button's dot.
+    var isNarrowed: Bool { base != nil || date != .all }
 
-    static func grouped(_ pulls: [PullRequestInfo]) -> [PullRequestGroup] {
-        Set(pulls.map(\.baseRef)).sorted().map { base in
-            PullRequestGroup(base: base, pulls: pulls.filter { $0.baseRef == base })
+    var isFiltered: Bool {
+        isNarrowed || !query.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// The pull requests the search and the filters keep, in their order.
+    func kept(_ pulls: [PullRequestInfo]) -> [PullRequestInfo] {
+        let cutoff = date.cutoff()
+        let needle = query.trimmingCharacters(in: .whitespaces).drop { $0 == "#" }.lowercased()
+        return pulls.filter { pull in
+            if let cutoff, let updated = Wire.date(pull.updatedAt), updated < cutoff { return false }
+            if let base, pull.baseRef != base { return false }
+            guard !needle.isEmpty else { return true }
+            let haystack = "\(pull.number)\n\(pull.title)\n\(pull.author)\n\(pull.headRef)".lowercased()
+            return haystack.contains(needle)
         }
     }
 }
@@ -65,6 +81,23 @@ struct CheckCounts {
     let pending: Int
     let neutral: Int
     let total: Int
+}
+
+/// One repository's part of the list: its rows in GitHub's order, headed
+/// by the repository while the workspace holds more than one.
+struct PullRequestSection: Identifiable {
+    let root: RootModel
+    let rows: [PullRequestInfo]
+
+    var id: String { root.path }
+    var pulls: PullRequests { root.pullRequests }
+}
+
+/// A row of the list, which across a workspace a number alone does not
+/// name: two repositories each have a #12.
+struct PullPick: Hashable {
+    let root: String
+    let number: Int
 }
 
 /// What a reviewer is in the middle of doing to a pull request, so the
@@ -93,11 +126,6 @@ final class PullRequests {
     private(set) var remote: GitHubRemote?
     /// What is in the middle of being done to one of them, if anything.
     private(set) var work: PullWork?
-
-    var query = ""
-    /// The base branch the list is narrowed to, or nil for every branch.
-    var baseFilter: String?
-    var dateFilter: PullDateFilter = .all
 
     @ObservationIgnored private let client: ReviewerClient
     @ObservationIgnored private var activation: NSObjectProtocol?
@@ -163,35 +191,9 @@ final class PullRequests {
         Set(pulls.map(\.baseRef)).sorted()
     }
 
-    /// The rows the list shows: what the search and the filters keep, under
-    /// the branch each targets.
-    var groups: [PullRequestGroup] {
-        let cutoff = dateFilter.cutoff()
-        let needle = query.trimmingCharacters(in: .whitespaces).drop { $0 == "#" }.lowercased()
-        let kept = pulls.filter { pull in
-            if let cutoff, let updated = Wire.date(pull.updatedAt), updated < cutoff { return false }
-            if let baseFilter, pull.baseRef != baseFilter { return false }
-            guard !needle.isEmpty else { return true }
-            let haystack = "\(pull.number)\n\(pull.title)\n\(pull.author)\n\(pull.headRef)".lowercased()
-            return haystack.contains(needle)
-        }
-        return PullRequestGroup.grouped(kept)
-    }
-
-    /// Whether anything narrows the list beyond the search, for the filter
-    /// button's dot.
-    var isNarrowed: Bool {
-        baseFilter != nil || dateFilter != .all
-    }
-
-    var isFiltered: Bool {
-        isNarrowed || !query.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-
-    func clearFilters() {
-        query = ""
-        baseFilter = nil
-        dateFilter = .all
+    /// The rows the list shows: what `filter` keeps.
+    func rows(_ filter: PullFilter) -> [PullRequestInfo] {
+        filter.kept(pulls)
     }
 
     /// The pull request numbered `number` as the list has it — or, while the

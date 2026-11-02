@@ -44,15 +44,15 @@ extension AppModel {
             ) { [weak self] in Task { await self?.refresh() } },
             PaletteCommand(
                 id: "git-fetch", label: "Fetch", group: "Git", symbol: "icloud.and.arrow.down", keywords: "remote",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.fetch(in: $0) }
             ) { [weak self] in self?.fetch() },
             PaletteCommand(
                 id: "git-pull", label: "Pull", group: "Git", symbol: "arrow.down", keywords: "remote update",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.pull(in: $0) }
             ) { [weak self] in self?.pull() },
             PaletteCommand(
                 id: "git-push", label: "Push", group: "Git", symbol: "arrow.up", keywords: "remote upload",
-                submenu: .git
+                submenu: .git, choices: repositoryChoices(in: roots) { [weak self] in self?.push(in: $0) }
             ) { [weak self] in self?.push() },
             PaletteCommand(
                 id: "git-branch", label: "Create branch…", group: "Git", symbol: "arrow.triangle.branch",
@@ -66,23 +66,60 @@ extension AppModel {
 
     /// The commit composer's actions, at the root beside Switch branch…
     /// rather than down in the Git list: they are the chords the TUI
-    /// shares, and the list ⌘E lands on is where a chord is looked up.
+    /// shares, and the list ⌘K lands on is where a chord is looked up. A
+    /// message can be drafted from anywhere (see `generateCommitMessage`);
+    /// committing takes the composer, with its ticked files.
     private var commitCommands: [PaletteCommand] {
-        guard hasCommitComposer else { return [] }
+        let draft = PaletteCommand(
+            id: "commit-draft-message", label: "Generate commit message", group: "Git", symbol: "sparkles",
+            keywords: "draft write claude codex agent ai", hint: "⌃G"
+        ) { [weak self] in self?.generateCommitMessage() }
+        guard hasCommitComposer else { return [draft] }
+        let changed = rootsWithCommitChanges
         return [
-            PaletteCommand(
-                id: "commit-draft-message", label: "Generate commit message", group: "Git", symbol: "sparkles",
-                keywords: "draft write claude codex agent ai", hint: "⌃G"
-            ) { [weak self] in self?.ask(commitComposer: .draft) },
+            draft,
             PaletteCommand(
                 id: "commit-commit", label: "Commit", group: "Git", symbol: "checkmark.circle",
-                keywords: "save changes", hint: "⌘K"
+                keywords: "save changes", hint: "⇧⌘K",
+                choices: repositoryChoices(in: changed, all: { [weak self] in self?.ask(commitComposer: .commit) }) {
+                    [weak self] root in self?.ask(commitComposer: .commit, only: root.path)
+                }
             ) { [weak self] in self?.ask(commitComposer: .commit) },
             PaletteCommand(
                 id: "commit-commit-push", label: "Commit and push", group: "Git", symbol: "arrow.up.circle",
-                keywords: "save changes upload remote", hint: "⌥⌘K"
+                keywords: "save changes upload remote", hint: "⌥⌘K",
+                choices: repositoryChoices(in: changed, all: { [weak self] in self?.ask(commitComposer: .commitAndPush) }) {
+                    [weak self] root in self?.ask(commitComposer: .commitAndPush, only: root.path)
+                }
             ) { [weak self] in self?.ask(commitComposer: .commitAndPush) },
         ]
+    }
+
+    /// The repositories the commit composer lists changes of.
+    private var rootsWithCommitChanges: [RootModel] {
+        let changed = Set((sidebar.workspaceCommit?.changes ?? []).compactMap { sidebar.locate($0.path)?.root })
+        return roots.filter { changed.contains($0.path) }
+    }
+
+    /// Where a workspace of several asks which repository a command is
+    /// for: all of them first — what the command does when nothing is
+    /// asked of one — then each by name, under its avatar. Nil while
+    /// there is only one to ask about, and the command simply runs.
+    private func repositoryChoices(
+        in candidates: [RootModel], all: (@MainActor () -> Void)? = nil, each: @escaping @MainActor (RootModel) -> Void
+    ) -> [PaletteCommand]? {
+        guard roots.count > 1, !candidates.isEmpty else { return nil }
+        let everyOne: @MainActor () -> Void = all ?? { candidates.forEach(each) }
+        let allRow = PaletteCommand(
+            id: "repositories-all", label: "All repositories", group: "Repository", symbol: "square.stack.3d.up",
+            run: everyOne)
+        let rows = candidates.map { root in
+            PaletteCommand(
+                id: "repository:\(root.path)", label: root.name, group: "Repository", symbol: "folder",
+                monogram: root.name, hint: root.branch
+            ) { each(root) }
+        }
+        return candidates.count > 1 ? [allRow] + rows : rows
     }
 
     /// The window's own: the diff style is the page's preference, asked
@@ -126,12 +163,30 @@ extension AppModel {
     ]
 
     private var projectCommands: [PaletteCommand] {
-        [
+        var commands = [
             PaletteCommand(
-                id: "project-open", label: "Open repository…", group: "Project", symbol: "folder",
-                keywords: "open change repository folder picker switch", hint: "⌘O"
-            ) { [weak self] in self?.showOpener() }
+                id: "project-open", label: "Open workspace…", group: "Project", symbol: "folder",
+                keywords: "open change repository folder picker switch workspace project", hint: "⌘O"
+            ) { [weak self] in self?.showOpener() },
+            PaletteCommand(
+                id: "project-add-root", label: "Add repository to workspace…", group: "Project",
+                symbol: "plus.square.on.square", keywords: "add repository root workspace multi folder", hint: "⌥⌘O"
+            ) { [weak self] in self?.chooseRootToAdd() },
         ]
+        if workspace?.workspace == nil {
+            commands.append(PaletteCommand(
+                id: "project-save-workspace", label: "Save as workspace…", group: "Project",
+                symbol: "plus.square.on.square", keywords: "save keep workspace name repositories"
+            ) { [weak self] in self?.askToSaveWorkspace() })
+        }
+        // Each repository of the workspace, to turn the page to.
+        for root in roots.count > 1 ? roots : [] where root !== focusedRoot {
+            commands.append(PaletteCommand(
+                id: "project-focus-\(root.path)", label: "Go to repository \(root.name)", group: "Project",
+                symbol: "folder", monogram: root.name, keywords: "switch repository root focus \(root.name)"
+            ) { [weak self] in self?.focus(root: root) })
+        }
+        return commands
     }
 
     private var sessionCommands: [PaletteCommand] {

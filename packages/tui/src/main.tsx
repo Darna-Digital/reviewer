@@ -69,7 +69,7 @@ async function main(cli: CliOptions) {
     prependInputHandlers: [commandKey.handle],
   });
   renderer.on('blur', commandKey.forget);
-  const settings = loadSettings();
+  const settings = loadSettings(store);
   const [system, terminal] = await Promise.all([
     readSystemScheme(),
     readTerminalLook(renderer),

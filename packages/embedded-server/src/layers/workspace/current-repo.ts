@@ -1,45 +1,74 @@
 /**
- * The single store for what is open — the repository every git view, file
- * read and comment runs against — held at module level so it can be read
- * both inside and outside the Effect runtime.
+ * The single store for what is open — the repositories of the workspace, side
+ * by side, every git view, file read and comment runs against one of — held
+ * at module level so it can be read both inside and outside the Effect
+ * runtime.
  *
  * The live PTY WebSocket handler and chat runtime run outside Effect (wired
  * straight onto the Node HTTP server's `upgrade` event / spawned processes), so
  * an Effect Ref wouldn't be reachable from them. WorkspaceContext therefore owns
- * no separate copy: it reads and writes the selection through here (on boot and
- * on every selection), and everything else reads it here too.
+ * no separate copy: it reads and writes the roots through here (on boot and
+ * on every open), and everything else reads them here too.
+ *
+ * Which root a request is about is the request's to say (see
+ * `requested-repo.ts`); what is kept here is only which roots are open. The
+ * first of them is the default root — what a request that names none runs
+ * against, so a client that predates workspaces keeps working on a workspace
+ * of one, and on the first repository of a larger one.
  */
-let currentRepo: string | null = null;
+let openRoots: ReadonlyArray<string> = [];
 
-/** Notified when the selection actually changes, with (next, previous) paths. */
-type SelectionListener = (next: string | null, prev: string | null) => void;
-const listeners = new Set<SelectionListener>();
+/** Notified when the roots actually change, with (next, previous). */
+type RootsListener = (
+  next: ReadonlyArray<string>,
+  prev: ReadonlyArray<string>
+) => void;
+const listeners = new Set<RootsListener>();
 
 /**
- * Subscribe to repository-selection changes. Used by long-lived, non-Effect
- * state outside the request cycle — the chat runtime repairs a repo's stale
- * turns when the user opens it, the dev-process registry stops the processes
- * the one being left was running. Returns an unsubscribe function.
+ * Subscribe to changes of the open roots. Used by long-lived, non-Effect
+ * state outside the request cycle — the chat runtime repairs the stale turns
+ * of repositories as they open, the dev-process registry stops the processes
+ * of the roots that left. Returns an unsubscribe function.
  */
-export const onCurrentRepoChange = (
-  listener: SelectionListener
-): (() => void) => {
+export const onOpenRootsChange = (listener: RootsListener): (() => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
 
-export const setCurrentRepo = (path: string | null): void => {
-  if (path === currentRepo) return;
-  const prev = currentRepo;
-  currentRepo = path;
+const sameRoots = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
+  a.length === b.length && a.every((root, index) => root === b[index]);
+
+export const setOpenRoots = (roots: ReadonlyArray<string>): void => {
+  const next = [...new Set(roots)];
+  if (sameRoots(next, openRoots)) return;
+  const prev = openRoots;
+  openRoots = next;
   for (const listener of listeners) {
     try {
-      listener(path, prev);
+      listener(next, prev);
     } catch {
       // a listener must never break selection bookkeeping
     }
   }
 };
 
-/** The repository everything runs against — git, files, comments. */
-export const getCurrentRepo = (): string | null => currentRepo;
+/** Every repository open in the workspace, in its order. */
+export const getOpenRoots = (): ReadonlyArray<string> => openRoots;
+
+export const isOpenRoot = (path: string): boolean => openRoots.includes(path);
+
+/** The default root: what a request that names no repository runs against. */
+export const getCurrentRepo = (): string | null => openRoots[0] ?? null;
+
+/**
+ * The root a caller outside Effect asked for — a socket's `?repo=` — when it
+ * is open; the default root when it asked for none; null for one that is not
+ * open, which the caller refuses rather than quietly running elsewhere.
+ */
+export const repoFor = (requested: string | null): string | null =>
+  requested === null || requested.length === 0
+    ? getCurrentRepo()
+    : isOpenRoot(requested)
+      ? requested
+      : null;

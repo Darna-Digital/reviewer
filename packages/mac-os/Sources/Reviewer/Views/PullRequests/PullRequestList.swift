@@ -1,7 +1,7 @@
 // The merge requests as a native source list, standing in the sidebar
 // while the page is on that surface — where the tree stands on the others
 // — drawn from what the shell reads itself (see `PullRequests`): every open
-// pull request under the branch it targets, each row its title over who
+// pull request, under its repository across a workspace, each row its title over who
 // wrote it and where it comes from, with what CI said and whether anything
 // is in the way at the trailing edge, the web list's own facts in the
 // sidebar's two lines. The web list's search and its branch-and-time filter
@@ -22,51 +22,75 @@ struct PullRequestList: View {
     /// The row highlighted: the page's, until a click moves it ahead of the
     /// page's answer — a list that waited for the round trip would flash the
     /// old row back under the pointer first.
-    @State private var selected: Int?
+    @State private var selected: PullPick?
 
-    private var pulls: PullRequests { model.pullRequests }
-    private var shown: [PullRequestInfo] { pulls.groups.flatMap(\.pulls) }
+    private var sections: [PullRequestSection] { model.pullSections }
+    /// Whether each repository's rows stand under its own header.
+    private var spansWorkspace: Bool { model.roots.count > 1 }
+    private var shown: [(section: PullRequestSection, pull: PullRequestInfo)] {
+        sections.flatMap { section in section.rows.map { (section, $0) } }
+    }
 
     var body: some View {
+        let sources = sections.map(\.pulls)
         VStack(spacing: 0) {
             PullListHeader()
-            if !pulls.hasGitHub {
+            if sources.isEmpty || !sources.contains(where: \.hasGitHub) {
                 PullListPlaceholder(
                     symbol: "point.3.connected.trianglepath.dotted", title: "No GitHub remote",
-                    detail: "This project is not on GitHub, so there are no merge requests to read here.")
-            } else if let error = pulls.error {
+                    detail: spansWorkspace
+                        ? "None of this workspace's repositories is on GitHub, so there are no merge requests to read here."
+                        : "This project is not on GitHub, so there are no merge requests to read here.")
+            } else if !spansWorkspace, let error = sources.first?.error {
                 PullListPlaceholder(symbol: "exclamationmark.triangle", title: "Could not load merge requests", detail: error)
-            } else if pulls.loading {
+            } else if sources.allSatisfy({ $0.pulls.isEmpty }) && sources.contains(where: \.loading) {
                 Spacer()
                 Orb(size: 16, label: "Loading")
                 Spacer()
-            } else if pulls.pulls.isEmpty {
+            } else if sources.allSatisfy({ $0.pulls.isEmpty && $0.error == nil }) {
                 PullListPlaceholder(
                     symbol: "arrow.triangle.pull", title: "No open merge requests",
                     detail: "When a branch is pushed and opened for review, it shows up here with its files and comments.")
-            } else if pulls.groups.isEmpty {
+            } else if sections.allSatisfy({ $0.rows.isEmpty && $0.pulls.error == nil }) {
                 PullListPlaceholder(symbol: "line.3.horizontal.decrease", title: "Nothing matches") {
-                    Button("Clear filters") { pulls.clearFilters() }
+                    Button("Clear filters") { model.pullFilter = PullFilter() }
                 }
             } else {
                 rows
             }
         }
-        .onChange(of: model.reviewingPull?.number, initial: true) { _, reviewing in selected = reviewing }
+        .onChange(of: model.reviewingPullPick, initial: true) { _, reviewing in selected = reviewing }
     }
 
     private var rows: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(pulls.groups) { group in
-                    GroupHeader(base: group.base, count: group.pulls.count)
-                    ForEach(group.pulls) { pull in
-                        PullRow(pull: pull, selected: selected == pull.number) { pick(pull) }
-                            .contextMenu { PullRowMenu(pull: pull) }
+                ForEach(sections) { section in
+                    if spansWorkspace {
+                        // A repository with nothing to show stands no header,
+                        // the way the changes tree lists only roots with
+                        // something in them; one that failed says so.
+                        if let error = section.pulls.error {
+                            RepositoryHeader(name: section.root.name)
+                            Text(error)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .padding(.horizontal, 8)
+                                .padding(.bottom, 4)
+                        } else if !section.rows.isEmpty {
+                            RepositoryHeader(name: section.root.name)
+                        }
+                    }
+                    ForEach(section.rows) { pull in
+                        let pick = PullPick(root: section.root.path, number: pull.number)
+                        PullRow(pull: pull, selected: selected == pick) { self.pick(pull, in: section) }
+                            .contextMenu { PullRowMenu(pull: pull, root: section.root) }
                     }
                 }
             }
             .padding(.horizontal, 10)
+            .padding(.top, spansWorkspace ? 0 : 6)
             .padding(.bottom, 8)
         }
         .focusable()
@@ -75,10 +99,11 @@ struct PullRequestList: View {
         .onKeyPress(.downArrow) { step(1) }
     }
 
-    private func pick(_ pull: PullRequestInfo) {
-        selected = pull.number
-        guard pull.number != model.reviewingPull?.number else { return }
-        model.show(pull: pull)
+    private func pick(_ pull: PullRequestInfo, in section: PullRequestSection) {
+        let pick = PullPick(root: section.root.path, number: pull.number)
+        selected = pick
+        guard pick != model.reviewingPullPick else { return }
+        model.show(pull: pull, in: section.root)
     }
 
     /// The row beside the picked one, in the order shown — the first with
@@ -86,37 +111,29 @@ struct PullRequestList: View {
     private func step(_ offset: Int) -> KeyPress.Result {
         let rows = shown
         guard !rows.isEmpty else { return .ignored }
-        let current = rows.firstIndex { $0.number == selected }
+        let current = rows.firstIndex { PullPick(root: $0.section.root.path, number: $0.pull.number) == selected }
         let next = current.map { min(max($0 + offset, 0), rows.count - 1) } ?? 0
-        pick(rows[next])
+        pick(rows[next].pull, in: rows[next].section)
         return .handled
     }
 }
 
-/// The branch a run of rows targets, over them, with how many when there
-/// is something to count: "1" beside a single row is a figure that reads
-/// as a fact and turns out to be the row itself.
-private struct GroupHeader: View {
-    let base: String
-    let count: Int
+/// A repository's part of the list, over the branches its rows target —
+/// only while the workspace holds more than one. Headed by its avatar, as
+/// the Branches pane heads each repository.
+private struct RepositoryHeader: View {
+    let name: String
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 9, weight: .medium))
-            Text(base.isEmpty ? "No branch" : base)
+        HStack(spacing: 6) {
+            RepoAvatar(name: name, size: 16)
+            Text(name)
                 .lineLimit(1)
-            if count > 1 {
-                Spacer(minLength: 4)
-                Text("\(count)")
-                    .monospacedDigit()
-            }
         }
-        .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(.secondary)
+        .font(.system(size: 12, weight: .semibold))
         .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 4)
+        .padding(.top, 12)
+        .padding(.bottom, 2)
     }
 }
 
@@ -128,9 +145,9 @@ private struct PullListHeader: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        @Bindable var pulls = model.pullRequests
+        @Bindable var model = model
         HStack(spacing: 6) {
-            PaneSearchField(prompt: "Search merge requests", text: $pulls.query)
+            MinimalSearchField(prompt: "Search merge requests", text: $model.pullFilter.query)
             PullFilterMenu()
         }
         .sidebarSearchBand()
@@ -145,11 +162,10 @@ private struct PullFilterMenu: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        let pulls = model.pullRequests
         Menu {
             Section("Target branch") {
                 Toggle("All branches", isOn: baseBinding(nil))
-                ForEach(pulls.baseBranches, id: \.self) { base in
+                ForEach(model.pullBaseBranches, id: \.self) { base in
                     Toggle(base.isEmpty ? "No branch" : base, isOn: baseBinding(base))
                 }
             }
@@ -161,39 +177,42 @@ private struct PullFilterMenu: View {
         } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .font(.system(size: 11, weight: .medium))
-                .frame(width: 24, height: 24)
+                .foregroundStyle(.secondary)
+                .frame(width: PaneMetrics.glassHeight, height: PaneMetrics.glassHeight)
                 .overlay(alignment: .topTrailing) {
-                    if pulls.isNarrowed {
+                    if model.pullFilter.isNarrowed {
                         Circle()
                             .fill(Color.accentColor)
                             .frame(width: 5, height: 5)
-                            .padding(3)
+                            .padding(4)
                     }
                 }
         }
-        .menuStyle(.borderlessButton)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
+        .glassCircleControl()
         .fixedSize()
         .help("Filter merge requests")
     }
 
     private func baseBinding(_ base: String?) -> Binding<Bool> {
         Binding(
-            get: { model.pullRequests.baseFilter == base },
-            set: { on in if on { model.pullRequests.baseFilter = base } })
+            get: { model.pullFilter.base == base },
+            set: { on in if on { model.pullFilter.base = base } })
     }
 
     private func dateBinding(_ date: PullDateFilter) -> Binding<Bool> {
         Binding(
-            get: { model.pullRequests.dateFilter == date },
-            set: { on in if on { model.pullRequests.dateFilter = date } })
+            get: { model.pullFilter.date == date },
+            set: { on in if on { model.pullFilter.date = date } })
     }
 }
 
 /// A pull request's row: its title, over its number, its author and the
 /// branch it comes from; at the trailing edge the blocker, if any, and
-/// what CI said. The target branch is not among them — the heading the
-/// row sits under has said it. Picked, it wears the tree's wash; under
+/// what CI said. The target branch is not among them: nearly every one
+/// targets the default branch, and the filter narrows by it. Picked, it wears the tree's wash; under
 /// the pointer, the same faint one the tree's rows do.
 private struct PullRow: View {
     let pull: PullRequestInfo
@@ -270,11 +289,13 @@ private struct PullRow: View {
 /// minus the two that are confirmed there.
 private struct PullRowMenu: View {
     let pull: PullRequestInfo
+    /// The repository the pull request is against, which the checkout lands in.
+    let root: RootModel
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Button("Check out \(pull.localBranch)") { model.checkout(pull: pull) }
-            .disabled(model.currentBranch == pull.localBranch)
+        Button("Check out \(pull.localBranch)") { model.checkout(pull: pull, in: root) }
+            .disabled(root.branch == pull.localBranch)
         Divider()
         if !pull.url.isEmpty {
             Button("Open on GitHub") { model.open(pull: pull) }

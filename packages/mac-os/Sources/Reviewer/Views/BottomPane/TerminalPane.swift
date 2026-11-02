@@ -1,17 +1,16 @@
 // The Terminal surface, laid out as the system's own Terminal is: the
-// project's shells as a row of tabs along the top — every tab an equal
-// share of the width, its title centred, the one in front filled, its ✕ at
-// the leading edge as the system puts it — and the mark that opens one at
-// the trailing end. Nothing else: a shell is opened, picked and closed,
-// and that is the whole of it. The Run surface beside it keeps the table
-// and its toolbar, since a command is a thing to add, edit and remove; a
-// shell is not. A double-click on a tab, or its menu, renames it in place
-// the way Finder renames a file. A repository with no shell of its own
-// opens one on the way in, so the surface comes up on a prompt rather than
-// on a placeholder; the placeholder is left for the shell that could not
-// be opened, and for the last one closed by hand. Every shell visited
-// stays attached while hidden, so coming back is the screen as you left
-// it.
+// project's shells as a row of tabs in one capsule of glass on the bar
+// over the shell — the repository's pop-up first while the workspace holds
+// several, the tab in front filled, its ✕ at the leading edge as the
+// system puts it — and the mark that opens one at the trailing end (see
+// `ShellTabBar`). Nothing else: a shell is opened, picked
+// and closed, and that is the whole of it. A double-click on a tab, or its
+// menu, renames it in place the way Finder renames a file. A repository
+// with no shell of its own opens one on the way in, so the surface comes
+// up on a prompt rather than on a placeholder; the placeholder is left for
+// the shell that could not be opened, and for the last one closed by
+// hand. Every shell visited stays attached while hidden, so coming back is
+// the screen as you left it.
 import Observation
 import SwiftTerm
 import SwiftUI
@@ -21,21 +20,17 @@ private typealias Color = SwiftUI.Color
 
 struct TerminalPane: View {
     @Environment(AppModel.self) private var model
-    @State private var rename = ThreadRename()
 
     private var threads: Threads { model.threads }
 
-    private var shells: [ThreadSummary] {
-        threads.threads.filter { $0.agent == "terminal" }
-    }
+    private var shells: [ThreadSummary] { threads.shells }
 
     var body: some View {
         VStack(spacing: 0) {
-            ShellTabBar(shells: shells, open: open, close: close(id:))
+            ShellTabBar()
             terminal
         }
-        .environment(rename)
-        .task(id: model.workspace?.project) { await openFirstSession() }
+        .task(id: model.focusedRootPath) { await openFirstSession() }
     }
 
     /// The shells of the project being opened, and one opened for it if it
@@ -73,18 +68,11 @@ struct TerminalPane: View {
     private func open() {
         Task { await threads.open(branch: model.currentBranch) }
     }
+}
 
-    /// Closing the tab in front leaves the neighbour in front, as the
-    /// system's tabs do, rather than jumping back to the first.
-    private func close(id: String) {
-        if threads.selectedId == id { threads.selectedId = neighbour(of: id)?.id }
-        Task { await threads.close(id: id) }
-    }
-
-    private func neighbour(of id: String) -> ThreadSummary? {
-        guard let index = shells.firstIndex(where: { $0.id == id }) else { return nil }
-        let after = shells.index(after: index)
-        return after < shells.endIndex ? shells[after] : (index > 0 ? shells[index - 1] : nil)
+private extension Threads {
+    var shells: [ThreadSummary] {
+        threads.filter { $0.agent == "terminal" }
     }
 }
 
@@ -114,37 +102,137 @@ private final class ThreadRename {
     }
 }
 
-/// The row of shells: the tabs sharing the width between them, then the
-/// mark that opens one, on a bar of the surface's own height.
+/// The bar over the shell: the repository, the shells as tabs, and the
+/// mark that opens one at the trailing end.
 private struct ShellTabBar: View {
-    let shells: [ThreadSummary]
-    let open: () -> Void
-    let close: (String) -> Void
     @Environment(AppModel.self) private var model
+    @State private var rename = ThreadRename()
+    @State private var overflow = TabOverflow()
+
+    private var threads: Threads { model.threads }
+    private var shells: [ThreadSummary] { threads.shells }
 
     var body: some View {
-        HStack(spacing: 3) {
-            ForEach(shells) { thread in
-                ShellTab(thread: thread,
-                         isSelected: model.threads.selectedId == thread.id,
-                         select: { model.threads.selectedId = thread.id },
-                         close: { close(thread.id) })
+        PaneBar {
+            RepositoryPicker(look: .bar)
+            tabs
+            PaneGlassGroup {
+                PaneBarButton(symbol: "plus", help: "New session", action: open)
             }
-            // The tabs take the width between them, so the mark ends up at
-            // the trailing edge on its own; with no tabs to push it there,
-            // this keeps it on that edge rather than in the middle.
-            Spacer(minLength: 0)
-            NewShellButton(action: open)
         }
-        .padding(.horizontal, 5)
-        .frame(height: PaneMetrics.barHeight)
-        .frame(maxWidth: .infinity)
-        .overlay(alignment: .bottom) { ThemedDivider() }
+    }
+
+    /// The tabs at their own widths, scrolling sideways once there are
+    /// more than the bar holds rather than squeezing every title away,
+    /// and keeping the tab in front in view as it changes.
+    @ViewBuilder
+    private var tabs: some View {
+        if shells.isEmpty {
+            Spacer(minLength: 0)
+        } else {
+            scrollingTabs
+                .layoutPriority(1)
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The tabs' capsule, drawn only while there are tabs to hold: empty,
+    /// it shrank to a sliver of glass beside the repository's pop-up.
+    private var scrollingTabs: some View {
+        ScrollViewReader { scroller in
+            ScrollView(.horizontal) {
+                HStack(spacing: 2) {
+                    ForEach(shells) { thread in
+                        ShellTab(thread: thread,
+                                 isSelected: threads.selectedId == thread.id,
+                                 select: { threads.selectedId = thread.id },
+                                 close: { close(id: thread.id) })
+                            .id(thread.id)
+                    }
+                }
+                .environment(rename)
+            }
+            .scrollIndicators(.never)
+            .onScrollGeometryChange(for: TabOverflow.self) { geometry in
+                TabOverflow(geometry)
+            } action: { _, overflow in
+                self.overflow = overflow
+            }
+            .mask { EdgeFade(leading: overflow.before, trailing: overflow.after) }
+            // The glass stands round the scroller rather than inside it, so
+            // the capsule keeps its ends while the tabs scroll under them;
+            // it hugs the tabs until they outrun the bar.
+            .frame(maxWidth: overflow.contentWidth > 0 ? overflow.contentWidth : nil)
+            .padding(.horizontal, 2)
+            .frame(height: PaneMetrics.glassHeight)
+            .glassEffect(.regular, in: Capsule())
+            .onChange(of: threads.selectedId) { _, id in
+                guard let id else { return }
+                withAnimation(PaneMotion.change) { scroller.scrollTo(id) }
+            }
+        }
+    }
+
+    private func open() {
+        Task { await threads.open(branch: model.currentBranch) }
+    }
+
+    /// Closing the tab in front leaves the neighbour in front, as the
+    /// system's tabs do, rather than jumping back to the first.
+    private func close(id: String) {
+        if threads.selectedId == id { threads.selectedId = neighbour(of: id)?.id }
+        Task { await threads.close(id: id) }
+    }
+
+    private func neighbour(of id: String) -> ThreadSummary? {
+        guard let index = shells.firstIndex(where: { $0.id == id }) else { return nil }
+        let after = shells.index(after: index)
+        return after < shells.endIndex ? shells[after] : (index > 0 ? shells[index - 1] : nil)
+    }
+}
+
+/// How far the tabs run past the capsule on either side, and how wide
+/// they are in all — what the edges fade by and the capsule hugs.
+private struct TabOverflow: Equatable {
+    var before = false
+    var after = false
+    var contentWidth: CGFloat = 0
+
+    init() {}
+
+    init(_ geometry: ScrollGeometry) {
+        let shown = geometry.visibleRect
+        before = shown.minX > 0.5
+        after = shown.maxX < geometry.contentSize.width - 0.5
+        contentWidth = geometry.contentSize.width
+    }
+}
+
+/// The mask that fades a scrolled row out at an edge it has more past —
+/// the tabs going on under the capsule's end rather than cut off at it.
+private struct EdgeFade: View {
+    let leading: Bool
+    let trailing: Bool
+
+    private static let width: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: leading ? Self.width : 0)
+            Rectangle()
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: trailing ? Self.width : 0)
+        }
+        .animation(.easeOut(duration: 0.15), value: leading)
+        .animation(.easeOut(duration: 0.15), value: trailing)
     }
 }
 
 enum ShellTabMetrics {
-    static let height: CGFloat = 22
+    static let height: CGFloat = PaneMetrics.glassHeight - 4
+    static let minWidth: CGFloat = 72
+    static let maxWidth: CGFloat = 170
     /// The ✕ stands in this much room at the leading edge, and the same is
     /// left free at the trailing one, so the title reads centred in the tab.
     static let closeSlot: CGFloat = 20
@@ -166,11 +254,11 @@ private struct ShellTab: View {
     var body: some View {
         Button(action: select) {
             title
-                .frame(maxWidth: .infinity)
+                .frame(minWidth: ShellTabMetrics.minWidth, maxWidth: ShellTabMetrics.maxWidth)
                 .padding(.horizontal, ShellTabMetrics.closeSlot)
                 .frame(height: ShellTabMetrics.height)
                 .background(fill, in: Capsule())
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .simultaneousGesture(TapGesture(count: 2).onEnded { rename.begin(thread) })
@@ -240,27 +328,6 @@ private struct ShellTabClose: View {
         .onHover { isHovering = $0 }
         .help("Close \(title)")
         .accessibilityLabel("Close \(title)")
-    }
-}
-
-/// The mark at the row's trailing end, in the round the system gives it.
-private struct NewShellButton: View {
-    let action: () -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(isHovering ? .primary : .secondary)
-                .frame(width: ShellTabMetrics.height, height: ShellTabMetrics.height)
-                .background(isHovering ? Color.primary.opacity(BarChipMetrics.hoverTint) : .clear, in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .help("New session")
-        .accessibilityLabel("New session")
     }
 }
 

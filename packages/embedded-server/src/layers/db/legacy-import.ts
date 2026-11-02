@@ -75,12 +75,12 @@ const readJson = (path: string): unknown | null => {
   }
 };
 
-const imported = (repoPath: string, feature: string): boolean =>
+export const imported = (repoPath: string, feature: string): boolean =>
   database()
     .prepare("SELECT 1 FROM legacy_import WHERE repo_path = ? AND feature = ?")
     .get(repoPath, feature) !== undefined;
 
-const markImported = (repoPath: string, feature: string): void => {
+export const markImported = (repoPath: string, feature: string): void => {
   database()
     .prepare(
       `INSERT INTO legacy_import (repo_path, feature, imported_at) VALUES (?, ?, ?)

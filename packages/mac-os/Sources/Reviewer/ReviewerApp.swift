@@ -4,7 +4,9 @@
 //
 // Two windows: the workspace, and the opener — the Finder-like list of
 // every repository the machine holds. The server holds one project at a
-// time, so each is a single `Window` rather than a group. Beside them the
+// time, so each is a single window rather than a group: the opener a
+// `Window` scene, and the workspace one AppKit makes, so that its toolbar
+// is AppKit's own (see `WorkspaceWindow`). Beside them the
 // settings scene (⌘,): the theme, and who the app works as. The workspace is
 // the one that opens at launch — the server usually remembers a project,
 // and the opener would only flash ahead of it — and hands over to the
@@ -16,50 +18,36 @@ import AppKit
 import SwiftUI
 
 enum ReviewerWindow {
-    static let workspace = "workspace"
     static let opener = "opener"
 }
 
 @main
 struct ReviewerApp: App {
-    @State private var model = AppModel()
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
-    var body: some Scene {
-        Window("Reviewer", id: ReviewerWindow.workspace) {
-            ContentView()
-                .environment(model)
-                // Re-opened from the opener, the window finds the server
-                // already answering, and only the first opening boots it.
-                .task { if model.connection != .ready { await model.bootstrap() } }
-                .frame(minWidth: 900, minHeight: 560)
-        }
-        .windowStyle(.hiddenTitleBar)
-        // The full-height toolbar, not the compact one: only under it does
-        // the system run the sidebar's pane up to the window's top edge,
-        // with the traffic lights and the sidebar toggle inside it, as
-        // Music has it. Compact keeps a title bar strip above the pane.
-        .windowToolbarStyle(.unified)
-        .defaultSize(width: 1280, height: 800)
-        .commands { ReviewerCommands(model: model) }
+    /// The delegate's, so the workspace window — which AppKit makes, not
+    /// a scene (see `WorkspaceWindow`) — and the scenes share the one.
+    private var model: AppModel { delegate.model }
 
+    var body: some Scene {
         // ⌘, and the app menu's Settings… are the scene's own. The window is
         // sized by its form, so no default size here.
         Settings {
             SettingsView()
                 .environment(model)
         }
+        // The workspace is AppKit's window, opened by the delegate; with
+        // no scene of its own to open at launch, SwiftUI would open this one.
+        .defaultLaunchBehavior(.suppressed)
+        .commands { ReviewerCommands(model: model) }
 
-        Window("Open repository", id: ReviewerWindow.opener) {
+        Window("Open workspace", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
                 .environment(model)
         }
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1040, height: 620)
         .defaultPosition(.center)
-        // Xcode's chord for its welcome, on the Window menu item the system
-        // adds for the scene.
-        .keyboardShortcut("1", modifiers: [.command, .shift])
         // Never the window a relaunch restores, and never the one the
         // launch opens: the workspace decides whether it is wanted.
         .restorationBehavior(.disabled)
@@ -81,9 +69,10 @@ struct ReviewerApp: App {
 /// not only while the page island has the keyboard.
 ///
 /// The chords are the web app's own — ⌘T for a session, ⌘B the bottom
-/// pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so the window
-/// answers the hands that learned it in the browser; the rail's buttons,
-/// which the web app gives no chords, take ⌥⌘1–7 (see `RailShortcut`).
+/// pane, ⌘G across Code and Sessions — so the window answers the hands
+/// that learned it in the browser; the rail's buttons take ⌘1–3 for the
+/// code surfaces and ⌥⌘4–7 for the bottom pane's (see `RailShortcut`), and
+/// the sessions ⇧⌘1–9 (see `TabSlotChords`).
 /// The tab chords are the island's strip's to answer, and a menu
 /// equivalent takes the key before the page sees it, so each of those
 /// items hands its chord back to the strip (`WindowTabAction`) rather than
@@ -100,15 +89,20 @@ struct ReviewerCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New agent session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
-            Button("Open repository…") { model.showOpener() }
+            Button("Open workspace…") { model.showOpener() }
                 .keyboardShortcut("o", modifiers: .command)
+            Button("Add repository to workspace…") { model.chooseRootToAdd() }
+                .keyboardShortcut("o", modifiers: [.command, .option])
+                .disabled(!model.hasProject)
+            Button("Save as workspace…") { model.askToSaveWorkspace() }
+                .disabled(!model.hasProject || model.workspace?.workspace != nil)
         }
         CommandGroup(replacing: .saveItem) {
             Button("Close tab") { model.closeCurrentTab() }
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
-        // Into the Edit menu, under the pasteboard: ⌘E, ⇧⌘O and ⇧⌘F, the
+        // Into the Edit menu, under the pasteboard: ⌘K, ⇧⌘O and ⇧⌘F, the
         // TUI's chords for the commands and the two searches, and each the
         // one way in from the keys.
         // Then ⌘F, which finds on the page the window is on — the files of
@@ -118,7 +112,7 @@ struct ReviewerCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Divider()
             Button("Commands…") { model.showCommands() }
-                .keyboardShortcut("e", modifiers: .command)
+                .keyboardShortcut("k", modifiers: .command)
                 .disabled(!model.hasProject)
             SearchMenuItems(model: model)
                 .disabled(!model.hasProject)
@@ -162,8 +156,9 @@ struct ReviewerCommands: Commands {
             Divider()
         }
         // ⌘G crosses between the two ways of working the strip leads with,
-        // and the sessions alone take the digits, as on the web strip: the
-        // pinned tabs are ways of working rather than tabs among them.
+        // and the sessions alone take ⇧⌘ and the digits: the pinned tabs are
+        // ways of working rather than tabs among them. The items show the
+        // chords; `TabSlotChords` hears them, by key rather than character.
         CommandMenu("Tabs") {
             Button("Switch between code and sessions") { model.switchMode() }
                 .keyboardShortcut("g", modifiers: .command)
@@ -176,12 +171,12 @@ struct ReviewerCommands: Commands {
             Divider()
             ForEach(Array(model.windowTabs.sessions.prefix(9).enumerated()), id: \.element.id) { slot, tab in
                 Button(tab.title) { model.select(tabId: tab.id) }
-                    .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: .command)
+                    .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: [.command, .shift])
             }
         }
         // The git chords the TUI shares: ⇧⌘B the branch switcher, ⌃G a
-        // drafted commit message, and the JetBrains pair ⌘K to commit and
-        // ⌥⌘K to commit and push. The TUI also answers ⌥⌘4 for the
+        // drafted commit message, ⇧⌘K to commit and ⌥⌘K to commit and push
+        // — ⌘K itself being the palette's. The TUI also answers ⌥⌘4 for the
         // switcher; here that is the rail's Branches (see `RailShortcut`).
         // ⌘↩ stays the message box's own (see `CommitMessageEditor`).
         CommandMenu("Git") {
@@ -189,11 +184,12 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("b", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)
             Divider()
+            Button("Generate commit message") { model.generateCommitMessage() }
+                .keyboardShortcut("g", modifiers: .control)
+                .disabled(!model.hasProject)
             Group {
-                Button("Generate commit message") { model.ask(commitComposer: .draft) }
-                    .keyboardShortcut("g", modifiers: .control)
                 Button("Commit") { model.ask(commitComposer: .commit) }
-                    .keyboardShortcut("k", modifiers: .command)
+                    .keyboardShortcut("k", modifiers: [.command, .shift])
                 Button("Commit and push") { model.ask(commitComposer: .commitAndPush) }
                     .keyboardShortcut("k", modifiers: [.command, .option])
             }
@@ -216,7 +212,9 @@ private struct NoticeLabMenuItem: View {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let model = AppModel()
     private var appearanceObservation: NSKeyValueObservation?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -229,6 +227,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { DockIcon.follow(app.effectiveAppearance) }
         }
         UpdateCheck.shared.start()
+        WorkspaceWindow.install(model: model)
+        WorkspaceWindow.show()
+    }
+
+    /// The Dock's tile pressed with no window up brings the workspace back,
+    /// which hands over to the opener itself if there is no project. Said
+    /// to be handled, so the system does not open a scene of its own.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows { WorkspaceWindow.show() }
+        return false
     }
 
     /// `reviewer://open` links — the widget's clicks (see `ProjectLinks`).

@@ -51,27 +51,32 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
 
   const get: ChatsRepo["get"] = (id) => attempt(() => requireChat(id));
 
+  // A chat started in a saved workspace is the workspace's: its agent starts
+  // in the repository the chat was started from and is given the rest.
   const create: ChatsRepo["create"] = (input: CreateChatInput) =>
-    withRepo((repoPath) => {
-      // A repository reached before any open (the boot seed) would not be
-      // registered yet; register it as it is used so the chat is labelled
-      // from the moment it exists.
-      rememberRepo(repoPath, repoPath);
-      return insertChat({
-        id: nextChatId("c"),
-        repoPath,
-        title:
-          input.title.trim().length > 0
-            ? input.title.trim()
-            : DEFAULT_CHAT_TITLE,
-        provider: input.provider,
-        model: input.model,
-        effort: input.effort,
-        access: input.access,
-        branch: input.branch,
-        createdAt: new Date().toISOString(),
-      });
-    });
+    Effect.flatMap(ctx.savedId, (workspaceId) =>
+      withRepo((repoPath) => {
+        // A repository reached before any open (the boot seed) would not be
+        // registered yet; register it as it is used so the chat is labelled
+        // from the moment it exists.
+        rememberRepo(repoPath, repoPath);
+        return insertChat({
+          id: nextChatId("c"),
+          repoPath,
+          workspaceId,
+          title:
+            input.title.trim().length > 0
+              ? input.title.trim()
+              : DEFAULT_CHAT_TITLE,
+          provider: input.provider,
+          model: input.model,
+          effort: input.effort,
+          access: input.access,
+          branch: input.branch,
+          createdAt: new Date().toISOString(),
+        });
+      })
+    );
 
   const update: ChatsRepo["update"] = (id, input: UpdateChatInput) =>
     attempt(() => {

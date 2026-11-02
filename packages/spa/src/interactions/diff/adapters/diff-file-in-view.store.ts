@@ -12,6 +12,10 @@
 import { useSyncExternalStore } from "react";
 
 export interface DiffFileInView {
+  /** Its name in the diff — under its root's key when the diff spans a workspace. */
+  readonly name: string;
+  /** Its repository, undefined for the page's own, and its path in it. */
+  readonly repo: string | undefined;
   readonly path: string;
   readonly index: number;
 }
@@ -20,7 +24,7 @@ let inView: DiffFileInView | null = null;
 const listeners = new Set<() => void>();
 
 export function setDiffFileInView(next: DiffFileInView | null) {
-  if (next?.path === inView?.path && next?.index === inView?.index) return;
+  if (next?.name === inView?.name && next?.index === inView?.index) return;
   inView = next;
   for (const listener of listeners) listener();
 }

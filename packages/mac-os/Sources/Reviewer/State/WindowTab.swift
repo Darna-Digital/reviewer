@@ -4,13 +4,13 @@
 // tab is a route change in a page that has already primed it rather than a
 // trip over the bridge. What the shell holds is a picture of the strip,
 // reported whenever it changes, which the toolbar draws natively (see
-// `TabStripItems`) and the menu bar names: the sessions ⌘1–9 reach, the
+// `ModeButtons` and `SessionTabBar`) and the menu bar names: the sessions ⇧⌘1–9 reach, the
 // modes ⌘G crosses between, and
 // whether the tab in front can be closed. See `ShellWindowTabStrip` in the
 // SPA's `lib/shell`.
 import Foundation
 
-struct WindowTabStrip: Decodable, Hashable, Sendable {
+struct WindowTabStrip: Codable, Hashable, Sendable {
     var tabs: [WindowTab]
     var activeId: String
 
@@ -28,7 +28,7 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
         return active.id == tab.id || (tab.kind == .sessions && active.kind == .session)
     }
 
-    /// The sessions in strip order, which is what ⌘1–9 count: the pinned
+    /// The sessions in strip order, which is what ⇧⌘1–9 count: the pinned
     /// tabs are ways of working rather than tabs among them, and ⌘G's.
     var sessions: [WindowTab] { tabs.filter { !$0.pinned } }
 
@@ -48,13 +48,31 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
         else { return nil }
         return try? JSONDecoder().decode(WindowTabStrip.self, from: data)
     }
+
+    /// The strip as the island last reported it, kept across launches: the
+    /// island boots well after the window is up, and a toolbar that waited
+    /// for its first report drew an empty bar and then broke the tabs in.
+    /// Drawn from this, the window opens with its tabs; the island's report
+    /// replaces it, and is almost always the same strip.
+    static var lastReported: WindowTabStrip {
+        get {
+            UserDefaults.standard.data(forKey: lastReportedKey)
+                .flatMap { try? JSONDecoder().decode(WindowTabStrip.self, from: $0) } ?? .empty
+        }
+        set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: lastReportedKey) }
+    }
+
+    private static let lastReportedKey = "windowTabs.lastReported"
 }
 
-struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
+struct WindowTab: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     let kind: WindowTabKind
     let pinned: Bool
+    /// The conversation a session's tab holds — none until its first
+    /// message makes one — whose agent the tab wears (see `Chats.agent`).
+    let chatId: String?
     /// Its agent is mid-turn, so the tab wears the orb.
     let working: Bool
     /// Its thread has moved since it was last read, so the tab wears the dot.
@@ -70,19 +88,20 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
         title = try values.decode(String.self, forKey: .title)
         kind = try values.decode(WindowTabKind.self, forKey: .kind)
         pinned = try values.decode(Bool.self, forKey: .pinned)
+        chatId = try values.decodeIfPresent(String.self, forKey: .chatId)
         working = try values.decodeIfPresent(Bool.self, forKey: .working) ?? false
         waiting = try values.decodeIfPresent(Bool.self, forKey: .waiting) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, kind, pinned, working, waiting
+        case id, title, kind, pinned, chatId, working, waiting
     }
 }
 
 /// What a tab is, as the web strip sorts them — its `WindowTabKind` — with
 /// the web app's icons for each, Tabler's code, git branch, send and
 /// message, in their SF Symbols shapes.
-enum WindowTabKind: String, Decodable, Sendable {
+enum WindowTabKind: String, Codable, Sendable {
     case project
     case sessions
     case session
@@ -178,6 +197,39 @@ enum Href {
 
     static func browseTab(_ path: String, line: Int?) -> String {
         file(path, line: line, on: "\(browsePath)?tab=permanent")
+    }
+
+    /// The query param naming the workspace repository a page is about —
+    /// the web app's `repo` search param (see the SPA's `lib/repo-scope`).
+    private static let repoParam = "repo"
+
+    /// The workspace repository an address is about, or nil for one that
+    /// names none — which the page reads as the workspace's first.
+    static func repo(of href: String) -> String? {
+        URLComponents(string: href)?.queryItems?
+            .first { $0.name == repoParam }?.value
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// `href` about `repo`. One that already names a repository keeps its
+    /// own: an address is about where it was made, and a pull request of
+    /// one repository read from another's page is still its repository's.
+    static func scoped(_ href: String, to repo: String?) -> String {
+        guard let repo, self.repo(of: href) == nil else { return href }
+        return moved(href, to: repo)
+    }
+
+    /// `href` moved to `repo`, whatever repository it named before — for
+    /// opening the same surface on another repository.
+    static func moved(_ href: String, to repo: String) -> String {
+        guard var components = URLComponents(string: href) else { return href }
+        components.queryItems = (components.queryItems ?? []).filter { $0.name != repoParam }
+            + [URLQueryItem(name: repoParam, value: repo)]
+        // URLComponents leaves `+` as it is in a query, which the page's
+        // search parser reads back as a space.
+        components.percentEncodedQuery = components.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
+        return components.string ?? href
     }
 }
 

@@ -29,7 +29,8 @@ export const GitMessageHandler = HttpApiBuilder.group(
           return yield* service.start(
             yield* openProject,
             payload.paths ?? [],
-            payload.agent ?? DEFAULT_COMMIT_AGENT
+            payload.agent ?? DEFAULT_COMMIT_AGENT,
+            payload.repositories
           );
         })
       )

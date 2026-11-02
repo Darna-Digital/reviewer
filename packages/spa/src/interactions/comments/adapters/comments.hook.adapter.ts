@@ -1,6 +1,7 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { type RefObject, useCallback, useRef } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { repoInit } from "@/lib/repo-scope";
 import { useGitHubAuth } from "@/lib/queries";
 import type { ReviewComment } from "@reviewer/core/comments";
 import { createCommentsFunctions } from "../functions/comments.functions";
@@ -23,136 +24,166 @@ import type {
 
 /** Wires the real API mutations + TanStack Query cache into the comment logic. */
 export function useCommentsActions() {
+  return useCommentsActionsByRepo()(undefined);
+}
+
+/**
+ * The same, for any repository of the workspace: the stacked diff holds every
+ * root's comments at once, and each is written where its file lives. Undefined
+ * is the page's own repository.
+ */
+export function useCommentsActionsByRepo() {
   const queryClient = useQueryClient();
   const author = useCommentAuthor();
   const githubLogin = useGitHubAuth().data?.login ?? "";
-
-  const fns: CommentsFunctions = useMemo(
-    () =>
-      createCommentsFunctions({
-        data: {},
-        sideEffects: {
-          addLocalComment: async (input) => {
-            const { data, error } = await fetchClient.POST("/api/comments", {
-              body: input,
-            });
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ?? "failed to comment"
-              );
-            return data;
-          },
-          addPullComment: async (pullNumber, input) => {
-            const { data, error } = await fetchClient.POST(
-              "/api/github/pulls/{number}/comments",
-              {
-                params: { path: { number: String(pullNumber) } },
-                body: input,
-              }
-            );
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ?? "failed to comment"
-              );
-            return data;
-          },
-          updateLocalComment: async (id, body) => {
-            const { data, error } = await fetchClient.PATCH(
-              "/api/comments/{id}",
-              {
-                params: { path: { id } },
-                body: { body },
-              }
-            );
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ?? "failed to update"
-              );
-            return data;
-          },
-          deleteComment: async (id) => {
-            await fetchClient.DELETE("/api/comments/{id}", {
-              params: { path: { id } },
-            });
-          },
-          updatePullComment: async (pullNumber, commentId, body) => {
-            const { data, error } = await fetchClient.PATCH(
-              "/api/github/pulls/{number}/comments/{commentId}",
-              {
-                params: {
-                  path: {
-                    number: String(pullNumber),
-                    commentId: String(commentId),
-                  },
-                },
-                body: { body },
-              }
-            );
-            // A server without the route answers 404 with no body, which
-            // openapi-fetch reports as neither data nor error.
-            if (error !== undefined || data === undefined)
-              throw new Error(
-                (error as { reason?: string } | undefined)?.reason ??
-                  "failed to update"
-              );
-            return data;
-          },
-          deletePullComment: async (pullNumber, commentId) => {
-            const { error } = await fetchClient.DELETE(
-              "/api/github/pulls/{number}/comments/{commentId}",
-              {
-                params: {
-                  path: {
-                    number: String(pullNumber),
-                    commentId: String(commentId),
-                  },
-                },
-              }
-            );
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ?? "failed to delete"
-              );
-          },
-          replyPullComment: async (pullNumber, commentId, body) => {
-            const { data, error } = await fetchClient.POST(
-              "/api/github/pulls/{number}/comments/{commentId}/replies",
-              {
-                params: {
-                  path: {
-                    number: String(pullNumber),
-                    commentId: String(commentId),
-                  },
-                },
-                body: { body },
-              }
-            );
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ?? "failed to reply"
-              );
-            return data;
-          },
-          setPullThreadResolved: async (pullNumber, threadId, resolved) => {
-            const { error } = await fetchClient.PUT(
-              "/api/github/pulls/{number}/threads/{threadId}",
-              {
-                params: {
-                  path: { number: String(pullNumber), threadId },
-                },
-                body: { resolved },
-              }
-            );
-            if (error)
-              throw new Error(
-                (error as { reason?: string }).reason ??
-                  (resolved ? "failed to resolve" : "failed to unresolve")
-              );
-          },
-        },
-      }),
-    []
+  // Only has to be unique within this session — it never reaches the server.
+  const pending = useRef(0);
+  return useCallback(
+    (repo: string | undefined) =>
+      commentsActions({ queryClient, author, githubLogin, pending, repo }),
+    [queryClient, author, githubLogin]
   );
+}
+
+interface CommentsActionsContext {
+  readonly queryClient: QueryClient;
+  readonly author: string;
+  readonly githubLogin: string;
+  readonly pending: RefObject<number>;
+  readonly repo: string | undefined;
+}
+
+function commentsActions({
+  queryClient,
+  author,
+  githubLogin,
+  pending,
+  repo,
+}: CommentsActionsContext) {
+  const scope = repoInit(repo);
+  const fns: CommentsFunctions = createCommentsFunctions({
+    data: {},
+    sideEffects: {
+      addLocalComment: async (input) => {
+        const { data, error } = await fetchClient.POST("/api/comments", {
+          body: input,
+          ...scope,
+        });
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ?? "failed to comment"
+          );
+        return data;
+      },
+      addPullComment: async (pullNumber, input) => {
+        const { data, error } = await fetchClient.POST(
+          "/api/github/pulls/{number}/comments",
+          {
+            params: { path: { number: String(pullNumber) } },
+            body: input,
+            ...scope,
+          }
+        );
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ?? "failed to comment"
+          );
+        return data;
+      },
+      updateLocalComment: async (id, body) => {
+        const { data, error } = await fetchClient.PATCH("/api/comments/{id}", {
+          params: { path: { id } },
+          body: { body },
+          ...scope,
+        });
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ?? "failed to update"
+          );
+        return data;
+      },
+      deleteComment: async (id) => {
+        await fetchClient.DELETE("/api/comments/{id}", {
+          params: { path: { id } },
+          ...scope,
+        });
+      },
+      updatePullComment: async (pullNumber, commentId, body) => {
+        const { data, error } = await fetchClient.PATCH(
+          "/api/github/pulls/{number}/comments/{commentId}",
+          {
+            params: {
+              path: {
+                number: String(pullNumber),
+                commentId: String(commentId),
+              },
+            },
+            body: { body },
+          }
+        );
+        // A server without the route answers 404 with no body, which
+        // openapi-fetch reports as neither data nor error.
+        if (error !== undefined || data === undefined)
+          throw new Error(
+            (error as { reason?: string } | undefined)?.reason ??
+              "failed to update"
+          );
+        return data;
+      },
+      deletePullComment: async (pullNumber, commentId) => {
+        const { error } = await fetchClient.DELETE(
+          "/api/github/pulls/{number}/comments/{commentId}",
+          {
+            params: {
+              path: {
+                number: String(pullNumber),
+                commentId: String(commentId),
+              },
+            },
+          }
+        );
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ?? "failed to delete"
+          );
+      },
+      replyPullComment: async (pullNumber, commentId, body) => {
+        const { data, error } = await fetchClient.POST(
+          "/api/github/pulls/{number}/comments/{commentId}/replies",
+          {
+            params: {
+              path: {
+                number: String(pullNumber),
+                commentId: String(commentId),
+              },
+            },
+            body: { body },
+          }
+        );
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ?? "failed to reply"
+          );
+        return data;
+      },
+      setPullThreadResolved: async (pullNumber, threadId, resolved) => {
+        const { error } = await fetchClient.PUT(
+          "/api/github/pulls/{number}/threads/{threadId}",
+          {
+            params: {
+              path: { number: String(pullNumber), threadId },
+            },
+            body: { resolved },
+          }
+        );
+        if (error)
+          throw new Error(
+            (error as { reason?: string }).reason ??
+              (resolved ? "failed to resolve" : "failed to unresolve")
+          );
+      },
+    },
+  });
 
   const invalidate = (key: string) =>
     queryClient.invalidateQueries({ queryKey: ["get", key] });
@@ -163,7 +194,7 @@ export function useCommentsActions() {
   const localCommentsKey = api.queryOptions(
     "get",
     "/api/comments",
-    {}
+    scope
   ).queryKey;
 
   /** The same, for one pull request's comments — keyed by its number. */
@@ -196,9 +227,6 @@ export function useCommentsActions() {
    */
   const holdRefetches = (key: CacheKey) =>
     void queryClient.cancelQueries({ queryKey: key });
-
-  // Only has to be unique within this session — it never reaches the server.
-  const pending = useRef(0);
 
   return {
     submit: async (

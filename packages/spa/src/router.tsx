@@ -1,7 +1,12 @@
 import "@/lib/idle-callback";
-import { focusManager, QueryClient } from "@tanstack/react-query";
+import { focusManager, hashKey, QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import {
+  readScopedRepoFrom,
+  repoFromSearch,
+  scopedRepo,
+} from "@/lib/repo-scope";
 import { routeTree } from "./routeTree.gen";
 
 // TanStack Query's default focus manager only listens to `visibilitychange`,
@@ -70,6 +75,12 @@ export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
+        // Each repository of the workspace answers on its own: the root the
+        // page is about is part of every query's identity (see
+        // `lib/repo-scope`), so switching repositories never shows one's
+        // answer for another's.
+        queryKeyHashFn: (queryKey) =>
+          hashKey([scopedRepo() ?? null, ...queryKey]),
         // Nothing is re-asked for just because a component mounted again —
         // navigating is not new information. What a query is actually worth
         // holding is set where it is declared (`lib/queries.ts`); this is the
@@ -91,6 +102,16 @@ export function getRouter() {
       !location.pathname.startsWith(sessionRoutePrefix),
     defaultPreload: "intent",
   });
+
+  // The page on screen is the one whose queries are being built and whose
+  // requests are leaving: read the repository off its matches rather than off
+  // a location still loading, so a page on its way out never asks the next
+  // page's repository for its own files. Before the first match, the location.
+  readScopedRepoFrom(() =>
+    repoFromSearch(
+      router.state.matches.at(-1)?.search ?? router.state.location.search
+    )
+  );
 
   setupRouterSsrQueryIntegration({ router, queryClient });
 

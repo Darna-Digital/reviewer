@@ -1,6 +1,7 @@
 import type { CliRenderer } from '@opentui/core';
 import { findTheme } from '@reviewer/core/themes';
 import * as React from 'react';
+import type { Store } from '../store/createStore';
 import { saveSettings, TERMINAL_THEME } from '../store/settings';
 import type { Appearance, Settings } from '../store/settings';
 import { resolveLook, wantedScheme } from '../theme/resolveLook';
@@ -41,7 +42,11 @@ export async function readTerminalLook(
  * The look on screen: the settings resolved against the OS appearance and
  * the terminal's colours, re-resolved whenever either changes.
  */
-export function useTheme(renderer: CliRenderer, start: ThemeStart) {
+export function useTheme(
+  renderer: CliRenderer,
+  store: Store,
+  start: ThemeStart,
+) {
   const [settings, setSettings] = React.useState(start.settings);
   const [system, setSystem] = React.useState(start.system);
   const [terminal, setTerminal] = React.useState(start.terminal);
@@ -90,7 +95,7 @@ export function useTheme(renderer: CliRenderer, start: ThemeStart) {
     setSettings(next);
     setOverride(undefined);
     setPreview(null);
-    saveSettings(next);
+    saveSettings(store, next);
     return next;
   }
 

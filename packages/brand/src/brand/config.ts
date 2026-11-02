@@ -1,4 +1,5 @@
-export type LayoutKind = "mark" | "horizontal" | "stacked" | "wordmark";
+export type LayoutKind =
+  "mark" | "horizontal" | "stacked" | "wordmark" | "blocks";
 export type FillKind = "transparent" | "solid" | "gradient";
 
 export type Fill = {

@@ -166,9 +166,13 @@ export function ChatsPage() {
    * back lands in that project's work rather than in whatever ran last
    * somewhere else. `replace` keeps the pane you passed through out of the
    * history, which you would otherwise land back on and be moved off again.
+   *
+   * Sessions deleted from here are passed over: the list keeps their rows
+   * until its refetch lands, and a conversation that is gone never loads.
    */
+  const deleted = useRef(new Set<string>());
   useEffect(() => {
-    const latest = sessions[0];
+    const latest = sessions.find((session) => !deleted.current.has(session.id));
     if (!landing || latest === undefined) return;
     void navigate({
       to: "/modes/agent-session/$chatId",
@@ -261,9 +265,21 @@ export function ChatsPage() {
       );
     }
     const gone = ids.filter((id) => !failed.some((f) => f.id === id));
-    if (chatId !== undefined && gone.includes(chatId)) {
-      void navigate({ to: "/modes/agent-session" });
-    }
+    for (const id of gone) deleted.current.add(id);
+    if (chatId === undefined || !gone.includes(chatId)) return;
+    // Straight to the session now at the head of the list, not through the
+    // landing: the list is still refetching, so the landing's first row would
+    // be the session just deleted, and its conversation never arrives.
+    const next = sessions.find((session) => !deleted.current.has(session.id));
+    void navigate(
+      next === undefined
+        ? { to: "/modes/agent-session", replace: true }
+        : {
+            to: "/modes/agent-session/$chatId",
+            params: { chatId: next.id },
+            replace: true,
+          }
+    );
   };
 
   const shellFilters = useShellFilters(shellSearch);

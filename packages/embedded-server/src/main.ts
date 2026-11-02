@@ -3,8 +3,8 @@
  * /api. Replaces the darna-stack Cloudflare worker: same HttpApi, served with
  * `@effect/platform-node` instead of a Worker runtime. No Postgres, no
  * Cloudflare — feature state lives in one local SQLite file
- * (~/.reviewer/reviewer.db), and the repository is selected at runtime and
- * persisted to ~/.reviewer/state.json (REVIEWER_REPO / cwd seed the initial
+ * (~/.reviewer/reviewer.db), and the repositories are opened at runtime and
+ * remembered in that same file (REVIEWER_REPO / cwd seed the initial
  * selection).
  *
  * Composition mirrors darna's worker: feature controllers are provided to the
@@ -40,6 +40,7 @@ import { ThemesHandler } from "./layers/themes/themes.handler.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
 import { layer as repoIndexLayer } from "./layers/workspace/repo-index.ts";
+import { scopeToRequestedRepo } from "./layers/workspace/requested-repo.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
@@ -153,7 +154,10 @@ const HttpLive = HttpRouter.serve(
     HttpRouter.middleware(
       HttpMiddleware.cors({ allowedOrigins: isAllowedOrigin }),
       { global: true }
-    )
+    ),
+    // With several repositories open side by side, each request says which
+    // one it is about (see `layers/workspace/requested-repo.ts`).
+    HttpRouter.middleware(scopeToRequestedRepo, { global: true })
   )
 ).pipe(
   Layer.provide(InfraLive),

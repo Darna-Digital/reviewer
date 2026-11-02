@@ -122,7 +122,7 @@ export const COMMANDS: Command[] = [
   {
     id: 'palette',
     scope: 'global',
-    keys: ['cmd+e', 'ctrl+k', ':'],
+    keys: ['cmd+k', 'ctrl+k', ':'],
     title: 'command palette',
     run: (app) => app.actions.openPalette('commands'),
   },
@@ -283,12 +283,13 @@ export const COMMANDS: Command[] = [
     when: (app) => app.isCommitMode,
     run: (app) => void app.commit.generate(),
   },
-  // ⌘K and ⌥⌘K are JetBrains' and the Mac app's; ⌘⏎ commits only from the
-  // commit box, since anywhere else it would end typing a comment and commit.
+  // ⇧⌘K and ⌥⌘K are the Mac app's — ⌘K itself opens the palette — and ⌘⏎
+  // commits only from the commit box, since anywhere else it would end
+  // typing a comment and commit.
   {
     id: 'commit.commit',
     scope: 'global',
-    keys: ['cmd+k'],
+    keys: ['cmd+shift+k'],
     title: 'commit',
     palette: true,
     when: (app) => app.isCommitMode,
