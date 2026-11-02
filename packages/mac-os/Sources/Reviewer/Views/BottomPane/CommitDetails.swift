@@ -45,9 +45,7 @@ struct CommitDetails: View {
                     .textSelection(.enabled)
             }
             HStack(spacing: 6) {
-                Text(detail.shortSha)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.primary.opacity(0.7))
+                ShaChip(sha: detail.sha, shortSha: detail.shortSha)
                 Text("·").foregroundStyle(.tertiary)
                 Text(detail.author)
                     .lineLimit(1)
@@ -88,6 +86,43 @@ struct CommitDetails: View {
                     }
                 }
             }
+        }
+    }
+}
+
+/// The commit's short sha as a button that copies the full one, washed and
+/// wearing a copy glyph on hover so it reads as something to click; its
+/// menu offers the short one too.
+private struct ShaChip: View {
+    let sha: String
+    let shortSha: String
+    @Environment(AppModel.self) private var model
+    @State private var isHovering = false
+
+    var body: some View {
+        Button {
+            model.copy(sha: sha, shortSha: shortSha)
+        } label: {
+            HStack(spacing: 3) {
+                Text(shortSha)
+                    .font(.system(size: 11, design: .monospaced))
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 9))
+                    .opacity(isHovering ? 1 : 0)
+            }
+            .foregroundStyle(.primary.opacity(isHovering ? 0.9 : 0.7))
+            .padding(.horizontal, 4)
+            .padding(.vertical, 1)
+            .background(isHovering ? Color.primary.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
+            .padding(.horizontal, -4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help("Copy \(sha)")
+        .contextMenu {
+            Button("Copy Commit SHA") { model.copy(sha: sha, shortSha: shortSha) }
+            Button("Copy Short SHA") { model.copy(sha: sha, shortSha: shortSha, short: true) }
         }
     }
 }

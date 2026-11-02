@@ -100,12 +100,6 @@ private struct ShownSection: Identifiable {
     let lines: [Line]
 }
 
-/// The step in front, kept apart from the view's state: it is set as the
-/// list is laid out, which state may not be.
-private final class FrontStep {
-    var key = ""
-}
-
 /// The submenu open, and on which row — one at a time across the list —
 /// and whether the keys opened it, which lights its first item.
 private struct Submenu: Equatable {
@@ -122,11 +116,7 @@ private struct Submenu: Equatable {
 private final class RowReading {
     var hovered: String?
     var walked: String?
-    /// The rows are being swapped for another step's, and the popover is
-    /// still easing to their height: whatever row the still pointer lands
-    /// on is not one being read, and says nothing until the list settles.
-    var settling = false
-    var key: String? { settling ? nil : hovered ?? walked }
+    var key: String? { hovered ?? walked }
 }
 
 struct BranchPopover<Footer: View>: View {
@@ -144,10 +134,6 @@ struct BranchPopover<Footer: View>: View {
     /// branches — rather than being the answer: the popover stays up for
     /// what comes next instead of going away under it.
     var drillsIn: (BranchChoice) -> Bool = { _ in false }
-    /// Whether the list eases to a new height as its rows change — the
-    /// agent chat's picker, whose steps swap one list for another — or
-    /// takes it at once, as every other picker does.
-    var easesHeight = false
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
@@ -160,20 +146,11 @@ struct BranchPopover<Footer: View>: View {
     private static var listHeight: CGFloat { 360 }
     /// The air between the rows' highlight and the popover's edges.
     static var listInset: CGFloat { 6 }
-    /// How the list — and the popover around it — moves to a new height: a
-    /// gentle ease, for a change of size the eye follows rather than a
-    /// press it answers.
-    static var resize: Animation { .smooth(duration: 0.32) }
 
     /// Which rows these are: another step's, not a search of these.
     private var stepKey: String { sections.map(\.id).joined(separator: "\n") }
 
     @State private var contentHeight: CGFloat = 0
-    /// The step whose rows are in front, read by the rows' height reports:
-    /// a list crossfading out goes on reporting its own height for the
-    /// length of the fade, which tugged the eased height back towards the
-    /// step being left and made the popover shudder as it grew.
-    @State private var front = FrontStep()
 
     private var searching: Bool { !needle.isEmpty }
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
@@ -235,20 +212,8 @@ struct BranchPopover<Footer: View>: View {
         .onChange(of: sections.map(\.id)) {
             query = ""
             active = 0
-            reading.settling = true
-        }
-        // The tooltips wait out the ease to the new step's height, a
-        // little past it, and the row under the pointer speaks once the
-        // list has come to rest.
-        .task(id: stepKey) {
-            guard reading.settling else { return }
-            try? await Task.sleep(for: Self.settleTime)
-            guard !Task.isCancelled else { return }
-            reading.settling = false
         }
     }
-
-    private static var settleTime: Duration { .milliseconds(380) }
 
     private func field(_ lines: [Line]) -> some View {
         MinimalSearchField(prompt: placeholder, text: $query, takesKeyboard: $fieldWantsKeyboard)
@@ -264,14 +229,10 @@ struct BranchPopover<Footer: View>: View {
     }
 
     private func list(_ shown: [ShownSection], _ lines: [Line]) -> some View {
-        let step = stepKey
-        front.key = step
-        return ScrollViewReader { proxy in
+        ScrollViewReader { proxy in
             ScrollView {
-                // Rows swapped for another step's crossfade, the old over
-                // the new, while the list eases to the new rows' height —
-                // keyed by the step so a search, which only narrows the
-                // same rows, does not fade them.
+                // Keyed by the step, so another step's rows replace these
+                // outright while a search only narrows them.
                 ZStack(alignment: .top) {
                     LazyVStack(alignment: .leading, spacing: rowGap(lines)) {
                         ForEach(shown) { section in
@@ -294,21 +255,16 @@ struct BranchPopover<Footer: View>: View {
                     .padding(Self.listInset)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height.rounded() } action: { measured in
                         // The list opens at its height, and from then on
-                        // takes a new one — eased, where the picker asks for
-                        // it, as a search narrows it or its rows are swapped
-                        // for the next step's — and the popover with it.
-                        guard step == front.key, measured != contentHeight else { return }
-                        withAnimation(easesHeight && contentHeight > 0 ? Self.resize : nil) {
-                            contentHeight = measured
-                        }
+                        // takes a new one at once as a search narrows it or
+                        // its rows are swapped for the next step's — and the
+                        // popover with it.
+                        guard measured != contentHeight else { return }
+                        contentHeight = measured
                     }
                     .id(stepKey)
-                    .transition(.opacity)
                 }
             }
-            // While the rows fit, no indicator at all: a list easing taller
-            // holds rows taller than its frame for the length of the ease,
-            // and the indicator would flash over them each time.
+            // While the rows fit, no indicator at all.
             .scrollIndicators(contentHeight > Self.listHeight ? .automatic : .hidden)
             // As tall as its rows, up to the cap: a scroll view takes all the
             // height it is offered, which left a short list scrollable, its

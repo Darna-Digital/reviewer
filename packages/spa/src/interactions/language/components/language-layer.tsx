@@ -460,12 +460,15 @@ export function useLanguageLayer({
       },
       [path]
     ),
+    navigate: useCallback(
+      (token: TokenSpan) => actions.navigate(path, token),
+      [actions, path]
+    ),
     onGoToDefinition: useCallback(
-      (token: TokenSpan, at: VirtualAnchor) => {
+      (navigation: Promise<NavigationOutcome>, at: VirtualAnchor) => {
         const anchor: CardAnchor = () => at;
         setCard({ kind: "busy", anchor });
-        void actions
-          .navigate(path, token)
+        void navigation
           .then((outcome) => {
             if (outcome.kind === "open") {
               setCard(null);
@@ -485,7 +488,7 @@ export function useLanguageLayer({
           })
           .catch(() => setCard(null));
       },
-      [actions, onOpenLocation, path]
+      [onOpenLocation, path]
     ),
     onApplyForeignEdits,
   });
