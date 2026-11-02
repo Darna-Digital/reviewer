@@ -54,6 +54,12 @@ export interface Reconcile {
   readonly intent?: OpenIntent;
   /** Which tabs may be put back on screen — the page's repository's. */
   readonly restorable?: (path: string) => boolean;
+  /**
+   * The page was just moved here from another of the workspace's
+   * repositories, so only `restorable` tabs come back: a sibling's would send
+   * it straight back to the repository it was moved away from.
+   */
+  readonly arrived?: boolean;
 }
 
 export interface Reconciled {

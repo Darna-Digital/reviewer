@@ -993,12 +993,13 @@ private final class SessionTabView: NSView {
 
     /// How wide what the slot shows is drawn — not the box it stands in —
     /// so its far edge, not its box's, keeps `edgeInset` from the tab's.
+    /// The ✕ is counted as wide as the orb, so the pointer swaps one for
+    /// the other in the same place rather than nudging the ✕ outwards.
     private var slotInkWidth: CGFloat {
         switch accessory {
         case .none: return 0
-        case .close: return TabCloseButton.inkWidth
+        case .close, .working: return Self.orbSize
         case .hint: return hintLabel.frame.width
-        case .working: return Self.orbSize
         case .waiting: return Self.waitingDotSize
         }
     }
@@ -1081,11 +1082,14 @@ private final class SessionTabView: NSView {
     }
 
     /// Hidden from the pointer while it is faded out, so a click on a quiet
-    /// tab's tail picks the tab rather than closing it. A tab closing is
-    /// out of reach altogether: it fades over the tab sliding in under it,
-    /// which the next click is for.
+    /// tab's tail picks the tab rather than closing it. While it is up it
+    /// takes the click before the faded orb and ⌘-number stacked in the
+    /// same slot, which still take the pointer at no opacity. A tab closing
+    /// is out of reach altogether: it fades over the tab sliding in under
+    /// it, which the next click is for.
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard !isDeparting else { return nil }
+        if accessory == .close, closeButton.frame.contains(convert(point, from: superview)) { return closeButton }
         let hit = super.hitTest(point)
         if hit === closeButton, accessory != .close { return self }
         if let orb, hit?.isDescendant(of: orb) ?? false { return self }
@@ -1394,8 +1398,6 @@ private final class NewTabButton: BarChipButton {
 @MainActor
 private final class TabCloseButton: BarChipButton {
     init() { super.init(symbol: "xmark", pointSize: 9, weight: .bold) }
-
-    static let inkWidth = symbolInkWidth(TabCloseButton().image)
 }
 
 /// How wide a symbol is drawn. Its image carries side bearings past its

@@ -197,19 +197,18 @@ export const syncActive = (
  * preferring the tabs `restorable` allows: in a workspace, the page's own
  * repository's, so arriving on a repository does not send the page back to the
  * one it left while it has a file of its own to show. With none, the head of
- * the strip all the same: a strip over an empty pane is never the answer.
+ * the strip all the same — a strip over an empty pane is never the answer —
+ * unless `orHead` is off, for a page moved to its repository on purpose.
  */
 export const tabToRestore = (
   state: TabsState,
-  restorable: (path: string) => boolean = () => true
+  restorable: (path: string) => boolean = () => true,
+  orHead = true
 ): string | null => {
   if (state.active !== null && restorable(state.active)) return state.active;
   const ordered = orderTabs(state.tabs);
-  return (
-    ordered.find((tab) => restorable(tab.path))?.path ??
-    ordered[0]?.path ??
-    null
-  );
+  const own = ordered.find((tab) => restorable(tab.path))?.path;
+  return own ?? (orHead ? ordered[0]?.path : undefined) ?? null;
 };
 
 /** Drop tabs for files that no longer exist, so a stale strip cannot outlive them. */
@@ -238,10 +237,12 @@ export const pruneTabs = (
  */
 export const reconcileTabs = (
   state: TabsState,
-  { viewing, switched, canRestore, intent, restorable }: Reconcile
+  { viewing, switched, canRestore, intent, restorable, arrived }: Reconcile
 ): Reconciled => {
   const carried = switched ? null : viewing;
   const open =
-    carried === null && canRestore ? tabToRestore(state, restorable) : carried;
+    carried === null && canRestore
+      ? tabToRestore(state, restorable, !arrived)
+      : carried;
   return { open, tabs: syncActive(state, open, intent) };
 };

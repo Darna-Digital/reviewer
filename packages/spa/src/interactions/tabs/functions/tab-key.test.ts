@@ -64,6 +64,32 @@ describe("a workspace's strip", () => {
     expect(open).toBe(tabKey(API, "server.ts"));
   });
 
+  it("leaves the pane empty rather than send a page moved here back to a sibling", () => {
+    const docs = (key: string) => tabFile(key).repo === "/work/docs";
+    const { open, tabs } = reconcileTabs(strip, {
+      viewing: null,
+      switched: false,
+      canRestore: true,
+      restorable: docs,
+      arrived: true,
+    });
+    expect(open).toBeNull();
+    expect(tabs.tabs.map((entry) => entry.path)).toEqual(
+      strip.tabs.map((entry) => entry.path)
+    );
+  });
+
+  it("still restores a page moved here to its own repository's tab", () => {
+    const { open } = reconcileTabs(strip, {
+      viewing: null,
+      switched: false,
+      canRestore: true,
+      restorable: webs,
+      arrived: true,
+    });
+    expect(open).toBe(tabKey(WEB, "page.tsx"));
+  });
+
   it("keeps every repository's tabs when the page moves between them", () => {
     const { open, tabs } = reconcileTabs(strip, {
       viewing: null,

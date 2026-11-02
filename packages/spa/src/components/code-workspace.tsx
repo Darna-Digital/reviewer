@@ -888,6 +888,8 @@ export function CodeWorkspace() {
   const canRestore = mode === "browse" && target === null;
   /** The workspace the strip was last settled against. */
   const settledFor = useRef<string | null>(null);
+  /** The repository the strip was last settled on. */
+  const settledOn = useRef<string | null>(null);
   const requestedTab = search.tab;
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
@@ -895,6 +897,9 @@ export function CodeWorkspace() {
     const switched =
       settledFor.current !== null && settledFor.current !== tabScope;
     settledFor.current = tabScope;
+    const arrived =
+      !switched && settledOn.current !== null && settledOn.current !== repoRoot;
+    settledOn.current = repoRoot;
     // A move between the workspace's repositories keeps the strip; arriving
     // on one with no file named puts back that repository's own tab, never a
     // sibling's, which would send the page straight back where it came from.
@@ -907,6 +912,7 @@ export function CodeWorkspace() {
         const owner = tabFile(key).repo;
         return owner === null || owner === repoRoot;
       },
+      arrived,
     });
     updateTabs(() => settled);
     const opened = open === null ? null : tabFile(open);
