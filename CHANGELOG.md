@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.0.36 — 2026-11-02
+
+- Internal improvements.
+
 ## v0.0.35 — 2026-11-02
 
 ### Added
