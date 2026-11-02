@@ -261,9 +261,20 @@ export function ChatsPage() {
       );
     }
     const gone = ids.filter((id) => !failed.some((f) => f.id === id));
-    if (chatId !== undefined && gone.includes(chatId)) {
-      void navigate({ to: "/modes/agent-session" });
-    }
+    if (chatId === undefined || !gone.includes(chatId)) return;
+    // Straight to the session now at the head of the list, not through the
+    // landing: the list is still refetching, so the landing's first row would
+    // be the session just deleted, and its conversation never arrives.
+    const next = sessions.find((session) => !gone.includes(session.id));
+    void navigate(
+      next === undefined
+        ? { to: "/modes/agent-session", replace: true }
+        : {
+            to: "/modes/agent-session/$chatId",
+            params: { chatId: next.id },
+            replace: true,
+          }
+    );
   };
 
   const shellFilters = useShellFilters(shellSearch);

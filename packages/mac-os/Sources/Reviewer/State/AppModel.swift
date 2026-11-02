@@ -109,6 +109,9 @@ final class AppModel {
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true
+    /// The sidebar was put away for a fresh session's composer, and comes
+    /// back once the page leaves it (see `holdSidebarAwayWhileComposing`).
+    @ObservationIgnored private var sidebarAwayForComposer = false
     /// The pane stays put away until asked for: a project opens on its
     /// page alone, and the pane is a keystroke or a rail click away. It
     /// comes up on Branches, the leftmost surface, until a surface is
@@ -178,6 +181,7 @@ final class AppModel {
         page.onNavigated = { [weak self] href in
             self?.focus(onPageAt: href)
             self?.chats.follow(href: href)
+            self?.holdSidebarAwayWhileComposing()
             self?.rememberComparison(on: href)
             self?.settleSidebarLayout()
         }
@@ -628,15 +632,40 @@ final class AppModel {
 
     /// ⌃⌘S — the system's own chord for it — from the View menu, the
     /// palette and the bar's toggle: the column put away, or brought back.
-    /// Asked of the window's split view controller, as the split's own
-    /// toggle asks it, so the column slides at AppKit's pace and on its
-    /// curve — flipping the switch alone moved it with none of that — and
-    /// the split hands the result back through the column binding. Aimed at
-    /// the controller rather than sent up the responder chain, which only
-    /// reaches it from a view inside the split: not from the palette's
-    /// field, nor with nothing focused. The switch is flipped here only
-    /// when there is no split to ask.
+    /// A move by hand is the last word, so a composer's hold on the
+    /// sidebar is let go of rather than undone after it.
     func toggleSidebar() {
+        sidebarAwayForComposer = false
+        moveSidebar()
+    }
+
+    /// A fresh session's composer takes the window's whole width: nothing
+    /// has been said, so the list of other sessions beside it is only in
+    /// the way. The sidebar is gone the moment the page arrives on the
+    /// composer and back the moment it leaves — the first message sent, or
+    /// another tab picked — switched rather than slid, so a tab opens on
+    /// its own layout instead of on a column moving. Unless it was already
+    /// away, or was moved by hand meanwhile.
+    private func holdSidebarAwayWhileComposing() {
+        let composing = onSessions && chats.page == .newSession
+        if composing, sidebarShown, !sidebarAwayForComposer {
+            sidebarShown = false
+            sidebarAwayForComposer = true
+        } else if !composing, sidebarAwayForComposer {
+            sidebarAwayForComposer = false
+            sidebarShown = true
+        }
+    }
+
+    /// The column moved, asked of the window's split view controller, as
+    /// the split's own toggle asks it, so the column slides at AppKit's
+    /// pace and on its curve — flipping the switch alone moved it with none
+    /// of that — and the split hands the result back through the column
+    /// binding. Aimed at the controller rather than sent up the responder
+    /// chain, which only reaches it from a view inside the split: not from
+    /// the palette's field, nor with nothing focused. The switch is flipped
+    /// here only when there is no split to ask.
+    private func moveSidebar() {
         if let split = (NSApp.keyWindow ?? NSApp.mainWindow)?.contentView.flatMap(Self.splitController(in:)) {
             split.toggleSidebar(nil)
         } else {

@@ -782,7 +782,10 @@ private final class SessionTabView: NSView {
             title.stringValue = tab.title
             updateHoverLabel()
             setAccessibilityLabel(tab.title)
-            needsLayout = true
+            // Now rather than on the next pass: the fade cut for the title
+            // before — a long "New session" — must not linger over a short
+            // one that fits.
+            layoutContent(animated: false)
         }
     }
     var agent: ChatProviderKind? {
@@ -977,13 +980,15 @@ private final class SessionTabView: NSView {
         needsLayout = true
     }
 
-    /// As wide as the tab needs to show its title whole beside its agent,
-    /// held off the hairlines by the same inset at both ends, so a quiet
-    /// tab sits even between them. The ✕ is not given room of its own: it
-    /// comes up over the title's tail, which fades out under it, as
-    /// Safari's does.
+    /// As wide as the tab needs to show its title whole beside its agent
+    /// and the slot at its tail, held off the hairlines by the same inset
+    /// at both ends. The slot is given its room even while it is empty, so
+    /// the ✕ coming up under the pointer never fades a title the tab has
+    /// room for: only a row too crowded to give every tab its width fades
+    /// one out.
     var fittingWidth: CGFloat {
-        Self.edgeInset + AgentTile.size + Self.titleSpacing + ceil(title.intrinsicContentSize.width) + Self.edgeInset
+        Self.edgeInset + AgentTile.size + Self.titleSpacing + ceil(title.intrinsicContentSize.width)
+            + Self.titleSpacing + Self.slot + Self.edgeInset
     }
 
     /// How wide what the slot shows is drawn — not the box it stands in —
