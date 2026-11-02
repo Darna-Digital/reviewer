@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.0.37 — 2026-11-02
+
+### Added
+
+- Commit details show the SHA as a chip you can click to copy. In a workspace it copies `repository@sha`; right-click to copy the full or the short SHA.
+
+### Changed
+
+- In a workspace, branch actions (checkout, update, fetch, pull, push, merge, rebase, create, rename, delete, compare and review) run in the repository you picked them from, and their notices name that repository.
+- Right-clicking a symbol at its own declaration no longer offers Go to definition, which would only have found its usages.
+
 ## v0.0.36 — 2026-11-02
 
 - Internal improvements.
