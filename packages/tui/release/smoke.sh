@@ -9,11 +9,7 @@ set -euo pipefail
 tarball="${1:?usage: smoke.sh <tarball>}"
 work="$(mktemp -d)"
 server_pid=""
-cleanup() {
-  [[ -n "$server_pid" ]] && kill "$server_pid" 2>/dev/null || true
-  rm -rf "$work"
-}
-trap cleanup EXIT
+trap '[[ -n "$server_pid" ]] && kill "$server_pid" 2>/dev/null; rm -rf "$work"' EXIT
 
 tar -xzf "$tarball" -C "$work"
 release="$(find "$work" -mindepth 1 -maxdepth 1 -type d | head -1)"
