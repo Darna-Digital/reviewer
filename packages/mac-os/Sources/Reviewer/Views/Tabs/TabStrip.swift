@@ -112,9 +112,10 @@ final class ModeButtons: NSObject {
     }
 }
 
-/// One pinned tab: its icon, on a disc of the theme's accent while its
-/// way of working is in front — the glyph white on it — and bare on the
-/// bar's glass otherwise, named with its chord on the bar's glass label.
+/// One pinned tab: its icon, on a flat grey disc while its way of working
+/// is in front — the grey the glass puck wore, without the glass — and bare
+/// on the bar's glass otherwise, named with its chord on the bar's glass
+/// label.
 ///
 /// Drawn here rather than by the system's toolbar bezel, which lights a
 /// shorter capsule round a smaller glyph than the pair is meant to wear:
@@ -134,6 +135,9 @@ private final class ModeButton: NSButton {
     /// wide enough to stretch its disc a shade into a pill beside Sessions'
     /// circle.
     private static let glyphMargin: CGFloat = 2.5
+    /// The lit disc's ink over the bar's glass: neutral rather than the
+    /// theme's accent, so the switch reads as a place, not an action.
+    private static let litTint: CGFloat = 0.16
 
     override var state: NSControl.StateValue {
         didSet { needsDisplay = true }
@@ -174,8 +178,6 @@ private final class ModeButton: NSButton {
         menu.addItem(withTitle: "Close other tabs", action: #selector(ModeButtons.closeSessions), keyEquivalent: "")
             .target = target
         self.menu = menu
-        NotificationCenter.default.addObserver(
-            self, selector: #selector(paletteChanged), name: ChromePalette.didChange, object: nil)
     }
 
     @available(*, unavailable)
@@ -188,22 +190,17 @@ private final class ModeButton: NSButton {
     /// fill — drawn to the frame — would run into the glass off-centre.
     override var alignmentRectInsets: NSEdgeInsets { NSEdgeInsetsZero }
 
-    /// Lit in the theme's accent, as the bottom pane's tabs and the diff's
-    /// add-a-comment button are — the one colour every lit control shares —
-    /// rather than the system's blue, and drawn again when a theme changes.
-    @objc private func paletteChanged() {
-        needsDisplay = true
-    }
-
     override func updateLayer() {
         let lit = state == .on
         effectiveAppearance.performAsCurrentDrawingAppearance {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            disc.backgroundColor = lit ? IslandPalette.accent.cgColor : NSColor.clear.cgColor
+            disc.backgroundColor = lit
+                ? NSColor.labelColor.withAlphaComponent(Self.litTint).cgColor
+                : NSColor.clear.cgColor
             CATransaction.commit()
         }
-        contentTintColor = lit ? .white : .labelColor
+        contentTintColor = .labelColor
     }
 
     override func layout() {
