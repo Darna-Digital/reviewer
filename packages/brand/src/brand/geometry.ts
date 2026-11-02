@@ -1,5 +1,12 @@
 import type { BrandConfig } from "./config";
-import { MARK_CELLS, MARK_COLUMNS, MARK_ROWS } from "./mark";
+import {
+  MARK_CELLS,
+  MARK_COLUMNS,
+  MARK_ROWS,
+  WORDMARK_ROWS,
+  blockWordmark,
+  type MarkCell,
+} from "./mark.ts";
 import type { OutlinedText } from "./font";
 
 /** Every measurement below is in design units, one grid cell being 100. */
@@ -16,6 +23,8 @@ export type Scene = {
   plate: RoundedBox | null;
   tile: RoundedBox | null;
   blocks: Array<RoundedBox>;
+  /** The block wordmark's counters, painted like the blocks but fainter. */
+  counters: Array<RoundedBox>;
   text: { d: string; x: number; baseline: number } | null;
 };
 
@@ -24,10 +33,15 @@ export function tileSide(markPadding: number) {
   return MARK_HEIGHT / Math.max(1 - 2 * markPadding, 0.05);
 }
 
-function markBlocks(config: BrandConfig, originX: number, originY: number) {
+function markBlocks(
+  config: BrandConfig,
+  originX: number,
+  originY: number,
+  cells: Array<MarkCell> = MARK_CELLS
+) {
   const inset = (config.blockGap * CELL) / 2;
   const size = CELL - 2 * inset;
-  return MARK_CELLS.map(({ column, row }) => ({
+  return cells.map(({ column, row }) => ({
     x: originX + column * CELL + inset,
     y: originY + row * CELL + inset,
     width: size,
@@ -36,10 +50,42 @@ function markBlocks(config: BrandConfig, originX: number, originY: number) {
   }));
 }
 
+/**
+ * The name spelt in the mark's own blocks, with the breathing room the other
+ * lockups get around their plate — no tile and no outlined text.
+ */
+function buildBlockWordmarkScene(config: BrandConfig): Scene {
+  const { cells, counters, columns } = blockWordmark(config.wordmark);
+  const pad =
+    config.markPadding * tileSide(config.markPadding) +
+    config.canvasPadding * MARK_HEIGHT;
+  const width = columns * CELL + 2 * pad;
+  const height = WORDMARK_ROWS * CELL + 2 * pad;
+  return {
+    width,
+    height,
+    plate:
+      config.plate.kind === "transparent"
+        ? null
+        : {
+            x: 0,
+            y: 0,
+            width,
+            height,
+            radius: config.plateRadius * Math.min(width, height),
+          },
+    tile: null,
+    blocks: markBlocks(config, pad, pad, cells),
+    counters: markBlocks(config, pad, pad, counters),
+    text: null,
+  };
+}
+
 export function buildScene(
   config: BrandConfig,
   text: OutlinedText | null
 ): Scene {
+  if (config.layout === "blocks") return buildBlockWordmarkScene(config);
   const side = tileSide(config.markPadding);
   const showsMark = config.layout !== "wordmark";
   const showsText = config.layout !== "mark" && text !== null && text.width > 0;
@@ -116,6 +162,7 @@ export function buildScene(
         ? { ...markBox, radius: config.tileRadius * side }
         : null,
     blocks: showsMark ? markBlocks(config, markOriginX, markOriginY) : [],
+    counters: [],
     text: showsText
       ? { d: text.d, x: textBox.x, baseline: textBox.y + textBox.height }
       : null,

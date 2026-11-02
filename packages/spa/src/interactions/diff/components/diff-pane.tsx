@@ -30,7 +30,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
 import { useCodeThemes } from "@/components/editor/highlighter";
@@ -53,6 +53,7 @@ import {
   type DiffFileInView,
   setDiffFileInView,
 } from "@/interactions/diff/adapters/diff-file-in-view.store";
+import { setDiffEmpty } from "@/interactions/diff/adapters/diff-empty.store";
 import { setDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import {
   isNarrowedToUnified,
@@ -66,6 +67,7 @@ import {
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
 import { DIAGNOSTIC_CSS } from "@/interactions/language/functions/diagnostic-styles";
 import { fetchClient } from "@/lib/api/client";
+import { repoInit } from "@/lib/repo-scope";
 import { useCodeFontReady } from "@/lib/code-font";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import {
@@ -86,6 +88,21 @@ export interface DiffRevealTarget {
   /** Bumped on every request, so revealing the same line twice scrolls both times. */
   readonly key: number;
 }
+
+/**
+ * The repository and repository-relative path a file's name stands for. The
+ * repository is undefined for the page's own, which is every file but those
+ * of a workspace's stacked diff — see `workspace-diff.functions`.
+ */
+export interface DiffFileLocation {
+  readonly repo: string | undefined;
+  readonly path: string;
+}
+
+const inPageRepo = (name: string): DiffFileLocation => ({
+  repo: undefined,
+  path: name,
+});
 
 type AnnotationMeta =
   | {
@@ -152,6 +169,8 @@ interface DiffPaneProps {
   ) => Promise<void>;
   /** Go-to-definition and find-usages land here. */
   onOpenLocation: (path: string, lineNumber: number) => void;
+  /** Where a file's name lives; absent, every name is the page's own path. */
+  locate?: (name: string) => DiffFileLocation;
 }
 
 const emptyHint = (target: DiffTarget): string => {
@@ -340,6 +359,9 @@ function useItemElement(
 }
 
 interface FileLanguageProps {
+  /** The file's name in the diff, which its diagnostics are reported under. */
+  name: string;
+  /** The path its repository's language server knows it by. */
   path: string;
   itemId: string;
   /** Where the item's element is published while the viewer has it rendered. */
@@ -349,7 +371,7 @@ interface FileLanguageProps {
   register: (itemId: string, viewOptions: DiffLanguage["viewOptions"]) => void;
   unregister: (itemId: string) => void;
   report: (
-    path: string,
+    name: string,
     annotations: ReadonlyArray<DiffLineAnnotation<DiagnosticsAnnotationMeta>>
   ) => void;
   onOpenLocation: (path: string, lineNumber: number) => void;
@@ -365,6 +387,7 @@ interface FileLanguageProps {
  * item to carry.
  */
 const FileLanguage = memo(function FileLanguageView({
+  name,
   path,
   itemId,
   elements,
@@ -394,8 +417,8 @@ const FileLanguage = memo(function FileLanguageView({
   }, [itemId, language.viewOptions, register, unregister]);
 
   useEffect(() => {
-    report(path, language.annotations);
-  }, [language.annotations, path, report]);
+    report(name, language.annotations);
+  }, [language.annotations, name, report]);
 
   return (
     <>
@@ -429,6 +452,7 @@ export function DiffPane({
   onCommentReply: rawOnCommentReply,
   onCommentResolve: rawOnCommentResolve,
   onOpenLocation: rawOnOpenLocation,
+  locate = inPageRepo,
 }: DiffPaneProps) {
   const codeThemes = useCodeThemes();
   // Held until the code face is in hand, so the diff is measured once rather
@@ -492,6 +516,14 @@ export function DiffPane({
     setDiffNarrowed(narrowed);
     return () => setDiffNarrowed(false);
   }, [narrowed]);
+
+  // Told to the header too, so the layout toggle steps aside over the empty
+  // state — there is no diff for it to lay out.
+  const empty = !loading && error === null && files.length === 0;
+  useEffect(() => {
+    setDiffEmpty(empty);
+    return () => setDiffEmpty(false);
+  }, [empty]);
 
   // Per-file "show the whole file" choices, scoped to the current target: the
   // stored key invalidates the set when the user navigates to another diff, so
@@ -558,16 +590,20 @@ export function DiffPane({
   const loadDiffFiles = useCallback(
     async (file: FileDiffMetadata): Promise<FileDiffLoadedFiles> => {
       try {
+        const { repo, path } = locate(file.name);
+        const prevPath =
+          file.prevName == null ? undefined : locate(file.prevName).path;
         const { data, error: fetchError } = await fetchClient.GET(
           "/api/diff-file",
           {
             params: {
               query: {
                 ...diffFileTargetQuery(target),
-                path: file.name,
-                ...(file.prevName != null ? { prevPath: file.prevName } : {}),
+                path,
+                ...(prevPath !== undefined ? { prevPath } : {}),
               },
             },
+            ...repoInit(repo),
           }
         );
         if (fetchError !== undefined || data === undefined)
@@ -586,7 +622,7 @@ export function DiffPane({
           newFile,
         };
       } catch (failure) {
-        toast.error(`Couldn't load the rest of ${file.name}`, {
+        notify.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
               ? "Its commits couldn't be fetched from origin — check the connection, then expand again."
@@ -596,7 +632,7 @@ export function DiffPane({
         throw failure;
       }
     },
-    [collapseFile, target]
+    [collapseFile, target, locate]
   );
 
   // The language layer's handlers, one set per file, under the item's id —
@@ -827,7 +863,8 @@ export function DiffPane({
       for (const [index, item] of itemsRef.current.entries()) {
         const top = viewer.getTopForItem(item.id);
         if (top === undefined || top > readingLine) break;
-        inView = { path: item.fileDiff.name, index };
+        const name = item.fileDiff.name;
+        inView = { name, ...locate(name), index };
       }
       setDiffFileInView(inView);
     }
@@ -1142,20 +1179,26 @@ export function DiffPane({
         renderHeaderMetadata={renderHeaderMetadata}
         renderAnnotation={renderAnnotation}
       />
-      {items.map((item) => (
-        <FileLanguage
-          key={item.id}
-          path={item.fileDiff.name}
-          itemId={item.id}
-          elements={elements}
-          enabled={languageEnabled}
-          drafting={draft !== null && draft.filePath === item.fileDiff.name}
-          register={registerLanguage}
-          unregister={unregisterLanguage}
-          report={reportDiagnostics}
-          onOpenLocation={onOpenLocation}
-        />
-      ))}
+      {items.map((item) => {
+        const { repo, path } = locate(item.fileDiff.name);
+        return (
+          <FileLanguage
+            key={item.id}
+            name={item.fileDiff.name}
+            path={path}
+            itemId={item.id}
+            elements={elements}
+            // The language layer asks the page's own repository; another
+            // root's files in a workspace's diff are read without it.
+            enabled={languageEnabled && repo === undefined}
+            drafting={draft !== null && draft.filePath === item.fileDiff.name}
+            register={registerLanguage}
+            unregister={unregisterLanguage}
+            report={reportDiagnostics}
+            onOpenLocation={onOpenLocation}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -1,801 +1,214 @@
-// The window tabs, on the toolbar: Code and Sessions as icons, each
-// session by its title with its ✕, and the mark that mints one — the row
-// the web app's window bar draws, on the window's own bar, from the picture
-// the island sends up (see `WindowTabStrip`). The pinned pair are the
-// system's own tabs — the segmented control in its macOS 27 tabs role,
-// whose glass puck can be grabbed and dragged from one segment to the
-// other as well as clicked; the sessions after them, and the mark that
-// mints one, wear the web bar's chips instead, cut to the glass's own
-// height and capsule, so a row of titles reads as the SPA's strip on the pinned
-// pair's line rather than a run of glass buttons (see `BarChipStyle`). A
-// press goes back down to the island's strip, which is the one that
-// switches.
+// The window tabs' pinned pair, Code and Sessions, as the system's own
+// toggle buttons side by side in one pane of the bar's glass — the way
+// Notes sets its format buttons, and the way SwiftUI's toolbar group had
+// them — the one in front lit. A press lights the
+// button pressed and puts the other out, and that is all it draws: no
+// segment slides or stretches across, so the switch is done the moment it
+// is clicked. They stand on the window's toolbar ahead of the sessions'
+// own tabs (see `SessionTabBar`), both drawn from the picture the island
+// sends up (see `WindowTabStrip`); a press goes back down to the island's
+// strip, which is the one that switches.
 //
-// The pinned pair are one toolbar item, laid out and tipped by the bar as
-// it does everything else on it. The sessions are not: they are one
-// item holding a row this file lays out itself, because a tab is dragged
-// along that row to reorder it and the tabs it passes have to slide out of
-// its way under the pointer — which means one view that knows where every
-// tab stands and can move them all against each other (see
-// `SessionTabRow`), not a run of items the toolbar places one by one.
-//
-// That row scrolls sideways once the sessions outrun the bar, as the web
-// strip does, rather than leaning on what the bar would otherwise do with
-// an item too wide for it: NSToolbar does not cut an item short, it takes
-// it off the bar whole and puts it in the ›› menu — and every session tab
-// being in the one item, they all went at once, which is the state a
-// window with a few sessions open would get into. So the row measures the
-// run the bar leaves it and keeps inside it (see `BarRunWidth`), and the
-// tabs past the strip's end are scrolled to.
+// The two are one toolbar item, a row holding both buttons, not a group of
+// two items: the bar sets the items of a group its own gap apart and
+// pads each as an item of its own, which stood them wider than the pair
+// ever stood; a row of its own spaces them as it is told. They
+// are AppKit's buttons, not ones hosted in SwiftUI, so the bar wraps them
+// in its glass as it does a control it knows (see `WindowToolbar`).
 import AppKit
-import SwiftUI
 
-struct TabStripItems: ToolbarContent {
-    let model: AppModel
-
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            ModeSwitch(model: model)
-        }
-        ToolbarItemGroup(placement: .navigation) {
-            SessionTabRow(model: model)
-        }
-        .sharedBackgroundVisibility(.hidden)
-    }
-}
-
-/// The pinned tabs — Code, Sessions — as the system's tabs: an icon a
-/// segment, in the toolbar's glass, the puck on the way of working in
-/// front (see `WindowTabStrip.lights`) and draggable across to the other.
-/// A tab is left by going to another, never by pressing it again, so a
-/// press on the tab in front is ignored; a press on Sessions lit for a
-/// session's own tab is the way back to the list — the control sends its
-/// action on every press, the same segment included, so that press
-/// reaches here even though the puck does not move.
+/// The pinned tabs — Code, Sessions — as a toolbar item of toggles: an
+/// icon each, the one lit the way of working in front (see
+/// `WindowTabStrip.lights`). A tab is left by going to another, never by
+/// pressing it again, so a press on the tab in front is ignored; a press on
+/// Sessions lit for a session's own tab is the way back to the list.
 ///
 /// The tab pressed is held here until the strip comes back with it in
-/// front: the control has already slid its puck there, and a selection
-/// read straight off the strip would still name the old tab for the trip
-/// over the bridge, sending the puck back and then over again.
+/// front: the button is lit at the press, and the strip read straight off
+/// would still name the old tab for the trip over the bridge, lighting the
+/// old one and then the new one again.
 ///
-/// Each segment is named on the glass label under the bar, with ⌘G on the
+/// Each button is named on the glass label under the bar, with ⌘G on the
 /// one it would cross to (see `ToolbarGlassLabel`).
-private struct ModeSwitch: View {
-    let model: AppModel
-    @State private var pressed: String?
+@MainActor
+final class ModeButtons: NSObject {
+    let item: NSToolbarItem
+    private let model: AppModel
+    private let row = NSStackView()
+    private var buttons: [ModeButton] = []
+    private var pinned: [WindowTab] = []
+    private var pressed: String?
+    private var activeId = ""
 
-    var body: some View {
-        SegmentedTabs(
-            segments: pinned.map {
-                SegmentedTabs.Segment(id: $0.id, title: $0.title, symbol: $0.kind.symbol, showsTitle: false)
-            },
-            selection: pressed ?? lit,
-            showsToolTips: false,
-            select: select
-        )
-        .contextMenu { PinnedTabContextMenu(model: model) }
-        .onChange(of: model.windowTabs.activeId) { pressed = nil }
-        .toolbarGlassLabel(labels)
+    /// Air between the two, so the lit one's fill stands clear of the
+    /// other's glyph — the bar's own gap between its items, kept inside
+    /// the one pane of glass.
+    private static let spacing: CGFloat = 6
+    /// The glass round the lit one, the same on every side: the bar wraps
+    /// its glass tight round the row, so the row carries its own margin —
+    /// without it the lit fill runs into the glass's edge.
+    private static let inset: CGFloat = 4
+
+    init(model: AppModel, identifier: NSToolbarItem.Identifier) {
+        self.model = model
+        item = NSToolbarItem(itemIdentifier: identifier)
+        super.init()
+        item.label = "Code and sessions"
+        row.orientation = .horizontal
+        row.spacing = Self.spacing
+        row.edgeInsets = NSEdgeInsets(top: Self.inset, left: Self.inset, bottom: Self.inset, right: Self.inset)
+        item.view = row
+        item.isBordered = true
+        follow()
     }
 
-    private var pinned: [WindowTab] { model.windowTabs.tabs.filter(\.pinned) }
-
-    private var lit: String {
-        pinned.first { model.windowTabs.lights($0) }?.id ?? ""
+    private func follow() {
+        let strip = withObservationTracking {
+            model.windowTabs
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.follow() }
+        }
+        apply(strip)
     }
 
-    private var labels: [ToolbarGlassLabel.Text] {
-        pinned.map { tab in
-            let crossesTo = model.windowTabs.canSwitchMode && (pressed ?? lit) != tab.id
-            return ToolbarGlassLabel.Text(title: tab.title, hint: crossesTo ? "⌘G" : nil)
+    private func apply(_ strip: WindowTabStrip) {
+        if strip.activeId != activeId {
+            activeId = strip.activeId
+            pressed = nil
+        }
+        let pinned = strip.tabs.filter(\.pinned)
+        if pinned.map(\.id) != self.pinned.map(\.id) || pinned.map(\.kind) != self.pinned.map(\.kind) {
+            self.pinned = pinned
+            buttons = pinned.map { ModeButton(tab: $0, target: self) }
+            row.setViews(buttons, in: .leading)
+        }
+        light(pressed ?? pinned.first { strip.lights($0) }?.id, canSwitch: strip.canSwitchMode)
+    }
+
+    /// The one tab lit, and ⌘G named on the other, the one it crosses to.
+    private func light(_ lit: String?, canSwitch: Bool) {
+        for button in buttons {
+            button.state = button.tabId == lit ? .on : .off
+            button.hint = canSwitch && button.tabId != lit ? "⌘G" : nil
         }
     }
 
-    private func select(_ id: String) {
-        guard model.windowTabs.activeId != id else { return }
+    @objc fileprivate func buttonPressed(_ sender: ModeButton) {
+        let id = sender.tabId
+        let strip = model.windowTabs
+        let lit = pinned.first { strip.lights($0) }?.id
+        // A toggle puts itself out when pressed while lit; the press is
+        // a way back to the tab, never a way out of it, so it stays lit.
+        light(id, canSwitch: strip.canSwitchMode)
+        guard strip.activeId != id else { return }
         if id != lit { pressed = id }
         model.select(tabId: id)
     }
-}
 
-/// The sessions, and the mark that mints one, as one row.
-///
-/// The row holds an order of its own rather than drawing the island's
-/// straight off. A tab dragged along it moves under the pointer frame by
-/// frame and the tabs it passes stand aside as it crosses their middle,
-/// which is a reorder every few hundredths of a second: asking the island
-/// for each of them and waiting for the strip to come back would put the
-/// bridge between the pointer and the tab under it. So the row rearranges
-/// itself as the drag goes and tells the island once, when the tab is let
-/// go — and the strip that comes back, being the order the row is already
-/// in, changes nothing on screen.
-///
-/// Nothing changes places while the drag is on. The row keeps the order it
-/// started in and moves the tabs with two offsets: the tab in hand stands
-/// where the pointer has it, to the frame and to the point, and the ones
-/// it has passed stand a tab's width aside, sprung, so the gap it would
-/// drop into opens and closes under it. Neither offset is ever the other's
-/// to correct, which is what a row that reordered itself mid-drag would
-/// have to do — its own slot moving out from under it by a tab's width
-/// every time the row settled.
-private struct SessionTabRow: View {
-    let model: AppModel
-    @State private var order: [WindowTab] = []
-    @State private var drag: TabDrag?
-    /// The run of the bar the row has to stay inside, the mark that mints
-    /// a session included (see `BarRunWidth`) — nothing until the bar has
-    /// laid the row out once, which the strip reads as no limit yet.
-    @State private var run: CGFloat = 0
-    /// How far the strip has been scrolled, which is only read to know
-    /// whether there is more of the row at either end (see `edges`).
-    @State private var scrolled: CGFloat = 0
-
-    /// The air between chips, which counts as part of the distance a tab
-    /// has to travel to pass its neighbour.
-    private static let gap: CGFloat = 4
-    /// The one spring the row moves on: the tabs standing aside mid-drag,
-    /// and the whole row settling into its new order once the tab is let
-    /// go. One spring for both because they meet at that moment — a tab
-    /// standing aside has to come to rest exactly as its slot arrives
-    /// under it, and two curves would show the difference.
-    private static let slide: Animation = .snappy(duration: 0.22, extraBounce: 0.1)
-    /// The room the strip's clip leaves above and below the tabs, for the
-    /// tab in hand to be lifted into.
-    private static let lift: CGFloat = 12
-    /// How long the strip takes to fade out at an end it has more tabs
-    /// past — about a title's last word.
-    private static let fade: CGFloat = 28
-
-    var body: some View {
-        // With no session open the strip is nothing wide, and the row's
-        // spacing after it would push the mark off the pinned pair by more
-        // than the bar's own gap — the one the pinned pair stand off the
-        // sidebar's glass by. So the empty row spaces nothing, and the mark
-        // stands where the bar puts it.
-        LeadingPinned {
-            HStack(spacing: order.isEmpty ? 0 : Self.gap) {
-                strip
-                Button { model.newSession() } label: {
-                    Label("New session", systemImage: "plus")
-                        .barGlyph()
-                }
-                .buttonStyle(BarChipStyle())
-                .toolbarGlassLabel("New session", hint: "⌘T")
-            }
-        }
-        .background { BarRunWidth(run: run) { run = $0 } }
-        // The row hands its run back before anything ahead of it on the
-        // bar comes to take the room: the sidebar's column, which slides
-        // out over the next fifth of a second, and the pinned pair, which
-        // arrive with the project a moment after the row itself does. A
-        // row that waited to be pushed would be a frame too wide, and a
-        // frame is all it takes — the bar takes an item that does not fit
-        // off into the ›› menu, and from there the row cannot see where
-        // the row on the bar would stand, so it can only feel its way back
-        // (see `BarRunWidth`). What it hands back it
-        // takes again a moment later, measured afresh.
-        .onChange(of: model.sidebarShown) { _, shown in
-            if shown { run = max(0, run - SidebarWidths.max) }
-        }
-        .onChange(of: model.windowTabs.tabs) { was, now in
-            if was.count(where: \.pinned) != now.count(where: \.pinned) { run = 0 }
-            follow()
-        }
-        .onAppear { follow() }
-    }
-
-    /// The tabs, as far along the bar as the bar allows. The mark that
-    /// mints a session stays out of the scroll, on the row's end, so it is
-    /// there to press however many sessions are open.
-    private var strip: some View {
-        ScrollViewReader { scroll in
-            ScrollView(.horizontal) {
-                HStack(spacing: Self.gap) {
-                    ForEach(Array(order.enumerated()), id: \.element.id) { slot, tab in
-                        tabView(tab, at: slot)
-                    }
-                }
-            }
-            // `.hidden` is only a hint on macOS: with a mouse attached, or
-            // scroll bars set to always show, the scroller is drawn anyway.
-            .scrollIndicators(.never)
-            // The strip's own clip is put away for a mask cut to the same
-            // width but taller: what scrolls past the ends is still taken
-            // off, and the tab in hand — a shade bigger, with a shadow
-            // under it — is not cut off at the tabs' own height.
-            .scrollClipDisabled()
-            .frame(width: width, height: BarChipMetrics.height)
-            .mask { edges }
-            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in
-                scrolled = x
-            }
-            .onChange(of: model.windowTabs.activeId, initial: true) { reveal(with: scroll) }
-            .onChange(of: order) { reveal(with: scroll) }
-        }
-    }
-
-    private func tabView(_ tab: WindowTab, at slot: Int) -> some View {
-        SessionTab(tab: tab, model: model, lifted: drag?.id == tab.id) { press(tab) }
-            // Standing aside is sprung; being carried is not — the tab in
-            // hand is under the pointer, not chasing it. The spring is
-            // inside the second offset, so it is the only one of the two
-            // it is ever applied to.
-            .offset(x: standsAside(at: slot))
-            .animation(Self.slide, value: standsAside(at: slot))
-            .offset(x: carried(tab, at: slot))
-            // The tab in hand passes over the others rather than under
-            // them.
-            .zIndex(drag?.id == tab.id ? 1 : 0)
-            .gesture(reorder(tab, at: slot))
-    }
-
-    /// The strip's ends: cut square where the row ends, and faded out
-    /// where it carries on past — the tab under the fade is the one that
-    /// says there are more, and a hard edge would have it look cut off
-    /// rather than scrolled past. Both ends are the one gradient, its
-    /// stops moved to the edge they are not wanted at, so a fade comes and
-    /// goes rather than appearing whole.
-    private var edges: some View {
-        let ends = width > 0 ? Self.fade / width : 0
-        return LinearGradient(
-            stops: [
-                .init(color: .clear, location: 0),
-                .init(color: .black, location: scrolled > 1 ? ends : 0),
-                .init(color: .black, location: scrolled + width < content - 1 ? 1 - ends : 1),
-                .init(color: .clear, location: 1),
-            ],
-            startPoint: .leading, endPoint: .trailing
-        )
-        .padding(.vertical, -Self.lift)
-        .animation(.easeOut(duration: 0.15), value: scrolled > 1)
-        .animation(.easeOut(duration: 0.15), value: scrolled + width < content - 1)
-    }
-
-    /// What the tabs come to, laid end to end.
-    private var content: CGFloat {
-        guard let last = order.indices.last else { return 0 }
-        return order.reduce(0) { $0 + width(of: $1) } + CGFloat(last) * Self.gap
-    }
-
-    /// How wide the strip stands: the tabs' own width while they fit, and
-    /// what the bar leaves once they do not — the run less the mark on the
-    /// row's end and the air before it. Nothing at all until the bar has
-    /// said, which is the one frame between the row appearing and its
-    /// first layout: a window opening on a dozen sessions would lay the
-    /// row out at its full length for that frame, and the bar, seeing an
-    /// item longer than itself, would have taken it off and put it in the
-    /// ›› menu before ever giving it a width to measure against — and a
-    /// row in the menu cannot see where the row on the bar would stand, so
-    /// it can only feel its way back.
-    private var width: CGFloat {
-        guard run > 0 else { return 0 }
-        return min(content, max(0, run - BarChipMetrics.height - Self.gap))
-    }
-
-    /// Keeps the tab in front in view: one reached by ⌘1–9 or ⌘⇧[, and the
-    /// freshly minted one at the row's end, are scrolled to rather than
-    /// left past the strip's edge. Never mid-drag — the row is the
-    /// pointer's then, and the order changing under it is the drag's own
-    /// doing.
-    private func reveal(with scroll: ScrollViewProxy) {
-        let id = model.windowTabs.activeId
-        guard drag == nil, order.contains(where: { $0.id == id }) else { return }
-        withAnimation(Self.slide) { scroll.scrollTo(id) }
-    }
-
-    /// The island's order, taken as the row's own — except mid-drag, where
-    /// the row's is the one the pointer is working and the island has yet
-    /// to hear about it.
-    private func follow() {
-        guard drag == nil else { return }
-        order = model.windowTabs.sessions
-    }
-
-    private func press(_ tab: WindowTab) {
-        if NSEvent.modifierFlags.contains(.shift) {
+    @objc fileprivate func closeSessions() {
+        for tab in model.windowTabs.sessions {
             model.closeTab(id: tab.id)
-        } else {
-            model.select(tabId: tab.id)
-        }
-    }
-
-    private func width(of tab: WindowTab) -> CGFloat {
-        SessionTab.width(for: tab.title)
-    }
-
-    /// The distance from one slot to the next along the row.
-    private func step(to slot: Int) -> CGFloat {
-        width(of: order[slot]) + Self.gap
-    }
-
-    /// Where the tab in hand stands: where the pointer has taken it, held
-    /// to the row — it stops with its leading edge at the row's start and
-    /// its trailing edge at the end rather than being carried off the bar.
-    private func carried(_ tab: WindowTab, at slot: Int) -> CGFloat {
-        guard let drag, drag.id == tab.id else { return 0 }
-        let before = (0..<slot).reduce(0) { $0 + step(to: $1) }
-        let after = ((slot + 1)..<order.count).reduce(0) { $0 + step(to: $1) }
-        return min(max(drag.translation, -before), after)
-    }
-
-    /// How far a tab stands aside to leave the slot the tab in hand would
-    /// drop into: one slot along, towards where that tab came from, for
-    /// every tab between the slot it left and the one it is over.
-    private func standsAside(at slot: Int) -> CGFloat {
-        guard let drag, slot != drag.from else { return 0 }
-        let landing = landing(of: drag)
-        let held = step(to: drag.from)
-        if drag.from < slot, slot <= landing { return -held }
-        if landing <= slot, slot < drag.from { return held }
-        return 0
-    }
-
-    /// The slot the tab in hand would drop into: the one it has been
-    /// carried into, counting a slot for each neighbour whose middle it
-    /// has crossed. Read off the distance travelled every time rather than
-    /// kept as it goes, so the tab is wherever the pointer says it is and
-    /// nothing can drift.
-    private func landing(of drag: TabDrag) -> Int {
-        var slot = drag.from
-        var left = drag.translation
-        // Whichever way the tab set off, it keeps going that way: crossing
-        // a neighbour's middle leaves what is left of the distance short
-        // of that neighbour's far side, which is to say pointing back the
-        // way it came, and a walk that read that as a step back would take
-        // every crossing straight off again.
-        if left > 0 {
-            while slot + 1 < order.count, left > step(to: slot + 1) / 2 {
-                left -= step(to: slot + 1)
-                slot += 1
-            }
-        } else {
-            while slot > 0, -left > step(to: slot - 1) / 2 {
-                left += step(to: slot - 1)
-                slot -= 1
-            }
-        }
-        return slot
-    }
-
-    private func reorder(_ tab: WindowTab, at slot: Int) -> some Gesture {
-        // Short of the threshold the drag never starts, so a press that
-        // wanders a point or two on its way up is still a press.
-        DragGesture(minimumDistance: 4)
-            .onChanged { value in
-                if drag?.id != tab.id { drag = TabDrag(id: tab.id, from: slot) }
-                drag?.translation = value.translation.width
-            }
-            .onEnded { _ in
-                guard drag?.id == tab.id else { return }
-                settle()
-            }
-    }
-
-    /// The tab let go. The row takes the order the tabs are already
-    /// standing in and drops both offsets at once, on the spring the tabs
-    /// standing aside are already moving on: each of them is put in the
-    /// slot it has been standing in all along, so it does not move at all,
-    /// and the tab in hand springs the last of the way home from wherever
-    /// the pointer left it. The island hears where it landed — after the
-    /// tab now before it, or before the one after it at the head of the
-    /// row. A tab put back where it started is no move and nobody is told.
-    private func settle() {
-        guard let drag else { return }
-        let landing = landing(of: drag)
-        withAnimation(Self.slide) {
-            if landing != drag.from {
-                order.insert(order.remove(at: drag.from), at: landing)
-            }
-            self.drag = nil
-        }
-        guard landing != drag.from else { return }
-        if landing > 0 {
-            model.moveTab(id: drag.id, beside: order[landing - 1].id, after: true)
-        } else if order.count > 1 {
-            model.moveTab(id: drag.id, beside: order[1].id, after: false)
         }
     }
 }
 
-/// A tab in hand: which one, the slot it was picked up from and how far
-/// the pointer has carried it since.
-private struct TabDrag {
-    let id: String
-    let from: Int
-    var translation: CGFloat = 0
-}
-
-/// Holds the row to where it begins on the bar while the bar catches up
-/// with a new width for it.
+/// One pinned tab: its icon, on a flat grey disc while its way of working
+/// is in front — the grey the glass puck wore, without the glass — and bare
+/// on the bar's glass otherwise, named with its chord on the bar's glass
+/// label.
 ///
-/// The bar sizes the item a pass after the row changes width, and for
-/// that pass the row is laid out in the item's old frame — centred in it,
-/// which is where SwiftUI sets a view that does not fit what it was
-/// given. So a tab opened or closed had every tab lurch by half its width
-/// and back. Taking whatever width it is offered and standing its content
-/// against the leading edge of it, the row overhangs the old frame at its
-/// end instead, and nothing already on the row moves. Asked for the width
-/// it would like, it answers with its content's own.
-private struct LeadingPinned: Layout {
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard let content = subviews.first else { return .zero }
-        let own = content.sizeThatFits(ProposedViewSize(width: nil, height: proposal.height))
-        return CGSize(width: proposal.width ?? own.width, height: own.height)
+/// Drawn here rather than by the system's toolbar bezel, which lights a
+/// shorter capsule round a smaller glyph than the pair is meant to wear:
+/// a round disc most of the glass's height, the glyph about half of it.
+@MainActor
+private final class ModeButton: NSButton {
+    let tabId: String
+    private let tabTitle: String
+    private let label = ToolbarHoverView()
+    private let disc = CALayer()
+
+    /// The disc: three quarters of the bar's 36pt glass, which leaves the
+    /// glass the same 4pt round it on every side.
+    static let size: CGFloat = 28
+    private static let glyphPointSize: CGFloat = 15
+    /// Air either side of the glyph inside the lit fill: Code's `</>` is
+    /// wide enough to stretch its disc a shade into a pill beside Sessions'
+    /// circle.
+    private static let glyphMargin: CGFloat = 2.5
+    /// The lit disc's ink over the bar's glass: neutral rather than the
+    /// theme's accent, so the switch reads as a place, not an action.
+    private static let litTint: CGFloat = 0.16
+
+    override var state: NSControl.StateValue {
+        didSet { needsDisplay = true }
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard let content = subviews.first else { return }
-        let own = content.sizeThatFits(ProposedViewSize(width: nil, height: bounds.height))
-        content.place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(own))
+    var hint: String? {
+        didSet {
+            if hint != oldValue { label.labels = [ToolbarGlassLabel.Text(title: tabTitle, hint: hint)] }
+        }
     }
-}
 
-/// How much of the bar is the row's: from where the row begins to the
-/// window's trailing edge, less the air the bar keeps there.
-///
-/// Measured because the bar will not clip. An item wider than the run left
-/// to it is not cut short — it is taken off the bar whole and put in the
-/// ›› menu, and every session tab being in the one item, they go together
-/// — so the row has to know its run before it lays out and keep inside it,
-/// and the bar never has cause to take it anywhere.
-///
-/// Read off the window rather than the toolbar, which has no public run of
-/// items to ask what it gave each of them. What the row wants is where it
-/// begins, once the sidebar's column and the pinned pair have had their
-/// share, and a view standing in the row can say that in the window's own
-/// coordinates; the row is last on the bar, so what follows it to the
-/// window's edge is the row's.
-private struct BarRunWidth: NSViewRepresentable {
-    /// The run the row has, which is not always the last one measured:
-    /// the row hands some back of its own accord.
-    let run: CGFloat
-    let measured: (CGFloat) -> Void
-
-    func makeNSView(context: Context) -> BarRunProbe { BarRunProbe(measured: measured) }
-
-    func updateNSView(_ probe: BarRunProbe, context: Context) {
-        probe.measured = measured
-        probe.adopt(run)
-    }
-}
-
-private final class BarRunProbe: NSView {
-    var measured: (CGFloat) -> Void
-    /// The air the row leaves at the window's trailing edge, which is the
-    /// bar's own: an item laid right up against the edge is one the bar
-    /// takes off into the ›› menu rather than draw that close.
-    private static let trailing: CGFloat = 16
-    /// How long a longer run has to hold before the row is given it (see
-    /// `measure`).
-    private static let settling: TimeInterval = 0.4
-    /// What the row gives up for as long as the window's edge is in hand.
-    /// The row follows a resize a frame behind — the bar is laid out on
-    /// the new width before the row hears the window's; this is that frame
-    /// paid for in advance, and taken back once the edge is let go.
-    private static let resizing: CGFloat = 128
-    /// What a row taken off the bar gives up at a time to get back on, when
-    /// where it began on the bar is no guide.
-    private static let retreat: CGFloat = 64
-    /// How long a row given less is left for the bar to take it back
-    /// before it gives up more.
-    private static let readmission: TimeInterval = 0.25
-    private var given: CGFloat?
-    private var growing: CGFloat?
-    private var growth: Timer?
-    private var retreating: Timer?
-    /// The window the row is on the bar of. Kept when the bar takes the row
-    /// off into the ›› menu, which takes it out of the window altogether:
-    /// the window is still the one whose width the row has to fit back
-    /// into, and the row is no longer in it to say what that width is.
-    private weak var watched: NSWindow?
-    /// Where the row began, from the window's leading edge, the last time
-    /// it stood on the bar — which is where it will stand once it is back.
-    private var lead: CGFloat?
-
-    init(measured: @escaping (CGFloat) -> Void) {
-        self.measured = measured
+    init(tab: WindowTab, target: ModeButtons) {
+        tabId = tab.id
+        tabTitle = tab.title
         super.init(frame: .zero)
+        setButtonType(.pushOnPushOff)
+        isBordered = false
+        image = NSImage(systemSymbolName: tab.kind.symbol, accessibilityDescription: tab.title)?
+            .withSymbolConfiguration(.init(pointSize: Self.glyphPointSize, weight: .regular))
+        imagePosition = .imageOnly
+        imageScaling = .scaleNone
+        wantsLayer = true
+        disc.cornerCurve = .continuous
+        layer?.insertSublayer(disc, at: 0)
+        translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            widthAnchor.constraint(equalToConstant: max(Self.size, (image?.size.width ?? 0) + 2 * Self.glyphMargin)),
+            heightAnchor.constraint(equalToConstant: Self.size),
+        ])
+        self.target = target
+        action = #selector(ModeButtons.buttonPressed(_:))
+        setAccessibilityLabel(tab.title)
+        label.frame = bounds
+        label.autoresizingMask = [.width, .height]
+        addSubview(label)
+        label.labels = [ToolbarGlassLabel.Text(title: tab.title, hint: nil)]
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Close other tabs", action: #selector(ModeButtons.closeSessions), keyEquivalent: "")
+            .target = target
+        self.menu = menu
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("BarRunProbe is not loaded from a nib") }
+    required init?(coder: NSCoder) { fatalError("ModeButton is not loaded from a nib") }
 
-    deinit { NotificationCenter.default.removeObserver(self) }
+    override var wantsUpdateLayer: Bool { true }
 
-    /// Leaving the window is not leaving the watch: the bar takes a row
-    /// that does not fit out of the window, and the row only gets back by
-    /// hearing that the window has changed and working out how much
-    /// shorter to be.
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if let window, window !== watched { watch(window) }
-        measure()
-    }
+    /// None: a symbol's own alignment insets would grow the frame past the
+    /// size it is given, by a different amount for each glyph, and the lit
+    /// fill — drawn to the frame — would run into the glass off-centre.
+    override var alignmentRectInsets: NSEdgeInsets { NSEdgeInsetsZero }
 
-    private func watch(_ window: NSWindow) {
-        let centre = NotificationCenter.default
-        centre.removeObserver(self)
-        watched = window
-        // The row moves without moving: as the sidebar's column comes and
-        // goes, and as the pinned pair arrive with the project, the bar
-        // slides the row along — which puts it somewhere else in the
-        // window without changing its frame in the view that holds it, so
-        // nothing on the view itself would say so. The window's own update
-        // is watched instead: it comes round after every pass of the event
-        // loop, and so after every move the bar makes, and what it costs
-        // is a coordinate and a comparison.
-        for name in [NSWindow.didUpdateNotification, NSWindow.didResizeNotification] {
-            centre.addObserver(self, selector: #selector(measure), name: name, object: window)
+    override func updateLayer() {
+        let lit = state == .on
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            disc.backgroundColor = lit
+                ? NSColor.labelColor.withAlphaComponent(Self.litTint).cgColor
+                : NSColor.clear.cgColor
+            CATransaction.commit()
         }
+        contentTintColor = .labelColor
     }
 
-    /// A shorter run is the row's at once; a longer one only once it has
-    /// held for a moment.
-    ///
-    /// Because a wrong answer shows. A row too long for the bar is not cut
-    /// short, it is taken off and put in the ›› menu, and from there it
-    /// cannot see where the row on the bar would stand, so getting back is
-    /// a matter of shrinking and waiting for the bar to notice (see
-    /// `retreat`) — every tab gone for that while. The
-    /// one moment the row is measured wrong is while the bar is still
-    /// filling: the pinned pair arrive with the project, after the row
-    /// does, and until they land the row stands where they will be and
-    /// reads the bar as longer than it will get. Every wrong answer that
-    /// costs anything is a long one, so a long one waits and a short one
-    /// does not.
-    @objc private func measure() {
-        guard let window = watched, let bar = window.toolbar else { return }
-        guard window === self.window, onTheBar(bar) else { return retreat(in: window) }
-        stopRetreating()
-        let lead = convert(bounds, to: nil).minX
-        self.lead = lead
-        let run = run(in: window, from: lead)
-        // A run within a point of the one the row has is its own layout
-        // coming back round, not the bar moving.
-        if let given, abs(run - given) < 1 { return stopGrowing() }
-        if let given, run < given {
-            stopGrowing()
-            self.given = run
-            measured(run)
-            return
-        }
-        guard growing.map({ abs(run - $0) >= 1 }) ?? true else { return }
-        growing = run
-        growth?.invalidate()
-        growth = Timer.scheduledTimer(withTimeInterval: Self.settling, repeats: false) {
-            [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, let grown = self.growing else { return }
-                self.stopGrowing()
-                self.given = grown
-                self.measured(grown)
-            }
-        }
-    }
-
-    /// Counts from the run the row has rather than the one last measured.
-    /// A row that handed some back — as the sidebar comes in — has to be
-    /// given it again once the bar has settled; a probe still counting
-    /// from the longer run would read the bar coming back to it as no
-    /// change at all, and leave the row short, or with nothing.
-    func adopt(_ run: CGFloat) {
-        guard let given, abs(run - given) >= 1 else { return }
-        stopGrowing()
-        self.given = run
-        DispatchQueue.main.async { [weak self] in self?.measure() }
-    }
-
-    private func run(in window: NSWindow, from lead: CGFloat) -> CGFloat {
-        let air = Self.trailing + (window.inLiveResize ? Self.resizing : 0)
-        return max(0, window.frame.width - lead - air)
-    }
-
-    /// Taken off the bar all the same — a window edge dragged in faster
-    /// than the row could follow it, or the window snapped to half the
-    /// screen in one go. The row cannot see from the ›› menu where it
-    /// would stand, but it can count on standing where it last stood, and
-    /// gives itself the run from there to the window's edge as it is now.
-    /// The bar takes a while to notice an item it holds in the menu has
-    /// got short enough to take back, so the row waits for it; if the bar
-    /// has not taken it back by then, where it last stood is no guide —
-    /// the bar ahead of it has grown — and it gives up a step of its run
-    /// at a time until the bar does, measuring afresh once it is back.
-    private func retreat(in window: NSWindow) {
-        guard retreating == nil, let given, given > 0 else { return }
-        stopGrowing()
-        let fits = lead.map { run(in: window, from: $0) } ?? given
-        let shorter = max(0, fits < given ? fits : given - Self.retreat)
-        self.given = shorter
-        measured(shorter)
-        retreating = Timer.scheduledTimer(withTimeInterval: Self.readmission, repeats: false) {
-            [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.retreating = nil
-                self?.measure()
-            }
-        }
-    }
-
-    private func stopRetreating() {
-        retreating?.invalidate()
-        retreating = nil
-    }
-
-    /// Whether the row is still on the bar. Taken off it, it is laid out
-    /// all the same — somewhere of the ›› menu's own choosing — and a run
-    /// measured from there is a number about nothing.
-    private func onTheBar(_ bar: NSToolbar) -> Bool {
-        bar.visibleItems?.contains { item in
-            item.view.map(isDescendant(of:)) ?? false
-        } ?? false
-    }
-
-    private func stopGrowing() {
-        growth?.invalidate()
-        growth = nil
-        growing = nil
-    }
-}
-
-/// A session's tab: its title, and a slot at its tail the ✕ stands in —
-/// always on the tab in front, and under the pointer on the rest, as the
-/// web strip shows it. The slot is the tab's whether or not the ✕ is in
-/// it, so a tab neither resizes nor leaves a hole as the control comes and
-/// goes. What the thread is doing shares that slot, so a thread going
-/// quiet neither resizes the tab nor leaves a hole, and reaching for the ✕
-/// trades one for the other. The ✕ is laid over the tab rather than set
-/// inside its label: a button inside a button's label never gets the
-/// click, the outer one does, so the tab leaves the slot empty and the ✕
-/// stands on top of it. A shift-click closes too, so a tab can go without
-/// aiming for its ✕.
-///
-/// A tab is not a button, for all that it reads as one: it answers a press
-/// and a drag both (see `SessionTabRow`), and a button would take the
-/// mouse-up that ends a drag as a press of its own and switch to the tab
-/// that had just been dropped. It is a chip with the two gestures on it
-/// instead, named to the accessibility tree as the button it stands in
-/// for.
-private struct SessionTab: View {
-    let tab: WindowTab
-    let model: AppModel
-    /// Whether it is the tab being dragged, which is lifted off the row:
-    /// a shade bigger, on the tint it wears when it is on, with a shadow
-    /// under it.
-    let lifted: Bool
-    let press: () -> Void
-    @State private var isHovering = false
-
-    private static let maxWidth: CGFloat = 208
-    private static let closeSlot: CGFloat = 20
-    /// Where a tab's title begins, which the empty row stands the mark
-    /// that mints a session on (see `SessionTabRow`).
-    fileprivate static let leadingInset: CGFloat = 14
-    private static let trailingInset: CGFloat = 8
-    private static let titleSpacing: CGFloat = 6
-    private static let titleFont = NSFont.systemFont(ofSize: 13)
-
-    /// A tab is as wide as its title up to a limit — worked out from the
-    /// title rather than measured once laid out, so the row knows a new
-    /// tab's width in the frame it arrives in. A width measured a frame
-    /// late had the strip laid out a few points short of it first, and
-    /// every tab moved as the strip caught up.
-    fileprivate static func width(for title: String) -> CGFloat {
-        let text = (title as NSString).size(withAttributes: [.font: titleFont]).width.rounded(.up)
-        return min(maxWidth, leadingInset + text + titleSpacing + closeSlot + trailingInset)
-    }
-
-    var body: some View {
-        let isActive = model.windowTabs.activeId == tab.id
-        let showsClose = isActive || isHovering
-        HStack(spacing: Self.titleSpacing) {
-            Text(tab.title)
-                .font(Font(Self.titleFont))
-                .lineLimit(1)
-                .truncationMode(.tail)
-            ZStack {
-                Color.clear
-                if !showsClose { TabMark(tab: tab) }
-            }
-            .frame(width: Self.closeSlot, height: Self.closeSlot)
-        }
-        .padding(.leading, Self.leadingInset)
-        .padding(.trailing, Self.trailingInset)
-        .frame(width: Self.width(for: tab.title))
-        // On the bar's own colour, so a tab carried across the row covers
-        // the ones it passes rather than having both titles show at once.
-        .barChip(isOn: isActive, isPressed: lifted, base: Color(nsColor: IslandPalette.frame))
-        .overlay(alignment: .trailing) {
-            if showsClose {
-                TabCloseButton(title: tab.title) { model.closeTab(id: tab.id) }
-                    .frame(width: Self.closeSlot, height: Self.closeSlot)
-                    .padding(.trailing, Self.trailingInset)
-            }
-        }
-        .scaleEffect(lifted ? 1.04 : 1)
-        .shadow(color: .black.opacity(lifted ? 0.28 : 0), radius: 7, y: 2)
-        .onHover { isHovering = $0 }
-        .onTapGesture(perform: press)
-        .help(tab.title)
-        .accessibilityElement(children: .contain)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(tab.title)
-        .accessibilityAction { press() }
-        .contextMenu { TabContextMenu(tab: tab, model: model) }
-    }
-}
-
-/// What a session's thread is doing, in the slot the ✕ shares: the orb the
-/// web strip wears while its agent works, and otherwise the accent dot for
-/// a thread that has moved since it was last read. An agent still working
-/// outranks a thread waiting to be read — the orb says the tab is going to
-/// change again, which is the more useful of the two.
-private struct TabMark: View {
-    let tab: WindowTab
-
-    var body: some View {
-        if tab.working {
-            Orb(size: 18, label: "Working")
-        } else if tab.waiting {
-            Circle()
-                .fill(Color.accentColor)
-                .frame(width: 6, height: 6)
-                .accessibilityLabel("Waiting")
-        }
-    }
-}
-
-/// The ✕ in a session tab's slot: a smaller chip inside the chip — round,
-/// as the tab's ends are — lit only under the pointer so it reads as part
-/// of the tab until it is reached for. Its own button, so pressing it
-/// closes the tab rather than picking it.
-private struct TabCloseButton: View {
-    let title: String
-    let action: () -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "xmark")
-                .font(.system(size: 10, weight: .semibold))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .foregroundStyle(.primary.opacity(isHovering ? 1 : 0.7))
-                .background(
-                    isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : Color.clear,
-                    in: Circle())
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .help("Close \(title)")
-        .accessibilityLabel("Close \(title)")
-    }
-}
-
-/// The segmented control is one view, so its menu cannot know which
-/// segment it was opened over; what a pinned tab's menu offers is the same
-/// for either — the sessions closed — so it does not need to.
-private struct PinnedTabContextMenu: View {
-    let model: AppModel
-
-    var body: some View {
-        Button("Close other tabs") {
-            for tab in model.windowTabs.sessions {
-                model.closeTab(id: tab.id)
-            }
-        }
-    }
-}
-
-private struct TabContextMenu: View {
-    let tab: WindowTab
-    let model: AppModel
-
-    var body: some View {
-        Button("Close tab") { model.closeTab(id: tab.id) }
-        Button("Close other tabs") {
-            for other in model.windowTabs.sessions where other.id != tab.id {
-                model.closeTab(id: other.id)
-            }
-        }
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        disc.frame = bounds
+        disc.cornerRadius = bounds.height / 2
+        CATransaction.commit()
     }
 }

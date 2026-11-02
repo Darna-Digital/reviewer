@@ -1,11 +1,12 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
-import { NoRepoSelected, StorageError } from "../../../shared.ts";
+import { NoRepoSelected, NotFound, StorageError } from "../../../shared.ts";
 import { folderName } from "../functions/workspace.functions.ts";
 import { mediaTypeFor } from "../schema/workspace.schema.ts";
 import type {
   RepoEntry,
   RepoIndex,
+  SavedWorkspace,
   WorkspaceInfo,
 } from "../schema/workspace.schema.ts";
 import type { WorkspaceRepo } from "./workspace.repository.ts";
@@ -58,6 +59,12 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
       seed.recents ?? []
     );
     const filesRef = yield* Ref.make<Record<string, string>>({ ...seed.files });
+    const rootsRef = yield* Ref.make<ReadonlyArray<string>>(
+      seed.project ? [seed.project] : []
+    );
+    const openSavedRef = yield* Ref.make<string | null>(null);
+    const savedRef = yield* Ref.make<ReadonlyArray<SavedWorkspace>>([]);
+    const nextId = yield* Ref.make(1);
     const requireCurrent = Ref.get(currentRef).pipe(
       Effect.flatMap((current) =>
         current === null ? Effect.fail(new NoRepoSelected()) : Effect.void
@@ -65,13 +72,40 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
     );
     const info: Effect.Effect<WorkspaceInfo> = Effect.gen(function* () {
       const current = yield* Ref.get(currentRef);
+      const openSaved = yield* Ref.get(openSavedRef);
+      const saved = (yield* Ref.get(savedRef)).find(
+        (workspace) => workspace.id === openSaved
+      );
       return {
         project: current,
         branch: current === null ? null : branchOf(current),
+        roots: (yield* Ref.get(rootsRef)).map((path) => ({
+          path,
+          name: folderName(path),
+          branch: branchOf(path),
+        })),
+        workspace: saved ? { id: saved.id, name: saved.name } : null,
         recents: yield* Ref.get(recentsRef),
         home: "/home/test",
       };
     });
+    const openRoots = (roots: ReadonlyArray<string>, saved: string | null) =>
+      Effect.gen(function* () {
+        yield* Ref.set(rootsRef, roots);
+        yield* Ref.set(currentRef, roots[0] ?? null);
+        yield* Ref.set(openSavedRef, saved);
+      });
+    const findSaved = (id: string) =>
+      Effect.flatMap(Ref.get(savedRef), (saved) => {
+        const found = saved.find((workspace) => workspace.id === id);
+        return found
+          ? Effect.succeed(found)
+          : Effect.fail(new NotFound({ reason: `no workspace ${id}` }));
+      });
+    const replaceSaved = (next: SavedWorkspace) =>
+      Ref.update(savedRef, (saved) =>
+        saved.map((workspace) => (workspace.id === next.id ? next : workspace))
+      );
     const repos: Effect.Effect<RepoIndex> = Effect.gen(function* () {
       return {
         repos: yield* Ref.get(reposRef),
@@ -84,7 +118,7 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
       setCurrent: (path) =>
         Effect.gen(function* () {
           const openedAt = new Date(0).toISOString();
-          yield* Ref.set(currentRef, path);
+          yield* openRoots([path], null);
           yield* Ref.update(recentsRef, (existing) =>
             [path, ...existing.filter((recent) => recent !== path)].slice(0, 10)
           );
@@ -97,6 +131,60 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
                 )
               : [...existing, { ...indexed(path), lastOpened: openedAt }]
           );
+          return yield* info;
+        }),
+      setRoots: (roots) =>
+        Effect.gen(function* () {
+          const openSaved = yield* Ref.get(openSavedRef);
+          if (openSaved !== null) {
+            const saved = yield* findSaved(openSaved).pipe(Effect.orDie);
+            yield* replaceSaved({ ...saved, roots });
+          }
+          yield* openRoots(roots, openSaved);
+          return yield* info;
+        }),
+      workspaces: Ref.get(savedRef),
+      createWorkspace: ({ name, roots }) =>
+        Effect.gen(function* () {
+          const id = `ws-${yield* Ref.getAndUpdate(nextId, (n) => n + 1)}`;
+          const created: SavedWorkspace = {
+            id,
+            name,
+            roots,
+            createdAt: new Date(0).toISOString(),
+            openedAt: null,
+          };
+          yield* Ref.update(savedRef, (saved) => [...saved, created]);
+          return created;
+        }),
+      updateWorkspace: (id, patch) =>
+        Effect.gen(function* () {
+          const saved = yield* findSaved(id);
+          const next = { ...saved, ...patch };
+          yield* replaceSaved(next);
+          if ((yield* Ref.get(openSavedRef)) === id) {
+            yield* openRoots(next.roots, id);
+          }
+          return next;
+        }),
+      deleteWorkspace: (id) =>
+        Effect.gen(function* () {
+          yield* findSaved(id);
+          yield* Ref.update(savedRef, (saved) =>
+            saved.filter((workspace) => workspace.id !== id)
+          );
+          if ((yield* Ref.get(openSavedRef)) === id) {
+            yield* Ref.set(openSavedRef, null);
+          }
+        }),
+      openWorkspace: (id) =>
+        Effect.gen(function* () {
+          const saved = yield* findSaved(id);
+          yield* replaceSaved({
+            ...saved,
+            openedAt: new Date(0).toISOString(),
+          });
+          yield* openRoots(saved.roots, id);
           return yield* info;
         }),
       repos,

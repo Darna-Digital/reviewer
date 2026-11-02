@@ -1,6 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname } from 'node:path';
+import type { Store } from './createStore';
 
 /** Per-repository UI state the TUI restores on the next launch. */
 export interface UiState {
@@ -44,39 +42,25 @@ export const DEFAULT_UI_STATE: UiState = {
   fullFiles: false,
 };
 
-export function uiStatePath(): string {
-  return process.env['REVIEWER_TUI_STATE'] || `${homedir()}/.reviewer/tui.json`;
-}
-
-export function loadUiState(root: string, path = uiStatePath()): UiState {
-  const state = { ...DEFAULT_UI_STATE, ...readAll(path)[root] };
+/** Kept per repository in the shared database, `tui_ui_state`. */
+export function loadUiState(store: Store, root: string): UiState {
+  const state = { ...DEFAULT_UI_STATE, ...saved(store, root) };
   return BOTTOM_TABS.includes(state.bottomTab)
     ? state
     : { ...state, bottomTab: DEFAULT_UI_STATE.bottomTab };
 }
 
-export function saveUiState(
-  root: string,
-  state: UiState,
-  path = uiStatePath(),
-) {
+export function saveUiState(store: Store, root: string, state: UiState) {
   try {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(
-      path,
-      JSON.stringify({ ...readAll(path), [root]: state }, null, 2),
-    );
+    store.saveUiState(root, state);
   } catch {
     // losing a layout preference is not worth interrupting the user
   }
 }
 
-function readAll(path: string): Record<string, Partial<UiState>> {
+function saved(store: Store, root: string): Partial<UiState> {
   try {
-    return JSON.parse(readFileSync(path, 'utf8')) as Record<
-      string,
-      Partial<UiState>
-    >;
+    return store.uiState(root) ?? {};
   } catch {
     return {};
   }

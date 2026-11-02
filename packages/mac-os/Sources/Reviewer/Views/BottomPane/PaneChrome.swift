@@ -1,38 +1,30 @@
 // The pieces the bottom pane's surfaces are built from, so they read as
-// one instrument: the 28pt bar a column wears along its top — the tab
-// strip, the filters, a detail's title all stand at that height, with the
-// same 8pt inset the rows below keep — the footer a source list wears
-// along its bottom (the system's own add and remove marks, as in Settings
-// and Xcode), the flat bar button both carry, the one shape every field on
-// a bar takes, and the dot that says whether a process is up. The pane is
-// set at the small control size throughout: 11pt text in 22pt fields, the
-// proportion of the system's own small controls, three points of air above
-// and below in the bar.
-//
-// The Run surface is the exception: it is laid out as the opener is (see
-// `RepoOpener`) — a Finder window's proportions inside the island — so it
-// carries the taller toolbar at the regular control size, with the
-// system's own search field at its trailing edge and the actions grouped
-// at its leading edge, and a table of plain rows under it. The Terminal
-// beside it keeps none of that: a shell is opened, picked and closed from
-// a row of tabs, nothing more (see `TerminalPane`).
+// one instrument: the bar each surface wears under the tab strip, as
+// Xcode's debug area and navigators wear theirs — the system's small
+// controls, borderless, lit only under the pointer, groups parted by a
+// hairline, and the small search field at the trailing edge; no glass,
+// since the glass is the tab strip's above (see `BottomPane`) and a
+// surface's controls belong to the surface. A table surface's detail wears
+// the same bar, so the rule under the one runs on into the rule under the
+// other. Then the flat bar button the bars carry, and the dot that says
+// whether a process is up.
 import AppKit
 import SwiftUI
 
 enum PaneMetrics {
-    static let barHeight: CGFloat = 28
+    /// The bar under the tab strip: its glass controls with four points
+    /// of air above and below.
+    static let barHeight: CGFloat = 34
+    static let glassHeight: CGFloat = 26
     static let barInset: CGFloat = 8
-    static let footerHeight: CGFloat = 24
     static let rowHeight: CGFloat = 22
     /// One level of an outline, the sidebar's own `indentationPerLevel`.
     static let indentUnit: CGFloat = 16
     static let listMinWidth: CGFloat = 200
     static let listIdealWidth: CGFloat = 240
     static let listMaxWidth: CGFloat = 380
-    /// The toolbar a table column wears: regular controls, 22pt tall, with
-    /// seven points of air above and below, as a window's toolbar gives them.
-    static let toolbarHeight: CGFloat = 36
-    static let toolbarSearchWidth: CGFloat = 180
+    /// The widest a bar's filter field stands.
+    static let filterWidth: CGFloat = 280
     /// A table column stands wider than a source list: it has columns of
     /// its own to show, and the output beside it reflows to what is left.
     static let tableMinWidth: CGFloat = 300
@@ -118,142 +110,171 @@ struct ColumnResizeHandle: View {
     }
 }
 
-/// The two sizes a field comes in: the sidebar's, and the pane bar's a
-/// step smaller, in the ratio the system's regular and small controls keep.
-enum PaneFieldSize {
-    case regular
-    case small
-
-    var height: CGFloat { self == .regular ? 24 : 22 }
-    var fontSize: CGFloat { self == .regular ? 12 : 11 }
-}
-
-/// The quiet input the web bar draws, as a modifier so a picker, a chip and
-/// a text field on the same bar come out the same height and radius.
-private struct PaneFieldChrome: ViewModifier {
-    let size: PaneFieldSize
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, 7)
-            .frame(height: size.height)
-            .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
+/// The air above a pane list's first row and below its last, as much as
+/// the bar above it keeps at its sides. A row rather than
+/// `contentMargins`, which the list ignores, so it scrolls with the rows;
+/// it cannot be picked, so the keys walk past it.
+struct ListEdgeSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(height: PaneMetrics.barInset)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
+            .selectionDisabled()
     }
 }
 
-/// The glyph that leads a field — a magnifier, a branch, a calendar — at
-/// the field's own text size.
-private struct PaneFieldGlyph: ViewModifier {
-    let size: PaneFieldSize
+extension EnvironmentValues {
+    /// Whether a control stands inside a `PaneGlassGroup`, whose one
+    /// capsule of glass it shares rather than wearing its own.
+    @Entry var inGlassGroup = false
+}
+
+/// A lone glyph — a filter menu's — in a circle of glass the height of the
+/// search beside it, or in the glass of the group it stands in. A menu
+/// takes no glass style of its own, so it is drawn plain and the glass
+/// laid round it here.
+private struct GlassCircleControl: ViewModifier {
+    @Environment(\.inGlassGroup) private var grouped
 
     func body(content: Content) -> some View {
-        content
-            .font(.system(size: size.fontSize, weight: .medium))
-            .foregroundStyle(.secondary)
+        if grouped {
+            content
+                .frame(width: PaneMetrics.glassHeight, height: PaneMetrics.glassHeight - 4)
+                .contentShape(Capsule())
+        } else {
+            content
+                .frame(width: PaneMetrics.glassHeight, height: PaneMetrics.glassHeight)
+                .contentShape(Circle())
+                .glassEffect(.regular.interactive(), in: Circle())
+        }
     }
 }
 
 extension View {
-    func paneField(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldChrome(size: size)) }
-    func paneFieldGlyph(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldGlyph(size: size)) }
+    func glassCircleControl() -> some View { modifier(GlassCircleControl()) }
 }
 
-/// The bar along the top of a detail column: what is shown, and what can
-/// be done to it, on one line, parted from the content by a rule.
-struct PaneBar<Content: View>: View {
+/// Related controls in one capsule of glass, as Xcode's toolbar holds
+/// them — pop-ups, menus and buttons side by side, groups of them parted
+/// inside the capsule by a `PaneGlassDivider` rather than standing in
+/// pills of their own with gaps between — each lit on its own under the
+/// pointer. A lone action stands in one of its own.
+struct PaneGlassGroup<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        HStack(spacing: 8) { content }
-            .controlSize(.small)
-            .padding(.horizontal, PaneMetrics.barInset)
-            .frame(height: PaneMetrics.barHeight)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .bottom) { ThemedDivider() }
+        HStack(spacing: 0) { content }
+            .environment(\.inGlassGroup, true)
+            .padding(.horizontal, 2)
+            .frame(height: PaneMetrics.glassHeight)
+            .glassEffect(.regular, in: Capsule())
+            .fixedSize()
     }
 }
 
-/// The bar along the top of a table column, and of the detail beside it,
-/// at a window toolbar's proportions: regular controls, the actions
-/// grouped at the leading edge, the search at the trailing one. Both
-/// columns wear it at the same height, so the rule under the one runs on
-/// into the rule under the other.
-struct PaneToolbar<Content: View>: View {
-    @ViewBuilder let content: Content
+/// The hairline between the groups of controls inside one capsule of
+/// glass, in the island's own hairline, the colour of the rules round the
+/// pane and between the repositories in Branches.
+struct PaneGlassDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color(nsColor: IslandPalette.hairline))
+            .frame(width: 1, height: 16)
+            .padding(.horizontal, 4)
+    }
+}
+
+/// The filter field at a bar's trailing edge, taking what room the bar
+/// has left up to its widest.
+struct PaneFilterField: View {
+    var prompt = "Filter"
+    @Binding var text: String
+    var submit: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 8) { content }
-            .controlSize(.regular)
-            .labelStyle(.iconOnly)
-            .padding(.horizontal, PaneMetrics.barInset)
-            .frame(height: PaneMetrics.toolbarHeight)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .bottom) { ThemedDivider() }
+        MinimalSearchField(prompt: prompt, text: $text, submit: submit)
+            .frame(minWidth: 100, maxWidth: PaneMetrics.filterWidth)
     }
 }
 
-/// The system's own search field — the rounded one with the magnifier,
-/// as a window toolbar carries it — over a table column. The text follows
-/// every keystroke; a surface that searches on demand rather than as you
-/// type passes `submit`, which fires on Return, on losing focus and on the
-/// cancel mark, since clearing should take at once.
-///
-/// A field at the head of a picker takes the keys the picker answers —
-/// ↑/↓ over the rows, Return, Escape — through `command`, which is handed
-/// the field editor's selector and says whether it took it; the field
-/// keeps whatever it declines. The same picker has the field focused as it
-/// comes up (`focusesOnAppear`), a turn of the run loop after the view is
-/// in a window.
-///
-/// The ring the field wears while it holds the keys is AppKit's, drawn in
-/// `keyboardFocusIndicatorColor` — the system's accent, which takes no
-/// tint and left a blue ring round the one box on a pane a theme had
-/// painted throughout. So where a theme paints the scheme the system's
-/// ring is turned off and one is laid round the field's capsule in the
-/// theme's accent instead, the way the chat's own box is ringed (see
-/// `ChatComposer`); on the app's own palette the field keeps the system's
-/// ring, untouched. The ring is laid over the field rather than drawn by
-/// it: an `NSSearchField` draws itself into its layer and never through
-/// `draw(_:)`, so an override there paints nothing.
-struct PaneSearchField: View {
+/// The one search the app has — the bars', the sidebar's heads', the
+/// pickers' — in the glass macOS 27 stands its search in: a capsule with
+/// the magnifier, the text and the mark that clears it, ringed in the
+/// accent while it has the keys. Drawn here rather than taken from the
+/// system, whose field paints itself after what stands behind it — a pale
+/// pill on the sidebar's translucent column, a dark one on the pane's
+/// solid island — and sets its magnifier hard against the text, so the
+/// same field read as two. The text follows
+/// every keystroke; a surface that searches on demand passes `submit`,
+/// which fires on Return, on the field letting the keys go and on
+/// clearing. Escape clears what is typed, then lets the field go. Raising
+/// `takesKeyboard` hands it the keys.
+struct MinimalSearchField: View {
     let prompt: String
     @Binding var text: String
     var submit: (() -> Void)? = nil
-    var focusesOnAppear = false
-    var command: ((Selector) -> Bool)? = nil
-    /// Raised to hand the field the keyboard, with what it holds selected so
-    /// a keystroke replaces it; the field lowers it again once it has them.
     var takesKeyboard: Binding<Bool> = .constant(false)
+    @State private var focused = false
+    @State private var wantsFocus = false
 
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var editing = false
-
-    private var themed: Bool {
-        ChromePalette.shared.isThemed(colorScheme == .dark ? .dark : .light)
-    }
+    private static let shape = Capsule()
 
     var body: some View {
-        SearchFieldBox(prompt: prompt, text: $text, submit: submit,
-                       focusesOnAppear: focusesOnAppear, command: command,
-                       ringsItself: themed, editing: $editing, takesKeyboard: takesKeyboard)
-            .overlay {
-                if themed && editing {
-                    Capsule().strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+            SearchTextInput(prompt: prompt, text: $text, focused: $focused, wantsFocus: $wantsFocus,
+                            submit: { submit?() }, clear: clear)
+            if !text.isEmpty {
+                Button(action: clear) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
                 }
+                .buttonStyle(.plain)
+                .help("Clear")
             }
+        }
+        .padding(.horizontal, 10)
+        .frame(height: PaneMetrics.glassHeight)
+        // Plain glass, not interactive: interactive glass answers a press
+        // with a squash and spring, which carried the prompt with it as the
+        // field was clicked into.
+        .glassEffect(.regular, in: Self.shape)
+        .overlay {
+            if focused {
+                Self.shape.strokeBorder(Color(nsColor: IslandPalette.accent).opacity(0.8), lineWidth: 1.5)
+            }
+        }
+        .contentShape(Self.shape)
+        .onTapGesture { wantsFocus = true }
+        .onChange(of: focused) { if !focused { submit?() } }
+        .onChange(of: takesKeyboard.wrappedValue) { _, wanted in
+            guard wanted else { return }
+            wantsFocus = true
+            takesKeyboard.wrappedValue = false
+        }
+    }
+
+
+    private func clear() {
+        text = ""
+        submit?()
     }
 
     /// Hand the keyboard back to the window while a search field holds it.
     /// A surface swapped out from under a focused field keeps the keys for
     /// as long as the crossfade takes — the field on its way out taking the
-    /// strokes, and the focus ring, that belong to the one coming in — so
-    /// the surface that swaps it says so (see `SidebarView`) rather than
-    /// waiting for the field to be taken out of the window.
+    /// strokes that belong to the one coming in — so the surface that swaps
+    /// it says so (see `SidebarView`) rather than waiting for the field to
+    /// be taken out of the window.
     @MainActor
     static func releaseKeyboard(from window: NSWindow?) {
         guard let window, let responder = window.firstResponder else { return }
-        let editing = responder as? NSSearchField
-            ?? ((responder as? NSTextView)?.delegate as? NSSearchField)
+        let editing = responder as? FocusReportingTextField
+            ?? ((responder as? NSTextView)?.delegate as? FocusReportingTextField)
         guard editing != nil else { return }
         window.makeFirstResponder(nil)
     }
@@ -264,99 +285,105 @@ struct PaneSearchField: View {
     }
 }
 
-private struct SearchFieldBox: NSViewRepresentable {
+/// The text of `MinimalSearchField`: a borderless AppKit field whose cell
+/// draws its text, and hands the editor the rect to edit in, centred the
+/// same way (see `CentredTextCell`). SwiftUI's own field drew its resting
+/// text — the prompt, or what was typed — a point lower than the editor
+/// that takes over on focus, so the words hopped up as the field took the
+/// keys.
+private struct SearchTextInput: NSViewRepresentable {
     let prompt: String
     @Binding var text: String
-    var submit: (() -> Void)? = nil
-    var focusesOnAppear = false
-    var command: ((Selector) -> Bool)? = nil
-    var ringsItself = false
-    @Binding var editing: Bool
-    @Binding var takesKeyboard: Bool
+    @Binding var focused: Bool
+    @Binding var wantsFocus: Bool
+    let submit: () -> Void
+    let clear: () -> Void
 
-    func makeNSView(context: Context) -> ReleasingSearchField {
-        let field = ReleasingSearchField()
-        field.placeholderString = prompt
-        field.controlSize = .regular
-        field.sendsSearchStringImmediately = true
+    private static let font = NSFont.systemFont(ofSize: 12)
+
+    func makeNSView(context: Context) -> FocusReportingTextField {
+        let field = FocusReportingTextField()
+        field.cell = CentredTextCell(textCell: "")
+        field.isEditable = true
+        field.isSelectable = true
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.usesSingleLineMode = true
+        field.cell?.isScrollable = true
+        field.cell?.wraps = false
+        field.lineBreakMode = .byTruncatingTail
+        field.font = Self.font
+        field.placeholderAttributedString = NSAttributedString(
+            string: prompt, attributes: [.font: Self.font, .foregroundColor: NSColor.placeholderTextColor])
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.delegate = context.coordinator
-        field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
-        if focusesOnAppear {
-            Task { @MainActor in field.window?.makeFirstResponder(field) }
-        }
         return field
     }
 
-    static func dismantleNSView(_ field: ReleasingSearchField, coordinator: Coordinator) {
-        MainActor.assumeIsolated { PaneSearchField.releaseKeyboard(from: field.window) }
-    }
-
-    func updateNSView(_ field: ReleasingSearchField, context: Context) {
-        context.coordinator.text = $text
-        context.coordinator.submit = submit
-        context.coordinator.command = command
-        field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
-        field.focusRingType = ringsItself ? .none : .default
+    func updateNSView(_ field: FocusReportingTextField, context: Context) {
+        context.coordinator.parent = self
+        field.onFocus = { [binding = $focused] holds in
+            if binding.wrappedValue != holds { binding.wrappedValue = holds }
+        }
         if field.stringValue != text { field.stringValue = text }
-        if takesKeyboard {
+        if wantsFocus {
             field.takeKeyboard()
             // Lowered after this update rather than during it, which SwiftUI
             // does not allow a view's state to be changed in.
-            Task { @MainActor [flag = $takesKeyboard] in flag.wrappedValue = false }
+            Task { @MainActor [flag = $wantsFocus] in flag.wrappedValue = false }
         }
     }
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, submit: submit, command: command)
-    }
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
 
     @MainActor
-    final class Coordinator: NSObject, NSSearchFieldDelegate {
-        var text: Binding<String>
-        var submit: (() -> Void)?
-        var command: ((Selector) -> Bool)?
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: SearchTextInput
 
-        init(text: Binding<String>, submit: (() -> Void)?, command: ((Selector) -> Bool)?) {
-            self.text = text
-            self.submit = submit
-            self.command = command
-        }
-
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
-            command?(selector) ?? false
+        init(parent: SearchTextInput) {
+            self.parent = parent
         }
 
         func controlTextDidChange(_ notification: Notification) {
-            guard let field = notification.object as? NSSearchField else { return }
-            text.wrappedValue = field.stringValue
-            if field.stringValue.isEmpty { submit?() }
+            guard let field = notification.object as? NSTextField else { return }
+            parent.text = field.stringValue
         }
 
-        func controlTextDidEndEditing(_ notification: Notification) {
-            submit?()
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            switch selector {
+            case #selector(NSResponder.insertNewline(_:)):
+                parent.submit()
+                return true
+            case #selector(NSResponder.cancelOperation(_:)):
+                if parent.text.isEmpty {
+                    control.window?.makeFirstResponder(nil)
+                } else {
+                    parent.clear()
+                }
+                return true
+            default:
+                return false
+            }
         }
     }
 }
 
-/// A search field that lets the keyboard go as it leaves the window, so a
-/// field removed while focused — the sidebar's surface changing under it —
-/// never leaves the window pointing at a view that is gone; and that says
-/// when it has the keys and when they go, for the ring the field wears
-/// while it holds them (see `PaneSearchField`).
-///
-/// Taking the keys is the field becoming first responder, and it is asked
-/// here rather than of the delegate: `controlTextDidBeginEditing` is not
-/// the keys arriving but the first change made with them, so a ring on it
-/// stayed off until the first letter was typed. Letting them go is the
-/// field editor's editing ending, which is what happens when the keys move
-/// on, whether or not a letter was ever typed.
-final class ReleasingSearchField: NSSearchField {
+/// A text field that says when it has the keys and when they go — on
+/// becoming first responder, not on the first keystroke, and on its
+/// editing ending, whether or not a letter was typed — and that lets the
+/// keyboard go as it leaves the window, so a field removed while focused
+/// never leaves the window pointing at a view that is gone.
+final class FocusReportingTextField: NSTextField {
     var onFocus: ((Bool) -> Void)?
-    /// Asked for the keyboard before it was in a window to take it from.
+    /// Asked for the keyboard before it was in a window to take it from —
+    /// a popover's search, asked for as the popover comes up.
     private var takesKeyboardOnArrival = false
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if newWindow == nil { PaneSearchField.releaseKeyboard(from: window) }
+        if newWindow == nil { MinimalSearchField.releaseKeyboard(from: window) }
         super.viewWillMove(toWindow: newWindow)
     }
 
@@ -390,22 +417,132 @@ final class ReleasingSearchField: NSSearchField {
     }
 }
 
-/// The footer along the bottom of a source list: a rule, then the marks —
-/// add and remove leading, the list's own actions trailing.
-struct PaneFooter<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        HStack(spacing: 2) { content }
-            .padding(.horizontal, 4)
-            .frame(height: PaneMetrics.footerHeight)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) { ThemedDivider() }
+/// A cell that sets its one line in the middle of its height. The rect is
+/// the one AppKit both draws the text in and hands the editor, so the
+/// prompt, the typed text and the editor that takes over on focus all
+/// stand on one line. (Centring the title rect and drawing the interior
+/// in it instead inset the resting text twice, and it hopped as the field
+/// took the keys.)
+private final class CentredTextCell: NSTextFieldCell {
+    override func drawingRect(forBounds rect: NSRect) -> NSRect {
+        var drawing = super.drawingRect(forBounds: rect)
+        let lineHeight = cellSize(forBounds: rect).height
+        let spare = drawing.height - lineHeight
+        guard spare > 0 else { return drawing }
+        drawing.origin.y += (spare / 2).rounded()
+        drawing.size.height = lineHeight
+        return drawing
     }
 }
 
-/// A flat symbol button for the bars: the system's accessory-bar style,
-/// which lights only on hover, in a square hit area.
+/// A pop-up on a bar: what it shows, then the up-and-down chevron a
+/// pop-up ends in — in the glass of the group it stands in, or in a
+/// capsule of its own.
+struct PaneBarPopUp<Leading: View>: View {
+    let title: String
+    /// What the pop-up is, under it while the pointer rests — or nil where
+    /// the popover it opens says it already, and a tooltip would only
+    /// stand over it.
+    let help: String?
+    var maxWidth: CGFloat = 160
+    @ViewBuilder let leading: Leading
+    let action: () -> Void
+    @Environment(\.inGlassGroup) private var grouped
+
+    var body: some View {
+        if grouped {
+            button
+        } else {
+            button
+                .padding(.horizontal, 2)
+                .frame(height: PaneMetrics.glassHeight)
+                .glassEffect(.regular.interactive(), in: Capsule())
+                .fixedSize()
+        }
+    }
+
+    private var button: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                leading
+                Text(title)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .clipHelp(title, font: .systemFont(ofSize: 11))
+                    .frame(maxWidth: maxWidth)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+            .fixedSize()
+        }
+        .buttonStyle(PaneBarButtonStyle())
+        .controlTooltip(help)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func controlTooltip(_ text: String?) -> some View {
+        if let text { controlTooltip(text) } else { self }
+    }
+}
+
+/// The look every button on a bar shares inside its glass: nothing at
+/// rest, a capsule of wash under the pointer and a deeper one while
+/// pressed — interactive glass on the Mac answers a press but not a
+/// hover, so the hover is drawn here. Not `.accessoryBar`, which left a
+/// bezel standing on whichever of a bar's buttons the keyboard happened to
+/// rest on, so the row read as lit at random.
+struct PaneBarButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        PaneBarButtonBody(configuration: configuration)
+    }
+}
+
+private struct PaneBarButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovering = false
+
+    private static let shape = Capsule()
+
+    var body: some View {
+        configuration.label
+            .padding(.horizontal, 5)
+            .frame(minHeight: PaneMetrics.glassHeight - 4)
+            .background(Self.shape.fill(Color.primary.opacity(wash)))
+            .contentShape(Self.shape)
+            .opacity(isEnabled ? 1 : 0.4)
+            .onHover { hovering = $0 }
+    }
+
+    private var wash: Double {
+        guard isEnabled else { return 0 }
+        if configuration.isPressed { return BarChipMetrics.onTint }
+        return hovering ? BarChipMetrics.hoverTint : 0
+    }
+}
+
+/// The bar under the tab strip, along the top of a surface or of one of
+/// its columns: what it is narrowed and acted on by, on one line of small
+/// controls, parted from the content by a rule.
+struct PaneBar<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 8) { content }
+            .controlSize(.small)
+            .padding(.horizontal, 8)
+            .frame(height: PaneMetrics.barHeight)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .bottom) { ThemedDivider() }
+    }
+}
+
+/// A flat symbol button for the bars, lit only under the pointer.
 struct PaneBarButton: View {
     let symbol: String
     let help: String
@@ -416,10 +553,11 @@ struct PaneBarButton: View {
         Button(role: role, action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .medium))
-                .frame(width: 20, height: 18)
+                .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
         }
-        .buttonStyle(.accessoryBar)
-        .help(help)
+        .buttonStyle(PaneBarButtonStyle())
+        .controlTooltip(help)
     }
 }
 

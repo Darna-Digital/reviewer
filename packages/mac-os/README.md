@@ -7,6 +7,24 @@ showing one part of the SPA.
 
 What it does today:
 
+- **Workspaces** — several repositories open side by side in one window,
+  as a JetBrains project holds several roots: a name over an ordered set
+  of repositories, kept by the server (`/api/workspaces`) and opened from
+  the opener, which lists them ahead of the repositories and makes and
+  edits them (`WorkspacesTable`, `WorkspaceEditor`); a repository is
+  added beside the others with ⌥⌘O or from the opener's row menu, and the
+  repositories open now are kept with File › Save as workspace. Each
+  repository is a `RootModel`, live at once — its status, branches, dev
+  commands, terminals, pull requests and watchers read through a client
+  scoped to it (`X-Reviewer-Repo`). The tree stands each under a header
+  naming its branch; the Run pane lists every repository's commands and
+  Start all brings the whole environment up; the palette's file and text
+  searches reach into all of them; a commit over files of several
+  repositories makes one in each. The window's single-repository
+  surfaces — the branch chip, the commit chords, History, Branches,
+  Terminal — follow the focused root, the repository the page is on
+  (its address carries it, `?repo=`), named by the repository chip
+  beside the branch chip and switched there or from each pane's bar.
 - **Native sidebar** — the system's own sidebar, the full-height column of
   glass running up to the window's top edge with the traffic lights, the
   project picker and the sidebar toggle inside it — the toggle as Music has
@@ -95,7 +113,13 @@ What it does today:
   strip lives in the page island — switching is a route change inside it,
   every tab's page primed while the window is idle — and
   sends the toolbar a picture of itself; a tab pressed there, and each menu
-  chord, goes back down to the strip to answer.
+  chord, goes back down to the strip to answer. The toolbar is AppKit's own,
+  on a window AppKit makes (`WorkspaceWindow`, `WindowToolbar`), so the
+  sessions can be one flexible item the bar sizes to the room it has
+  (`SessionTabBar`): tabs of one width on a capsule track, a raised surface
+  that springs to the tab in front, titles that fade rather than truncate,
+  ✕ on hover, ⌘-numbers while ⌘ is held, select on press, drag to reorder
+  with the row scrolling at its ends, middle-click to close.
 - **Page island** — the SPA's routed page, with the window's own chrome and
   file tree off: the diff, the file view, review comments, a
   pull request's diff alone — its overview, its files and the list of them
@@ -132,7 +156,7 @@ What it does today:
   play/stop/restart.
 - **Palette** — the web app's search dialog as a Liquid Glass pane over
   the page, the same stack of lists under one box with a breadcrumb over
-  it: ⌘E opens on the commands — where to go, the git actions behind
+  it: ⌘K opens on the commands — where to go, the git actions behind
   their own list (fetch, pull, push, a new branch, and Switch branch…
   behind that), the window's own (the diff style, asked of the page; the
   bottom pane and its surfaces; the sidebar), the opener, a new session — the ways into the two searches among them. ⇧⇧ or

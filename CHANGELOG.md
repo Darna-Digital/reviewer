@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.0.35 — 2026-11-02
+
+### Added
+
+- Workspaces: open several repositories side by side in one window. Save a named, ordered set of repositories as a workspace from the opener or the toolbar's menu, or open a few together without saving. Each repository stays live with its own status, branches, terminals, dev commands and pull requests.
+- In a workspace, the sidebar lists each repository's changes under its own header, and only the repositories that have something to commit. The commit box takes changes from several repositories at once and commits in each, and Generate commit message drafts one message that covers all of them.
+- The bottom pane spans the workspace. Run lists every repository's dev commands and Start all brings the whole workspace up. Branches lists every repository in one outline. History and Terminal have a repository picker.
+- Go to file and Find in files search every repository in the workspace.
+- Merge requests lists pull requests from every repository on GitHub, each under its own header.
+- Agent sessions started in a workspace work across all of its repositories. The session bar names the workspace, and its branch menu steps from a repository to that repository's branches.
+- Fetch, Pull, Push, Commit and Commit and push in the command palette ask which repository they're for, or all of them.
+- Generate commit message works from anywhere with ⌃G or ⌘E, not just with Review on screen. The draft waits in Review's commit box.
+- Session tabs show each session's agent icon, and a new session tab keeps its own agent, model and effort settings until you send.
+
+### Changed
+
+- The window has a new toolbar. Session tabs share one bar: drag to reorder, middle-click or ✕ on hover to close, and ⇧⌘1–9 to switch. Browse, Review and Merge requests are now ⌘1–3.
+- The toolbar chip shows where you're working, this Mac and the open workspace. Its menu lists your workspaces, then recent repositories, favorites and all repositories.
+- The sidebar's title shows the repository over its current branch. What the changes are compared against now sits in the filter row ("vs main").
+- Repositories show their own avatars wherever they're listed.
+- The bottom pane's controls sit on one glass bar beside its tabs. History's filters are in a menu. Terminal shells are tabs that scroll sideways when there are many. Bar buttons name themselves in a quick tooltip.
+- Open editor tabs are kept per workspace, so moving between repositories no longer swaps them out.
+- The sidebar steps aside while you write a new session and comes back afterwards. With the sidebar folded, the page takes the full width and the workspace chip stays on the toolbar.
+- The lit Code/Sessions tab is a neutral grey instead of the accent colour.
+- Settings, what's open and your recent repositories are kept in one store shared by every window and the TUI, so they no longer overwrite each other.
+
+### Fixed
+
+- New workspace now opens its editor on the first click.
+- Deleting a session no longer lands you back on it or reports a lost connection.
+- Search fields no longer shift their text when you click into them.
+- Long tooltips, such as a repository's path near the screen's edge, stay on one line instead of breaking into fragments.
+
+## v0.0.34 — 2026-10-29
+
+### Changed
+
+- Every message about something you did — discarding a file or a single change, saving, assigning comments, a dropped image that is too large — now appears in the same notice stack at the bottom corner of the window as git's push and commit notices, instead of in a separate pop-up inside the page that could end up hidden under a panel.
+- Notices are easier to read: the headline is lighter, the explanation under it is set at the same size with more space between lines and can run a little longer, and the icon lines up with the first line of text.
+
 ## v0.0.33 — 2026-10-29
 
 ### Fixed

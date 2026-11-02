@@ -18,7 +18,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -151,7 +151,7 @@ export function ThreadsPage() {
       const created = await actions.create("terminal", "", newThreadBranch);
       setActiveId(created.id);
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof Error ? error.message : "could not create session"
       );
     }

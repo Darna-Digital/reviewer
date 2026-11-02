@@ -93,9 +93,23 @@ export const ChatOrigin = Schema.Struct({
   repoName: Schema.String,
 });
 export type ChatOrigin = typeof ChatOrigin.Type;
+/**
+ * The saved workspace a chat belongs to: its agent starts in the chat's own
+ * root and is given every other repository of the workspace beside it, as
+ * the workspace holds them when each turn starts.
+ */
+export const ChatWorkspace = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  /** Every repository of the workspace, in its order. */
+  roots: Schema.Array(Schema.String),
+});
+export type ChatWorkspace = typeof ChatWorkspace.Type;
 export const Chat = Schema.Struct({
   id: Schema.String,
   origin: ChatOrigin,
+  /** Absent for a chat of a repository open on its own. */
+  workspace: Schema.optionalKey(ChatWorkspace),
   title: Schema.String,
   provider: ChatProviderKind,
   model: Schema.String,

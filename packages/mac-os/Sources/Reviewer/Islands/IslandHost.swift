@@ -28,7 +28,10 @@
 // answers as the promise the page is holding (`confirm`). And one the
 // island keeps saying as it scrolls: whether its scroller stands at its top
 // (`scroll`), for a header the shell scrolls away over the page to know,
-// as a wheel turns, whether the page has any further up to go.
+// as a wheel turns, whether the page has any further up to go. And one
+// the island sends for every toast it would have raised itself (`notice`):
+// a save, a discard, a request refused — posted to the window's own notices
+// rather than drawn in the web view, which the native pane stands over.
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -54,12 +57,15 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
     @ObservationIgnored var onWindowTabsReported: ((WindowTabStrip) -> Void)?
-    @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
+    @ObservationIgnored var onTreeReported: ((ShellTree?, ShellTreeState?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
-    @ObservationIgnored var onHistoryRequested: ((String) -> Void)?
+    /// A file's past asked for: its path, and its repository when that is
+    /// not the page's own.
+    @ObservationIgnored var onHistoryRequested: ((String, String?) -> Void)?
     @ObservationIgnored var onReviewReported: ((ShellReview?) -> Void)?
     @ObservationIgnored var onOpenRequested: ((OpenTarget) -> Void)?
+    @ObservationIgnored var onNoticeRequested: ((NoticeKind, String, String?) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -287,6 +293,19 @@ final class IslandHost: NSObject {
     }
 }
 
+extension NoticeKind {
+    /// The SPA's `NotifyKind`: the island raises only settled notices — an
+    /// action's wait is the page's own to show.
+    init?(island kind: String) {
+        switch kind {
+        case "success": self = .success
+        case "error": self = .error
+        case "info": self = .info
+        default: return nil
+        }
+    }
+}
+
 /// What the page's empty pane asks the shell to open — the SPA's
 /// `ShellOpenTarget`: one of the palette's lists, or the settings window.
 enum OpenTarget: String {
@@ -325,7 +344,7 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             if let strip = WindowTabStrip.decode(body["strip"]) { onWindowTabsReported?(strip) }
             return (nil, nil)
         case "tree":
-            onTreeReported?(ShellTree.decode(body["tree"]))
+            onTreeReported?(ShellTree.decode(body["tree"]), ShellTreeState.decode(body["state"]))
             return (nil, nil)
         case "treeState":
             if let state = ShellTreeState.decode(body["state"]) { onTreeStateReported?(state) }
@@ -334,13 +353,21 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             onSessionsReported?(ShellSessions.decode(body["list"]))
             return (nil, nil)
         case "history":
-            if let path = body["path"] as? String { onHistoryRequested?(path) }
+            if let path = body["path"] as? String { onHistoryRequested?(path, body["repo"] as? String) }
             return (nil, nil)
         case "review":
             onReviewReported?(ShellReview.decode(body["review"]))
             return (nil, nil)
         case "scroll":
             if let atTop = body["atTop"] as? Bool { scrolledToTop = atTop }
+            return (nil, nil)
+        case "notice":
+            guard let kind = (body["kind"] as? String).flatMap(NoticeKind.init(island:)),
+                let title = body["title"] as? String
+            else {
+                return (nil, "malformed notice")
+            }
+            onNoticeRequested?(kind, title, body["detail"] as? String)
             return (nil, nil)
         case "open":
             if let target = (body["target"] as? String).flatMap(OpenTarget.init(rawValue:)) {

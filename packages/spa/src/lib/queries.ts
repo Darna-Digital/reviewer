@@ -3,11 +3,18 @@
  * `api.queryOptions(...)`; components use these hooks. Centralising them keeps
  * query keys consistent so mutations/invalidation hit the right caches.
  */
-import { type Query, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  type Query,
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+} from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { repoInit } from "@/lib/repo-scope";
 import { island } from "@/lib/shell";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
+import type { ReviewComment } from "@reviewer/core/comments";
 
 /**
  * How long an answer is worth reusing, and what makes it worth asking again.
@@ -420,6 +427,58 @@ export const usePagedLog = (ref: string | null, filters: LogQuery) => {
     hasMore: query.hasNextPage,
     loadMore: query.fetchNextPage,
   };
+};
+
+/** Each root's patch as text, read off its query: nothing yet is no change. */
+const combineDiffs = (
+  results: ReadonlyArray<{
+    data?: unknown;
+    isPending: boolean;
+    error: unknown;
+  }>
+) => ({
+  texts: results.map((result) =>
+    typeof result.data === "string" ? result.data : ""
+  ),
+  pending: results.some((result) => result.isPending),
+  error: results.find((result) => result.error != null)?.error ?? null,
+});
+
+const NO_COMMENTS: ReadonlyArray<ReviewComment> = [];
+
+const combineComments = (
+  results: ReadonlyArray<{ data?: ReadonlyArray<ReviewComment> }>
+) => results.map((result) => result.data ?? NO_COMMENTS);
+
+/**
+ * Each repository's uncommitted changes and its comments, for the workspace's
+ * stacked diff. A root is named outright, the page's own as undefined — which
+ * is the very query `useDiffText` and `useComments` hold for it, so the page's
+ * repository is asked once and every write that refreshes it refreshes this.
+ */
+export const useWorkspaceChanges = (
+  roots: ReadonlyArray<string | undefined>,
+  enabled: boolean
+) => {
+  const diffs = useQueries({
+    queries: roots.map((root) =>
+      api.queryOptions("get", "/api/diff", repoInit(root), {
+        ...GIT_DATA,
+        enabled,
+      })
+    ),
+    combine: combineDiffs,
+  });
+  const comments = useQueries({
+    queries: roots.map((root) =>
+      api.queryOptions("get", "/api/comments", repoInit(root), {
+        ...OWN_DATA,
+        enabled,
+      })
+    ),
+    combine: combineComments,
+  });
+  return { diffs, comments };
 };
 
 /** The right diff for the current target (worktree / commit / range / PR). */

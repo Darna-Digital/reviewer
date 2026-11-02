@@ -7,7 +7,6 @@ import {
 import { Suspense, lazy, useEffect } from "react";
 
 import { Alerts } from "@/components/ui/alerts";
-import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { startChromeTheme } from "@/lib/chrome-theme";
 import { primeCodeFont } from "@/lib/code-font";
@@ -101,7 +100,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <CodeFont />
         <SyntaxTheme />
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
-        <Toaster />
         <Alerts />
         {/* Devtools only in the browser, not inside the native shell. In a
             release build `Devtools` is null and the panels were never bundled

@@ -10,8 +10,8 @@ vi.mock("@/lib/api/client", () => ({
     PUT: (...args: ReadonlyArray<unknown>) => put(...args),
   },
 }));
-vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+vi.mock("@/lib/notify", () => ({
+  notify: { success: vi.fn(), error: vi.fn() },
 }));
 
 /**

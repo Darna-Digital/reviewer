@@ -9,7 +9,7 @@
  * so a drop anywhere in the pane shows up as a chip on the composer below.
  */
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { addComposerAttachment } from "@/interactions/chats/adapters/composer-attachments.store";
 import {
@@ -25,18 +25,18 @@ export const attachImageFiles = async (
 ) => {
   const images = files.filter(isImageFile);
   if (images.length === 0) {
-    if (files.length > 0) toast.error("Only image files can be attached");
+    if (files.length > 0) notify.error("Only image files can be attached");
     return;
   }
   for (const file of images) {
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error(`${file.name || "image"} is too large (max 15 MB)`);
+      notify.error(`${file.name || "image"} is too large (max 15 MB)`);
       continue;
     }
     try {
       addComposerAttachment(draftKey, await readImageAttachment(file));
     } catch {
-      toast.error(`Could not read ${file.name || "image"}`);
+      notify.error(`Could not read ${file.name || "image"}`);
     }
   }
 };

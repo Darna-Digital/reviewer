@@ -5,6 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDiffEmpty } from "@/interactions/diff/adapters/diff-empty.store";
 import { useDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import type { ShellRoute } from "@/lib/shell-route";
 import { type DiffStyle, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -186,12 +187,14 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
 /**
  * Whether a diff is on screen, which is where the toggle belongs: a code page,
  * with no file open over it, pointed at something to diff — your own changes
- * or a pull request, a commit, or a range.
+ * or a pull request, a commit, or a range — and with changes in it to lay out.
  */
 export function useShowsDiffStyleToggle(route: ShellRoute): boolean {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
+  const empty = useDiffEmpty();
   return (
+    !empty &&
     route.kind === "code" &&
     search.file === undefined &&
     (route.mode === "review" ||

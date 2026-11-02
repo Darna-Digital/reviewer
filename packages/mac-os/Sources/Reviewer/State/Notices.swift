@@ -1,5 +1,6 @@
-// The window's notices — the web app's toasts, native: what a git action
-// came to, a save, a request the server refused — stacked at the foot of
+// The window's notices — the app's only toasts, the page island's
+// included (it posts them over the bridge): what a git action came to, a
+// save, a discard, a request the server refused — stacked at the foot of
 // the detail column (see `NoticeStack`) rather than raised inside the page
 // island, whose web view would clip them and whose edge the pane stands
 // over. An action worth waiting on is one notice for its whole run: it goes
@@ -7,7 +8,7 @@
 // wears — and settles in place into what came of it, so a push that is
 // slow to answer is seen being tried rather than wondered about. A settled
 // notice stays up long enough to read and then goes; the clock holds while
-// the pointer is over the stack, as the web toaster's does, and a loading
+// the pointer is over the stack, and a loading
 // notice has no clock at all — it goes when its action does.
 import Foundation
 import Observation
@@ -79,13 +80,13 @@ enum GitOutput {
 @Observable
 final class Notices {
     /// Oldest first: the stack draws them bottom-up, the newest nearest the
-    /// window's edge, the way the web toaster stacks.
+    /// window's edge.
     private(set) var items: [Notice] = []
     @ObservationIgnored private var clocks: [Notice.ID: Task<Void, Never>] = [:]
     @ObservationIgnored private var held = false
     @ObservationIgnored private var pinned: Set<Notice.ID> = []
 
-    /// The web toaster's 6s: about as long as "Saved" needs and short
+    /// 6s: about as long as "Saved" needs and short
     /// enough for a six-line push rejection to have been worth reading.
     static let readTime: Duration = .seconds(6)
     /// How many stand at once; beyond it the oldest settled one goes, so a

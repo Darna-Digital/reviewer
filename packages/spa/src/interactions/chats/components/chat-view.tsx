@@ -4,7 +4,7 @@
  * sends/stops/settings go through the REST actions and come back as events.
  */
 import { IconPlugConnectedX } from "@tabler/icons-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Orb } from "@/components/ui/orb";
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
 import { useMarkChatSeen } from "@/interactions/chats/adapters/chat-seen.hook.adapter";
@@ -56,7 +56,7 @@ export function ChatView({ chatId }: { chatId: string }) {
     try {
       await actions.send(chat.id, text, images);
     } catch (sendError) {
-      toast.error(
+      notify.error(
         sendError instanceof Error ? sendError.message : "failed to send"
       );
       throw sendError;
@@ -68,7 +68,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const changeSettings = (patch: Partial<ChatSettings>) => {
     rememberSession(patch);
     actions.updateSettings(chat.id, patch).catch((updateError: unknown) => {
-      toast.error(
+      notify.error(
         updateError instanceof Error
           ? updateError.message
           : "failed to update settings"

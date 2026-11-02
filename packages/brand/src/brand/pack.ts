@@ -14,6 +14,7 @@ const LAYOUTS: Array<LayoutKind> = [
   "horizontal",
   "stacked",
   "wordmark",
+  "blocks",
 ];
 
 type Variant = { id: string; layout: LayoutKind; config: BrandConfig };
@@ -32,6 +33,7 @@ const VARIANTS_BY_LAYOUT: Record<LayoutKind, Array<string>> = {
   horizontal: ["dark", "light", "dark-gradient", "mono", "mono-inverse"],
   stacked: ["dark", "light", "dark-gradient", "mono", "mono-inverse"],
   wordmark: ["mono", "mono-inverse"],
+  blocks: ["dark", "light", "mono", "mono-inverse"],
 };
 
 function variants(base: BrandConfig): Array<Variant> {
@@ -125,7 +127,7 @@ function readme(config: BrandConfig) {
     "",
     "- `svg/` — source-of-truth vectors. The wordmark is outlined, so no font is needed.",
     "- `png/mark/` — square icon at every size an app store, OS or browser asks for.",
-    "- `png/horizontal/`, `png/stacked/` — lockups, named by pixel width.",
+    "- `png/horizontal/`, `png/stacked/`, `png/blocks/` — lockups, named by pixel width.",
     "- `favicon.ico` — multi-resolution icon (16–256px).",
     "- `apple-touch-icon.png` — 180px, for iOS home screens.",
     "",

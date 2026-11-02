@@ -28,16 +28,88 @@ export const RepoIndex = Schema.Struct({
 });
 export type RepoIndex = typeof RepoIndex.Type;
 
+/**
+ * One repository open in the workspace — a root, as a JetBrains project calls
+ * each of the version-controlled folders it holds side by side.
+ */
+export const WorkspaceRoot = Schema.Struct({
+  path: Schema.String,
+  /** The folder's own name, what the root reads as in a tree or a picker. */
+  name: Schema.String,
+  /** The branch it is on, or null when HEAD is detached or unreadable. */
+  branch: Schema.NullOr(Schema.String),
+});
+export type WorkspaceRoot = typeof WorkspaceRoot.Type;
+
+/**
+ * A workspace kept to come back to: a name over an ordered set of
+ * repositories, opened together as one environment.
+ */
+export const SavedWorkspace = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  /** The repositories it holds, in the order the tree lists them. */
+  roots: Schema.Array(Schema.String),
+  createdAt: Schema.String,
+  /** ISO timestamp of the last open, or null for one never opened. */
+  openedAt: Schema.NullOr(Schema.String),
+});
+export type SavedWorkspace = typeof SavedWorkspace.Type;
+
+export const SavedWorkspaces = Schema.Array(SavedWorkspace);
+export type SavedWorkspaces = typeof SavedWorkspaces.Type;
+
+/** Which saved workspace is open, when the open one is a saved one. */
+export const OpenWorkspaceRef = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+});
+export type OpenWorkspaceRef = typeof OpenWorkspaceRef.Type;
+
 export const WorkspaceInfo = Schema.Struct({
-  /** The open repository, or null when nothing is open. */
+  /**
+   * The repository a request that names none runs against — the root the
+   * request named, or else the workspace's first — or null when nothing is
+   * open. Clients that know the workspace address each root themselves.
+   */
   project: Schema.NullOr(Schema.String),
   /** The branch it is on, or null when HEAD is detached or nothing is open. */
   branch: Schema.NullOr(Schema.String),
+  /** Every repository open side by side, in the workspace's order. */
+  roots: Schema.Array(WorkspaceRoot),
+  /**
+   * The saved workspace those roots are, or null for repositories opened
+   * on their own — a single repository picked from the opener.
+   */
+  workspace: Schema.NullOr(OpenWorkspaceRef),
   /** Recently opened repositories, most-recent first. */
   recents: Schema.Array(Schema.String),
   home: Schema.String,
 });
 export type WorkspaceInfo = typeof WorkspaceInfo.Type;
+
+export const CreateWorkspace = Schema.Struct({
+  name: Schema.String,
+  roots: Schema.Array(Schema.String),
+});
+export type CreateWorkspace = typeof CreateWorkspace.Type;
+
+export const UpdateWorkspace = Schema.Struct({
+  name: Schema.optionalKey(Schema.String),
+  roots: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+export type UpdateWorkspace = typeof UpdateWorkspace.Type;
+
+/** The open workspace's repositories, replaced as a whole. */
+export const SetRoots = Schema.Struct({
+  roots: Schema.Array(Schema.String),
+});
+export type SetRoots = typeof SetRoots.Type;
+
+export const WorkspaceIdParams = Schema.Struct({
+  id: Schema.String,
+});
+export type WorkspaceIdParams = typeof WorkspaceIdParams.Type;
 export const BrowseEntry = Schema.Struct({
   name: Schema.String,
   path: Schema.String,

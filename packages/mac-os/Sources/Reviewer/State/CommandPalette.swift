@@ -1,4 +1,4 @@
-// The palette's model: the web app's search dialog — ⌘E for the commands
+// The palette's model: the web app's search dialog — ⌘K for the commands
 // it opens on, a double tap of Shift to find a file by name, ⌘⇧F to grep
 // the working tree — done natively, since inside the shell the dialog
 // itself is not mounted (it belongs to the web app's window frame, which
@@ -29,6 +29,9 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
     case text
     case git
     case branches
+    /// Which of the workspace's repositories a command is for, asked before
+    /// it runs (see `PaletteCommand.choices`).
+    case repositories
 
     var id: String { rawValue }
 
@@ -39,6 +42,7 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
         case .text: return "Text"
         case .git: return "Git"
         case .branches: return "Branches"
+        case .repositories: return "Repository"
         }
     }
 
@@ -49,15 +53,18 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
         case .text: return "Search in files…"
         case .git: return "Type a git action…"
         case .branches: return "Search branches…"
+        case .repositories: return "Choose a repository…"
         }
     }
 
     /// The list this one hangs off, or nil for the command list at the
     /// root. Declared once, so a mode's breadcrumb trail, the row that
     /// opens it and where Backspace on an empty box returns to never drift.
+    /// The repository step hangs off whichever list asked it, which the
+    /// palette keeps (see `RepositoryChoice`).
     var parent: PaletteMode? {
         switch self {
-        case .commands: return nil
+        case .commands, .repositories: return nil
         case .files, .text, .git: return .commands
         case .branches: return .git
         }
@@ -74,7 +81,7 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
     /// The menus, which are not searches: they start on an empty box.
     var isMenu: Bool {
         switch self {
-        case .commands, .git, .branches: return true
+        case .commands, .git, .branches, .repositories: return true
         case .files, .text: return false
         }
     }
@@ -114,17 +121,55 @@ struct PaletteCommand: Identifiable {
     /// The heading the command is grouped under — Navigation, Git, View.
     let group: String
     let symbol: String
+    /// The repository whose avatar the row wears in the symbol's place —
+    /// a command about one repository of the workspace.
+    var monogram: String? = nil
     /// Extra search terms not shown in the label.
     var keywords = ""
     /// A current value or a chord, on the row's trailing edge.
     var hint: String? = nil
     /// The list the command lives in; the command list when nil.
     var submenu: PaletteMode? = nil
+    /// Where a workspace of several asks which repository the command is
+    /// for: the row leads on to these, one per repository and one for them
+    /// all, rather than running.
+    var choices: [PaletteCommand]? = nil
     let run: @MainActor () -> Void
+}
+
+/// The repository step as a command asked for it: what is being done, the
+/// list it was asked from — where the step's crumb and Backspace lead back
+/// to — and a row per repository.
+struct RepositoryChoice {
+    let title: String
+    let returnTo: PaletteMode
+    let options: [PaletteCommand]
 }
 
 /// A branch the checkout list offers, local and remote flattened into one
 /// row: the ref to check out, and the name it is shown under.
+/// One repository the palette's file list and grep reach into, and the
+/// key its results are named under — nil for a workspace of one, whose
+/// paths need no repository named.
+struct PaletteScope: Sendable {
+    let key: String?
+    let client: ReviewerClient
+
+    func named(_ paths: [String]) -> [String] {
+        guard let key else { return paths }
+        return paths.map { "\(key)/\($0)" }
+    }
+
+    func named(_ found: ContentMatches) -> ContentMatches {
+        guard let key else { return found }
+        return ContentMatches(
+            matches: found.matches.map {
+                ContentMatch(path: "\(key)/\($0.path)", line: $0.line, column: $0.column, text: $0.text)
+            },
+            truncated: found.truncated)
+    }
+}
+
 struct PaletteBranch: Identifiable, Hashable, Sendable {
     let name: String
     let ref: String
@@ -140,7 +185,7 @@ struct PaletteBranch: Identifiable, Hashable, Sendable {
 /// so the list can put one over each run of the same.
 struct PaletteRow: Identifiable {
     enum Content {
-        case command(label: String, symbol: String)
+        case command(label: String, symbol: String, monogram: String? = nil)
         case file(path: String)
         case match(path: String, line: Int, text: String)
         case branch(name: String)
@@ -188,6 +233,7 @@ final class CommandPalette {
     private(set) var searchError: String?
     private(set) var commands: [PaletteCommand] = []
     private(set) var branches: [PaletteBranch] = []
+    private(set) var repositoryChoice: RepositoryChoice?
 
     /// What a search row opens: a file, at a line when a text hit named one.
     @ObservationIgnored var onOpen: ((String, Int?) -> Void)?
@@ -201,7 +247,9 @@ final class CommandPalette {
     @ObservationIgnored var commandSource: (() -> [PaletteCommand])?
     @ObservationIgnored var branchSource: (() -> [PaletteBranch])?
 
-    @ObservationIgnored private let client: ReviewerClient
+    /// The server, about the focused root — turned with it, before
+    /// `projectChanged` drops what the last one listed.
+    @ObservationIgnored var client: ReviewerClient
     @ObservationIgnored private var paths: [String] = []
     @ObservationIgnored private var pathsLoaded = false
     @ObservationIgnored private var grepTask: Task<Void, Never>?
@@ -225,14 +273,14 @@ final class CommandPalette {
             switch mode {
             case .files: return fileQuery
             case .text: return textQuery
-            case .commands, .git, .branches: return menuQuery
+            case .commands, .git, .branches, .repositories: return menuQuery
             }
         }
         set {
             switch mode {
             case .files: fileQuery = newValue
             case .text: textQuery = newValue
-            case .commands, .git, .branches: menuQuery = newValue
+            case .commands, .git, .branches, .repositories: menuQuery = newValue
             }
         }
     }
@@ -248,7 +296,7 @@ final class CommandPalette {
         isShown = true
     }
 
-    /// ⌘E: a second press closes the command list, but from another list it
+    /// ⌘K: a second press closes the command list, but from another list it
     /// brings the commands back first rather than closing what you were
     /// doing.
     func toggleCommands() {
@@ -269,8 +317,25 @@ final class CommandPalette {
         if mode == .files { Task { await loadPathsIfNeeded() } }
     }
 
+    /// The repository step, asked by a command that needs one.
+    func chooseRepository(for command: PaletteCommand, options: [PaletteCommand]) {
+        repositoryChoice = RepositoryChoice(title: command.label, returnTo: mode, options: options)
+        show(.repositories)
+    }
+
+    /// Where the list on screen sits, root first — the repository step
+    /// after the list that asked it.
+    var crumbs: [PaletteMode] {
+        guard mode == .repositories else { return mode.crumbs }
+        return (repositoryChoice?.returnTo.crumbs ?? [.commands]) + [.repositories]
+    }
+
     /// Back up the trail. False at the root, where Backspace is the box's.
     func back() -> Bool {
+        if mode == .repositories {
+            show(repositoryChoice?.returnTo ?? .commands)
+            return true
+        }
         guard let parent = mode.parent else { return false }
         show(parent)
         return true
@@ -292,6 +357,17 @@ final class CommandPalette {
         switch mode {
         case .commands, .git:
             return menuRows()
+        case .repositories:
+            let options = repositoryChoice?.options ?? []
+            let needle = menuQuery.trimmingCharacters(in: .whitespaces).lowercased()
+            return options
+                .filter { needle.isEmpty || Self.fuzzyScore($0.label, needle) != nil }
+                .map { option in
+                    PaletteRow(
+                        id: "repository:\(option.id)", group: repositoryChoice?.title ?? "",
+                        content: .command(label: option.label, symbol: option.symbol, monogram: option.monogram),
+                        run: option.run)
+                }
         case .files:
             return fileResults.map { path in
                 PaletteRow(id: "file:\(path)", group: "Files", content: .file(path: path)) { [weak self] in
@@ -342,9 +418,18 @@ final class CommandPalette {
         let actions = commands
             .filter { ($0.submenu ?? .commands) == mode || reachesEverything }
             .map { command in
-                PaletteRow(
+                if let choices = command.choices {
+                    return PaletteRow(
+                        id: "command:\(command.id)", group: command.group,
+                        content: .command(label: command.label, symbol: command.symbol, monogram: command.monogram),
+                        hint: command.hint, closesOnRun: false
+                    ) { [weak self] in
+                        self?.chooseRepository(for: command, options: choices)
+                    }
+                }
+                return PaletteRow(
                     id: "command:\(command.id)", group: command.group,
-                    content: .command(label: command.label, symbol: command.symbol),
+                    content: .command(label: command.label, symbol: command.symbol, monogram: command.monogram),
                     hint: command.hint, run: command.run)
             }
         let keywords = openerKeywords.merging(commands.map { ("command:\($0.id)", $0.keywords) }) { first, _ in first }
@@ -352,7 +437,7 @@ final class CommandPalette {
         guard !needle.isEmpty else { return rows }
         return rows.lazy
             .compactMap { row -> (PaletteRow, Double)? in
-                guard case .command(let label, _) = row.content else { return nil }
+                guard case .command(let label, _, _) = row.content else { return nil }
                 let haystack = "\(label) \(keywords[row.id] ?? "") \(row.group)"
                 return Self.fuzzyScore(haystack, needle).map { (row, $0) }
             }
@@ -372,16 +457,52 @@ final class CommandPalette {
         searchError = nil
     }
 
+    /// Where a file by name and a grep look: every repository of the
+    /// workspace, each result named under its repository's key — the way
+    /// the tree names it — or, in a workspace of one, the focused root
+    /// alone with its paths as they are. Unset, the focused root's client.
+    @ObservationIgnored var scopesSource: (() -> [PaletteScope])?
+
+    private var scopes: [PaletteScope] {
+        scopesSource?() ?? [PaletteScope(key: nil, client: client)]
+    }
+
     private func loadPathsIfNeeded() async {
         guard !pathsLoaded else { return }
         pathsLoaded = true
         do {
-            let payload = try await client.files()
-            paths = payload.paths
+            paths = try await withThrowingTaskGroup(of: (Int, [String]).self) { group in
+                for (index, scope) in scopes.enumerated() {
+                    group.addTask { (index, scope.named(try await scope.client.files().paths)) }
+                }
+                var listed: [(Int, [String])] = []
+                for try await result in group { listed.append(result) }
+                return listed.sorted { $0.0 < $1.0 }.flatMap(\.1)
+            }
             fileResults = Self.fuzzyFilter(paths, by: fileQuery)
         } catch {
             pathsLoaded = false
             searchError = error.localizedDescription
+        }
+    }
+
+    /// The grep run in every scope at once, the hits kept in the
+    /// workspace's order and named under their repositories.
+    private func search(_ query: String, options: GrepOptions) async throws -> ContentMatches {
+        try await withThrowingTaskGroup(of: (Int, ContentMatches).self) { group in
+            for (index, scope) in scopes.enumerated() {
+                group.addTask {
+                    let found = try await scope.client.search(query, options: options, limit: Self.maximumMatches)
+                    return (index, scope.named(found))
+                }
+            }
+            var found: [(Int, ContentMatches)] = []
+            for try await result in group { found.append(result) }
+            let ordered = found.sorted { $0.0 < $1.0 }.map(\.1)
+            let matches = ordered.flatMap(\.matches)
+            return ContentMatches(
+                matches: Array(matches.prefix(Self.maximumMatches)),
+                truncated: matches.count > Self.maximumMatches || ordered.contains(where: \.truncated))
         }
     }
 
@@ -405,7 +526,7 @@ final class CommandPalette {
             try? await Task.sleep(for: Self.debounce)
             guard !Task.isCancelled else { return }
             do {
-                let found = try await client.search(query, options: options, limit: Self.maximumMatches)
+                let found = try await search(query, options: options)
                 guard !Task.isCancelled else { return }
                 matches = found
                 searchError = nil

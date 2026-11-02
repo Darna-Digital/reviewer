@@ -41,7 +41,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { confirm } from "@/components/ui/alerts";
 import { CommitPanel } from "@/components/commit-panel";
@@ -96,8 +96,9 @@ import {
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
 } from "@/interactions/chats/functions/chat-assignment.functions";
-import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
+import { useCommentsActionsByRepo } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
+import { useWorkspaceDiff } from "@/interactions/diff/adapters/workspace-diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { useOpenBrowseTab } from "@/interactions/tabs/adapters/open-browse-tab.hook.adapter";
 import {
@@ -121,6 +122,7 @@ import {
   reconcileTabs,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
+import { tabFile, tabKey } from "@/interactions/tabs/functions/tab-key";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   ALL_REFS,
@@ -181,7 +183,8 @@ export function CodeWorkspace() {
   const prefs = useUiPrefs();
   const diffFns = useDiffFunctions();
   const git = useGitActions();
-  const comments = useCommentsActions();
+  const commentsIn = useCommentsActionsByRepo();
+  const comments = commentsIn(undefined);
   const chatActions = useChatsActions();
 
   /**
@@ -227,6 +230,16 @@ export function CodeWorkspace() {
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
   const repo = useRepo();
+  const repoRoot = repo.data?.root ?? null;
+  const roots = workspace.data?.roots;
+  const multiRoot = (roots?.length ?? 0) > 1;
+  /** A file of the page's repository, as the workspace's strip names it. */
+  const keyOf = (path: string) => tabKey(repoRoot, path);
+  /** Whether a tab is the page's repository's — the ones it can show as is. */
+  const inThisRepo = (key: string) => {
+    const owner = tabFile(key).repo;
+    return owner === null || owner === repoRoot;
+  };
   const chatModels = useChatModels();
   const chats = useRecentChats();
   const files = useFiles();
@@ -356,12 +369,48 @@ export function CodeWorkspace() {
   });
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
+  /**
+   * Your own uncommitted changes across a workspace are read as one diff of
+   * every root's, each file named under its root — see
+   * `workspace-diff.functions`. A branch comparison, a pull request, a commit
+   * and a range are each one repository's.
+   */
+  const spansWorkspace = multiRoot && target?.kind === "worktree";
+  const workspaceDiff = useWorkspaceDiff(roots, repoRoot, spansWorkspace);
+  const { locate: locateDiffFile, nameOf: diffNameOf } = workspaceDiff;
+
   const diff = useDiffText(target);
-  const diffText = typeof diff.data === "string" ? diff.data : null;
+  const diffText = spansWorkspace
+    ? workspaceDiff.text
+    : typeof diff.data === "string"
+      ? diff.data
+      : null;
   const parsedFiles = useMemo(
-    () => diffFns.parseFiles(diffText),
-    [diffText, diffFns]
+    () =>
+      diffFns
+        .parseFiles(diffText)
+        .filter(
+          (file) => !diffFns.isInternalPath(locateDiffFile(file.name).path)
+        ),
+    [diffText, diffFns, locateDiffFile]
   );
+  /**
+   * The browser's own tree over a workspace's diff lists the diff's files,
+   * each under its root's name the way the diff names them. Inside the shell
+   * the tree is native and reads every root's listing itself, so it is still
+   * handed the page's repository's.
+   */
+  const treeOfDiff = spansWorkspace && !shellDrawsTree;
+  const diffPending = spansWorkspace ? workspaceDiff.pending : diff.isPending;
+  const diffError = spansWorkspace ? workspaceDiff.error : diff.error;
+  /** The selected file of the diff, in its own repository's terms. */
+  const selectedDiffFile =
+    search.path === undefined ? null : locateDiffFile(search.path);
+  /** The same, while it is a file of the page's own repository. */
+  const selectedOwnPath =
+    selectedDiffFile !== null && selectedDiffFile.repo === undefined
+      ? selectedDiffFile.path
+      : null;
   const pullComments = usePullComments(
     target?.kind === "pull" ? target.pull.number : null
   );
@@ -411,25 +460,34 @@ export function CodeWorkspace() {
   const treePaths = useMemo(
     () =>
       diffFns.treePaths({
-        mode,
+        mode: treeOfDiff ? "review" : mode,
         allPaths,
         gitStatus,
         parsedFiles,
         commentedPaths,
         comparing,
       }),
-    [diffFns, mode, allPaths, gitStatus, parsedFiles, commentedPaths, comparing]
+    [
+      diffFns,
+      treeOfDiff,
+      mode,
+      allPaths,
+      gitStatus,
+      parsedFiles,
+      commentedPaths,
+      comparing,
+    ]
   );
   const treeGitStatus = useMemo(
     () =>
       diffFns.treeGitStatus({
-        mode,
+        mode: treeOfDiff ? "review" : mode,
         allPaths,
         gitStatus,
         parsedFiles,
         comparing,
       }),
-    [diffFns, mode, allPaths, gitStatus, parsedFiles, comparing]
+    [diffFns, treeOfDiff, mode, allPaths, gitStatus, parsedFiles, comparing]
   );
   const changedFiles = useMemo(
     () => diffFns.changedFiles(gitStatus),
@@ -440,7 +498,9 @@ export function CodeWorkspace() {
       diffFns.visibleComments({
         targetKind: target?.kind ?? null,
         targetKey,
-        localComments: localComments.data ?? [],
+        localComments: spansWorkspace
+          ? workspaceDiff.comments
+          : (localComments.data ?? []),
         pullComments: pullComments.data ?? [],
         viewingFile: search.file ?? null,
       }),
@@ -448,6 +508,8 @@ export function CodeWorkspace() {
       diffFns,
       target?.kind,
       targetKey,
+      spansWorkspace,
+      workspaceDiff.comments,
       localComments.data,
       pullComments.data,
       search.file,
@@ -498,12 +560,15 @@ export function CodeWorkspace() {
       // No pull request is passed, which is how the GitHub ones are spared —
       // they belong to the pull request rather than to this hand-off.
       await Promise.all(
-        openComments.map((comment) => comments.remove(null, comment))
+        openComments.map((comment) => {
+          const stored = storedComment(comment);
+          return stored.actions.remove(null, stored.comment);
+        })
       );
-      toast.success(`Assigned ${count} comment${plural}`);
+      notify.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
-      toast.error(
+      notify.error(
         error instanceof Error ? error.message : "could not assign comments"
       );
     }
@@ -511,9 +576,10 @@ export function CodeWorkspace() {
 
   // Only the open file has a buffer, so it is the only one that can be dirty.
   const [dirtyFile, setDirtyFile] = useState<string | null>(null);
-  const dirtyPaths = useMemo(
-    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
-    [dirtyFile]
+  /** The edited file's tab, as the workspace's strip names it. */
+  const dirtyKeys = useMemo(
+    () => new Set(dirtyFile === null ? [] : [tabKey(repoRoot, dirtyFile)]),
+    [dirtyFile, repoRoot]
   );
   const onDirtyChange = useCallback(
     (dirty: boolean) => {
@@ -521,11 +587,11 @@ export function CodeWorkspace() {
       // Editing a file is the clearest possible statement that you are staying
       // in it, so it stops being a preview.
       if (dirty && search.file !== undefined) {
-        const path = search.file;
-        updateTabs((state) => keepTab(state, path));
+        const key = tabKey(repoRoot, search.file);
+        updateTabs((state) => keepTab(state, key));
       }
     },
-    [search.file]
+    [search.file, repoRoot]
   );
 
   /**
@@ -571,6 +637,11 @@ export function CodeWorkspace() {
   const openInBrowse = (path: string, lineNumber?: number) => {
     whenMayLeaveFile(path, () => openBrowseTab(path, lineNumber));
   };
+  /** A file of the diff opened in the browser, in whichever root it is in. */
+  const openDiffFileInBrowse = (name: string) => {
+    const { repo: owner, path } = locateDiffFile(name);
+    whenMayLeaveFile(path, () => openBrowseTab(path, undefined, owner));
+  };
   const openFile = (path: string) => {
     if (readingDiff) return openInBrowse(path);
     whenMayLeaveFile(path, () => setSearch({ file: path }));
@@ -595,7 +666,8 @@ export function CodeWorkspace() {
   const openLocation = (path: string, lineNumber: number) => {
     if (readingDiff) return openInBrowse(path, lineNumber);
     whenMayLeaveFile(path, () => {
-      if (tabbed) updateTabs((state) => openTab(state, path, "permanent"));
+      if (tabbed)
+        updateTabs((state) => openTab(state, keyOf(path), "permanent"));
       setSearch({ file: path });
       revealLine(path, lineNumber);
     });
@@ -638,14 +710,27 @@ export function CodeWorkspace() {
       }));
       return;
     }
-    if (tabbed)
-      updateTabs((state) => openTab(state, comment.filePath, "permanent"));
+    const { repo: owner, path } = locateDiffFile(comment.filePath);
+    if (owner !== undefined) {
+      void navigate({
+        to: ".",
+        search: (prev: Search) => ({
+          ...prev,
+          file: path,
+          path: undefined,
+          line: comment.lineNumber,
+          repo: owner,
+        }),
+      });
+      return;
+    }
+    if (tabbed) updateTabs((state) => openTab(state, keyOf(path), "permanent"));
     setSearch({
-      file: comment.filePath,
+      file: path,
       path: comment.filePath,
       line: comment.lineNumber,
     });
-    revealLine(comment.filePath, comment.lineNumber);
+    revealLine(path, comment.lineNumber);
   };
 
   /**
@@ -700,41 +785,74 @@ export function CodeWorkspace() {
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History — the shell's own History, when this is
   // an island, since the drawer under it holds no history there.
-  const showFileHistory = (path: string) => {
+  const showFileHistory = (path: string, owner?: string) => {
     if (island !== undefined) {
-      void shell.post({ type: "history", path });
+      void shell.post({
+        type: "history",
+        path,
+        ...(owner === undefined ? {} : { repo: owner }),
+      });
       return;
     }
+    // The dock reads the page's repository, so another root's file takes the
+    // page there first.
+    if (owner !== undefined) openBrowseTab(path, undefined, owner);
     setHistoryQuery(fileHistoryQuery(path));
     openBottomTab("history");
   };
+  const showDiffFileHistory = (name: string) => {
+    const { repo: owner, path } = locateDiffFile(name);
+    showFileHistory(path, owner);
+  };
+  /** Files of the diff discarded, a discard in each repository they are in. */
+  const discardDiffFiles = (names: ReadonlyArray<string>) => {
+    const byRepo = new Map<string | undefined, string[]>();
+    for (const { repo: owner, path } of names.map(locateDiffFile))
+      byRepo.set(owner, [...(byRepo.get(owner) ?? []), path]);
+    for (const [owner, paths] of byRepo) void git.discard(paths, owner);
+  };
 
   // --- conflict resolution ---------------------------------------------------
-  const openConflict = (path: string) => setSearch({ path, file: undefined });
+  const openConflict = (path: string) =>
+    setSearch({ path: diffNameOf(null, path), file: undefined });
   const resolveConflictSide = async (path: string, side: "ours" | "theirs") => {
     await git.resolveConflict(path, side);
-    if (search.path === path) setSearch({ path: undefined });
+    if (selectedOwnPath === path) setSearch({ path: undefined });
   };
   const resolveConflictContent = async (path: string, merged: string) => {
     await git.resolveConflictWithContent(path, merged);
-    if (search.path === path) setSearch({ path: undefined });
+    if (selectedOwnPath === path) setSearch({ path: undefined });
   };
 
-  const onFileSelect = (path: string | null) => {
+  /** `owner` names another root's file, picked while the diff spans them. */
+  const onFileSelect = (path: string | null, owner?: string) => {
     if (path === null) return;
     if (mode === "browse") {
       openFile(path);
       return;
     }
+    const name = treeOfDiff ? path : diffNameOf(owner ?? null, path);
     // Commit mode: a file with no diff hunks isn't in the diff pane — either it
     // was newly added/untracked (git diff omits new files) or it only carries
     // local comments. Open it in the file viewer so its contents and comments
     // are still reachable; files that are in the diff open in the diff pane.
-    if (mode === "commit" && !parsedFiles.some((f) => f.name === path)) {
-      setSearch({ file: path, path });
+    if (mode === "commit" && !parsedFiles.some((f) => f.name === name)) {
+      if (owner !== undefined && owner !== repoRoot) {
+        void navigate({
+          to: ".",
+          search: (prev: Search) => ({
+            ...prev,
+            file: path,
+            path: undefined,
+            repo: owner,
+          }),
+        });
+        return;
+      }
+      setSearch({ file: path, path: name });
       return;
     }
-    setSearch({ path, file: undefined });
+    setSearch({ path: name, file: undefined });
   };
 
   const viewing = search.file ?? null;
@@ -743,53 +861,85 @@ export function CodeWorkspace() {
   // The strip follows the open file rather than owning it: navigation arrives
   // from the tree, the command menu, go-to-definition and restored URLs alike.
   const tabs = useTabs();
-  const repoRoot = repo.data?.root ?? null;
+  // One strip per workspace, every repository's files in it: a saved
+  // workspace by its id, repositories open on their own by their roots — for
+  // one repository, its root alone, which is where its strip was kept before
+  // workspaces were.
+  const savedWorkspace = workspace.data?.workspace ?? null;
+  const tabScope =
+    savedWorkspace !== null
+      ? `workspace:${savedWorkspace.id}`
+      : roots !== undefined && roots.length > 0
+        ? roots.map((root) => root.path).join("\n")
+        : null;
   useEffect(() => {
-    scopeTabsTo(repoRoot);
-  }, [repoRoot]);
+    if (tabScope === null || repoRoot === null) return;
+    scopeTabsTo(tabScope, repoRoot);
+  }, [tabScope, repoRoot]);
   // Which repository is open is being re-asked, so the answer on hand is not
   // to be acted on: it may still be the one being left. Until it lands, the
-  // strip in the store is the departing repository's, and restoring from it
-  // would put that repository's file on screen inside this one.
-  const repoInDoubt = repo.isFetching;
+  // tabs the store calls this repository's may be the departing one's, and
+  // restoring from them would put that repository's file on screen in this.
+  const repoInDoubt = repo.isFetching || tabScope === null;
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
   const canRestore = mode === "browse" && target === null;
-  /** The repository the strip was last settled against. */
+  /** The workspace the strip was last settled against. */
   const settledFor = useRef<string | null>(null);
   const requestedTab = search.tab;
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
     if (!tabbed || !pageSettled || repoInDoubt) return;
     const switched =
-      settledFor.current !== null && settledFor.current !== repoRoot;
-    settledFor.current = repoRoot;
+      settledFor.current !== null && settledFor.current !== tabScope;
+    settledFor.current = tabScope;
+    // A move between the workspace's repositories keeps the strip; arriving
+    // on one with no file named puts back that repository's own tab, never a
+    // sibling's, which would send the page straight back where it came from.
     const { open, tabs: settled } = reconcileTabs(readTabs(), {
-      viewing,
+      viewing: viewing === null ? null : tabKey(repoRoot, viewing),
       switched,
       canRestore,
       intent: requestedTab,
+      restorable: (key) => {
+        const owner = tabFile(key).repo;
+        return owner === null || owner === repoRoot;
+      },
     });
     updateTabs(() => settled);
+    const opened = open === null ? null : tabFile(open);
+    const openPath = opened?.path ?? null;
+    // With none of this repository's own in the strip, the restored tab is a
+    // sibling's, and showing it moves the page to that repository.
+    const openRepo =
+      opened !== null && opened.repo !== null && opened.repo !== repoRoot
+        ? opened.repo
+        : undefined;
     // Replaces rather than pushes, so Back leaves the strip behind instead of
     // returning to a URL that reopens the same file. Done off the repository
     // alone rather than waiting on its file list: the viewer is already asking
     // for whatever the URL names, and a file the last repository had open is a
     // request this one can only answer with an error.
-    if (open !== viewing || requestedTab !== undefined) {
+    if (
+      openPath !== viewing ||
+      openRepo !== undefined ||
+      requestedTab !== undefined
+    ) {
       void navigate({
         to: ".",
         search: (prev: Search) => ({
           ...prev,
-          file: open ?? undefined,
+          file: openPath ?? undefined,
+          ...(openRepo === undefined ? {} : { repo: openRepo }),
           tab: undefined,
         }),
         replace: true,
       });
     }
   }, [
+    tabScope,
     repoRoot,
     repoInDoubt,
     viewing,
@@ -812,45 +962,79 @@ export function CodeWorkspace() {
    * repository it lists (see `FilesPayload`), and the pruning waits for the
    * two to agree. The file on screen is spared whatever the listing says — it
    * is open, so it is there, and an ignored file reached from the tree is in
-   * no listing at all.
+   * no listing at all. In a workspace only this repository's tabs are
+   * pruned: the others are each pruned against their own listing, when the
+   * page is on their repository.
    */
   useEffect(() => {
     if (listing === undefined || listing.root !== repoRoot) return;
     const known = new Set(listing.paths);
     updateTabs((state) =>
-      pruneTabs(state, (path) => known.has(path) || path === state.active)
+      pruneTabs(state, (key) => {
+        const { repo: owner, path } = tabFile(key);
+        const ours = owner === null || owner === repoRoot;
+        return !ours || known.has(path) || key === state.active;
+      })
     );
   }, [listing, repoRoot]);
 
-  const selectTab = (path: string) => {
-    whenMayLeaveFile(path, () => setSearch({ file: path }));
+  /**
+   * A tab's file on screen: by the address alone for one of this
+   * repository's, or the page moved to its repository for one of another's
+   * — the workspace's other repositories are a navigation away, and the
+   * strip, being the workspace's, stays as it is.
+   */
+  const showTab = (key: string | null) => {
+    if (key === null) return void setSearch({ file: undefined });
+    const { repo: owner, path } = tabFile(key);
+    if (owner === null || owner === repoRoot)
+      return void setSearch({ file: path });
+    void navigate({
+      to: ".",
+      search: (prev: Search) => ({ ...prev, file: path, repo: owner }),
+    });
+  };
+
+  const selectTab = (key: string) => {
+    whenMayLeaveFile(inThisRepo(key) ? tabFile(key).path : undefined, () =>
+      showTab(key)
+    );
   };
 
   // Every file in the strip, read and highlighted while the window has nothing
   // else to do. A tab is already open as far as you are concerned — clicking it
   // should show the file, not start rendering it — and waiting for the pointer
   // to reach the tab is too late for a click that follows straight after.
+  // Only this repository's files are read ahead: the page reads the
+  // repository it is on, and another's are a navigation away.
   const prerenderFile = usePrerenderFile();
+  /** Only the page's repository is read ahead — see above. */
+  const prerenderDiffFile = (name: string) => {
+    const { repo: owner, path } = locateDiffFile(name);
+    if (owner === undefined) prerenderFile(path);
+  };
   const openTabs = tabs.tabs;
   useEffect(() => {
     if (openTabs.length === 0) return;
     const warm = () => {
-      for (const tab of openTabs) prerenderFile(tab.path);
+      for (const tab of openTabs) {
+        const { repo: owner, path } = tabFile(tab.path);
+        if (owner === null || owner === repoRoot) prerenderFile(path);
+      }
     };
     const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
     return () => window.cancelIdleCallback(idle);
-  }, [openTabs, prerenderFile]);
-  const closeTabAt = (path: string) => {
+  }, [openTabs, prerenderFile, repoRoot]);
+  const dirtyKey = dirtyFile === null ? null : keyOf(dirtyFile);
+  const closeTabAt = (key: string) => {
     // Closing another tab leaves the edited file where it is; only closing the
     // one holding the buffer throws it away.
-    whenMayLeaveFile(dirtyFile === path ? undefined : dirtyFile, () =>
+    whenMayLeaveFile(dirtyKey === key ? undefined : dirtyFile, () =>
       updateTabs((state) => {
-        const next = closeTab(state, path);
+        const next = closeTab(state, key);
         // Closing the tab on screen moves the file view to its neighbour, or
         // shuts it when the strip empties.
-        if (state.active === path) {
-          setSearch({ file: next.active ?? undefined });
-        }
+        if (state.active === key) showTab(next.active);
         return next;
       })
     );
@@ -970,19 +1154,42 @@ export function CodeWorkspace() {
   const sendComment = async (
     ctx: Parameters<typeof comments.submit>[0],
     location: DraftLocation,
-    body: string
+    body: string,
+    stored = { actions: comments, filePath: location.filePath }
   ) => {
     setDraft(null);
     try {
-      await comments.submit(ctx, location, body);
+      await stored.actions.submit(
+        ctx,
+        { ...location, filePath: stored.filePath },
+        body
+      );
     } catch (error) {
       setDraft({ ...location, body });
-      toast.error(errorReason(error, "Could not save the comment"));
+      notify.error(errorReason(error, "Could not save the comment"));
     }
   };
 
-  const submitComment = (location: DraftLocation, body: string) =>
-    sendComment({ mode, selectedPull, targetKey }, location, body);
+  /**
+   * Where a comment on the diff is kept: its file's repository, under the
+   * path that repository knows it by — the diff's names are the workspace's
+   * when it spans one.
+   */
+  const storedComment = (comment: ReviewComment) => {
+    const { repo: owner, path } = locateDiffFile(comment.filePath);
+    return {
+      actions: commentsIn(owner),
+      comment: { ...comment, filePath: path },
+    };
+  };
+
+  const submitComment = (location: DraftLocation, body: string) => {
+    const { repo: owner, path } = locateDiffFile(location.filePath);
+    return sendComment({ mode, selectedPull, targetKey }, location, body, {
+      actions: commentsIn(owner),
+      filePath: path,
+    });
+  };
 
   // Comments left on a file in the viewer (browse, or commit mode) always store
   // against the worktree, regardless of the active mode/diff target.
@@ -995,14 +1202,16 @@ export function CodeWorkspace() {
   // GitHub can refuse this one — a comment somebody else wrote is not ours to
   // remove — so unlike a local delete it needs somewhere to say so.
   const deleteComment = async (comment: ReviewComment) => {
+    const stored = storedComment(comment);
     try {
-      await comments.remove(selectedPull, comment);
+      await stored.actions.remove(selectedPull, stored.comment);
     } catch (error) {
-      toast.error(errorReason(error, "Could not delete the comment"));
+      notify.error(errorReason(error, "Could not delete the comment"));
     }
   };
   const editComment = async (comment: ReviewComment, body: string) => {
-    await comments.update(selectedPull, comment, body);
+    const stored = storedComment(comment);
+    await stored.actions.update(selectedPull, stored.comment, body);
   };
   const replyComment = async (comment: ReviewComment, body: string) => {
     await comments.reply(selectedPull, comment, body);
@@ -1014,7 +1223,7 @@ export function CodeWorkspace() {
     try {
       await comments.setResolved(selectedPull, comment, resolved);
     } catch (error) {
-      toast.error(
+      notify.error(
         errorReason(
           error,
           resolved
@@ -1095,7 +1304,7 @@ export function CodeWorkspace() {
         />
       );
     }
-    const conflicted = search.path;
+    const conflicted = selectedOwnPath;
     if (
       mode === "commit" &&
       conflicted != null &&
@@ -1115,21 +1324,20 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      return (
-        <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
-      );
+      // The strip names what belongs here, and the effect above is already
+      // putting it back; the ways into an empty pane would contradict it.
+      return tabbed && tabs.tabs.length > 0 ? null : <EmptyPane />;
     }
     return (
       <DiffPane
         onOpenLocation={openLocation}
+        locate={locateDiffFile}
         files={diffFiles}
         theme={prefs.resolvedTheme}
         diffStyle={prefs.diffStyle}
         connectors={prefs.connectors}
-        loading={diff.isPending}
-        error={
-          diff.error ? errorReason(diff.error, "Could not load diff") : null
-        }
+        loading={diffPending}
+        error={diffError ? errorReason(diffError, "Could not load diff") : null}
         target={target}
         comments={visibleComments}
         draft={draft}
@@ -1137,8 +1345,8 @@ export function CodeWorkspace() {
         reveal={diffReveal}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={openInBrowse}
-        onShowFileHistory={showFileHistory}
+        onEditFile={openDiffFileInBrowse}
+        onShowFileHistory={showDiffFileHistory}
         onDiscardFile={
           // Discarding restores a file from HEAD, and a hunk is found by its
           // place in the diff against HEAD. Read against a branch, the pane is
@@ -1146,11 +1354,19 @@ export function CodeWorkspace() {
           // so the same gesture would undo something other than what it points
           // at. It is offered on the working-tree diff, where it means what it
           // says.
-          target?.kind === "worktree" ? (p) => void git.discard([p]) : undefined
+          target?.kind === "worktree"
+            ? (name) => {
+                const { repo: owner, path } = locateDiffFile(name);
+                void git.discard([path], owner);
+              }
+            : undefined
         }
         onDiscardHunk={
           target?.kind === "worktree"
-            ? (p, hunkIndex) => void git.discardHunk(p, hunkIndex)
+            ? (name, hunkIndex) => {
+                const { repo: owner, path } = locateDiffFile(name);
+                void git.discardHunk(path, hunkIndex, owner);
+              }
             : undefined
         }
         onCommentSubmit={submitComment}
@@ -1170,18 +1386,28 @@ export function CodeWorkspace() {
     mode,
     paths: treePaths,
     gitStatus: treeGitStatus,
-    loading: mode === "review" ? diff.isPending : files.isPending,
-    selectedFile: mode === "browse" ? viewing : (search.path ?? null),
+    loading: mode === "review" ? diffPending : files.isPending,
+    // The tree is the page's repository's, unless it is the diff's own; another
+    // root's file selected in a workspace's diff is otherwise the shell's to
+    // mark — see `useShellTree` below.
+    selectedFile:
+      mode === "browse"
+        ? viewing
+        : treeOfDiff
+          ? (search.path ?? null)
+          : selectedOwnPath,
     onFileSelect,
-    onFileIntent: prerenderFile,
-    onShowHistory: showFileHistory,
+    onFileIntent: treeOfDiff ? prerenderDiffFile : prerenderFile,
+    onShowHistory: treeOfDiff ? showDiffFileHistory : showFileHistory,
     // A working-tree action, offered while the working tree is what is being
     // read: against a branch, the tree's badges are the comparison's and a
     // discard would answer for HEAD instead — see the pane's own discard
     // above.
     onDiscardPaths:
       target?.kind === "worktree"
-        ? (paths: ReadonlyArray<string>) => void git.discard(paths)
+        ? treeOfDiff
+          ? discardDiffFiles
+          : (paths: ReadonlyArray<string>) => void git.discard(paths)
         : undefined,
     projectPath: workspace.data?.project ?? null,
   };
@@ -1196,7 +1422,7 @@ export function CodeWorkspace() {
             git.startCommitMessage(p, agent),
           onDraftSettled: (settled: CommitDraft) => {
             if (settled.status === "error" && settled.error !== null)
-              toast.error(settled.error);
+              notify.error(settled.error);
             void git.clearCommitDraft();
           },
         }
@@ -1226,6 +1452,10 @@ export function CodeWorkspace() {
     shellDrawsTree
       ? {
           ...treeSource,
+          selectedFile:
+            mode === "browse" ? viewing : (selectedDiffFile?.path ?? null),
+          selectedRoot: mode === "browse" ? null : selectedDiffFile?.repo,
+          spansWorkspace,
           // The header's compare picker is the shell's to draw too — it stands
           // in the shell's sidebar, over the changed files — and it reads the
           // same answer, resolved here once for the diff and the picker both.
@@ -1300,36 +1530,49 @@ export function CodeWorkspace() {
     ? {
         tabs: tabs.tabs,
         active: tabs.active,
-        dirty: dirtyPaths,
+        dirty: dirtyKeys,
         onSelect: selectTab,
-        onIntent: prerenderFile,
-        onKeep: (path) => updateTabs((state) => keepTab(state, path)),
+        onIntent: (key) => {
+          if (inThisRepo(key)) prerenderFile(tabFile(key).path);
+        },
+        onKeep: (key) => updateTabs((state) => keepTab(state, key)),
         onClose: closeTabAt,
-        onTogglePin: (path) => updateTabs((state) => togglePin(state, path)),
-        onCloseOthers: (path) => {
-          whenMayLeaveFile(path, () =>
-            updateTabs((state) => {
-              const next = closeOthers(state, path);
-              setSearch({ file: next.active ?? undefined });
-              return next;
-            })
+        onTogglePin: (key) => updateTabs((state) => togglePin(state, key)),
+        onCloseOthers: (key) => {
+          whenMayLeaveFile(
+            inThisRepo(key) ? tabFile(key).path : undefined,
+            () =>
+              updateTabs((state) => {
+                const next = closeOthers(state, key);
+                showTab(next.active);
+                return next;
+              })
           );
         },
         onCloseAll: () => {
           whenMayLeaveFile(undefined, () =>
             updateTabs((state) => {
               const next = closeAll(state);
-              setSearch({ file: next.active ?? undefined });
+              showTab(next.active);
               return next;
             })
           );
         },
-        onMove: (path, toIndex) =>
-          updateTabs((state) => moveTab(state, path, toIndex)),
+        onMove: (key, toIndex) =>
+          updateTabs((state) => moveTab(state, key, toIndex)),
+        describe: (key) => {
+          const { repo: owner, path } = tabFile(key);
+          return multiRoot && owner !== null
+            ? `${pathName(owner)} · ${path}`
+            : path;
+        },
         // A file's past is asked for from the tab naming it, which is the one
         // thing that goes on naming it once the trail under the pane is the
-        // window's own — see the path bar at the foot of this file.
-        onShowHistory: showFileHistory,
+        // window's own — see the path bar at the foot of this file. Another
+        // repository's file is read from its own page.
+        onShowHistory: (key) => {
+          if (inThisRepo(key)) showFileHistory(tabFile(key).path);
+        },
       }
     : null;
 
@@ -1487,7 +1730,7 @@ export function CodeWorkspace() {
           mergeState.data.operation !== "none" && (
             <ConflictBanner
               state={mergeState.data}
-              selectedPath={search.path ?? null}
+              selectedPath={selectedOwnPath}
               onSelectFile={openConflict}
               onAbort={() => void git.abortMerge()}
               onContinue={() => void git.continueMerge()}

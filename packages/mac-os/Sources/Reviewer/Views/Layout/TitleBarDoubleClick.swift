@@ -98,7 +98,10 @@ private extension NSView {
         while let current = view {
             let name = String(describing: type(of: current))
             if name.contains("HostingView") { hosted = true }
-            if name.hasPrefix("NSToolbarItemViewer") { return hosted }
+            // An AppKit item's own controls say so themselves: a tab or a
+            // button keeps the press, where the bar's bare run past them
+            // lets it move the window.
+            if name.hasPrefix("NSToolbarItemViewer") { return hosted || !mouseDownCanMoveWindow }
             view = current.superview
         }
         return false

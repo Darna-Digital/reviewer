@@ -51,7 +51,7 @@ import {
   readThreadAgentSessionId,
   readThreadInitialPrompt,
 } from "../threads/store.ts";
-import { getCurrentRepo } from "../workspace/current-repo.ts";
+import { repoFor } from "../workspace/current-repo.ts";
 import {
   recentAgentSessions,
   writesDiscoverableSessions,
@@ -131,12 +131,6 @@ const loadNodePty = (): NodePty | null => {
   return ptyModule;
 };
 
-/** Where a session's program runs — the open repository. */
-const sessionCwd = (): string => getCurrentRepo() ?? process.cwd();
-
-/** Where a thread's record lives — `.reviewer/` in the selected repository. */
-const threadStore = (): string => getCurrentRepo() ?? process.cwd();
-
 const parseAgent = (value: string | null): AgentKind =>
   value !== null && (AGENT_KINDS as ReadonlyArray<string>).includes(value)
     ? (value as AgentKind)
@@ -209,6 +203,11 @@ const droppedPathInput = (path: string): string => `'${path}' `;
  */
 interface PtySession {
   readonly pty: IPty;
+  /**
+   * The repository the session runs in and its thread is recorded under —
+   * kept with the session, since a re-attach names the thread, not the root.
+   */
+  readonly repoPath: string;
   /** Recent raw output, capped, replayed verbatim to a re-attaching client. */
   chunks: string[];
   size: number;
@@ -370,13 +369,24 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
     const existing = sessions.get(id);
     if (existing !== undefined && !existing.exited) {
       attachClient(existing, ws, cols, rows);
-      patchThread(threadStore(), id, { updatedAt: new Date().toISOString() });
+      patchThread(existing.repoPath, id, {
+        updatedAt: new Date().toISOString(),
+      });
       return;
     }
   }
 
-  const cwd = sessionCwd();
-  const repoPath = threadStore();
+  // The repository the socket named (`?repo=`), or the workspace's first; a
+  // repository that is not open is refused rather than run somewhere else.
+  const requested = url.searchParams.get("repo");
+  const root = repoFor(requested);
+  if (root === null && requested !== null && requested.length > 0) {
+    send(ws, { error: `${requested} is not open in this workspace` });
+    ws.close();
+    return;
+  }
+  const cwd = root ?? process.cwd();
+  const repoPath = cwd;
   // A one-shot prompt to type into the program once it's ready (e.g. a task
   // comment handed to an agent). Only on a fresh spawn, never on re-attach.
   const initialPrompt =
@@ -483,6 +493,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
 
   const session: PtySession = {
     pty,
+    repoPath,
     chunks: [],
     size: 0,
     client: ws,

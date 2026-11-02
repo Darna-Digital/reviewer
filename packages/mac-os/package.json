@@ -9,6 +9,7 @@
     "watch": "./scripts/watch.sh",
     "start": "swift run Reviewer",
     "clean": "rm -rf .build",
-    "import-icons": "node scripts/import-file-icons.mjs"
+    "import-icons": "node scripts/import-file-icons.mjs",
+    "import-wordmark": "node scripts/import-block-wordmark.mjs"
   }
 }

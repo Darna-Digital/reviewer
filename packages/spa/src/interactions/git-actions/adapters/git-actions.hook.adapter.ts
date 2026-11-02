@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notify";
 import { api, fetchClient } from "@/lib/api/client";
+import { repoInit } from "@/lib/repo-scope";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import { createGitActionsFunctions } from "../functions/git-actions.functions";
@@ -31,7 +32,7 @@ const unwrap = async <T>(
 const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
 
 /**
- * All imperative git actions, wired to the typed API, sonner toasts and
+ * All imperative git actions, wired to the typed API, the app's toasts and
  * TanStack Query invalidation. Components call these; the pure flow logic
  * (commit→push messaging, op notices) lives in the functions layer.
  */
@@ -114,16 +115,20 @@ export function useGitActions() {
     /**
      * Discard the working-tree changes for the given paths, reverting them to HEAD
      * (modifications and deletions are restored; new files are removed). This is
-     * irreversible — callers should confirm before invoking.
+     * irreversible — callers should confirm before invoking. `repo` names
+     * another root of the workspace than the page's own.
      */
-    discard: (paths: ReadonlyArray<string>) =>
+    discard: (paths: ReadonlyArray<string>, repo?: string) =>
       fns.runOp(
         paths.length === 1
           ? `Discarded changes in ${paths[0]}`
           : `Discarded changes in ${paths.length} files`,
         () =>
           unwrap(
-            fetchClient.POST("/api/discard", { body: { paths: [...paths] } })
+            fetchClient.POST("/api/discard", {
+              body: { paths: [...paths] },
+              ...repoInit(repo),
+            })
           )
       ),
 
@@ -132,10 +137,13 @@ export function useGitActions() {
      * change. `hunkIndex` is zero-based in the order the diff renders its hunks.
      * Irreversible — callers should confirm before invoking.
      */
-    discardHunk: (path: string, hunkIndex: number) =>
+    discardHunk: (path: string, hunkIndex: number, repo?: string) =>
       fns.runOp(`Discarded a change in ${path}`, () =>
         unwrap(
-          fetchClient.POST("/api/discard-hunk", { body: { path, hunkIndex } })
+          fetchClient.POST("/api/discard-hunk", {
+            body: { path, hunkIndex },
+            ...repoInit(repo),
+          })
         )
       ),
 

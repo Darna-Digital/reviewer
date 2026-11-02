@@ -16,7 +16,10 @@
  */
 
 export interface Tab {
-  /** Repository-relative path — also the tab's identity. */
+  /**
+   * The tab's identity: the file's repository-relative path, qualified by its
+   * repository in a workspace (see `tab-key`).
+   */
   readonly path: string;
   /** Pinned tabs survive "close others" and never become the preview slot. */
   readonly pinned: boolean;
@@ -44,11 +47,13 @@ export type OpenIntent =
 export interface Reconcile {
   /** The file the URL names, or null when it names none. */
   readonly viewing: string | null;
-  /** The repository has changed since the strip was last reconciled. */
+  /** The workspace has changed since the strip was last reconciled. */
   readonly switched: boolean;
   /** The page is browsing, so a strip with nothing on screen is a hole. */
   readonly canRestore: boolean;
   readonly intent?: OpenIntent;
+  /** Which tabs may be put back on screen — the page's repository's. */
+  readonly restorable?: (path: string) => boolean;
 }
 
 export interface Reconciled {

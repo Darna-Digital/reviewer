@@ -2,8 +2,9 @@
  * RepoIndex — every git repository the machine holds, for the opener to list.
  *
  * The walk over the home folder takes seconds, so the index is kept: the
- * last complete listing is written to ~/.reviewer/repos.json and read back at
- * boot, and a fresh walk starts in the background — at boot, and whenever a
+ * last complete listing is written to the database (`db/app-state.ts`) and
+ * read back at boot, so the opener lists every repository the moment it is
+ * up, and a fresh walk starts in the background — at boot, and whenever a
  * client asks — filling the listing in as it goes. What a read returns is
  * the walk's progress so far folded with the repositories opened here, each
  * stamped with its last open, so a repository the walk has not reached (or
@@ -11,7 +12,7 @@
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
-import * as FileSystem from "effect/FileSystem";
+import type * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Ref from "effect/Ref";
 import { homedir } from "node:os";
@@ -20,6 +21,7 @@ import {
   type RepoEntry,
   type RepoIndex,
 } from "@reviewer/core/workspace";
+import { importScanFile, readScan, writeScan } from "../db/app-state.ts";
 import { isGitRoot, scanRepos } from "./repo-scan.ts";
 import { WorkspaceContext } from "./workspace-context.ts";
 
@@ -35,8 +37,6 @@ export class RepoIndexService extends Context.Service<
   RepoIndexShape
 >()("RepoIndexService") {}
 
-const CACHE_FILE = `${homedir()}/.reviewer/repos.json`;
-
 interface Cached {
   readonly repos: ReadonlyArray<RepoEntry>;
   readonly scannedAt: string | null;
@@ -44,39 +44,31 @@ interface Cached {
 
 const EMPTY: Cached = { repos: [], scannedAt: null };
 
-const isEntry = (value: unknown): value is RepoEntry =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as RepoEntry).path === "string" &&
-  typeof (value as RepoEntry).name === "string";
-
 export const make = (start: string) =>
   Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
     const ctx = yield* WorkspaceContext;
 
-    const readCache: Effect.Effect<Cached> = Effect.gen(function* () {
-      if (!(yield* fs.exists(CACHE_FILE))) return EMPTY;
-      const parsed = JSON.parse(yield* fs.readFileString(CACHE_FILE));
+    // The last walk's listing — `repos.json`'s, the first time, taken across.
+    const readCache: Effect.Effect<Cached> = Effect.sync(() => {
+      importScanFile();
+      const scan = readScan();
       return {
-        repos: Array.isArray(parsed?.repos)
-          ? parsed.repos.filter(isEntry).map((repo: RepoEntry): RepoEntry => ({
-              name: repo.name,
-              path: repo.path,
-              branch: typeof repo.branch === "string" ? repo.branch : null,
-              lastOpened: null,
-            }))
-          : [],
-        scannedAt:
-          typeof parsed?.scannedAt === "string" ? parsed.scannedAt : null,
+        repos: scan.repos.map((repo) => ({ ...repo, lastOpened: null })),
+        scannedAt: scan.scannedAt,
       };
     }).pipe(Effect.catch(() => Effect.succeed(EMPTY)));
 
     const writeCache = (cached: Cached) =>
-      Effect.gen(function* () {
-        yield* fs.makeDirectory(`${homedir()}/.reviewer`, { recursive: true });
-        yield* fs.writeFileString(CACHE_FILE, JSON.stringify(cached, null, 2));
-      }).pipe(Effect.catch(() => Effect.void));
+      Effect.sync(() =>
+        writeScan({
+          repos: cached.repos.map(({ path, name, branch }) => ({
+            path,
+            name,
+            branch,
+          })),
+          scannedAt: cached.scannedAt,
+        })
+      ).pipe(Effect.catch(() => Effect.void));
 
     const settled = yield* Ref.make<Cached>(yield* readCache);
     /** What the walk under way has found so far; null between walks. */

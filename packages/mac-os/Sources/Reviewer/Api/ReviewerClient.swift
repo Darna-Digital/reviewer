@@ -38,6 +38,32 @@ struct ReviewerAPIError: LocalizedError, CommandOutputError, Sendable {
 
 struct ReviewerClient: Sendable {
     let baseURL: URL
+    /// The workspace repository every repository-scoped call is about —
+    /// sent as `X-Reviewer-Repo`, and as `?repo=` on a socket — or nil for
+    /// the workspace's first. Calls about no repository ignore it.
+    private(set) var repo: String?
+
+    /// This client, about `repo` — one of the workspace's roots.
+    func scoped(to repo: String?) -> ReviewerClient {
+        var scoped = self
+        scoped.repo = repo
+        return scoped
+    }
+
+    private static let repoHeader = "X-Reviewer-Repo"
+
+    /// `encodeURIComponent`'s alphabet: the server reads the header back with
+    /// `decodeURIComponent`, and a header value must be ASCII.
+    private static let headerSafe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")
+
+    private func scope(_ request: inout URLRequest) {
+        guard let repo, let encoded = repo.addingPercentEncoding(withAllowedCharacters: Self.headerSafe) else { return }
+        request.setValue(encoded, forHTTPHeaderField: Self.repoHeader)
+    }
+
+    private var repoQueryItems: [URLQueryItem] {
+        repo.map { [URLQueryItem(name: "repo", value: $0)] } ?? []
+    }
     private let session = URLSession(configuration: .ephemeral)
 
     /// The chat stream socket for one session — `ws://` on the same host.
@@ -57,6 +83,37 @@ struct ReviewerClient: Sendable {
 
     func openProject(path: String) async throws -> WorkspaceInfo {
         try await send("POST", "/api/workspace", body: SetWorkspace(path: path))
+    }
+
+    /// Replace the open workspace's repositories — a saved one keeps them.
+    func setRoots(_ roots: [String]) async throws -> WorkspaceInfo {
+        try await send("PUT", "/api/workspace/roots", body: SetRoots(roots: roots))
+    }
+
+    /// The workspaces kept to come back to, most recently opened first.
+    func workspaces() async throws -> [SavedWorkspace] {
+        try await get("/api/workspaces")
+    }
+
+    func createWorkspace(name: String, roots: [String]) async throws -> SavedWorkspace {
+        try await send("POST", "/api/workspaces", body: CreateWorkspace(name: name, roots: roots))
+    }
+
+    func updateWorkspace(id: String, _ patch: UpdateWorkspace) async throws -> SavedWorkspace {
+        try await send("PATCH", "/api/workspaces/\(Self.pathSegment(id))", body: patch)
+    }
+
+    func deleteWorkspace(id: String) async throws {
+        let _: Ok = try await send("DELETE", "/api/workspaces/\(Self.pathSegment(id))", body: nil as EmptyBody?)
+    }
+
+    /// Open every repository a saved workspace holds, side by side.
+    func openWorkspace(id: String) async throws -> WorkspaceInfo {
+        try await send("POST", "/api/workspaces/\(Self.pathSegment(id))/open", body: EmptyBody())
+    }
+
+    private static func pathSegment(_ value: String) -> String {
+        value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? value
     }
 
     /// Every repository the machine holds, as far as the server's walk has
@@ -278,6 +335,25 @@ struct ReviewerClient: Sendable {
         let _: Ok = try await send("POST", "/api/discard", body: DiscardBody(paths: paths))
     }
 
+    /// Start an agent drafting a commit message from the changes; the run
+    /// answers before the message is written, which is read off `commitDraft`.
+    func generateCommitMessage(
+        agent: CommitAgent, paths: [String] = [], repositories: [DraftRepositoryBody]? = nil
+    ) async throws -> CommitDraft {
+        let body = GenerateCommitMessageBody(
+            agent: agent.rawValue, paths: paths.isEmpty ? nil : paths, repositories: repositories)
+        return try await send("POST", "/api/git-message/generate", body: body)
+    }
+
+    func commitDraft() async throws -> CommitDraft {
+        try await get("/api/git-message/draft")
+    }
+
+    /// The draft taken, so the server lets it go.
+    func clearCommitDraft() async throws {
+        let _: CommitDraft = try await send("POST", "/api/git-message/draft/clear", body: EmptyBody())
+    }
+
     func pull() async throws -> String {
         let result: CommandOutput = try await send("POST", "/api/pull", body: EmptyBody())
         return result.output
@@ -363,7 +439,7 @@ struct ReviewerClient: Sendable {
             URLQueryItem(name: "cols", value: String(cols)),
             URLQueryItem(name: "rows", value: String(rows)),
             URLQueryItem(name: "theme", value: theme),
-        ]
+        ] + repoQueryItems
         return components.url!
     }
 
@@ -406,7 +482,7 @@ struct ReviewerClient: Sendable {
             URLQueryItem(name: "command", value: command),
             URLQueryItem(name: "cols", value: String(cols)),
             URLQueryItem(name: "rows", value: String(rows)),
-        ]
+        ] + repoQueryItems
         return components.url!
     }
 
@@ -420,12 +496,15 @@ struct ReviewerClient: Sendable {
         if !query.isEmpty {
             components.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         }
-        return try await perform(URLRequest(url: components.url!))
+        var request = URLRequest(url: components.url!)
+        scope(&request)
+        return try await perform(request)
     }
 
     private func send<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B?) async throws -> T {
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
+        scope(&request)
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)

@@ -3,6 +3,9 @@ import type { RoundedBox, Scene } from "./geometry";
 
 const round = (value: number) => Number(value.toFixed(3));
 
+/** How strongly the block wordmark's counters show against its ink. */
+const COUNTER_OPACITY = 0.4;
+
 /** CSS-style angle: 0° points up, 90° points right. */
 function gradientVector(angle: number) {
   const radians = ((angle - 90) * Math.PI) / 180;
@@ -66,8 +69,15 @@ export function renderSvg(
   // antialias against the background, which leaves a hairline seam running
   // through the mark. Filling them as a single path rasterises the union.
   if (scene.blocks.length && config.blocks.kind !== "transparent") {
+    const fill = paint(config.blocks, "blocks");
+    if (scene.counters.length) {
+      const d = scene.counters.map(roundedRectPath).join("");
+      body.push(
+        `<path d="${d}" fill="${fill}" fill-opacity="${COUNTER_OPACITY}"/>`
+      );
+    }
     const d = scene.blocks.map(roundedRectPath).join("");
-    body.push(`<path d="${d}" fill="${paint(config.blocks, "blocks")}"/>`);
+    body.push(`<path d="${d}" fill="${fill}"/>`);
   }
 
   if (scene.text) {

@@ -15,15 +15,15 @@ struct ChatPageView: View {
             switch model.chats.page {
             case .newSession:
                 NewChatView()
-            case .conversation:
+            case .landing:
+                SessionsLanding()
+            // Off the surface, the conversation left open stays built
+            // behind the code page for the way back (see `Chats.follow`).
+            case .conversation, nil:
                 if let session = model.chats.session {
                     ConversationView(session: session)
                         .id(session.id)
                 }
-            case .landing:
-                SessionsLanding()
-            case nil:
-                EmptyView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,19 +68,20 @@ private struct NewChatView: View {
     @State private var viewport: CGFloat = 0
 
     private var chats: Chats { model.chats }
+    /// The tab this page is in front on, whose composer it is.
+    private var tabId: String { model.windowTabs.activeId }
+    private var draftKey: String { Chats.newSessionKey(forTab: tabId) }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                Text("What should we work on?")
-                    .font(.system(size: 24, weight: .medium))
-                    .tracking(-0.3)
-                    .padding(.bottom, 16)
+                BlockWordmark()
+                    .padding(.bottom, 20)
                 VStack(spacing: 0) {
                     ChatComposer(
-                        draftKey: Chats.newSessionKey,
-                        settings: chats.newSessionSettings,
-                        onSettingsChange: { chats.remember($0) },
+                        draftKey: draftKey,
+                        settings: chats.newSessionSettings(forTab: tabId),
+                        onSettingsChange: { [tabId] in chats.change($0, forUnsentTab: tabId) },
                         running: false,
                         placeholder: "Ask anything, or describe a change…",
                         onSend: start
@@ -96,13 +97,13 @@ private struct NewChatView: View {
             .frame(minHeight: viewport)
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewport = $0 }
-        .imageDropZone(draftKey: Chats.newSessionKey)
+        .imageDropZone(draftKey: draftKey)
     }
 
     private func start(_ text: String, _ images: [ComposerAttachment]) async throws {
         do {
             let chat = try await chats.start(
-                settings: chats.newSessionSettings, text: text, images: images,
+                settings: chats.newSessionSettings(forTab: tabId), text: text, images: images,
                 branch: model.currentBranch)
             model.show(chat: chat)
         } catch {

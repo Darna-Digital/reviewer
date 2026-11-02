@@ -14,9 +14,10 @@
 // pointer leaves the controls. A press puts it away until the pointer
 // moves on to another control, or another segment of the same one.
 //
-// The pointer is followed in AppKit rather than by SwiftUI's hover, so a
-// control SwiftUI makes for itself — the split's sidebar toggle — can be
-// given the label as well as one of the app's own (see `ToolbarWatcher`).
+// The pointer is followed in AppKit rather than by SwiftUI's hover, so the
+// toolbar's AppKit controls — the sidebar's toggle and the mark that mints
+// a session — are given the label as well as its SwiftUI ones (see
+// `WindowToolbar`, `SessionTabBar`).
 import AppKit
 import SwiftUI
 

@@ -1,7 +1,5 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname } from 'node:path';
 import type { CommitAgent } from '../git/commitMessage';
+import type { Store } from './createStore';
 
 /** The theme that takes the terminal's own colours and background. */
 export const TERMINAL_THEME = 'terminal';
@@ -28,26 +26,18 @@ export const DEFAULT_SETTINGS: Settings = {
   fileIcons: true,
 };
 
-export function settingsPath(): string {
-  return (
-    process.env['REVIEWER_TUI_SETTINGS'] ||
-    `${homedir()}/.reviewer/tui-settings.json`
-  );
-}
-
-export function loadSettings(path = settingsPath()): Settings {
+/** Kept in the shared database, `tui_settings`. */
+export function loadSettings(store: Store): Settings {
   try {
-    const saved = JSON.parse(readFileSync(path, 'utf8')) as Partial<Settings>;
-    return { ...DEFAULT_SETTINGS, ...saved };
+    return { ...DEFAULT_SETTINGS, ...(store.settings() as Partial<Settings>) };
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
-export function saveSettings(settings: Settings, path = settingsPath()) {
+export function saveSettings(store: Store, settings: Settings) {
   try {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(settings, null, 2));
+    store.saveSettings(settings);
   } catch {
     // a preference that fails to save is still applied for this session
   }

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { fetchClient } from "@/lib/api/client";
 import { createWorkspaceFunctions } from "../functions/workspace.functions";
 
@@ -40,7 +40,7 @@ export function useWorkspaceActions() {
           invalidateAll: async () => {
             await queryClient.invalidateQueries();
           },
-          notifyError: (text) => toast.error(text),
+          notifyError: (text) => notify.error(text),
         },
       }),
     [queryClient]

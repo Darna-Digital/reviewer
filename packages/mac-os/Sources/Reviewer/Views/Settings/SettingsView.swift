@@ -92,7 +92,7 @@ struct SettingsView: View {
         .frame(width: 480, height: 620)
         .task { await model.settings.reload() }
         .task { await model.settings.loadThemes() }
-        .onChange(of: model.workspace?.project) { Task { await model.settings.reload() } }
+        .onChange(of: model.focusedRootPath) { Task { await model.settings.reload() } }
     }
 }
 
