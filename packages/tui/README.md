@@ -11,17 +11,17 @@ reviewer ~/code/web ~/code/api   # two repositories side by side
 reviewer -w platform             # a saved workspace
 ```
 
-| Option            | Does                                                                      |
-| ----------------- | ------------------------------------------------------------------------- |
-| `[path…]`         | Any path inside the repository (default: here); several open side by side |
-| `-w <name>`       | Open a saved workspace (`--workspace`)                                    |
-| `--workspaces`    | List the saved workspaces                                                 |
-| `--against <ref>` | Read the branch against `<ref>`'s merge base                              |
-| `--commit <sha>`  | Read one commit                                                           |
-| `--pr <number>`   | Review a GitHub pull request                                              |
-| `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`)                 |
-| `--light`         | This run only: the light default theme                                    |
-| `--no-server`     | Leave the Reviewer server alone                                           |
+| Option            | Does                                                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `[path…]`         | Any path inside the repository (default: here); several open side by side; a folder of repositories opens as its workspace |
+| `-w <name>`       | Open a saved workspace (`--workspace`)                                                                                     |
+| `--workspaces`    | List the saved workspaces                                                                                                  |
+| `--against <ref>` | Read the branch against `<ref>`'s merge base                                                                               |
+| `--commit <sha>`  | Read one commit                                                                                                            |
+| `--pr <number>`   | Review a GitHub pull request                                                                                               |
+| `--theme <name>`  | This run only: `terminal` or a catalog theme (`--themes`)                                                                  |
+| `--light`         | This run only: the light default theme                                                                                     |
+| `--no-server`     | Leave the Reviewer server alone                                                                                            |
 
 ### Install
 
@@ -120,7 +120,10 @@ the same saved ones: they are kept by the Reviewer server
   folder's right-click menu in the tree removes it from the workspace.
 
 A plain `reviewer` reopens the workspace last opened from the repository it
-is started in. Opening another stops the services this TUI started.
+is started in. Started in a folder of repositories (`reviewer-project/`, with
+`reviewer/` and `reviewer-cloud/` in it) it opens the saved workspace whose
+repositories are all in that folder, or saves one named after the folder;
+typing such a folder in the `⌘O` picker does the same. Opening another stops the services this TUI started.
 
 ## Layout
 
