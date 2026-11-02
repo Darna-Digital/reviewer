@@ -631,12 +631,13 @@ final class AppModel {
     // MARK: sidebar
 
     /// ⌃⌘S — the system's own chord for it — from the View menu, the
-    /// palette and the bar's toggle: the column put away, or brought back.
-    /// A move by hand is the last word, so a composer's hold on the
-    /// sidebar is let go of rather than undone after it.
+    /// palette and the bar's toggle: the column put away, or brought back,
+    /// at once rather than slid — the split only slides when its own toggle
+    /// is asked. A move by hand is the last word, so a composer's hold on
+    /// the sidebar is let go of rather than undone after it.
     func toggleSidebar() {
         sidebarAwayForComposer = false
-        moveSidebar()
+        sidebarShown.toggle()
     }
 
     /// A fresh session's composer takes the window's whole width: nothing
@@ -655,29 +656,6 @@ final class AppModel {
             sidebarAwayForComposer = false
             sidebarShown = true
         }
-    }
-
-    /// The column moved, asked of the window's split view controller, as
-    /// the split's own toggle asks it, so the column slides at AppKit's
-    /// pace and on its curve — flipping the switch alone moved it with none
-    /// of that — and the split hands the result back through the column
-    /// binding. Aimed at the controller rather than sent up the responder
-    /// chain, which only reaches it from a view inside the split: not from
-    /// the palette's field, nor with nothing focused. The switch is flipped
-    /// here only when there is no split to ask.
-    private func moveSidebar() {
-        if let split = (NSApp.keyWindow ?? NSApp.mainWindow)?.contentView.flatMap(Self.splitController(in:)) {
-            split.toggleSidebar(nil)
-        } else {
-            sidebarShown.toggle()
-        }
-    }
-
-    private static func splitController(in view: NSView) -> NSSplitViewController? {
-        if let split = view as? NSSplitView, let controller = split.delegate as? NSSplitViewController {
-            return controller
-        }
-        return view.subviews.lazy.compactMap(splitController(in:)).first
     }
 
     /// Which page the window is on — its address without the query, which
@@ -958,6 +936,7 @@ final class AppModel {
     /// `SessionAction`. A pick sends the page to that session, the way a
     /// file picked in the tree is carried to the page.
     func act(onSessions action: SessionAction) {
+        if case .delete(let ids) = action { chats.letGo(of: ids) }
         page.send(action)
     }
 

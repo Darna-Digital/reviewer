@@ -166,6 +166,14 @@ final class Chats {
         self.session = session
     }
 
+    /// Sessions about to be deleted: the open one among them stops
+    /// listening first, so the socket the server drops with it does not
+    /// read as a lost connection for the moment before the page moves on.
+    func letGo(of ids: [String]) {
+        guard let session, ids.contains(session.id) else { return }
+        session.close()
+    }
+
     private func putDownSession() {
         guard let session else { return }
         if let chat = session.chat { keep(chat, for: session.id) }
