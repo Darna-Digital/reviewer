@@ -1,0 +1,34 @@
+{
+  "name": "@reviewer/themes",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "reviewer theme adapter — the theme catalog (Reviewer's own, Pierre's and Shiki's bundled themes) and Shiki highlighting, plugged into core's ThemeLibrary port",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint",
+    "format": "prettier --write \"**/*.{ts,js}\"",
+    "format:check": "prettier --check \"**/*.{ts,js}\""
+  },
+  "dependencies": {
+    "@pierre/theme": "2.0.0",
+    "@pierre/theming": "1.0.2",
+    "@reviewer/core": "workspace:*",
+    "@shikijs/themes": "4.5.0",
+    "effect": "4.0.6",
+    "shiki": "4.5.0"
+  },
+  "devDependencies": {
+    "@reviewer/lint": "workspace:*",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

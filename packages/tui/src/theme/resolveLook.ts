@@ -1,10 +1,10 @@
+import { deriveChromeTokens } from '@reviewer/core/themes';
 import {
   DEFAULT_DARK_THEME,
   DEFAULT_LIGHT_THEME,
-  deriveChromeTokens,
   findTheme,
   loadTheme,
-} from '@reviewer/core/themes';
+} from '@reviewer/themes';
 import type { Theme } from '../diff/highlight';
 import { createPalette } from '../render/palette';
 import type { Palette } from '../render/palette';

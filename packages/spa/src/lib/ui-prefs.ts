@@ -14,7 +14,7 @@ import {
   DEFAULT_DARK_THEME,
   DEFAULT_LIGHT_THEME,
   themeNameOrDefault,
-} from "@reviewer/core/themes";
+} from "@reviewer/themes";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
@@ -58,7 +58,7 @@ export interface UiPrefs {
   resolvedTheme: Theme;
   /**
    * Which theme paints the light scheme and which the dark — names from the
-   * catalog in `@reviewer/core/themes`. One choice per scheme rather than one
+   * catalog in `@reviewer/themes`. One choice per scheme rather than one
    * for both: a theme is written for one scheme, and following the system
    * from day to night means switching between two of them.
    */

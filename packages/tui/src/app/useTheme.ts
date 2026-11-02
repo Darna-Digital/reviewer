@@ -1,5 +1,5 @@
 import type { CliRenderer } from '@opentui/core';
-import { findTheme } from '@reviewer/core/themes';
+import { findTheme } from '@reviewer/themes';
 import * as React from 'react';
 import type { Store } from '../store/createStore';
 import { saveSettings, TERMINAL_THEME } from '../store/settings';

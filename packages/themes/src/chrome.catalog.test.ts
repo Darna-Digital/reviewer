@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { deriveChromeTokens } from "./chrome.functions.ts";
-import { contrast, luminance, parseHex } from "./hex-color.functions.ts";
+import {
+  contrast,
+  deriveChromeTokens,
+  luminance,
+  parseHex,
+} from "@reviewer/core/themes";
 import {
   DEFAULT_DARK_THEME,
   DEFAULT_LIGHT_THEME,
   describeThemes,
   loadTheme,
-} from "../catalog/theme-catalog.ts";
+} from "./catalog.ts";
 
 const rgb = (color: string) => parseHex(color)!;
 

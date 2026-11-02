@@ -20,7 +20,8 @@
  * one is a fetch, and a card opened in the first moments of a session shows
  * GitHub's colours rather than none.
  */
-import { deriveSyntaxTokens, loadTheme } from "@reviewer/core/themes";
+import { deriveSyntaxTokens } from "@reviewer/core/themes";
+import { loadTheme } from "@reviewer/themes";
 import type { SyntaxTokens } from "@reviewer/core/themes";
 import {
   readUiPrefs,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { createCliRenderer } from '@opentui/core';
 import { createRoot } from '@opentui/react';
-import { describeThemes, findTheme } from '@reviewer/core/themes';
+import { describeThemes, findTheme } from '@reviewer/themes';
 import { App } from './app/App';
 import { trackCommandKey } from './app/commandKey';
 import { WORKTREE } from './app/comparison';

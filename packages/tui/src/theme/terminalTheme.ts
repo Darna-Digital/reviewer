@@ -1,8 +1,7 @@
 import type { TerminalColors } from '@opentui/core';
-import type { deriveChromeTokens } from '@reviewer/core/themes';
+import type { Theme } from '@reviewer/core/ports/theme-library';
 
 export type Scheme = 'light' | 'dark';
-type ThemeLike = Parameters<typeof deriveChromeTokens>[0];
 
 /** The terminal's ANSI slots a palette borrows. */
 export interface AnsiColors {
@@ -42,7 +41,7 @@ export function schemeOf(background: string): Scheme {
 }
 
 /** The terminal's colours dressed as a VS Code theme, so core derives the chrome. */
-export function terminalThemeLike(look: TerminalLook): ThemeLike {
+export function terminalThemeLike(look: TerminalLook): Theme {
   const { background, foreground, ansi } = look;
   return {
     name: 'terminal',

@@ -14,8 +14,7 @@
  * against the page — the derived answer is preferred, so the ladder of
  * surfaces keeps its order whichever theme is on.
  */
-import { colorUtils, normalizeThemeColors } from "@pierre/theming/color";
-import type { ThemeLike } from "@pierre/theming";
+import type { Theme } from "../../../ports/theme-library.ts";
 import type { ChromeTokens, ColorScheme } from "../schema/themes.schema.ts";
 import {
   BLACK,
@@ -29,6 +28,7 @@ import {
   withAlpha,
   type Rgba,
 } from "./hex-color.functions.ts";
+import { resolveWorkbenchColors } from "./workbench-colors.functions.ts";
 
 /** What stands in where a theme leaves a colour out entirely. */
 const FALLBACK = {
@@ -103,13 +103,18 @@ const MIN_MUTED_CONTRAST = 6;
 const MIN_TERTIARY_CONTRAST = 4;
 /** The least two surfaces may differ and still be told apart. */
 const MIN_STEP_CONTRAST = 1.04;
+/** Under this a theme with no `type` is read as a dark one. */
+const DARK_SURFACE_LUMINANCE = 0.4;
+/**
+ * The contrast at which a theme's own type colour is taken as it is — the
+ * first candidate that clears it wins, before `inked` raises it to the floor.
+ */
+const MIN_CANDIDATE_TEXT_CONTRAST = 3;
 
-export function deriveChromeTokens(theme: ThemeLike): ChromeTokens {
-  const { colors = {} } = normalizeThemeColors(theme);
+export function deriveChromeTokens(theme: Theme): ChromeTokens {
+  const colors = resolveWorkbenchColors(theme);
   const read = (key: string): Rgba | undefined => parseHex(colors[key]);
-  const scheme: ColorScheme =
-    theme.type ??
-    (colorUtils.isDarkSurface(colors["editor.background"]) ? "dark" : "light");
+  const scheme: ColorScheme = theme.type ?? schemeOf(read("editor.background"));
   const fallback = FALLBACK[scheme];
   // Shiki's normalizer mangles a `color(display-p3 …)` editor background
   // into a near-transparent hex on its way into `colors`, while the theme's
@@ -248,16 +253,39 @@ function controlFor(
   return lifted ?? mix(island, dark ? WHITE : BLACK, CONTROL_STEP[scheme]);
 }
 
-/** The first candidate that reads as type over the surface. */
+function schemeOf(background: Rgba | undefined): ColorScheme {
+  return background !== undefined &&
+    luminance(background) < DARK_SURFACE_LUMINANCE
+    ? "dark"
+    : "light";
+}
+
+/**
+ * The first candidate that reads as type over the surface, or failing that
+ * the one that comes closest. Each is flattened onto the surface and rounded
+ * to the hex it will be written out as before it is measured.
+ */
 function readableOver(
   surface: Rgba,
   candidates: ReadonlyArray<Rgba | undefined>
 ): Rgba | undefined {
-  const legible = colorUtils.pickReadableForeground(
-    toHex(surface),
-    present(candidates).map((candidate) => toHex(over(candidate, surface)))
+  const flattened = present(candidates).map((candidate) =>
+    hex(toHex(over(candidate, surface)))
   );
-  return parseHex(legible);
+  const rounded = hex(toHex(surface));
+  return (
+    flattened.find(
+      (candidate) => contrast(candidate, rounded) >= MIN_CANDIDATE_TEXT_CONTRAST
+    ) ??
+    flattened.reduce<Rgba | undefined>(
+      (best, candidate) =>
+        best === undefined ||
+        contrast(candidate, rounded) > contrast(best, rounded)
+          ? candidate
+          : best,
+      undefined
+    )
+  );
 }
 
 /**

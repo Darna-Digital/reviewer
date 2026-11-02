@@ -16,7 +16,7 @@
  * background (see `deriveChromeTokens`), so a token that reads in the diff
  * reads on the card, and moving it would only make the two disagree.
  */
-import type { ThemeLike } from "@pierre/theming";
+import type { Theme, TokenRule } from "../../../ports/theme-library.ts";
 import { parseHex, toHex } from "./hex-color.functions.ts";
 
 /** The colours markdown's code is set in, by the role each class plays. */
@@ -53,13 +53,7 @@ const SCOPES: Record<keyof SyntaxTokens, string> = {
  */
 const PLAIN = "inherit";
 
-/** A theme's TextMate rules, which `ThemeLike` does not declare. */
-interface TokenRule {
-  readonly scope?: string | ReadonlyArray<string>;
-  readonly settings?: { readonly foreground?: string };
-}
-
-export function deriveSyntaxTokens(theme: ThemeLike): SyntaxTokens {
+export function deriveSyntaxTokens(theme: Theme): SyntaxTokens {
   const rules = tokenRulesOf(theme);
   const plain =
     hex(theme.fg) ?? hex(theme.colors?.["editor.foreground"]) ?? PLAIN;
@@ -80,12 +74,8 @@ export function deriveSyntaxTokens(theme: ThemeLike): SyntaxTokens {
  * A theme writes its rules under `tokenColors`; the older TextMate spelling
  * is `settings`, and a few of the bundled themes still use it.
  */
-function tokenRulesOf(theme: ThemeLike): ReadonlyArray<TokenRule> {
-  const { tokenColors, settings } = theme as {
-    tokenColors?: ReadonlyArray<TokenRule>;
-    settings?: ReadonlyArray<TokenRule>;
-  };
-  return tokenColors ?? settings ?? [];
+function tokenRulesOf(theme: Theme): ReadonlyArray<TokenRule> {
+  return theme.tokenColors ?? theme.settings ?? [];
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { grammarFor, highlightCode } from "./highlight.functions.ts";
-import { DEFAULT_DARK_THEME, loadTheme } from "../catalog/theme-catalog.ts";
+import { grammarFor, highlightCode } from "./highlight.ts";
+import { DEFAULT_DARK_THEME, loadTheme } from "./catalog.ts";
 
 const theme = async () => (await loadTheme(DEFAULT_DARK_THEME))!;
 
