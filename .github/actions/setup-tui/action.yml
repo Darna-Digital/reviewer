@@ -1,0 +1,27 @@
+name: setup-tui
+description: Node at the server's pin, Bun at the TUI's, the workspace's dependencies and the server bundle — everything packages/tui/release/package.sh needs.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+
+    # The server bundle is built on the Node.js it ships on, so a release is
+    # tested on the runtime install.sh will fetch for it.
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: packages/embedded-server/node-version
+        cache: pnpm
+
+    # The Bun compiled into the TUI binary is a pin too, bumped on purpose.
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: packages/tui/.bun-version
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Build the server bundle
+      shell: bash
+      run: pnpm --filter @reviewer/embedded-server build:bundle

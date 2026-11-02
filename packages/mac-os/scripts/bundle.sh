@@ -81,7 +81,11 @@ fi
 # one — inside the repository the server runs on the developer's Node
 # through pnpm anyway. A release bundle without it would ship broken, so
 # there it stops the build.
-node_version="24.21.0"
+#
+# The version is the server's own pin, packages/embedded-server/node-version,
+# which the TUI's one-line install reads too: one file to bump for a Node
+# security release, and both ship it.
+node_version="$(tr -d '[:space:]' < "${package_dir}/../embedded-server/node-version")"
 node_cache="${package_dir}/.build/node"
 
 fetch_node() {

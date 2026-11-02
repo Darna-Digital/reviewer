@@ -7,6 +7,7 @@ import { trackCommandKey } from './app/commandKey';
 import { WORKTREE } from './app/comparison';
 import type { Comparison } from './app/comparison';
 import { parseCli, USAGE } from './cli';
+import { upgrade, VERSION } from './release/install';
 import type { CliOptions } from './cli';
 import { git, resolves } from './git/exec';
 import { repoInfo, repoRoot } from './git/repo';
@@ -32,6 +33,9 @@ await main(parseCli(Bun.argv.slice(2)));
 
 async function main(cli: CliOptions) {
   if (cli.help) return exit(USAGE);
+  if (cli.version) return exit(VERSION);
+  if (cli.upgrade !== undefined)
+    process.exit(upgrade(cli.upgrade || undefined));
   if (cli.listThemes) {
     return exit(
       describeThemes()

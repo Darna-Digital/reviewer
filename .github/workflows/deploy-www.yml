@@ -11,6 +11,8 @@ on:
     branches: [main]
     paths:
       - "packages/www/**"
+      # reviewer.sh/install serves this file, read at build time.
+      - "packages/tui/release/install.sh"
       - "pnpm-lock.yaml"
       - ".github/workflows/deploy-www.yml"
   workflow_call:

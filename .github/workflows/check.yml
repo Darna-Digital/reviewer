@@ -33,3 +33,40 @@ jobs:
 
       - name: Test
         run: pnpm -r --if-present test
+
+  # The one-line install, end to end, as a release would ship it: the TUI
+  # and its server packed, the server booted from the tarball, then
+  # install.sh run against those files (REVIEWER_RELEASE_URL) into a fresh
+  # home — Node.js fetched from nodejs.org and checked, PATH written — and
+  # the installed binary run. Unsigned; release.yml signs the macOS ones.
+  tui-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-tui
+
+      - name: Check the scripts
+        run: |
+          shellcheck -s sh packages/tui/release/install.sh
+          shellcheck packages/tui/release/package.sh packages/tui/release/manifest.sh packages/tui/release/smoke.sh
+
+      - name: Package the TUI
+        id: package
+        run: echo "path=$(packages/tui/release/package.sh "$RUNNER_TEMP/release")" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test the tarball
+        run: packages/tui/release/smoke.sh "${{ steps.package.outputs.path }}"
+
+      - name: Install it with the one-line installer
+        run: |
+          packages/tui/release/manifest.sh "$RUNNER_TEMP/release" > "$RUNNER_TEMP/release/install-manifest.txt"
+          home="$RUNNER_TEMP/home"
+          mkdir -p "$home"
+          HOME="$home" SHELL=/bin/bash REVIEWER_RELEASE_URL="file://$RUNNER_TEMP/release" \
+            sh packages/tui/release/install.sh
+          grep -q '.reviewer/bin' "$home/.bashrc"
+          installed="$("$home/.reviewer/bin/reviewer" --version)"
+          expected="$(node -p "require('./package.json').version")"
+          test "$installed" = "$expected"
+          "$home/.reviewer/releases/$expected/server/node" --version

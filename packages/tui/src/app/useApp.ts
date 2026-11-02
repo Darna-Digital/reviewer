@@ -54,6 +54,7 @@ import { usePulls } from './usePulls';
 import type { RepoPull } from './usePulls';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
+import { useUpdateNotice } from './useUpdateNotice';
 import { useServices } from './useServices';
 import { useSymbols } from './useSymbols';
 import type { SymbolSpot } from './useSymbols';
@@ -206,6 +207,7 @@ export function useApp(props: AppProps) {
     props.focus,
   );
   useServer(review, props.startServer ?? false);
+  useUpdateNotice(review);
   const pulls = usePulls(review);
   const [now, setNow] = React.useState(Date.now);
   const [focus, setFocusState] = React.useState<Focus>('main');

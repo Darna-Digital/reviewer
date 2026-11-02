@@ -26,6 +26,17 @@ reviewer -w platform             # a saved workspace
 ### Install
 
 ```bash
+curl -fsSL https://reviewer.sh/install | bash
+```
+
+macOS and Linux (arm64 and x64). It installs into `~/.reviewer` with the
+Reviewer server and the Node.js it runs on, so nothing else is needed — not
+the Mac app either; `reviewer upgrade` updates it, `reviewer --version` says
+which it is. See RELEASING.md for what goes where.
+
+From a checkout:
+
+```bash
 pnpm install:tui             # builds dist/reviewer and puts it in ~/.local/bin
 reviewer                     # then, in any repository
 ```
@@ -42,7 +53,8 @@ target recorded for it, or the uncommitted work.
 
 On launch it checks for the Reviewer server on `127.0.0.1:41811`
 (`REVIEWER_PORT`) the way the Mac app does, and starts it when nothing
-answers: from the Reviewer checkout the binary was built from, else from
+answers: from the Reviewer checkout the binary was built from, the one
+installed beside it by the one-line install, else from
 `/Applications/Reviewer.app`. It is started detached through a login shell
 and left running when the TUI quits — the Mac app and the
 `resolve-reviewer-comments` skill share it. Its output goes to
