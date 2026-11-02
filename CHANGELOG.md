@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.38 — 2026-11-02
+
+### Fixed
+
+- In a workspace, moving to another repository keeps the page you're on instead of jumping to the first open tab. It shows that repository's own tab, or nothing if it has none.
+- A session tab's ✕ appears exactly where its activity dot sits, and clicking it always closes the tab.
+
 ## v0.0.37 — 2026-11-02
 
 ### Added
