@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 
 import { BlockWordmark } from "#/components/block-wordmark";
 import { Container } from "#/components/container";
-import { GitHub } from "#/components/icons";
 import { ISSUES_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
 
 const LINK =
@@ -73,30 +72,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-24 overflow-hidden border-t border-black/[0.06] pt-12 sm:mt-36 sm:pt-20 dark:border-white/[0.08]">
       <Container>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[1.4fr_repeat(3,1fr)] sm:gap-x-8">
-          <div className="col-span-2 flex flex-col gap-5 sm:col-span-1">
-            <p className="max-w-xs text-[15px] leading-relaxed text-pretty text-neutral-500 lg:text-base dark:text-neutral-400">
-              The Mac app and the terminal app are free and open source. Made by{" "}
-              <a
-                className="text-neutral-700 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
-                href="https://darnadigital.com"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Darna Digital
-              </a>
-              .
-            </p>
-            <a
-              aria-label="Reviewer on GitHub"
-              className="w-fit text-neutral-400 transition-colors hover:text-neutral-900 dark:text-neutral-500 dark:hover:text-white"
-              href={REPO_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <GitHub className="size-6" />
-            </a>
-          </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 sm:gap-x-8">
           {COLUMNS.map((column) => (
             <div className="flex flex-col gap-3" key={column.title}>
               <p className="text-[13px] font-semibold text-neutral-900 lg:text-sm dark:text-white">
