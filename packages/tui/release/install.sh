@@ -220,16 +220,22 @@ if [ -n "$found" ] && [ "$found" != "$link" ] && [ "$(readlink "$found" 2>/dev/n
   say "Note: another reviewer is on PATH (${found}) — remove it, or it may run instead of this release."
 fi
 
-# The app icon's mark — its 3×4 grid of cells, a cell to two columns so they
-# come out square — set beside the words, as the site's lockup sets the
-# wordmark. Only for a terminal; a log gets the plain line.
+# The site's lockup, the mark and the wordmark, drawn from its SVG at 16px
+# tall (a half block to a pixel, so its rows join up). Only for a terminal;
+# a log gets the plain line.
 if [ -t 1 ]; then
-  b="$(printf '\033[1m')" d="$(printf '\033[2m')" r="$(printf '\033[0m')"
-  printf '\n'
-  printf '  %s██████%s\n' "$b" "$r"
-  printf '  %s██  ██%s   %sReviewer %s%s is installed.\n' "$b" "$r" "$b" "$version" "$r"
-  printf '  %s████  %s   %sRun %sreviewer%s%s in a repository.%s\n' "$b" "$r" "$d" "$r$b" "$r" "$d" "$r"
-  printf '  %s██  ██%s\n\n' "$b" "$r"
+  printf '\n\033[1m'
+  cat <<'LOGO'
+████████████
+████████████    ▄▄▄▄▄▄                ▄▄
+████    ████    ██   ██               ▀▀
+████    ████    ██▄▄▄█▀ ▄█▀▀█▄ ██  ██ ██ ▄█▀▀█▄ ██ ██ ██ ▄█▀▀█▄ ██▄█▀▀
+████████        ██   ██ ██▀▀▀▀ ▀█▄▄█▀ ██ ██▀▀▀▀ ██ ██ ██ ██▀▀▀▀ ██
+████████        ██   ██ ▀█▄▄█▀  ▀██▀  ██ ▀█▄▄█▀ ▀██▀▀██▀ ▀█▄▄█▀ ██
+████    ████
+████    ████
+LOGO
+  printf '\033[0m\n\033[1mReviewer %s\033[0m is installed. Run \033[1mreviewer\033[0m in a repository.\n\n' "$version"
 else
   say "Reviewer ${version} is installed. Run \`reviewer\` in a repository."
 fi
