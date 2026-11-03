@@ -55,8 +55,8 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * The chosen app: what it is and how to get it on the left, the facts under
- * that, and the app itself on the right.
+ * The chosen app in one column: what it is and how to get it, the facts
+ * under that, then the app itself across the card.
  */
 function AppPanel({
   name,
@@ -75,9 +75,9 @@ function AppPanel({
 }) {
   return (
     <div
-      className={`${SURFACE} grid grid-cols-1 gap-8 overflow-hidden p-5 sm:p-10 lg:grid-cols-2 lg:items-center lg:gap-12 lg:p-12`}
+      className={`${SURFACE} flex flex-col gap-8 overflow-hidden p-5 sm:gap-10 sm:p-10 lg:gap-12 lg:p-12`}
     >
-      <div className="flex flex-col items-start gap-6">
+      <div className="flex w-full max-w-xl flex-col items-start gap-6">
         <div className="flex flex-col gap-3">
           <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-[30px] lg:text-4xl">
             {name}
