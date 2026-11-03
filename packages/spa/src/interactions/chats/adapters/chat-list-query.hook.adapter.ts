@@ -11,22 +11,19 @@ import { useMemo } from "react";
 import { useChatFilters } from "@/interactions/chats/adapters/chat-filters.store";
 import {
   chatListFilters,
-  resolveProjectFilter,
+  resolvePlaceFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
-import { useChatProjects } from "@/lib/queries";
+import { NO_PLACES, useChatPlaces } from "@/lib/queries";
 import type { ChatListFilters } from "@/lib/queries";
-import type { ChatProjectTally } from "@reviewer/core/chats";
-
-const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 
 export function useChatListQuery(): ChatListFilters {
-  // Over every session rather than over the pages loaded so far: a project the
-  // reader has not scrolled to is still a project they can narrow to.
-  const projects = useChatProjects().data ?? EMPTY_PROJECTS;
+  // Over every session rather than over the pages loaded so far: a place the
+  // reader has not scrolled to is still a place they can narrow to.
+  const places = useChatPlaces().data ?? NO_PLACES;
   const stored = useChatFilters();
-  const project = resolveProjectFilter(projects, stored.project);
+  const place = resolvePlaceFilter(places, stored.place);
   return useMemo(
-    () => chatListFilters(project, stored.date),
-    [project, stored.date]
+    () => chatListFilters(place, stored.date),
+    [place, stored.date]
   );
 }

@@ -1,11 +1,10 @@
-import * as Schema from "effect/Schema";
 import {
   ChatBusy,
   Chat,
   ChatListQuery,
   ChatModelCatalog,
   ChatPage,
-  ChatProjectTally,
+  ChatPlaces,
   ChatIdParam,
   NewChat,
   SendChatMessage,
@@ -46,10 +45,11 @@ export class ChatsApi extends HttpApiGroup.make("chats")
     })
   )
   .add(
-    // Likewise ahead of /chats/:id. The filter menu's projects, over every
-    // session rather than over the pages the client happens to hold.
-    HttpApiEndpoint.get("projects", "/chats/projects", {
-      success: Schema.Array(ChatProjectTally),
+    // Likewise ahead of /chats/:id. The filter menu's workspaces and
+    // repositories, over every session rather than over the pages the client
+    // happens to hold.
+    HttpApiEndpoint.get("places", "/chats/places", {
+      success: ChatPlaces,
       error: errors,
     })
   )

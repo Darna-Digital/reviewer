@@ -4,13 +4,39 @@ import type {
   StoredChatFiltersDependencies,
 } from "../interfaces/chat-filters.interfaces";
 import {
-  ALL_PROJECTS,
+  ALL_PLACES,
   NO_FILTERS,
   type ChatFilters,
+  type PlaceFilter,
 } from "./chat-filters.functions";
 
 const isDateFilter = (value: unknown): value is DateFilter =>
   DATE_FILTERS.some((filter) => filter.value === value);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const parsePlace = (value: unknown): PlaceFilter => {
+  if (!isRecord(value)) return ALL_PLACES;
+  if (value.kind === "workspace" && typeof value.id === "string") {
+    return { kind: "workspace", id: value.id };
+  }
+  if (value.kind === "repo" && typeof value.path === "string") {
+    return { kind: "repo", path: value.path };
+  }
+  return ALL_PLACES;
+};
+
+/**
+ * Before workspaces the list was narrowed to a project folder, which for a
+ * folder holding one repository is that repository — so a stored project
+ * carries over as the repository of the same path, and a folder of several
+ * steps aside once the places arrive (see `resolvePlaceFilter`).
+ */
+const placeFromProject = (project: unknown): PlaceFilter =>
+  typeof project === "string" && project !== "all"
+    ? { kind: "repo", path: project }
+    : ALL_PLACES;
 
 /**
  * Stored filters are read back one field at a time: the time windows on offer
@@ -20,10 +46,13 @@ const isDateFilter = (value: unknown): value is DateFilter =>
 export const parseChatFilters = (raw: string | null): ChatFilters => {
   if (raw === null) return NO_FILTERS;
   try {
-    const parsed = JSON.parse(raw) as Partial<ChatFilters>;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return NO_FILTERS;
     return {
-      project:
-        typeof parsed.project === "string" ? parsed.project : ALL_PROJECTS,
+      place:
+        "place" in parsed
+          ? parsePlace(parsed.place)
+          : placeFromProject(parsed.project),
       date: isDateFilter(parsed.date) ? parsed.date : NO_FILTERS.date,
     };
   } catch {
@@ -38,7 +67,7 @@ export function createStoredChatFilters(
     load: () => parseChatFilters(d.sideEffects.read()),
     save: (filters) =>
       d.sideEffects.write(
-        JSON.stringify({ project: filters.project, date: filters.date })
+        JSON.stringify({ place: filters.place, date: filters.date })
       ),
   };
 }

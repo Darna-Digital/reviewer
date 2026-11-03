@@ -36,7 +36,7 @@ import {
 import {
   isChatUnread,
   unattendedTurnState,
-  type ChatProjectTally,
+  type ChatPlaces,
   type ChatSummary,
 } from "@reviewer/core/chats";
 
@@ -57,8 +57,8 @@ export interface ShellSessionsSource {
   readonly activeId: string | null;
   readonly loading: boolean;
   readonly hasMore: boolean;
-  readonly filters: Omit<ShellSessionFilters, "projects">;
-  readonly projects: ReadonlyArray<ChatProjectTally>;
+  readonly filters: Omit<ShellSessionFilters, "places">;
+  readonly places: ChatPlaces;
   readonly loadMore: () => void;
   /** The shell has asked what it needs to: a sweep is not confirmed again. */
   readonly remove: (ids: ReadonlyArray<string>) => void;
@@ -102,22 +102,22 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
   const loading = source?.loading ?? false;
   const hasMore = source?.hasMore ?? false;
   const filters = source?.filters ?? null;
-  const projects = source?.projects ?? null;
+  const places = source?.places ?? null;
   const list = useMemo<ShellSessions | null>(
     () =>
       shellDrawsSessions &&
       sessions !== null &&
       filters !== null &&
-      projects !== null
+      places !== null
         ? {
             sessions: sessions.map(sessionRow),
             activeId,
             loading,
             hasMore,
-            filters: { ...filters, projects },
+            filters: { ...filters, places },
           }
         : null,
-    [sessions, activeId, loading, hasMore, filters, projects]
+    [sessions, activeId, loading, hasMore, filters, places]
   );
   useEffect(() => {
     if (!shellDrawsSessions) return;
@@ -165,9 +165,7 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
           return current.search(action.text);
         case "filter":
           return setChatFilters({
-            ...(action.project === undefined
-              ? {}
-              : { project: action.project }),
+            ...(action.place === undefined ? {} : { place: action.place }),
             ...(action.date === undefined ? {} : { date: action.date }),
           });
       }

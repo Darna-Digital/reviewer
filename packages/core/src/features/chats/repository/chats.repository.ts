@@ -12,7 +12,7 @@ import type {
   ChatAccess,
   ChatEffort,
   ChatPage,
-  ChatProjectTally,
+  ChatPlaces,
   ChatProviderKind,
 } from "../schema/chats.schema.ts";
 
@@ -27,8 +27,10 @@ export interface ListChatsInput {
   readonly cursor: string | null;
   /** Free text over title, last message and project name. */
   readonly search: string | null;
-  /** A project's absolute path; null means every project. */
-  readonly projectPath: string | null;
+  /** A saved workspace's id; null means every workspace and none. */
+  readonly workspaceId: string | null;
+  /** A repository's absolute path; null means every repository. */
+  readonly repoPath: string | null;
   /** ISO timestamp — only sessions touched at or after it. */
   readonly since: string | null;
 }
@@ -54,11 +56,9 @@ export interface ChatsRepo {
   readonly list: (
     input: ListChatsInput
   ) => Effect.Effect<ChatPage, ChatsFailure>;
-  /** Every project holding a session, for the list's own filter menu. */
-  readonly projects: Effect.Effect<
-    ReadonlyArray<ChatProjectTally>,
-    ChatsFailure
-  >;
+  /** Every workspace and repository holding a session, for the list's own
+   * filter menu. */
+  readonly places: Effect.Effect<ChatPlaces, ChatsFailure>;
   readonly get: (id: string) => Effect.Effect<Chat, ChatsFailure>;
   readonly create: (
     input: CreateChatInput

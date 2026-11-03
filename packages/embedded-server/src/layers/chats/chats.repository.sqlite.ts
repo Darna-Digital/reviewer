@@ -24,7 +24,7 @@ import type {
 import {
   findChat,
   insertChat,
-  listChatProjects,
+  listChatPlaces,
   listChatSummaries,
   markChatSeen,
   nextChatId,
@@ -47,7 +47,7 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
   const list: ChatsRepo["list"] = (input) =>
     attempt(() => listChatSummaries(input));
 
-  const projects: ChatsRepo["projects"] = attempt(listChatProjects);
+  const places: ChatsRepo["places"] = attempt(listChatPlaces);
 
   const get: ChatsRepo["get"] = (id) => attempt(() => requireChat(id));
 
@@ -118,7 +118,7 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
 
   return {
     list,
-    projects,
+    places,
     get,
     create,
     update,

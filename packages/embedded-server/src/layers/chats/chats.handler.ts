@@ -16,7 +16,7 @@ export const ChatsHandler = HttpApiBuilder.group(Api, "chats", (handlers) =>
       Effect.flatMap(ChatsService, (s) => s.list(parseChatListQuery(query)))
     )
     .handle("models", () => Effect.flatMap(ChatsService, (s) => s.models))
-    .handle("projects", () => Effect.flatMap(ChatsService, (s) => s.projects))
+    .handle("places", () => Effect.flatMap(ChatsService, (s) => s.places))
     .handle("create", ({ payload }) =>
       Effect.flatMap(ChatsService, (s) =>
         s.create({

@@ -167,9 +167,10 @@ final class AppModel {
             page.send(TreeAction.intent(file))
         }
         palette.scopesSource = { [weak self] in self?.paletteScopes ?? [] }
-        palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
+        palette.onCheckout = { [weak self] ref, path in self?.checkout(ref, in: self?.root(at: path)) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
-        palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
+        palette.branchSource = { [weak self] path in self?.paletteBranches(of: self?.root(at: path)) ?? [] }
+        palette.branchChoicesSource = { [weak self] in self?.paletteBranchChoices() }
         // The web app keeps the gesture out of its inputs; here the one
         // input it could land in is the palette's own box, where two Shifts
         // in a row are typing, not a request to switch lists.

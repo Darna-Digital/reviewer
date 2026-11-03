@@ -57,7 +57,8 @@ export const parseChatListQuery = (query: ChatListQuery): ListChatsInput => {
       : DEFAULT_CHAT_PAGE_SIZE,
     cursor: trimmed(query.cursor),
     search: trimmed(query.q),
-    projectPath: trimmed(query.project),
+    workspaceId: trimmed(query.workspace),
+    repoPath: trimmed(query.repo),
     since: trimmed(query.since),
   };
 };
@@ -94,7 +95,7 @@ export const matchesChatFilters = (
   chat: ChatSummary,
   input: ListChatsInput
 ): boolean =>
-  (input.projectPath === null ||
-    chat.origin.projectPath === input.projectPath) &&
+  (input.workspaceId === null || chat.workspaceId === input.workspaceId) &&
+  (input.repoPath === null || chat.origin.repoPath === input.repoPath) &&
   (input.since === null || chat.updatedAt >= input.since) &&
   (input.search === null || matchesChatSearch(chat, input.search));

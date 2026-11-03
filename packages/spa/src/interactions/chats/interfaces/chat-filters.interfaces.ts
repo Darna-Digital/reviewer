@@ -1,6 +1,6 @@
 /**
- * The sessions list's filters outlive the page. Narrowing to one project is a
- * statement about what you are working on, not about this visit, so it survives
+ * The sessions list's filters outlive the page. Narrowing to one workspace or
+ * repository is a statement about what you are working on, not about this visit, so it survives
  * navigating away and reloading the window — the storage it survives in is
  * injected, which is what keeps the parsing testable without a browser.
  */

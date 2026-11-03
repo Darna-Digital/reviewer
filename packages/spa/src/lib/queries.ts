@@ -14,6 +14,7 @@ import { api, fetchClient } from "@/lib/api/client";
 import { repoInit } from "@/lib/repo-scope";
 import { island } from "@/lib/shell";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
+import type { ChatPlaces } from "@reviewer/core/chats";
 import type { ReviewComment } from "@reviewer/core/comments";
 
 /**
@@ -123,15 +124,18 @@ export const useThreads = () =>
 export interface ChatListFilters {
   /** Free text over title, last message and project name. */
   readonly search: string;
-  /** A project's absolute path; null is every project. */
-  readonly project: string | null;
+  /** A saved workspace's id; null is every workspace and none. */
+  readonly workspace: string | null;
+  /** A repository's absolute path; null is every repository. */
+  readonly repo: string | null;
   /** ISO timestamp; null is any time. */
   readonly since: string | null;
 }
 
 export const NO_CHAT_FILTERS: ChatListFilters = {
   search: "",
-  project: null,
+  workspace: null,
+  repo: null,
   since: null,
 };
 
@@ -197,9 +201,12 @@ export const recentChatsOptions = () =>
 /** The newest sessions — the top of the list, not all of it. */
 export const useRecentChats = () => useQuery(recentChatsOptions());
 
-/** Every project holding a session, for the list's filter menu. */
-export const useChatProjects = (enabled = true) =>
-  api.useQuery("get", "/api/chats/projects", {}, { ...OWN_DATA, enabled });
+/** Every workspace and repository holding a session, for the list's filter
+ * menu. */
+export const NO_PLACES: ChatPlaces = { workspaces: [], repos: [] };
+
+export const useChatPlaces = (enabled = true) =>
+  api.useQuery("get", "/api/chats/places", {}, { ...OWN_DATA, enabled });
 
 /** How many hits the search popover shows — one screenful, not a second list. */
 const SEARCH_HITS = 12;
@@ -230,7 +237,8 @@ const chatListQuery = (filters: ChatListFilters, cursor: string | null) => ({
   limit: String(CHAT_PAGE_SIZE),
   ...(cursor === null ? {} : { cursor }),
   ...(filters.search.trim().length === 0 ? {} : { q: filters.search.trim() }),
-  ...(filters.project === null ? {} : { project: filters.project }),
+  ...(filters.workspace === null ? {} : { workspace: filters.workspace }),
+  ...(filters.repo === null ? {} : { repo: filters.repo }),
   ...(filters.since === null ? {} : { since: filters.since }),
 });
 

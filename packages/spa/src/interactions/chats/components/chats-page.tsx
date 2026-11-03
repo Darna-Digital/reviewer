@@ -68,9 +68,9 @@ import {
   shellDrawsSessions,
   useShellSessions,
 } from "@/interactions/chats/components/chats-page.shell";
-import { resolveProjectFilter } from "@/interactions/chats/functions/chat-filters.functions";
+import { resolvePlaceFilter } from "@/interactions/chats/functions/chat-filters.functions";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
-import { useChatPages, useChatProjects } from "@/lib/queries";
+import { NO_PLACES, useChatPages, useChatPlaces } from "@/lib/queries";
 import {
   NO_ROWS,
   anchorRow,
@@ -80,27 +80,25 @@ import {
   type RowSelection,
 } from "@/lib/row-selection";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ChatProjectTally } from "@reviewer/core/chats";
 
 /** How close to the foot of the loaded list fetches the next page. */
 const LOAD_MORE_WITHIN_PX = 400;
 
-const NO_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
-
 /**
  * What the shell's filter menu shows: the stored filters as `SessionFilters`
- * reads them — the project resolved against the ones that exist — and the
- * projects it could name. Fetched only in the shell, where the menu is.
+ * reads them — the place resolved against the ones that exist — and the
+ * workspaces and repositories it could name. Fetched only in the shell, where
+ * the menu is.
  */
 function useShellFilters(search: string) {
-  const projects = useChatProjects(shellDrawsSessions).data ?? NO_PROJECTS;
+  const places = useChatPlaces(shellDrawsSessions).data ?? NO_PLACES;
   const stored = useChatFilters();
-  const project = resolveProjectFilter(projects, stored.project);
+  const place = resolvePlaceFilter(places, stored.place);
   const filters = useMemo(
-    () => ({ search, project, date: stored.date }),
-    [search, project, stored.date]
+    () => ({ search, place, date: stored.date }),
+    [search, place, stored.date]
   );
-  return { filters, projects };
+  return { filters, places };
 }
 
 export function ChatsPage() {
@@ -291,7 +289,7 @@ export function ChatsPage() {
           loading,
           hasMore,
           filters: shellFilters.filters,
-          projects: shellFilters.projects,
+          places: shellFilters.places,
           loadMore: () => void loadMore(),
           remove: (ids) => void removeConfirmed(ids),
           search: setShellSearch,

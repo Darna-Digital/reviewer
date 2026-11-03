@@ -135,6 +135,8 @@ export type Chat = typeof Chat.Type;
 export const ChatSummary = Schema.Struct({
   id: Schema.String,
   origin: ChatOrigin,
+  /** The saved workspace it was started in — null for a lone repository. */
+  workspaceId: Schema.NullOr(Schema.String),
   title: Schema.String,
   provider: ChatProviderKind,
   model: Schema.String,
@@ -172,8 +174,11 @@ export const ChatListQuery = Schema.Struct({
   cursor: Schema.optionalKey(Schema.String),
   /** Matches title, last message, and the project's name. */
   q: Schema.optionalKey(Schema.String),
-  /** A project's absolute path; absent means every project. */
-  project: Schema.optionalKey(Schema.String),
+  /** A saved workspace's id — only sessions started in it. */
+  workspace: Schema.optionalKey(Schema.String),
+  /** A repository's absolute path — only sessions whose agent ran in it,
+   * whether it was opened alone or inside a workspace. */
+  repo: Schema.optionalKey(Schema.String),
   /** ISO timestamp — only sessions touched at or after it. */
   since: Schema.optionalKey(Schema.String),
 });
@@ -191,17 +196,30 @@ export const ChatPage = Schema.Struct({
 export type ChatPage = typeof ChatPage.Type;
 
 /**
- * A project the sessions list can be narrowed to, and how many it holds. Drawn
- * from every session rather than from the loaded pages, so the menu offers the
- * same projects however far the reader has scrolled.
+ * Where the sessions list can be narrowed to — the saved workspaces and the
+ * repositories holding a session — and how many each holds. Drawn from every
+ * session rather than from the loaded pages, so the menu offers the same
+ * places however far the reader has scrolled.
  */
-export const ChatProjectTally = Schema.Struct({
-  /** The project folder's absolute path — the filter's value. */
+export const ChatWorkspaceTally = Schema.Struct({
+  /** The saved workspace's id — the filter's value. */
+  id: Schema.String,
+  name: Schema.String,
+  count: Schema.Number,
+});
+export type ChatWorkspaceTally = typeof ChatWorkspaceTally.Type;
+export const ChatRepoTally = Schema.Struct({
+  /** The repository's absolute path — the filter's value. */
   path: Schema.String,
   name: Schema.String,
   count: Schema.Number,
 });
-export type ChatProjectTally = typeof ChatProjectTally.Type;
+export type ChatRepoTally = typeof ChatRepoTally.Type;
+export const ChatPlaces = Schema.Struct({
+  workspaces: Schema.Array(ChatWorkspaceTally),
+  repos: Schema.Array(ChatRepoTally),
+});
+export type ChatPlaces = typeof ChatPlaces.Type;
 
 export const ChatModel = Schema.Struct({
   id: Schema.String,

@@ -37,7 +37,8 @@ const everything = {
   limit: 100,
   cursor: null,
   search: null,
-  projectPath: null,
+  workspaceId: null,
+  repoPath: null,
   since: null,
 } as const;
 

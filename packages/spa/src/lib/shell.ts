@@ -30,7 +30,8 @@ import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
 import type { NotifyKind } from "@/lib/notify";
 import type { CommitAgent } from "@/lib/ui-prefs";
-import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
+import type { PlaceFilter } from "@/interactions/chats/functions/chat-filters.functions";
+import type { ChatPlaces, ChatProviderKind } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
 
@@ -291,17 +292,16 @@ export interface ShellSession {
 
 /**
  * The three ways the web narrows the list — the rail's search, and the filter
- * popover's project and date — all of them part of what the page asks the
+ * popover's place and date — all of them part of what the page asks the
  * server for, so the shell's field and menu narrow every session rather than
- * the pages loaded so far. The projects are the ones the filter can name, with
- * how many sessions each holds. See `chatListFilters`.
+ * the pages loaded so far. The places are the workspaces and repositories the
+ * filter can name, with how many sessions each holds. See `chatListFilters`.
  */
 export interface ShellSessionFilters {
   readonly search: string;
-  /** `all`, or a project folder's absolute path. */
-  readonly project: string;
+  readonly place: PlaceFilter;
   readonly date: DateFilter;
-  readonly projects: ReadonlyArray<ChatProjectTally>;
+  readonly places: ChatPlaces;
 }
 
 /**
@@ -323,7 +323,7 @@ export type ShellSessionAction =
   | { readonly kind: "search"; readonly text: string }
   | {
       readonly kind: "filter";
-      readonly project?: string;
+      readonly place?: PlaceFilter;
       readonly date?: DateFilter;
     };
 
