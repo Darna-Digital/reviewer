@@ -89,7 +89,7 @@ export function SectionHeading({
   return (
     <h2
       className={cn(
-        "text-[30px] leading-[1.1] font-semibold tracking-[-0.025em] text-balance sm:text-[40px] lg:text-[52px]",
+        "text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] text-balance sm:text-[40px] lg:text-[52px]",
         className
       )}
     >
@@ -118,7 +118,7 @@ export function PageHero({
   return (
     <section className="flex flex-col items-start gap-6 pt-24 pb-10 sm:pt-36 sm:pb-14 lg:pt-44 lg:pb-16">
       {eyebrow}
-      <h1 className="max-w-3xl text-[36px] leading-[1.05] font-bold tracking-[-0.03em] text-balance sm:text-[52px] lg:max-w-4xl lg:text-[72px]">
+      <h1 className="max-w-3xl text-[36px] leading-[1.05] font-bold tracking-[-0.02em] text-balance sm:text-[52px] lg:max-w-4xl lg:text-[72px]">
         {title}
       </h1>
       <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">

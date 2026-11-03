@@ -83,7 +83,7 @@ function RecentlyShipped() {
   return (
     <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
       <div className="flex flex-col items-start gap-4">
-        <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.025em] sm:text-[36px] lg:text-[44px]">
+        <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
           Recently shipped
         </h2>
         <Link
@@ -188,7 +188,7 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
 function Questions() {
   return (
     <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
-      <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.025em] sm:text-[36px] lg:text-[44px]">
+      <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
         Questions
       </h2>
       <dl className="flex flex-col">
@@ -218,7 +218,7 @@ function Hero() {
   return (
     <Container>
       <section className="flex flex-col items-start gap-6 pt-24 sm:pt-36 lg:pt-44">
-        <h1 className="max-w-4xl text-[34px] leading-[1.12] font-semibold tracking-[-0.03em] text-balance sm:text-[52px] lg:text-[68px]">
+        <h1 className="max-w-4xl text-[34px] leading-[1.12] font-semibold tracking-[-0.02em] text-balance sm:text-[52px] lg:text-[68px]">
           Focused system for building software with agents
         </h1>
         <p className="max-w-2xl text-lg leading-relaxed text-pretty text-neutral-600 sm:text-xl dark:text-neutral-400">
