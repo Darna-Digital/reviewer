@@ -4,12 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { GetReviewerButtons } from "#/components/buttons";
 import { SURFACE, SectionHeading } from "#/components/card";
-import { Container } from "#/components/container";
+import { Container, HERO_WIDTH } from "#/components/container";
 import { ClaudeIcon, CodexIcon, ChevronRight } from "#/components/icons";
 import { MacFeatures } from "#/components/mac-features";
 import { TerminalFeatures } from "#/components/terminal-features";
 import { InlineMarkdown } from "#/components/release-notes";
 import { WaitlistForm } from "#/components/waitlist-form";
+import { CloudIllustration } from "#/components/cloud-illustration";
 import { Crossfade } from "#/components/segmented-control";
 import { getChangelog } from "#/lib/changelog";
 import { cn } from "#/lib/cn";
@@ -344,8 +345,7 @@ function PlacePicker({
   );
 }
 
-/** Reviewer Cloud has no screenshot, so its view goes straight to the waitlist. */
-function Stage({ place }: { place: Exclude<Place, "cloud"> }) {
+function Stage({ place }: { place: Place }) {
   return (
     <Crossfade
       value={place}
@@ -372,6 +372,14 @@ function Stage({ place }: { place: Exclude<Place, "cloud"> }) {
                 lazy={false}
                 name="tui-review"
               />
+            </div>
+          ),
+        },
+        {
+          value: "cloud",
+          node: (
+            <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
+              <CloudIllustration />
             </div>
           ),
         },
@@ -453,11 +461,9 @@ function Home() {
     <>
       <Hero />
       <PlacePicker onChange={setPlace} place={place} />
-      {place !== "cloud" && (
-        <Container>
-          <Stage place={place} />
-        </Container>
-      )}
+      <Container className={HERO_WIDTH}>
+        <Stage place={place} />
+      </Container>
       <Container
         className="fade-in mt-24 flex flex-col gap-24 sm:mt-36 sm:gap-36"
         key={place}

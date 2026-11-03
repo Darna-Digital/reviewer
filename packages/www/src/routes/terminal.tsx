@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { AppScreenshot } from "#/components/app-screenshot";
 import { PageHero } from "#/components/card";
-import { Container } from "#/components/container";
+import { Container, HERO_WIDTH } from "#/components/container";
 import { InstallCommand } from "#/components/install-command";
 import { TerminalFeatures } from "#/components/terminal-features";
 import { SITE_URL } from "#/lib/links";
@@ -44,7 +44,7 @@ function TerminalPage() {
         </PageHero>
       </Container>
 
-      <Container>
+      <Container className={HERO_WIDTH}>
         <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
           <AppScreenshot
             label="The terminal app reviewing a branch against main, with a comment on a changed line"

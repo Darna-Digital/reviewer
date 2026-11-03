@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { DownloadButton } from "#/components/buttons";
 import { PageHero } from "#/components/card";
-import { Container } from "#/components/container";
+import { Container, HERO_WIDTH } from "#/components/container";
 import { MacFeatures } from "#/components/mac-features";
 import { SITE_URL } from "#/lib/links";
 
@@ -39,7 +39,7 @@ function MacPage() {
         </PageHero>
       </Container>
 
-      <Container>
+      <Container className={HERO_WIDTH}>
         <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
           <AppScreenshot
             label="The Mac app showing a side-by-side diff of uncommitted changes, with the changed files beside it"
