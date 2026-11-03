@@ -435,8 +435,7 @@ function CloudSections() {
             is what we're building next.
           </SectionHeading>
           <p className="max-w-xl text-lg text-pretty text-neutral-600 dark:text-neutral-400">
-            Leave your email and we'll tell you when it opens. That's the only
-            email you'll get.
+            Leave your email and we'll tell you when it opens.
           </p>
           <div className="max-w-md">
             <WaitlistForm />
