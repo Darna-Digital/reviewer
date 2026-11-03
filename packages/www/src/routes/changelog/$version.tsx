@@ -2,7 +2,7 @@ import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 
 import { Container } from "#/components/container";
 import { ChevronLeft, ChevronRight } from "#/components/icons";
-import { ReleaseEntry } from "#/components/release-notes";
+import { PAST_RAIL, ReleaseEntry } from "#/components/release-notes";
 import { getChangelog } from "#/lib/changelog";
 import { SITE_URL } from "#/lib/links";
 
@@ -52,56 +52,68 @@ export const Route = createFileRoute("/changelog/$version")({
 });
 
 const STEP =
-  "group flex flex-col gap-1 rounded-2xl p-4 ring-1 ring-black/[0.06] transition-colors hover:bg-black/[0.03] dark:ring-white/[0.08] dark:hover:bg-white/[0.04]";
+  "group flex flex-col gap-0.5 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white";
 
+/**
+ * One release on its own, as conductor.build shows them: the way back above
+ * the notes, then the entry, then the releases either side of it.
+ */
 function ReleasePage() {
   const { release, latest, newer, older } = Route.useLoaderData();
 
   return (
     <Container className="pt-20 sm:pt-28 lg:pt-36">
-      <Link
-        className="mb-6 inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
-        to="/changelog"
-      >
-        <ChevronLeft className="size-4" />
-        Changelog
-      </Link>
+      <div className={PAST_RAIL}>
+        <Link
+          className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
+          to="/changelog"
+        >
+          <ChevronLeft className="size-4" />
+          Back to changelog
+        </Link>
+      </div>
 
       <ReleaseEntry latest={latest} release={release} standalone />
 
-      <nav
-        aria-label="Other releases"
-        className="grid grid-cols-2 gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
-      >
-        {older ? (
-          <Link
-            className={STEP}
-            params={{ version: older }}
-            to="/changelog/$version"
-          >
-            <span className="inline-flex items-center gap-1 text-sm text-neutral-500">
-              <ChevronLeft className="size-4" />
-              Previous
-            </span>
-            <span className="font-mono text-[15px]">{older}</span>
-          </Link>
-        ) : (
-          <span />
-        )}
-        {newer && (
-          <Link
-            className={`${STEP} items-end text-right`}
-            params={{ version: newer }}
-            to="/changelog/$version"
-          >
-            <span className="inline-flex items-center gap-1 text-sm text-neutral-500">
-              Next
-              <ChevronRight className="size-4" />
-            </span>
-            <span className="font-mono text-[15px]">{newer}</span>
-          </Link>
-        )}
-      </nav>
+      <div className={PAST_RAIL}>
+        <nav
+          aria-label="Other releases"
+          className="flex max-w-2xl justify-between gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
+        >
+          {older ? (
+            <Link
+              className={STEP}
+              params={{ version: older }}
+              to="/changelog/$version"
+            >
+              <span className="inline-flex items-center gap-1 text-sm">
+                <ChevronLeft className="size-4" />
+                Older
+              </span>
+              <span className="pl-5 font-mono text-[15px] text-neutral-900 dark:text-white">
+                {older}
+              </span>
+            </Link>
+          ) : (
+            <span />
+          )}
+          {newer && (
+            <Link
+              className={`${STEP} items-end`}
+              params={{ version: newer }}
+              to="/changelog/$version"
+            >
+              <span className="inline-flex items-center gap-1 text-sm">
+                Newer
+                <ChevronRight className="size-4" />
+              </span>
+              <span className="pr-5 font-mono text-[15px] text-neutral-900 dark:text-white">
+                {newer}
+              </span>
+            </Link>
+          )}
+        </nav>
+      </div>
     </Container>
   );
 }

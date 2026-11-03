@@ -44,10 +44,14 @@ function ReleaseNotes({ release }: { release: Release }) {
   );
 }
 
+/** Moves something into the notes' column, past the rail and its gap. */
+export const PAST_RAIL = "sm:pl-[200px]";
+
 /**
- * One release: its version and date in a rail, the notes beside it. In the
- * list the version links to the release's own page; on that page
- * (`standalone`) it is the page's heading instead.
+ * One release, as conductor.build sets them: its version and date in a rail,
+ * the notes beside it and a rule under the notes. In the list the heading
+ * links to the release's own page; on that page (`standalone`) it is the
+ * page's heading instead.
  */
 export function ReleaseEntry({
   release,
@@ -61,12 +65,7 @@ export function ReleaseEntry({
   const heading = release.title ?? `Reviewer ${release.version}`;
 
   return (
-    <article
-      className={cn(
-        "grid grid-cols-1 gap-4 py-10 sm:grid-cols-[160px_1fr] sm:gap-10 sm:py-14",
-        !standalone && "border-t border-black/[0.06] dark:border-white/[0.08]"
-      )}
-    >
+    <article className="grid grid-cols-1 gap-4 pt-10 sm:grid-cols-[160px_1fr] sm:gap-10 sm:pt-14">
       <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
         <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
           {release.version}
@@ -80,13 +79,19 @@ export function ReleaseEntry({
           </span>
         )}
       </div>
-      <div className="flex max-w-2xl flex-col gap-6">
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-6 pb-10 sm:pb-14",
+          !standalone &&
+            "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
+        )}
+      >
         {standalone ? (
-          <h1 className="text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
+          <h1 className="max-w-2xl text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
             {heading}
           </h1>
         ) : (
-          <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
+          <h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
             <Link
               className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
               params={{ version: release.version }}
@@ -96,7 +101,9 @@ export function ReleaseEntry({
             </Link>
           </h2>
         )}
-        <ReleaseNotes release={release} />
+        <div className="max-w-2xl">
+          <ReleaseNotes release={release} />
+        </div>
       </div>
     </article>
   );

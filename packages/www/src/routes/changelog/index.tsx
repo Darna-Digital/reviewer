@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { Container } from "#/components/container";
 import { ChevronLeft, ChevronRight } from "#/components/icons";
-import { ReleaseEntry } from "#/components/release-notes";
+import { PAST_RAIL, ReleaseEntry } from "#/components/release-notes";
 import { getChangelog } from "#/lib/changelog";
 import { RELEASES_URL, SITE_URL } from "#/lib/links";
 import { cn } from "#/lib/cn";
@@ -137,7 +137,7 @@ function Changelog() {
 
       <ol className="flex flex-col">
         {releases.map((release) => (
-          <li key={release.version}>
+          <li className="group" key={release.version}>
             <ReleaseEntry
               latest={release.version === latest}
               release={release}
@@ -146,7 +146,9 @@ function Changelog() {
         ))}
       </ol>
 
-      <Pagination page={page} pages={pages} />
+      <div className={PAST_RAIL}>
+        <Pagination page={page} pages={pages} />
+      </div>
     </Container>
   );
 }
