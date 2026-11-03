@@ -123,8 +123,9 @@ version: it reads `releases/latest/download/install-manifest.txt` (or
 `releases/download/vX.Y.Z/…` for `--version`), then installs into
 `~/.reviewer`:
 
-- `bin/reviewer`, a link to the release in use, put on `PATH` in the shell's
-  rc file;
+- `bin/reviewer`, a link to the release in use. When `~/.local/bin` is on
+  `PATH`, a link there makes `reviewer` run in the same terminal; otherwise
+  `bin` goes on `PATH` in the shell's rc file, which reaches new terminals;
 - `releases/<version>/`, the TUI and the server it starts when none answers;
 - `runtimes/node-v<pin>-<os>-<arch>/`, Node.js from nodejs.org, which the
   server runs on. It is kept per pin, so an upgrade that keeps the pin

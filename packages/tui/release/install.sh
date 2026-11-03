@@ -4,7 +4,8 @@
 #   curl -fsSL https://reviewer.sh/install | bash
 #
 # Installs the latest release (or `--version X.Y.Z`) into ~/.reviewer
-# (REVIEWER_HOME), and puts ~/.reviewer/bin on PATH unless `--no-modify-path`:
+# (REVIEWER_HOME), and unless `--no-modify-path` makes `reviewer` a command: a
+# link in ~/.local/bin when that is on PATH, or else ~/.reviewer/bin put on it:
 #
 #   ~/.reviewer/bin/reviewer                  → the release in use
 #   ~/.reviewer/releases/<version>/           the TUI and the Reviewer server
@@ -22,9 +23,9 @@
 # GitHub (a `file://` URL works) — how CI installs a release before it ships.
 #
 # Run it again to upgrade (`reviewer upgrade` does). To uninstall, remove
-# ~/.reviewer/bin, ~/.reviewer/releases and ~/.reviewer/runtimes and the PATH
-# line it added; the rest of ~/.reviewer is Reviewer's data, shared with the
-# Mac app.
+# ~/.reviewer/bin, ~/.reviewer/releases and ~/.reviewer/runtimes, and
+# ~/.local/bin/reviewer or the PATH line it added; the rest of ~/.reviewer is
+# Reviewer's data, shared with the Mac app.
 set -eu
 
 REPO="Darna-Digital/reviewer"
@@ -165,8 +166,19 @@ for cached in "${home}/runtimes"/*; do
 done
 
 bin="${home}/bin"
-on_path() { case ":${PATH}:" in *":${bin}:"*) return 0 ;; esac; return 1; }
-if [ "$modify_path" = 1 ] && ! on_path; then
+on_path() { case ":${PATH}:" in *":${1}:"*) return 0 ;; esac; return 1; }
+# This script cannot change the PATH of the shell that ran it. Most setups
+# already have ~/.local/bin on it, though, so a link there makes `reviewer`
+# run in this terminal straight away; it points at bin/reviewer, so upgrades
+# keep it current. A file there that is not a link is someone else's, and stays.
+local_bin="$HOME/.local/bin"
+shim="${local_bin}/reviewer"
+if [ "$modify_path" = 1 ] && ! on_path "$bin" && on_path "$local_bin" &&
+  { [ -L "$shim" ] || [ ! -e "$shim" ]; }; then
+  mkdir -p "$local_bin"
+  ln -s "$link" "${shim}.partial"
+  mv -f "${shim}.partial" "$shim"
+elif [ "$modify_path" = 1 ] && ! on_path "$bin"; then
   shown_bin="$(printf '%s' "$bin" | sed "s|^${HOME}|\$HOME|")"
   case "$(basename "${SHELL:-sh}")" in
     zsh)
@@ -191,10 +203,12 @@ if [ "$modify_path" = 1 ] && ! on_path; then
     mkdir -p "$(dirname "$config")"
     if ! grep -qsF "$line" "$config"; then
       printf '\n# Reviewer\n%s\n' "$line" >>"$config"
-      say "Added ${shown_bin} to PATH in ${config} — open a new terminal, or run: ${line}"
+      say "Added ${shown_bin} to PATH in ${config}."
     fi
+    # Said on every run: this terminal lacks it even when the config already had it.
+    say "New terminals have reviewer. To run it in this one now: ${line}"
   else
-    say "Add ${shown_bin} to PATH: ${line}"
+    say "Add ${shown_bin} to PATH to run reviewer: ${line}"
   fi
 fi
 if [ -n "${GITHUB_PATH:-}" ]; then
@@ -202,7 +216,7 @@ if [ -n "${GITHUB_PATH:-}" ]; then
 fi
 
 found="$(command -v reviewer 2>/dev/null || true)"
-if [ -n "$found" ] && [ "$found" != "$link" ]; then
+if [ -n "$found" ] && [ "$found" != "$link" ] && [ "$(readlink "$found" 2>/dev/null)" != "$link" ]; then
   say "Note: another reviewer is on PATH (${found}) — remove it, or it may run instead of this release."
 fi
 
