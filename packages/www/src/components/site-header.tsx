@@ -26,6 +26,8 @@ const ACTIVE_LINK = { className: "text-neutral-900 dark:text-white" };
 type MenuItem = {
   title: string;
   badge?: string;
+  /** Shown only where the header hides its own link. */
+  mobileOnly?: boolean;
 } & ({ to: "/mac" | "/terminal" | "/cloud" | "/changelog" } | { href: string });
 
 const MENU: { heading: string; items: MenuItem[] }[] = [
@@ -40,7 +42,7 @@ const MENU: { heading: string; items: MenuItem[] }[] = [
   {
     heading: "Resources",
     items: [
-      { to: "/changelog", title: "Changelog" },
+      { to: "/changelog", title: "Changelog", mobileOnly: true },
       { href: REPO_URL, title: "Source code" },
       { href: RELEASES_URL, title: "Releases" },
     ],
@@ -127,7 +129,7 @@ function ProductMenu() {
               {items.map((item) =>
                 "to" in item ? (
                   <Link
-                    className={MENU_LINK}
+                    className={cn(MENU_LINK, item.mobileOnly && "sm:hidden")}
                     key={item.title}
                     onClick={close}
                     to={item.to}
