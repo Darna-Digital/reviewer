@@ -2,6 +2,7 @@ import type { TextareaRenderable } from '@opentui/core';
 import { useRenderer, useTerminalDimensions } from '@opentui/react';
 import type { ReviewComment } from '@reviewer/core/comments';
 import type { DevCommand } from '@reviewer/core/local-dev';
+import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import * as React from 'react';
@@ -24,6 +25,7 @@ import type { Branch } from '../git/refs';
 import type { MergeMethod } from '../github/client';
 import { mergeBlockedReason, mergeCaution } from '../github/pullStatus';
 import { stopAllSessions } from '../process/ptySession';
+import { installedRelease, linkedBinary } from '../release/install';
 import { fileIcons } from '../render/fileIcons';
 import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
@@ -54,6 +56,7 @@ import { usePulls } from './usePulls';
 import type { RepoPull } from './usePulls';
 import { useReview } from './useReview';
 import { useServer } from './useServer';
+import { useUpdate } from './useUpdate';
 import { useServices } from './useServices';
 import { useSymbols } from './useSymbols';
 import type { SymbolSpot } from './useSymbols';
@@ -206,6 +209,7 @@ export function useApp(props: AppProps) {
     props.focus,
   );
   useServer(review, props.startServer ?? false);
+  const update = useUpdate(review);
   const pulls = usePulls(review);
   const [now, setNow] = React.useState(Date.now);
   const [focus, setFocusState] = React.useState<Focus>('main');
@@ -1387,6 +1391,18 @@ export function useApp(props: AppProps) {
       store.close();
       process.exit(0);
     },
+    /** Quits into the release installed since launch, opened as this one was. */
+    restart() {
+      const release = installedRelease();
+      if (!release || !update.installed) return;
+      stopAllSessions();
+      renderer.destroy();
+      store.close();
+      const next = spawnSync(linkedBinary(release.home), Bun.argv.slice(2), {
+        stdio: 'inherit',
+      });
+      process.exit(next.status ?? 0);
+    },
   };
   const latestActions = React.useRef(actions);
   latestActions.current = actions;
@@ -1408,6 +1424,7 @@ export function useApp(props: AppProps) {
     branches,
     services,
     pulls,
+    update,
     activeView,
     focus,
     typing,

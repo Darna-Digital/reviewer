@@ -3,7 +3,10 @@ name: release
 # A push to `main` whose root package.json carries a version that has not been
 # released yet builds Reviewer.app, signs it with the Developer ID certificate,
 # notarizes and staples it, and publishes the disk image as GitHub release
-# vX.Y.Z of this repository, with the appcast.xml installed apps update from. Bumping the version is the "ship it" signal: a
+# vX.Y.Z of this repository, with the appcast.xml installed apps update from —
+# and beside it the TUI's tarballs for macOS and Linux and the
+# install-manifest.txt that `curl -fsSL https://reviewer.sh/install | bash`
+# reads. Bumping the version is the "ship it" signal: a
 # push that leaves package.json alone starts no run at all, and one that edits
 # it without a new version stops at the first, seconds-long job. Nothing else —
 # no other branch, no pull request — releases anything. See RELEASING.md.
@@ -63,8 +66,54 @@ jobs:
     if: needs.version.outputs.publish == 'true'
     uses: ./.github/workflows/check.yml
 
-  release:
+  # The TUI with the server it starts, one tarball per platform, each built
+  # and smoke-tested on a runner of its own platform: OpenTUI's native core
+  # and node-pty's prebuilt only install for the machine they run on. The
+  # macOS ones are signed and notarized with the app's certificate.
+  tui:
     needs: [version, check]
+    strategy:
+      matrix:
+        include:
+          - { runner: macos-15, platform: darwin-arm64 }
+          - { runner: macos-15-intel, platform: darwin-x64 }
+          - { runner: ubuntu-24.04, platform: linux-x64 }
+          - { runner: ubuntu-24.04-arm, platform: linux-arm64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-tui
+
+      - if: runner.os == 'macOS'
+        uses: ./.github/actions/codesign
+        with:
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          api-key: ${{ secrets.APPLE_API_KEY }}
+
+      - name: Package the TUI
+        id: package
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          # assigned first, so a failed build fails the step
+          path="$(packages/tui/release/package.sh "$RUNNER_TEMP/tui")"
+          echo "path=${path}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test the tarball
+        run: packages/tui/release/smoke.sh "${{ steps.package.outputs.path }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tui-${{ matrix.platform }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+
+  release:
+    needs: [version, check, tui]
     # Xcode 27 and its macOS 27 SDK: the app's tabs take the system's macOS 27
     # tabs role (see `SegmentedTabs`), which the macOS 26 image's Xcode 26
     # cannot build. GitHub still marks this image a preview.
@@ -92,29 +141,13 @@ jobs:
 
       - uses: ./.github/actions/setup-mac
 
-      - name: Import the Developer ID certificate
-        uses: apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466
+      # bundle.sh signs for notarization only when handed a Developer ID
+      # identity by name; this exports it as SIGN_IDENTITY.
+      - uses: ./.github/actions/codesign
         with:
-          keychain: build
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-
-      # bundle.sh signs for notarization (hardened runtime, timestamps) only
-      # when handed a Developer ID identity by name, so the name is read back
-      # from the keychain rather than kept in a secret of its own.
-      - name: Resolve the signing identity
-        run: |
-          identity="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application: .*\)"$/\1/p' | head -1)"
-          if [[ -z "$identity" ]]; then
-            echo "::error::No Developer ID Application identity in APPLE_CERTIFICATE."
-            exit 1
-          fi
-          echo "SIGN_IDENTITY=${identity}" >> "$GITHUB_ENV"
-
-      - name: Write the App Store Connect API key
-        run: |
-          echo "${{ secrets.APPLE_API_KEY }}" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
-          echo "APPLE_API_KEY_PATH=$RUNNER_TEMP/apple-api-key.p8" >> "$GITHUB_ENV"
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          api-key: ${{ secrets.APPLE_API_KEY }}
 
       - name: Build and sign Reviewer.app
         run: pnpm build:mac
@@ -176,9 +209,23 @@ jobs:
           cat "$appcast"
           echo "path=${appcast}" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tui-*
+          path: ${{ runner.temp }}/tui
+          merge-multiple: true
+
+      # Written once every tarball exists, so a published release always
+      # lists a checksum for each file the install script fetches.
+      - name: Write the install manifest
+        run: |
+          packages/tui/release/manifest.sh "$RUNNER_TEMP/tui" > "$RUNNER_TEMP/tui/install-manifest.txt"
+          cat "$RUNNER_TEMP/tui/install-manifest.txt"
+
       # The appcast rides on the same release as the image it names, so the
       # feed at releases/latest/download/appcast.xml always points at a disk
-      # image that exists. The body is the same notes the update window
+      # image that exists. The TUI's tarballs and manifest ride along too, so
+      # releases/latest/download/install-manifest.txt names tarballs that exist. The body is the same notes the update window
       # shows, plus a compare link to the previous release.
       - name: Publish the release
         env:
@@ -191,6 +238,8 @@ jobs:
             cat "$NOTES"
             echo
             echo "Signed and notarized. For Apple silicon Macs on macOS 26 or later."
+            echo
+            echo "The terminal UI, for macOS and Linux: \`curl -fsSL https://reviewer.sh/install | bash\`"
             if [[ -n "$PREVIOUS" ]]; then
               echo
               echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/v${PREVIOUS}...v${VERSION}"
@@ -199,7 +248,7 @@ jobs:
           if [[ "$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
             gh release delete "v${VERSION}" --repo "$GITHUB_REPOSITORY" --yes
           fi
-          gh release create "v${VERSION}" "$DMG" "$APPCAST" \
+          gh release create "v${VERSION}" "$DMG" "$APPCAST" "$RUNNER_TEMP"/tui/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Reviewer v${VERSION}" \

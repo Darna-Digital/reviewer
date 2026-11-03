@@ -1,28 +1,30 @@
 # Releasing Reviewer
 
-Reviewer ships as one thing: the native macOS app in `packages/mac-os`,
-distributed as a signed, notarized disk image on this repository's GitHub
-releases. There is one channel and no beta.
+Reviewer ships as two things on one version: the native macOS app in
+`packages/mac-os`, a signed, notarized disk image; and the terminal UI in
+`packages/tui`, a tarball per platform that `curl -fsSL
+https://reviewer.sh/install | bash` installs. Both ride on the same GitHub
+release `vX.Y.Z` of this repository. There is one channel and no beta.
 
 ## Branches
 
-| Branch          | What it is                         | What a push does                              |
-| --------------- | ---------------------------------- | --------------------------------------------- |
-| feature branch  | work in progress                   | nothing — its pull request runs CI            |
-| `staging`       | where development happens          | nothing                                       |
-| `main`          | what has shipped, or is shipping   | releases, **if** the version is new           |
+| Branch         | What it is                       | What a push does                    |
+| -------------- | -------------------------------- | ----------------------------------- |
+| feature branch | work in progress                 | nothing — its pull request runs CI  |
+| `staging`      | where development happens        | nothing                             |
+| `main`         | what has shipped, or is shipping | releases, **if** the version is new |
 
 Work lands on `staging` through pull requests. Promote it with a
 `staging` → `main` merge.
 
 ## CI and CD
 
-| Workflow         | Trigger                    | Does                                                                 |
-| ---------------- | -------------------------- | -------------------------------------------------------------------- |
-| `check.yml`      | every pull request         | lint, format check, tests (Ubuntu)                                   |
-| `mac.yml`        | pull requests (not www/docs-only) | builds `Reviewer.app` on `xcode-27`, ad-hoc signed — proves it still builds |
-| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish with its Sparkle appcast, then redeploy reviewer.sh |
-| `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                        |
+| Workflow         | Trigger                                | Does                                                                                                                                           |
+| ---------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check.yml`      | every pull request                     | lint, format check, tests (Ubuntu); packs the TUI and installs it with the one-line installer                                                  |
+| `mac.yml`        | pull requests (not www/docs-only)      | builds `Reviewer.app` on `xcode-27`, ad-hoc signed — proves it still builds                                                                    |
+| `release.yml`    | push to `main` changing `package.json` | if the version is unreleased: check, build, sign, notarize, publish with its Sparkle appcast and the TUI's tarballs, then redeploy reviewer.sh |
+| `deploy-www.yml` | push to `main` touching `packages/www` | deploys reviewer.sh                                                                                                                            |
 
 `release.yml` only starts for a push to `main` that changes the root
 `package.json`, so merges that don't touch it start no run at all. It then
@@ -47,11 +49,20 @@ If there isn't:
 4. The release notes are the version's entry in `CHANGELOG.md` (the
    section under `## vX.Y.Z`). Without one, the run warns and falls back to
    the commit subjects since the previous version.
-5. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
+5. Beside it, the `tui` job builds the terminal UI on a runner of each
+   platform — macOS arm64 and x64, Linux arm64 and x64 — with
+   `packages/tui/release/package.sh`: the Bun-compiled binary, version
+   stamped in, and the server bundle with node-pty's prebuilt for that
+   platform. The macOS ones are signed with the same certificate and
+   notarized. `smoke.sh` boots each tarball's server before it is kept.
+   `manifest.sh` then writes `install-manifest.txt`: the version, the
+   Node.js pin, and the SHA-256 of every tarball and of nodejs.org's tarball
+   for the pin.
+6. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
    image, its EdDSA signature (made with `SPARKLE_PRIVATE_KEY`), and those
    notes for the update window to show.
-6. `gh release create vX.Y.Z` publishes the image and the appcast as the
-   latest release, with the same notes and a compare link to the previous
+7. `gh release create vX.Y.Z` publishes the image, the appcast, the TUI's
+   tarballs and the manifest as the latest release, with the same notes and a compare link to the previous
    version as its body.
 
 A run that fails midway leaves no published release, so re-running it (or
@@ -66,7 +77,7 @@ build time. The Info.plist values in the repository are never read.
 
 - Every release is a **patch**: `0.0.1` → `0.0.2` → `0.0.3` …
 - Plain `X.Y.Z` semver only. `0.0.1.1` is not a version, and a prerelease
-  like `0.0.2-1` sorts *below* `0.0.2`. When in doubt, take the next patch.
+  like `0.0.2-1` sorts _below_ `0.0.2`. When in doubt, take the next patch.
 - **Taken tags.** The retired Electron app released `v0.1.0` and
   `v0.2.0`–`v0.2.8` here. `release.yml` never overwrites a release it
   didn't make; a version that collides fails the run. A minor bump, if one
@@ -104,18 +115,55 @@ steps.
   `https://reviewer.sh/latest.json` and offer the release page; installing
   one Sparkle build by hand moves them onto in-place updates.
 
+## The terminal UI
+
+`reviewer.sh/install` serves `packages/tui/release/install.sh`. It holds no
+version: it reads `releases/latest/download/install-manifest.txt` (or
+`releases/download/vX.Y.Z/…` for `--version`), then installs into
+`~/.reviewer`:
+
+- `bin/reviewer`, a link to the release in use, put on `PATH` in the shell's
+  rc file;
+- `releases/<version>/`, the TUI and the server it starts when none answers;
+- `runtimes/node-v<pin>-<os>-<arch>/`, Node.js from nodejs.org, which the
+  server runs on. It is kept per pin, so an upgrade that keeps the pin
+  downloads only the release, about 35 MB.
+
+Every download is checked against the manifest before it is unpacked. The
+release used before stays, so a server it started keeps running through an
+upgrade; older ones, and runtimes nothing links, are removed. `reviewer
+upgrade` runs the installer again, and the TUI says when a newer release is
+out.
+
+Two runtimes are pinned, each in one file: Node.js in
+`packages/embedded-server/node-version` (the app's bundled Node and the
+TUI's server both read it; bump it for a Node security release) and Bun in
+`packages/tui/.bun-version` (compiled into the TUI). Linux builds need glibc;
+there is no musl or Windows build yet.
+
+To try a release before it ships, pack one and point the installer at it:
+
+```bash
+pnpm --filter @reviewer/embedded-server build:bundle
+packages/tui/release/package.sh /tmp/release
+packages/tui/release/manifest.sh /tmp/release > /tmp/release/install-manifest.txt
+REVIEWER_RELEASE_URL=file:///tmp/release REVIEWER_HOME=/tmp/reviewer-home sh packages/tui/release/install.sh
+```
+
 ## Secrets
 
 Set in **Settings → Secrets and variables → Actions** of `Darna-Digital/reviewer`:
 
-| Secret                       | What                                                       |
-| ---------------------------- | ---------------------------------------------------------- |
-| `APPLE_CERTIFICATE`          | base64 of the Developer ID Application `.p12`              |
-| `APPLE_CERTIFICATE_PASSWORD` | that `.p12`'s password                                     |
-| `APPLE_API_KEY`              | base64 of the App Store Connect API key (`.p8`)            |
-| `APPLE_API_KEY_ID`           | that key's ID                                              |
-| `APPLE_API_ISSUER`           | that key's issuer UUID                                     |
-| `SPARKLE_PRIVATE_KEY`        | the EdDSA key the appcast signs the disk image with        |
+| Secret                       | What                                                |
+| ---------------------------- | --------------------------------------------------- |
+| `APPLE_CERTIFICATE`          | base64 of the Developer ID Application `.p12`       |
+| `APPLE_CERTIFICATE_PASSWORD` | that `.p12`'s password                              |
+| `APPLE_API_KEY`              | base64 of the App Store Connect API key (`.p8`)     |
+| `APPLE_API_KEY_ID`           | that key's ID                                       |
+| `APPLE_API_ISSUER`           | that key's issuer UUID                              |
+| `SPARKLE_PRIVATE_KEY`        | the EdDSA key the appcast signs the disk image with |
+
+The TUI's macOS builds use the same Apple secrets; it needs none of its own.
 
 `GITHUB_TOKEN` is built in; it publishes the release.
 

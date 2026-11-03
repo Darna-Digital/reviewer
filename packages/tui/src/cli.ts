@@ -3,8 +3,10 @@ import { parseArgs } from 'node:util';
 import { DEFAULT_LIGHT_THEME } from '@reviewer/themes';
 
 export const USAGE = `Usage: reviewer [path…] [options]
+       reviewer upgrade [version]
 
   Several paths open their repositories side by side, as one workspace.
+  \`upgrade\` installs the latest release, or the version given, over this one.
 
 Options:
   -w, --workspace <name>  open a saved workspace (the Mac app's too)
@@ -17,6 +19,7 @@ Options:
   --light           this run only: the light default theme
   --no-server       do not start the Reviewer server when it is not running
   --themes          list the themes
+  -v, --version     print the version
   -h, --help        show this help`;
 
 export interface CliOptions {
@@ -24,6 +27,9 @@ export interface CliOptions {
   paths: string[];
   workspace?: string;
   listWorkspaces: boolean;
+  /** `reviewer upgrade [version]`: `''` for the latest. */
+  upgrade?: string;
+  version: boolean;
   against?: string;
   commit?: string;
   pr?: string;
@@ -47,17 +53,22 @@ export function parseCli(argv: string[], env = process.env): CliOptions {
       themes: { type: 'boolean' },
       workspace: { type: 'string', short: 'w' },
       workspaces: { type: 'boolean' },
+      version: { type: 'boolean', short: 'v' },
       'no-server': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
   });
+  const upgrading = positionals[0] === 'upgrade';
+  const paths = upgrading ? [] : positionals;
   // Under `pnpm tui` the process starts in the workspace root; INIT_CWD is
   // where it was run from. Only trusted when a package script launched us.
   const invokedFrom = env['npm_lifecycle_event'] ? env['INIT_CWD'] : undefined;
   return {
-    paths: (positionals.length > 0 ? positionals : [invokedFrom ?? '.']).map(
-      (path) => resolve(path),
+    paths: (paths.length > 0 ? paths : [invokedFrom ?? '.']).map((path) =>
+      resolve(path),
     ),
+    upgrade: upgrading ? (positionals[1] ?? '') : undefined,
+    version: values.version ?? false,
     workspace: values.workspace,
     listWorkspaces: values.workspaces ?? false,
     against: values.against,

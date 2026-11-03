@@ -30,26 +30,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$out_dir"
 
-# `notarytool submit --wait` can exit non-zero on a rejected submission, and
-# the reason is only in the submission's log, so the status is read back from
-# its JSON rather than trusted from the exit code.
-notarize() {
-  local submission="$1" status id result
-  result="$(xcrun notarytool submit "$submission" \
-    --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" \
-    --wait --output-format json)" || true
-  status="$(plutil -extract status raw -o - - <<<"$result" 2>/dev/null || echo unknown)"
-  id="$(plutil -extract id raw -o - - <<<"$result" 2>/dev/null || echo "")"
-  echo "notarization of ${submission##*/}: ${status} ${id}" >&2
-  if [[ "$status" != "Accepted" ]]; then
-    echo "$result" >&2
-    if [[ -n "$id" ]]; then
-      xcrun notarytool log "$id" \
-        --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" >&2 || true
-    fi
-    exit 1
-  fi
-}
+notarize() { "$(dirname "$0")/notarize.sh" "$1"; }
 
 ditto -c -k --keepParent "$app" "${work}/Reviewer.zip"
 notarize "${work}/Reviewer.zip"

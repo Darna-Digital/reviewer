@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, openSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { installedServer } from '../release/install';
 
 /** The checkout `build:bin` compiled the binary from. */
 declare const REVIEWER_CHECKOUT: string | undefined;
@@ -45,8 +46,9 @@ export async function isServerUp(port = SERVER_PORT): Promise<boolean> {
 
 /**
  * How to start the server: from a Reviewer checkout (this one in
- * development, or the one the binary was built from), else from the
- * installed Reviewer.app's bundled Node.
+ * development, or the one the binary was built from), the one installed
+ * beside this binary by the one-line install, else the installed
+ * Reviewer.app's bundled Node.
  */
 export function findLaunch(env = process.env): Launch | null {
   const checkout = [
@@ -59,6 +61,14 @@ export function findLaunch(env = process.env): Launch | null {
       command: 'exec pnpm --filter @reviewer/embedded-server start',
       cwd: checkout,
       from: checkout,
+    };
+  }
+  const installed = installedServer();
+  if (installed) {
+    return {
+      command: `exec ${shellQuote(installed.node)} ${shellQuote(installed.main)}`,
+      cwd: homedir(),
+      from: dirname(installed.main),
     };
   }
   const app = APP_LOCATIONS.find((path) =>
