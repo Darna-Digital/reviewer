@@ -10,12 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CloudRouteImport } from './routes/cloud'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
+import { Route as MacRouteImport } from './routes/mac'
+import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as ChangelogIndexRouteImport } from './routes/changelog/index'
+import { Route as ChangelogVersionRouteImport } from './routes/changelog/$version'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CloudRoute = CloudRouteImport.update({
+  id: '/cloud',
+  path: '/cloud',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstallRoute = InstallRouteImport.update({
@@ -28,35 +38,100 @@ const LatestDotjsonRoute = LatestDotjsonRouteImport.update({
   path: '/latest.json',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MacRoute = MacRouteImport.update({
+  id: '/mac',
+  path: '/mac',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminalRoute = TerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogIndexRoute = ChangelogIndexRouteImport.update({
+  id: '/changelog/',
+  path: '/changelog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogVersionRoute = ChangelogVersionRouteImport.update({
+  id: '/changelog/$version',
+  path: '/changelog/$version',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cloud': typeof CloudRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/terminal': typeof TerminalRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cloud': typeof CloudRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/terminal': typeof TerminalRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/changelog': typeof ChangelogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cloud': typeof CloudRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/terminal': typeof TerminalRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/install' | '/latest.json'
+  fullPaths:
+    | '/'
+    | '/cloud'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/terminal'
+    | '/changelog/$version'
+    | '/changelog/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/install' | '/latest.json'
-  id: '__root__' | '/' | '/install' | '/latest.json'
+  to:
+    | '/'
+    | '/cloud'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/terminal'
+    | '/changelog/$version'
+    | '/changelog'
+  id:
+    | '__root__'
+    | '/'
+    | '/cloud'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/terminal'
+    | '/changelog/$version'
+    | '/changelog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CloudRoute: typeof CloudRoute
   InstallRoute: typeof InstallRoute
   LatestDotjsonRoute: typeof LatestDotjsonRoute
+  MacRoute: typeof MacRoute
+  TerminalRoute: typeof TerminalRoute
+  ChangelogVersionRoute: typeof ChangelogVersionRoute
+  ChangelogIndexRoute: typeof ChangelogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cloud': {
+      id: '/cloud'
+      path: '/cloud'
+      fullPath: '/cloud'
+      preLoaderRoute: typeof CloudRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/install': {
@@ -82,13 +164,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LatestDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mac': {
+      id: '/mac'
+      path: '/mac'
+      fullPath: '/mac'
+      preLoaderRoute: typeof MacRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminal': {
+      id: '/terminal'
+      path: '/terminal'
+      fullPath: '/terminal'
+      preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog/': {
+      id: '/changelog/'
+      path: '/changelog'
+      fullPath: '/changelog/'
+      preLoaderRoute: typeof ChangelogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog/$version': {
+      id: '/changelog/$version'
+      path: '/changelog/$version'
+      fullPath: '/changelog/$version'
+      preLoaderRoute: typeof ChangelogVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CloudRoute: CloudRoute,
   InstallRoute: InstallRoute,
   LatestDotjsonRoute: LatestDotjsonRoute,
+  MacRoute: MacRoute,
+  TerminalRoute: TerminalRoute,
+  ChangelogVersionRoute: ChangelogVersionRoute,
+  ChangelogIndexRoute: ChangelogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

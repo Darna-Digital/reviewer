@@ -2,20 +2,23 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
+import { SiteLayout } from "#/components/site-layout";
+import { getStarCount } from "#/lib/github-stars";
 import { SITE_URL } from "#/lib/links";
 import appCss from "../styles.css?url";
 
-const TITLE = "Reviewer: Understand AI-generated code";
+const TITLE = "Reviewer: focused system for building software with agents";
 const DESCRIPTION =
-  "In a world where we no longer write code, we spend a lot more time reviewing it. Reviewer is a delightful, smooth macOS app built precisely for that.";
+  "Read the change, comment on what's wrong and hand it back to Claude Code or Codex. Commit when you're sure.";
 const OG_IMAGE = {
   url: `${SITE_URL}/og-image.png`,
   width: "1200",
   height: "630",
-  alt: "Reviewer: Understand AI-generated code, above a side-by-side diff in the app",
+  alt: "Reviewer above a side-by-side diff in the Mac app",
 };
 
 export const Route = createRootRoute({
+  loader: async () => ({ stars: await getStarCount() }),
   head: () => ({
     meta: [
       {
@@ -87,7 +90,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <SiteLayout>{children}</SiteLayout>
         <TanStackDevtools
           config={{
             position: "bottom-right",

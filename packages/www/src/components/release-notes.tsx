@@ -1,0 +1,103 @@
+import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
+
+import { formatReleaseDate, type Release } from "#/lib/changelog";
+import { cn } from "#/lib/cn";
+
+/** The changelog's only inline markup is `code`; everything else is text. */
+export function InlineMarkdown({ text }: { text: string }) {
+  return text.split(/(`[^`]+`)/).map((part, index) =>
+    part.startsWith("`") && part.endsWith("`") && part.length > 1 ? (
+      <code
+        className="rounded-[5px] bg-black/[0.05] px-1 py-px font-mono text-[0.88em] dark:bg-white/[0.08]"
+        key={index}
+      >
+        {part.slice(1, -1)}
+      </code>
+    ) : (
+      <Fragment key={index}>{part}</Fragment>
+    )
+  );
+}
+
+/** A release's sections (Added, Changed, Fixed), each a heading and a list. */
+function ReleaseNotes({ release }: { release: Release }) {
+  return (
+    <div className="flex flex-col gap-7">
+      {release.sections.map((section, index) => (
+        <section className="flex flex-col gap-3" key={section.title ?? index}>
+          {section.title && (
+            <h3 className="text-[17px] font-semibold tracking-[-0.01em] lg:text-lg">
+              {section.title}
+            </h3>
+          )}
+          <ul className="flex list-disc flex-col gap-2.5 pl-5 text-[15px] leading-relaxed text-pretty text-neutral-700 marker:text-neutral-300 lg:text-base dark:text-neutral-300 dark:marker:text-neutral-600">
+            {section.items.map((item) => (
+              <li className="pl-1" key={item}>
+                <InlineMarkdown text={item} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One release: its version and date in a rail, the notes beside it. In the
+ * list the version links to the release's own page; on that page
+ * (`standalone`) it is the page's heading instead.
+ */
+export function ReleaseEntry({
+  release,
+  latest,
+  standalone = false,
+}: {
+  release: Release;
+  latest: boolean;
+  standalone?: boolean;
+}) {
+  const heading = release.title ?? `Reviewer ${release.version}`;
+
+  return (
+    <article
+      className={cn(
+        "grid grid-cols-1 gap-4 py-10 sm:grid-cols-[160px_1fr] sm:gap-10 sm:py-14",
+        !standalone && "border-t border-black/[0.06] dark:border-white/[0.08]"
+      )}
+    >
+      <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
+        <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
+          {release.version}
+        </span>
+        <time className="text-sm text-neutral-500" dateTime={release.date}>
+          {formatReleaseDate(release.date)}
+        </time>
+        {latest && (
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            Latest
+          </span>
+        )}
+      </div>
+      <div className="flex max-w-2xl flex-col gap-6">
+        {standalone ? (
+          <h1 className="text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
+            {heading}
+          </h1>
+        ) : (
+          <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
+            <Link
+              className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
+              params={{ version: release.version }}
+              to="/changelog/$version"
+            >
+              {heading}
+            </Link>
+          </h2>
+        )}
+        <ReleaseNotes release={release} />
+      </div>
+    </article>
+  );
+}
