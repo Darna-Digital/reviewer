@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.39 — 2026-11-03
+
+### Changed
+
+- The sessions list's filter narrows to a saved workspace, or to one repository whether you opened it alone or inside a workspace, in place of a project. Each choice shows how many sessions it holds.
+- In a workspace, every git action in the ⌘K palette asks which repository it's for first, as Push already did. Switch branch… lists the branches of the repository you pick, and Refresh and Create branch… ask too.
+
 ## v0.0.38 — 2026-11-02
 
 ### Fixed
