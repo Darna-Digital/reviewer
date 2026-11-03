@@ -71,8 +71,7 @@ export function SiteFooter() {
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-[1.4fr_repeat(3,1fr)] sm:gap-x-8">
           <div className="col-span-2 flex flex-col gap-5 sm:col-span-1">
             <p className="max-w-xs text-[15px] leading-relaxed text-pretty text-neutral-500 lg:text-base dark:text-neutral-400">
-              The Mac app and the terminal app are free and open source.
-              Reviewer Cloud will be paid. Made by{" "}
+              The Mac app and the terminal app are free and open source. Made by{" "}
               <a
                 className="text-neutral-700 transition-colors hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
                 href="https://darnadigital.com"
