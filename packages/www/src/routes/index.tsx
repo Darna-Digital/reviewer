@@ -5,8 +5,7 @@ import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { GetReviewerButtons } from "#/components/buttons";
 import { SURFACE, SectionHeading } from "#/components/card";
 import { Container } from "#/components/container";
-import { ClaudeIcon, CodexIcon, ChevronRight, Cloud } from "#/components/icons";
-import { MARK_PATH } from "#/components/logo";
+import { ClaudeIcon, CodexIcon, ChevronRight } from "#/components/icons";
 import { MacFeatures } from "#/components/mac-features";
 import { TerminalFeatures } from "#/components/terminal-features";
 import { InlineMarkdown } from "#/components/release-notes";
@@ -33,34 +32,6 @@ type Place = (typeof PLACES)[number]["value"];
 
 const CHIP =
   "inline-flex items-center gap-1.5 rounded-full align-[0.05em] bg-black/[0.04] px-2.5 py-0.5 font-medium text-neutral-800 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-200 dark:ring-white/[0.08]";
-
-/** Reviewer Cloud has no screenshot yet: its mark, and the way onto the list. */
-function CloudPlaceholder() {
-  return (
-    <div className="noir relative flex aspect-[2659/1714] flex-col items-center justify-center gap-4 overflow-hidden rounded-[min(2vw,12px)] px-6 text-center text-white">
-      <svg
-        aria-hidden="true"
-        className="absolute h-[80%] w-auto text-white/[0.05]"
-        fill="currentColor"
-        viewBox="0 0 300 400"
-      >
-        <path d={MARK_PATH} />
-      </svg>
-      <Cloud className="relative size-10 text-neutral-400" />
-      <p className="relative max-w-md text-lg text-pretty text-neutral-300 sm:text-xl">
-        Reviewer Cloud is the paid part of Reviewer, and what we're building
-        next.
-      </p>
-      <Link
-        className="relative inline-flex items-center gap-1 text-[15px] font-medium text-white"
-        to="/cloud"
-      >
-        Join the cloud waitlist
-        <ChevronRight className="size-4" />
-      </Link>
-    </div>
-  );
-}
 
 function SurfaceCard({
   to,
@@ -373,7 +344,8 @@ function PlacePicker({
   );
 }
 
-function Stage({ place }: { place: Place }) {
+/** Reviewer Cloud has no screenshot, so its view goes straight to the waitlist. */
+function Stage({ place }: { place: Exclude<Place, "cloud"> }) {
   return (
     <Crossfade
       value={place}
@@ -403,7 +375,6 @@ function Stage({ place }: { place: Place }) {
             </div>
           ),
         },
-        { value: "cloud", node: <CloudPlaceholder /> },
       ]}
     />
   );
@@ -482,9 +453,11 @@ function Home() {
     <>
       <Hero />
       <PlacePicker onChange={setPlace} place={place} />
-      <Container>
-        <Stage place={place} />
-      </Container>
+      {place !== "cloud" && (
+        <Container>
+          <Stage place={place} />
+        </Container>
+      )}
       <Container
         className="fade-in mt-24 flex flex-col gap-24 sm:mt-36 sm:gap-36"
         key={place}
