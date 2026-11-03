@@ -3,13 +3,17 @@ import { Link } from "@tanstack/react-router";
 import { BlockWordmark } from "#/components/block-wordmark";
 import { Container } from "#/components/container";
 import { GitHub } from "#/components/icons";
-import { DOWNLOAD_URL, ISSUES_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
+import { ISSUES_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
 
 const LINK =
   "text-[15px] text-neutral-500 transition-colors hover:text-neutral-900 lg:text-base dark:text-neutral-400 dark:hover:text-white";
 
 type FooterLink =
-  | { label: string; to: "/mac" | "/terminal" | "/cloud" | "/changelog" }
+  | {
+      label: string;
+      to:
+        "/mac" | "/terminal" | "/cloud" | "/download" | "/changelog" | "/about";
+    }
   | { label: string; href: string };
 
 const COLUMNS: Array<{ title: string; links: Array<FooterLink> }> = [
@@ -19,7 +23,7 @@ const COLUMNS: Array<{ title: string; links: Array<FooterLink> }> = [
       { label: "Mac app", to: "/mac" },
       { label: "Terminal app", to: "/terminal" },
       { label: "Reviewer Cloud", to: "/cloud" },
-      { label: "Download for Mac", href: DOWNLOAD_URL },
+      { label: "Download", to: "/download" },
     ],
   },
   {
@@ -33,6 +37,7 @@ const COLUMNS: Array<{ title: string; links: Array<FooterLink> }> = [
   {
     title: "Project",
     links: [
+      { label: "About", to: "/about" },
       { label: "Source code", href: REPO_URL },
       { label: "License", href: `${REPO_URL}/blob/main/LICENSE` },
       { label: "Security", href: `${REPO_URL}/blob/main/SECURITY.md` },
