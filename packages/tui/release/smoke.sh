@@ -20,7 +20,8 @@ REVIEWER_PORT="$port" REVIEWER_DB="${work}/reviewer.db" HOME="$work" \
   node "${release}/server/main.cjs" >"${work}/server.log" 2>&1 &
 server_pid=$!
 for _ in $(seq 1 60); do
-  if curl -fs "http://127.0.0.1:${port}/api/workspace" >/dev/null 2>&1; then
+  # bounded, so a server that takes the connection but never answers fails here instead of hanging the job
+  if curl -fs --max-time 2 "http://127.0.0.1:${port}/api/workspace" >/dev/null 2>&1; then
     echo "server answered on :${port}"
     exit 0
   fi
