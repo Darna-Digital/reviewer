@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.40 — 2026-11-03
+
+### Added
+
+- Install Reviewer's terminal UI on macOS or Linux in one line: `curl -fsSL https://reviewer.sh/install | bash`. It installs into `~/.reviewer` with the Reviewer server and the Node.js it runs on, and `reviewer upgrade` installs the latest release.
+- The installed terminal UI offers new releases in its ⌘K palette and updates itself, as the Mac app does.
+
 ## v0.0.39 — 2026-11-03
 
 ### Changed
