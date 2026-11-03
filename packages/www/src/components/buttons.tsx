@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Apple, Terminal } from "#/components/icons";
+import { Apple } from "#/components/icons";
 import { cn } from "#/lib/cn";
 
 export const PRIMARY_BUTTON =
@@ -22,14 +22,15 @@ export function DownloadButton({ className }: { className?: string }) {
   );
 }
 
-/** Both free ways in: the Mac download and the terminal app's install page. */
+/** The download page, where you pick an app, and the about page. */
 export function GetReviewerButtons({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-col gap-3 sm:flex-row", className)}>
-      <DownloadButton />
-      <Link className={SECONDARY_BUTTON} to="/terminal">
-        <Terminal className="size-5" />
-        Install the terminal app
+      <Link className={PRIMARY_BUTTON} to="/download">
+        Download
+      </Link>
+      <Link className={SECONDARY_BUTTON} to="/about">
+        Read about Reviewer
       </Link>
     </div>
   );
