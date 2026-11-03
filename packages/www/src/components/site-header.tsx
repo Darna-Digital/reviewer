@@ -2,12 +2,12 @@ import { Link, useLoaderData } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Container } from "#/components/container";
-import { Apple, ArrowUpRight, ChevronDown, GitHub } from "#/components/icons";
+import { ArrowUpRight, ChevronDown, GitHub } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
 import { cn } from "#/lib/cn";
 import { formatStars } from "#/lib/github-stars";
-import { DOWNLOAD_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
+import { RELEASES_URL, REPO_URL } from "#/lib/links";
 
 function TouchTarget() {
   return (
@@ -28,7 +28,10 @@ type MenuItem = {
   badge?: string;
   /** Shown only where the header hides its own link. */
   mobileOnly?: boolean;
-} & ({ to: "/mac" | "/terminal" | "/cloud" | "/changelog" } | { href: string });
+} & (
+  | { to: "/mac" | "/terminal" | "/cloud" | "/changelog" | "/about" }
+  | { href: string }
+);
 
 const MENU: { heading: string; items: MenuItem[] }[] = [
   {
@@ -42,6 +45,7 @@ const MENU: { heading: string; items: MenuItem[] }[] = [
   {
     heading: "Resources",
     items: [
+      { to: "/about", title: "About" },
       { to: "/changelog", title: "Changelog", mobileOnly: true },
       { href: REPO_URL, title: "Source code" },
       { href: RELEASES_URL, title: "Releases" },
@@ -217,14 +221,13 @@ export function SiteHeader() {
           </Link>
         </nav>
         <GitHubStars />
-        <a
+        <Link
           className="relative inline-flex h-8 items-center gap-1.5 rounded-full bg-neutral-900 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700 lg:h-9 lg:px-4 lg:text-sm dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-          href={DOWNLOAD_URL}
+          to="/download"
         >
           <TouchTarget />
-          <Apple className="size-3.5 lg:size-4" />
           Download
-        </a>
+        </Link>
       </Container>
     </header>
   );
