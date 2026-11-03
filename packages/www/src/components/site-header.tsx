@@ -30,7 +30,7 @@ type MenuItem = {
 
 const MENU: { heading: string; items: MenuItem[] }[] = [
   {
-    heading: "Products",
+    heading: "Applications",
     items: [
       { to: "/mac", title: "Mac app" },
       { to: "/terminal", title: "Terminal app" },
