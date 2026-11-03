@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CloudRouteImport } from './routes/cloud'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
 import { Route as MacRouteImport } from './routes/mac'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const CloudRoute = CloudRouteImport.update({
   id: '/cloud',
   path: '/cloud',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstallRoute = InstallRouteImport.update({
@@ -62,6 +68,7 @@ const ChangelogVersionRoute = ChangelogVersionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cloud'
+    | '/download'
     | '/install'
     | '/latest.json'
     | '/mac'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/cloud'
+    | '/download'
     | '/install'
     | '/latest.json'
     | '/mac'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/cloud'
+    | '/download'
     | '/install'
     | '/latest.json'
     | '/mac'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CloudRoute: typeof CloudRoute
+  DownloadRoute: typeof DownloadRoute
   InstallRoute: typeof InstallRoute
   LatestDotjsonRoute: typeof LatestDotjsonRoute
   MacRoute: typeof MacRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/cloud'
       fullPath: '/cloud'
       preLoaderRoute: typeof CloudRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/install': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CloudRoute: CloudRoute,
+  DownloadRoute: DownloadRoute,
   InstallRoute: InstallRoute,
   LatestDotjsonRoute: LatestDotjsonRoute,
   MacRoute: MacRoute,

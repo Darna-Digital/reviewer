@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 
 import { Apple, Terminal } from "#/components/icons";
 import { cn } from "#/lib/cn";
-import { DOWNLOAD_URL } from "#/lib/links";
 
 export const PRIMARY_BUTTON =
   "inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-neutral-900 px-6 text-base font-semibold text-white transition-colors hover:bg-neutral-700 lg:h-13 lg:px-7 lg:text-[17px] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200";
@@ -12,10 +11,14 @@ export const SECONDARY_BUTTON =
 
 export function DownloadButton({ className }: { className?: string }) {
   return (
-    <a className={cn(PRIMARY_BUTTON, className)} href={DOWNLOAD_URL}>
+    <Link
+      className={cn(PRIMARY_BUTTON, className)}
+      search={{ app: "mac" }}
+      to="/download"
+    >
       <Apple className="size-5" />
       Download for Mac
-    </a>
+    </Link>
   );
 }
 
