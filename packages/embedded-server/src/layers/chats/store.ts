@@ -31,7 +31,7 @@ import {
   type ChatAttachment,
   type ChatMessage,
   type ChatPage,
-  type ChatProjectTally,
+  type ChatPlaces,
   type ChatSummary,
   type ChatTurn,
   type ChatWorkspace,
@@ -233,11 +233,6 @@ const SUMMARY_SOURCE = `
   LEFT JOIN last_message ON last_message.chat_id = chat.id
 `;
 
-/** A chat whose repository was never registered is grouped under the
- * repository itself, exactly as `originOf` labels it — so the filter's values
- * and the rows it matches agree about which project a session belongs to. */
-const PROJECT_OF_CHAT = `COALESCE(repo.project_path, chat.repo_path)`;
-
 interface SummaryRow extends ChatRow {
   readonly message_count: number;
   readonly last_message: string | null;
@@ -246,6 +241,7 @@ interface SummaryRow extends ChatRow {
 const toSummary = (row: SummaryRow): ChatSummary => ({
   id: row.id,
   origin: originOf(row),
+  workspaceId: row.workspace_id,
   title: row.title,
   provider: row.provider as ChatSummary["provider"],
   model: row.model,
@@ -284,9 +280,13 @@ export const listChatSummaries = (input: ListChatsInput): ChatPage => {
     );
     values.push(position.updatedAt, position.updatedAt, position.id);
   }
-  if (input.projectPath !== null) {
-    clauses.push(`${PROJECT_OF_CHAT} = ?`);
-    values.push(input.projectPath);
+  if (input.workspaceId !== null) {
+    clauses.push(`chat.workspace_id = ?`);
+    values.push(input.workspaceId);
+  }
+  if (input.repoPath !== null) {
+    clauses.push(`chat.repo_path = ?`);
+    values.push(input.repoPath);
   }
   if (input.since !== null) {
     clauses.push(`chat.updated_at >= ?`);
@@ -326,35 +326,43 @@ export const listChatSummaries = (input: ListChatsInput): ChatPage => {
 };
 
 /**
- * Every project holding a session, with how many it holds — the filter menu's
- * own query. Derived from all of them rather than from the pages fetched so
- * far, so the menu says the same thing however far the reader has scrolled.
+ * Every saved workspace and every repository holding a session, with how many
+ * each holds — the filter menu's own query. Derived from all of them rather
+ * than from the pages fetched so far, so the menu says the same thing however
+ * far the reader has scrolled. A workspace since deleted is no longer a place
+ * to narrow to; its sessions stay under their repositories.
  */
-export const listChatProjects = (): ReadonlyArray<ChatProjectTally> => {
-  const rows = allRows<{
-    project_path: string;
-    project_name: string | null;
+export const listChatPlaces = (): ChatPlaces => {
+  const workspaces = allRows<{ id: string; name: string; count: number }>(
+    `SELECT workspace.id, workspace.name, COUNT(*) AS count
+     FROM chat
+     JOIN workspace ON workspace.id = chat.workspace_id
+     GROUP BY workspace.id, workspace.name`
+  );
+  const repos = allRows<{
     repo_path: string;
+    repo_name: string | null;
     count: number;
   }>(
-    `SELECT ${PROJECT_OF_CHAT} AS project_path,
-            project.name AS project_name,
-            MIN(chat.repo_path) AS repo_path,
-            COUNT(*) AS count
+    `SELECT chat.repo_path, repo.name AS repo_name, COUNT(*) AS count
      FROM chat
      LEFT JOIN repo ON repo.path = chat.repo_path
-     LEFT JOIN project ON project.path = repo.project_path
-     GROUP BY project_path, project.name`
+     GROUP BY chat.repo_path, repo.name`
   );
-  return rows
-    .map((row) => ({
-      path: row.project_path,
-      name: row.project_name ?? unknownOrigin(row.repo_path).projectName,
-      count: row.count,
-    }))
-    .sort(
-      (a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
-    );
+  return {
+    workspaces: workspaces
+      .map((row) => ({ id: row.id, name: row.name, count: row.count }))
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id)),
+    repos: repos
+      .map((row) => ({
+        path: row.repo_path,
+        name: row.repo_name ?? unknownOrigin(row.repo_path).repoName,
+        count: row.count,
+      }))
+      .sort(
+        (a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
+      ),
+  };
 };
 
 // --- Writes -----------------------------------------------------------------

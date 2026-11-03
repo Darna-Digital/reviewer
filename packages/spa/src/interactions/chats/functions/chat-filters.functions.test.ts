@@ -1,15 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ChatProjectTally } from "@reviewer/core/chats";
+import type { ChatPlaces } from "@reviewer/core/chats";
 import {
-  ALL_PROJECTS,
+  ALL_PLACES,
   chatListFilters,
-  resolveProjectFilter,
+  resolvePlaceFilter,
+  samePlace,
 } from "./chat-filters.functions";
 
-const projects: ReadonlyArray<ChatProjectTally> = [
-  { path: "/home/dev", name: "dev", count: 2 },
-  { path: "/home/side", name: "side", count: 1 },
-];
+const places: ChatPlaces = {
+  workspaces: [{ id: "ws-platform", name: "platform", count: 3 }],
+  repos: [
+    { path: "/home/dev", name: "dev", count: 2 },
+    { path: "/home/side", name: "side", count: 1 },
+  ],
+};
 
 afterEach(() => {
   vi.useRealTimers();
@@ -17,21 +21,36 @@ afterEach(() => {
 
 describe("chatListFilters", () => {
   it("asks for everything when neither filter is set", () => {
-    expect(chatListFilters(ALL_PROJECTS, "all")).toEqual({
+    expect(chatListFilters(ALL_PLACES, "all")).toEqual({
       search: "",
-      project: null,
+      workspace: null,
+      repo: null,
       since: null,
     });
   });
 
-  it("carries the chosen project's path", () => {
-    expect(chatListFilters("/home/side", "all").project).toBe("/home/side");
+  it("carries the chosen workspace's id", () => {
+    const filters = chatListFilters(
+      { kind: "workspace", id: "ws-platform" },
+      "all"
+    );
+    expect(filters.workspace).toBe("ws-platform");
+    expect(filters.repo).toBeNull();
+  });
+
+  it("carries the chosen repository's path", () => {
+    const filters = chatListFilters(
+      { kind: "repo", path: "/home/side" },
+      "all"
+    );
+    expect(filters.repo).toBe("/home/side");
+    expect(filters.workspace).toBeNull();
   });
 
   it("turns a time window into the cutoff the server compares against", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
-    expect(chatListFilters(ALL_PROJECTS, "7d").since).toBe(
+    expect(chatListFilters(ALL_PLACES, "7d").since).toBe(
       "2026-08-06T12:00:00.000Z"
     );
   });
@@ -41,24 +60,49 @@ describe("chatListFilters", () => {
   it("holds the cutoff still between ticks of the clock", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
-    const first = chatListFilters(ALL_PROJECTS, "30d").since;
+    const first = chatListFilters(ALL_PLACES, "30d").since;
     vi.setSystemTime(new Date("2026-08-13T12:00:12.345Z"));
-    expect(chatListFilters(ALL_PROJECTS, "30d").since).toBe(first);
+    expect(chatListFilters(ALL_PLACES, "30d").since).toBe(first);
   });
 });
 
-describe("resolveProjectFilter", () => {
-  it("keeps a filter naming a project that still has sessions", () => {
-    expect(resolveProjectFilter(projects, "/home/side")).toBe("/home/side");
+describe("samePlace", () => {
+  it("tells a workspace from a repository of the same name", () => {
+    expect(
+      samePlace({ kind: "workspace", id: "/x" }, { kind: "repo", path: "/x" })
+    ).toBe(false);
+    expect(
+      samePlace({ kind: "repo", path: "/x" }, { kind: "repo", path: "/x" })
+    ).toBe(true);
+  });
+});
+
+describe("resolvePlaceFilter", () => {
+  it("keeps a filter naming a workspace that still has sessions", () => {
+    const place = { kind: "workspace", id: "ws-platform" } as const;
+    expect(resolvePlaceFilter(places, place)).toBe(place);
   });
 
-  it("steps aside when the project it names has none left", () => {
-    expect(resolveProjectFilter(projects, "/home/gone")).toBe(ALL_PROJECTS);
+  it("keeps a filter naming a repository that still has sessions", () => {
+    const place = { kind: "repo", path: "/home/side" } as const;
+    expect(resolvePlaceFilter(places, place)).toBe(place);
   });
 
-  // Mid-load every project is absent, which is not the same as gone: dropping
+  it("steps aside when the place it names has none left", () => {
+    expect(
+      resolvePlaceFilter(places, { kind: "workspace", id: "ws-gone" })
+    ).toBe(ALL_PLACES);
+    expect(
+      resolvePlaceFilter(places, { kind: "repo", path: "/home/gone" })
+    ).toBe(ALL_PLACES);
+  });
+
+  // Mid-load every place is absent, which is not the same as gone: dropping
   // the filter then would silently widen the list the moment it arrives.
-  it("holds the filter while the projects are still unknown", () => {
-    expect(resolveProjectFilter([], "/home/side")).toBe("/home/side");
+  it("holds the filter while the places are still unknown", () => {
+    const place = { kind: "repo", path: "/home/side" } as const;
+    expect(resolvePlaceFilter({ workspaces: [], repos: [] }, place)).toBe(
+      place
+    );
   });
 });

@@ -66,21 +66,38 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
                 : encodeChatCursor(last),
           };
         }),
-      projects: Effect.map(summaries, (all) => {
-        const tallies = new Map<string, { name: string; count: number }>();
-        for (const chat of all) {
-          const seen = tallies.get(chat.origin.projectPath);
-          tallies.set(chat.origin.projectPath, {
-            name: chat.origin.projectName,
-            count: (seen?.count ?? 0) + 1,
-          });
+      places: Effect.map(Ref.get(store), (chats) => {
+        const workspaces = new Map<string, { name: string; count: number }>();
+        const repos = new Map<string, { name: string; count: number }>();
+        const tally = (
+          into: Map<string, { name: string; count: number }>,
+          key: string,
+          name: string
+        ) => into.set(key, { name, count: (into.get(key)?.count ?? 0) + 1 });
+        for (const chat of chats) {
+          if (chat.workspace !== undefined) {
+            tally(workspaces, chat.workspace.id, chat.workspace.name);
+          }
+          tally(repos, chat.origin.repoPath, chat.origin.repoName);
         }
-        return [...tallies]
-          .map(([path, tally]) => ({ path, ...tally }))
-          .sort(
+        const byName = <T extends { name: string }>(
+          entries: ReadonlyArray<T>,
+          key: (entry: T) => string
+        ) =>
+          [...entries].sort(
             (a, b) =>
-              a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
+              a.name.localeCompare(b.name) || key(a).localeCompare(key(b))
           );
+        return {
+          workspaces: byName(
+            [...workspaces].map(([id, entry]) => ({ id, ...entry })),
+            (entry) => entry.id
+          ),
+          repos: byName(
+            [...repos].map(([path, entry]) => ({ path, ...entry })),
+            (entry) => entry.path
+          ),
+        };
       }),
       get: (id) => Effect.flatMap(Ref.get(store), (chats) => find(chats, id)),
       create: (input: CreateChatInput) =>

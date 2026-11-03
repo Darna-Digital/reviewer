@@ -980,14 +980,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/chats/projects": {
+    "/api/chats/places": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["chats.projects"];
+        get: operations["chats.places"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4944,7 +4944,8 @@ export interface operations {
                 limit?: string;
                 cursor?: string;
                 q?: string;
-                project?: string;
+                workspace?: string;
+                repo?: string;
                 since?: string;
             };
             header?: never;
@@ -4968,6 +4969,7 @@ export interface operations {
                                 repoPath: string;
                                 repoName: string;
                             };
+                            workspaceId: string | null;
                             title: string;
                             /** @enum {string} */
                             provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5200,7 +5202,7 @@ export interface operations {
             };
         };
     };
-    "chats.projects": {
+    "chats.places": {
         parameters: {
             query?: never;
             header?: never;
@@ -5216,10 +5218,17 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        path: string;
-                        name: string;
-                        count: number;
-                    }[];
+                        workspaces: {
+                            id: string;
+                            name: string;
+                            count: number;
+                        }[];
+                        repos: {
+                            path: string;
+                            name: string;
+                            count: number;
+                        }[];
+                    };
                 };
             };
             /** @description NotFound */

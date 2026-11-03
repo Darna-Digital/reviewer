@@ -3,17 +3,23 @@
  * that mint a session and find one, rather than on the list's own heading where
  * the two of them only appeared under the pointer.
  *
- * One control for both axes: the project the conversation was had in, and how
- * far back to look. The projects are searchable because the list spans all of
- * them at once, and there are as many of them as you have ever worked in — a
- * column of radio items is a list you scroll to find the one you meant.
+ * One control for both axes: where the conversation was had — a saved
+ * workspace, or a repository whether opened alone or inside one — and how far
+ * back to look. The places are searchable because the list spans all of them at
+ * once, and there are as many of them as you have ever worked in — a column of
+ * radio items is a list you scroll to find the one you meant.
  *
  * What is chosen is held in the filters store, so it survives opening a session
  * and coming back, and the list asks the server for it a page at a time. The
  * button carries a dot while anything is set: the list is never quietly
  * narrower than it looks. See `chatListFilters`.
  */
-import { IconCheck, IconFilter2, IconFolder } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconFilter2,
+  IconFolder,
+  IconStack2,
+} from "@tabler/icons-react";
 import { useState } from "react";
 import { RailButton, revealSidebar } from "@/components/layout/rail";
 import { Input } from "@/components/ui/input";
@@ -38,30 +44,39 @@ import {
   useChatFilters,
 } from "@/interactions/chats/adapters/chat-filters.store";
 import {
-  ALL_PROJECTS,
-  resolveProjectFilter,
-  type ProjectFilter,
+  ALL_PLACES,
+  resolvePlaceFilter,
+  samePlace,
+  type PlaceFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
 import { displayPath } from "@/lib/display-path";
-import { useChatProjects, useWorkspace } from "@/lib/queries";
+import { NO_PLACES, useChatPlaces, useWorkspace } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import type { ChatProjectTally } from "@reviewer/core/chats";
-
-const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 
 const rowClass =
   "flex h-8 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate";
 
+const groupLabelClass =
+  "px-1.5 pt-2 pb-1 text-[11px] font-medium text-muted-foreground";
+
 /**
- * The mark a project is known by, so a row here reads the same as the project
- * chip in the window bar; "all projects" keeps the badge's shape so the names
- * stay in one column.
+ * The badge-shaped marks of the rows without an avatar of their own, so the
+ * names stay in one column beside the repositories' avatars — the same as the
+ * project chip in the window bar.
  */
-function AllProjectsMark() {
+function PlaceMark({ icon: Icon }: { icon: typeof IconFolder }) {
   return (
     <span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-elevate text-muted-foreground">
-      <IconFolder className="size-3" />
+      <Icon className="size-3" />
+    </span>
+  );
+}
+
+function PlaceCount({ count }: { count: number }) {
+  return (
+    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+      {count}
     </span>
   );
 }
@@ -114,17 +129,23 @@ function FilterRow({
 export function SessionFilters() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const projectList = useChatProjects();
+  const places = useChatPlaces().data ?? NO_PLACES;
   const home = useWorkspace().data?.home;
-  const projects = projectList.data ?? EMPTY_PROJECTS;
   const stored = useChatFilters();
-  const project = resolveProjectFilter(projects, stored.project);
-  const filtered = projects.filter((p) =>
-    p.name.toLowerCase().includes(query.trim().toLowerCase())
+  const place = resolvePlaceFilter(places, stored.place);
+  const needle = query.trim().toLowerCase();
+  const workspaces = places.workspaces.filter((w) =>
+    w.name.toLowerCase().includes(needle)
   );
-  const filtering = project !== ALL_PROJECTS || stored.date !== "all";
+  const repos = places.repos.filter(
+    (r) =>
+      r.name.toLowerCase().includes(needle) ||
+      displayPath(r.path, home).toLowerCase().includes(needle)
+  );
+  const hasPlaces = places.workspaces.length + places.repos.length > 1;
+  const filtering = place.kind !== "all" || stored.date !== "all";
 
-  const choose = (patch: { project?: ProjectFilter; date?: DateFilter }) => {
+  const choose = (patch: { place?: PlaceFilter; date?: DateFilter }) => {
     setChatFilters(patch);
     setOpen(false);
   };
@@ -153,47 +174,76 @@ export function SessionFilters() {
         align="start"
         className="w-72 gap-0 overflow-hidden p-0"
       >
-        {projects.length > 1 && (
+        {hasPlaces && (
           <>
             <div className="border-b p-2">
               <Input
                 autoFocus
                 value={query}
-                placeholder="Search projects"
+                placeholder="Search workspaces and repositories"
                 onChange={(e) => setQuery(e.target.value)}
                 className="h-8"
               />
             </div>
-            <ScrollArea className="max-h-56" viewportClassName="scroll-fade">
+            <ScrollArea className="max-h-72" viewportClassName="scroll-fade">
               <div className="flex flex-col p-1.5">
                 <FilterRow
-                  selected={project === ALL_PROJECTS}
-                  onSelect={() => choose({ project: ALL_PROJECTS })}
+                  selected={place.kind === "all"}
+                  onSelect={() => choose({ place: ALL_PLACES })}
                 >
-                  <AllProjectsMark />
+                  <PlaceMark icon={IconFolder} />
                   <span className="min-w-0 flex-1 truncate text-left">
-                    All projects
+                    Everywhere
                   </span>
                 </FilterRow>
-                {filtered.map((option) => (
-                  <FilterRow
-                    key={option.path}
-                    selected={project === option.path}
-                    onSelect={() => choose({ project: option.path })}
-                    tooltip={displayPath(option.path, home)}
-                  >
-                    <ProjectAvatar name={option.name} />
-                    <span className="min-w-0 flex-1 truncate text-left">
-                      {option.name}
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {option.count}
-                    </span>
-                  </FilterRow>
-                ))}
-                {filtered.length === 0 && (
+                {workspaces.length > 0 && (
+                  <p className={groupLabelClass}>Workspaces</p>
+                )}
+                {workspaces.map((option) => {
+                  const choice: PlaceFilter = {
+                    kind: "workspace",
+                    id: option.id,
+                  };
+                  return (
+                    <FilterRow
+                      key={option.id}
+                      selected={samePlace(place, choice)}
+                      onSelect={() => choose({ place: choice })}
+                    >
+                      <PlaceMark icon={IconStack2} />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {option.name}
+                      </span>
+                      <PlaceCount count={option.count} />
+                    </FilterRow>
+                  );
+                })}
+                {repos.length > 0 && (
+                  <p className={groupLabelClass}>Repositories</p>
+                )}
+                {repos.map((option) => {
+                  const choice: PlaceFilter = {
+                    kind: "repo",
+                    path: option.path,
+                  };
+                  return (
+                    <FilterRow
+                      key={option.path}
+                      selected={samePlace(place, choice)}
+                      onSelect={() => choose({ place: choice })}
+                      tooltip={displayPath(option.path, home)}
+                    >
+                      <ProjectAvatar name={option.name} />
+                      <span className="min-w-0 flex-1 truncate text-left">
+                        {option.name}
+                      </span>
+                      <PlaceCount count={option.count} />
+                    </FilterRow>
+                  );
+                })}
+                {workspaces.length === 0 && repos.length === 0 && (
                   <p className="px-1.5 py-3 text-[13px] text-muted-foreground">
-                    No projects match.
+                    Nothing matches.
                   </p>
                 )}
               </div>

@@ -7,7 +7,10 @@
  */
 import { useSyncExternalStore } from "react";
 import { createStoredChatFilters } from "../functions/stored-chat-filters.functions";
-import type { ChatFilters } from "../functions/chat-filters.functions";
+import {
+  samePlace,
+  type ChatFilters,
+} from "../functions/chat-filters.functions";
 
 const STORE_KEY = "reviewer-chat-filters";
 
@@ -34,7 +37,7 @@ const listeners = new Set<() => void>();
 
 export function setChatFilters(patch: Partial<ChatFilters>): void {
   const next = { ...state, ...patch };
-  if (next.project === state.project && next.date === state.date) return;
+  if (samePlace(next.place, state.place) && next.date === state.date) return;
   state = next;
   stored.save(state);
   for (const listener of listeners) listener();

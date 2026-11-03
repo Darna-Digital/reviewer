@@ -13,7 +13,8 @@
 // `TreeSelection`), so the two read as one.
 //
 // What the web rail carries stands at the head of the list instead: a
-// search field, and a filter menu for the project and how far back to look
+// search field, and a filter menu for the workspace or repository and how
+// far back to look
 // — both of them the page's query, so they narrow every session the server
 // has rather than the pages loaded so far. A sweep of rows deleted together
 // is asked about here, in the list's own alert.
@@ -76,9 +77,10 @@ private struct SessionsHeader: View {
     }
 }
 
-/// The button the filter popover hangs off: the filter glyph, or the
-/// avatar of the project the list is narrowed to, so the sidebar says
-/// whose sessions these are without the popover open; and a dot while
+/// The button the filter popover hangs off: the filter glyph, the
+/// workspace glyph, or the avatar of the repository the list is narrowed
+/// to, so the sidebar says whose sessions these are without the popover
+/// open; and a dot while
 /// anything is set, as the web's has, since the list is never quietly
 /// narrower than it looks.
 private struct SessionFilterMenu: View {
@@ -89,11 +91,18 @@ private struct SessionFilterMenu: View {
     var body: some View {
         Button { open.toggle() } label: {
             ZStack {
-                if let project = filters.projects.first(where: { $0.path == filters.project }) {
-                    RepoAvatar(name: project.name)
-                } else {
-                    Image(systemName: "line.3.horizontal.decrease")
+                switch filters.place {
+                case .repo(let path):
+                    if let repo = filters.places.repos.first(where: { $0.path == path }) {
+                        RepoAvatar(name: repo.name)
+                    } else {
+                        filterGlyph
+                    }
+                case .workspace:
+                    Image(systemName: SessionFilterPopover.workspaceSymbol)
                         .font(.system(size: 11, weight: .medium))
+                case .all:
+                    filterGlyph
                 }
             }
             .foregroundStyle(.secondary)
@@ -111,11 +120,16 @@ private struct SessionFilterMenu: View {
         .buttonStyle(.plain)
         .help("Filter sessions")
         .popover(isPresented: $open, arrowEdge: .bottom) {
-            SessionFilterPopover(filters: filters, dismiss: { open = false }) { project, date in
-                model.act(onSessions: .filter(project: project, date: date))
+            SessionFilterPopover(filters: filters, dismiss: { open = false }) { place, date in
+                model.act(onSessions: .filter(place: place, date: date))
             }
         }
         .closesOnNavigation($open)
+    }
+
+    private var filterGlyph: some View {
+        Image(systemName: "line.3.horizontal.decrease")
+            .font(.system(size: 11, weight: .medium))
     }
 }
 

@@ -3,13 +3,17 @@ import type { ChatMessage, ChatTurn } from "@reviewer/core/chats";
 import { closeDatabase, openDatabase } from "../db/database.ts";
 import { rememberProject } from "../db/scope.ts";
 import {
+  createWorkspace,
+  deleteWorkspace,
+} from "../workspace/saved-workspaces.ts";
+import {
   appendActivity,
   appendPendingMessage,
   appendTurnStart,
   completeTurn,
   findChat,
   insertChat,
-  listChatProjects,
+  listChatPlaces,
   listChatSummaries,
   markChatSeen,
   removeChat,
@@ -23,7 +27,8 @@ const WHOLE_LIST = {
   limit: 100,
   cursor: null,
   search: null,
-  projectPath: null,
+  workspaceId: null,
+  repoPath: null,
   since: null,
 } as const;
 const allChats = () => listChatSummaries(WHOLE_LIST).items;
@@ -51,11 +56,13 @@ const seed = (
   id: string,
   repoPath: string,
   updatedAt: string,
-  title = "a chat"
+  title = "a chat",
+  workspaceId: string | null = null
 ) => {
   const chat = insertChat({
     id,
     repoPath,
+    workspaceId,
     title,
     provider: "claude",
     model: "opus",
@@ -164,16 +171,31 @@ describe("chat store", () => {
     ]);
   });
 
-  it("narrows to one project, across every root it holds", () => {
-    seed("c-api", API, "2026-07-25T12:00:00.000Z");
-    seed("c-web", WEB, "2026-07-25T13:00:00.000Z");
-    seed("c-solo", SOLO, "2026-07-25T14:00:00.000Z");
+  it("narrows to the sessions started in one workspace", () => {
+    const platform = createWorkspace("platform", [API, SOLO]);
+    seed("c-api", API, "2026-07-25T12:00:00.000Z", "a chat", platform.id);
+    seed("c-solo", SOLO, "2026-07-25T13:00:00.000Z", "a chat", platform.id);
+    seed("c-alone", API, "2026-07-25T14:00:00.000Z");
 
     const { items } = listChatSummaries({
       ...WHOLE_LIST,
-      projectPath: PROJECT,
+      workspaceId: platform.id,
     });
-    expect(items.map((chat) => chat.id)).toEqual(["c-web", "c-api"]);
+    expect(items.map((chat) => chat.id)).toEqual(["c-solo", "c-api"]);
+    expect(items.map((chat) => chat.workspaceId)).toEqual([
+      platform.id,
+      platform.id,
+    ]);
+  });
+
+  it("narrows to one repository, opened alone or inside a workspace", () => {
+    const platform = createWorkspace("platform", [API, WEB]);
+    seed("c-api", API, "2026-07-25T12:00:00.000Z", "a chat", platform.id);
+    seed("c-web", WEB, "2026-07-25T13:00:00.000Z", "a chat", platform.id);
+    seed("c-alone", API, "2026-07-25T14:00:00.000Z");
+
+    const { items } = listChatSummaries({ ...WHOLE_LIST, repoPath: API });
+    expect(items.map((chat) => chat.id)).toEqual(["c-alone", "c-api"]);
   });
 
   it("keeps only what was touched since the cutoff", () => {
@@ -233,17 +255,34 @@ describe("chat store", () => {
     expect(found.items.map((chat) => chat.id)).toEqual(["c-1"]);
   });
 
-  it("tallies every project holding a session, however far the list is scrolled", () => {
-    seed("c-api", API, "2026-07-25T12:00:00.000Z");
-    seed("c-web", WEB, "2026-07-25T13:00:00.000Z");
+  it("tallies every workspace and repository holding a session, however far the list is scrolled", () => {
+    const platform = createWorkspace("platform", [API, WEB]);
+    seed("c-api", API, "2026-07-25T12:00:00.000Z", "a chat", platform.id);
+    seed("c-web", WEB, "2026-07-25T13:00:00.000Z", "a chat", platform.id);
+    seed("c-alone", API, "2026-07-25T13:30:00.000Z");
     seed("c-solo", SOLO, "2026-07-25T14:00:00.000Z");
     seed("c-orphan", "/home/gone/elsewhere", "2026-07-25T15:00:00.000Z");
 
-    expect(listChatProjects()).toEqual([
-      { path: PROJECT, name: "dev", count: 2 },
-      { path: "/home/gone/elsewhere", name: "elsewhere", count: 1 },
-      { path: SOLO, name: "solo", count: 1 },
-    ]);
+    expect(listChatPlaces()).toEqual({
+      workspaces: [{ id: platform.id, name: "platform", count: 2 }],
+      repos: [
+        { path: API, name: "api", count: 2 },
+        { path: "/home/gone/elsewhere", name: "elsewhere", count: 1 },
+        { path: SOLO, name: "solo", count: 1 },
+        { path: WEB, name: "web", count: 1 },
+      ],
+    });
+  });
+
+  it("stops offering a deleted workspace, keeping its sessions under their repositories", () => {
+    const gone = createWorkspace("gone", [API]);
+    seed("c-api", API, "2026-07-25T12:00:00.000Z", "a chat", gone.id);
+    deleteWorkspace(gone.id);
+
+    expect(listChatPlaces()).toEqual({
+      workspaces: [],
+      repos: [{ path: API, name: "api", count: 1 }],
+    });
   });
 
   it("stands a chat from an unregistered repository up as its own project", () => {

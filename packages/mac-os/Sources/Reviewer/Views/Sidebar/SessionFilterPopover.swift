@@ -1,62 +1,72 @@
 // The sessions list's filter, as the web rail's popover: one control for
-// both axes — the project the conversation was had in, and how far back
-// to look. The projects are searchable because the list spans all of them
-// at once, and there are as many as you have ever worked in; a column of
-// radio items is a list you scroll to find the one you meant. Each stands
-// under the avatar it is known by everywhere else (see `RepoAvatar`), and
-// "All projects" keeps the badge's shape so the names stay in one column.
-// Under each name stands the folder it lives in, the home folder folded to
-// `~` — two checkouts of one repository share a name, and the path is what
-// tells them apart — and the search reads the path as well as the name. A
-// path too long for its row is cut at its end and says the whole of itself
-// in a tooltip off the row's trailing edge, as a branch name does in the
-// branch picker (see `RowTooltip`).
+// both axes — where the conversation was had, and how far back to look.
+// A place is a saved workspace, which holds the sessions started in it, or
+// a repository, which holds every session whose agent ran in it, opened
+// alone or inside a workspace. They are searchable because the list spans
+// all of them at once, and there are as many as you have ever worked in; a
+// column of radio items is a list you scroll to find the one you meant.
+// The workspaces stand under the glyph the opener gives them, the
+// repositories under the avatar each is known by everywhere else (see
+// `RepoAvatar`), and "Everywhere" keeps the badge's shape so the names stay
+// in one column. Under each repository stands the folder it lives in, the
+// home folder folded to `~` — two checkouts of one repository share a name,
+// and the path is what tells them apart — and the search reads the path as
+// well as the name. A path too long for its row is cut at its end and says
+// the whole of itself in a tooltip off the row's trailing edge, as a branch
+// name does in the branch picker (see `RowTooltip`).
 // The dates stand under a rule of their own, plain — a range needs no
 // mark — and a pick on either axis puts the popover away.
 //
 // The keys are the branch popover's (see `popoverListKeys`): ↑/↓ walk the
 // rows, wrapping at the ends, Return picks the lit one, Escape clears the
 // search and then closes — with or without the field, which a single
-// project goes without.
+// place goes without.
 import SwiftUI
 
 struct SessionFilterPopover: View {
     let filters: ShellSessionFilters
     let dismiss: () -> Void
-    let choose: (_ project: String?, _ date: SessionDateFilter?) -> Void
+    let choose: (_ place: SessionPlace?, _ date: SessionDateFilter?) -> Void
 
     @State private var query = ""
     @State private var fieldWantsKeyboard = false
     @State private var active = 0
 
+    static let workspaceSymbol = "square.on.square"
+
     private static let width: CGFloat = 288
-    private static let listHeight: CGFloat = 264
+    private static let listHeight: CGFloat = 320
     private static let home = NSHomeDirectory()
 
     private var needle: String { query.trimmingCharacters(in: .whitespaces) }
     private var searching: Bool { !needle.isEmpty }
-    /// More than one project is a choice; one is only a fact.
-    private var hasProjects: Bool { filters.projects.count > 1 }
+    /// More than one place is a choice; one is only a fact.
+    private var hasPlaces: Bool { filters.places.count > 1 }
 
-    private var shown: [ShellProjectTally] {
-        guard searching else { return filters.projects }
-        return filters.projects.filter {
+    private var shownWorkspaces: [ShellWorkspaceTally] {
+        guard searching else { return filters.places.workspaces }
+        return filters.places.workspaces.filter { $0.name.localizedCaseInsensitiveContains(needle) }
+    }
+
+    private var shownRepos: [ShellRepoTally] {
+        guard searching else { return filters.places.repos }
+        return filters.places.repos.filter {
             $0.name.localizedCaseInsensitiveContains(needle) || folded($0.path).localizedCaseInsensitiveContains(needle)
         }
     }
 
-    /// Every row the keys can land on, in order: the projects, then the dates.
+    /// Every row the keys can land on, in order: the places, then the dates.
     private enum Line: Hashable {
-        case allProjects
-        case project(String)
+        case place(SessionPlace)
         case date(SessionDateFilter)
     }
 
     private var lines: [Line] {
         var lines: [Line] = []
-        if hasProjects {
-            if !searching { lines.append(.allProjects) }
-            lines += shown.map { .project($0.path) }
+        if hasPlaces {
+            if !searching { lines.append(.place(.all)) }
+            lines += shownWorkspaces.map { .place(.workspace(id: $0.id)) }
+            lines += shownRepos.map { .place(.repo(path: $0.path)) }
         }
         lines += SessionDateFilter.allCases.map { .date($0) }
         return lines
@@ -65,10 +75,10 @@ struct SessionFilterPopover: View {
     var body: some View {
         let lines = lines
         VStack(spacing: 0) {
-            if hasProjects {
+            if hasPlaces {
                 field
                 ThemedDivider()
-                projects(lines)
+                places(lines)
                 ThemedDivider()
             }
             dates(lines)
@@ -92,36 +102,50 @@ struct SessionFilterPopover: View {
     }
 
     private var field: some View {
-        MinimalSearchField(prompt: "Search projects", text: $query, takesKeyboard: $fieldWantsKeyboard)
+        MinimalSearchField(prompt: "Search workspaces and repositories", text: $query, takesKeyboard: $fieldWantsKeyboard)
             .padding(8)
             .onAppear { fieldWantsKeyboard = true }
     }
 
-    private func projects(_ lines: [Line]) -> some View {
-        ScrollViewReader { proxy in
+    private func places(_ lines: [Line]) -> some View {
+        let workspaces = shownWorkspaces
+        let repos = shownRepos
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 1) {
                     if !searching {
-                        FilterRow(lit: lines[safe: active] == .allProjects, checked: filters.project == ShellSessionFilters.allProjects) {
-                            AllProjectsMark()
-                            Text("All projects")
+                        placeRow(.all, lit: lines[safe: active]) {
+                            PlaceMark(systemName: "folder")
+                            Text("Everywhere")
                                 .lineLimit(1)
-                        } pick: {
-                            take(.allProjects)
                         }
-                        .id(Line.allProjects)
                     }
-                    ForEach(shown) { project in
-                        ProjectFilterRow(
-                            name: project.name, path: folded(project.path),
-                            lit: lines[safe: active] == .project(project.path), checked: filters.project == project.path
+                    if !workspaces.isEmpty {
+                        GroupLabel(title: "Workspaces")
+                    }
+                    ForEach(workspaces) { workspace in
+                        placeRow(.workspace(id: workspace.id), lit: lines[safe: active]) {
+                            PlaceMark(systemName: Self.workspaceSymbol)
+                            Text(workspace.name)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                    if !repos.isEmpty {
+                        GroupLabel(title: "Repositories")
+                    }
+                    ForEach(repos) { repo in
+                        let place = SessionPlace.repo(path: repo.path)
+                        RepoFilterRow(
+                            name: repo.name, path: folded(repo.path),
+                            lit: lines[safe: active] == .place(place), checked: filters.place == place
                         ) {
-                            take(.project(project.path))
+                            take(.place(place))
                         }
-                        .id(Line.project(project.path))
+                        .id(Line.place(place))
                     }
-                    if shown.isEmpty {
-                        Text("No projects match.")
+                    if workspaces.isEmpty && repos.isEmpty {
+                        Text("Nothing matches.")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
@@ -136,6 +160,17 @@ struct SessionFilterPopover: View {
                 proxy.scrollTo(lines[index])
             }
         }
+    }
+
+    private func placeRow<Content: View>(
+        _ place: SessionPlace, lit: Line?, @ViewBuilder content: () -> Content
+    ) -> some View {
+        FilterRow(lit: lit == .place(place), checked: filters.place == place) {
+            content()
+        } pick: {
+            take(.place(place))
+        }
+        .id(Line.place(place))
     }
 
     private func dates(_ lines: [Line]) -> some View {
@@ -160,18 +195,19 @@ struct SessionFilterPopover: View {
     private func take(_ line: Line) {
         dismiss()
         switch line {
-        case .allProjects: choose(ShellSessionFilters.allProjects, nil)
-        case .project(let path): choose(path, nil)
+        case .place(let place): choose(place, nil)
         case .date(let date): choose(nil, date)
         }
     }
 }
 
-/// The mark "All projects" wears in the avatars' column: a folder on the
-/// row's own wash, the badge's size and corner.
-private struct AllProjectsMark: View {
+/// The mark a row without an avatar of its own wears in the avatars'
+/// column: a glyph on the row's own wash, the badge's size and corner.
+private struct PlaceMark: View {
+    let systemName: String
+
     var body: some View {
-        Image(systemName: "folder")
+        Image(systemName: systemName)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(.secondary)
             .frame(width: 20, height: 20)
@@ -179,9 +215,23 @@ private struct AllProjectsMark: View {
     }
 }
 
-/// A project's row: its avatar, its name, and the folder it lives in
+/// The heading over the workspaces, and over the repositories.
+private struct GroupLabel: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+    }
+}
+
+/// A repository's row: its avatar, its name, and the folder it lives in
 /// beneath, cut at the end when the row is too narrow for it.
-private struct ProjectFilterRow: View {
+private struct RepoFilterRow: View {
     let name: String
     let path: String
     let lit: Bool

@@ -6,6 +6,7 @@ export const summarizeChat = (chat: Chat): ChatSummary => {
   return {
     id: chat.id,
     origin: chat.origin,
+    workspaceId: chat.workspace?.id ?? null,
     title: chat.title,
     provider: chat.provider,
     model: chat.model,

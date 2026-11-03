@@ -34,20 +34,62 @@ struct ShellSession: Decodable, Identifiable, Hashable, Sendable {
 
 /// What the list is narrowed to — the web rail's search and its filter
 /// popover's two axes, all of them part of what the page asks the server
-/// for — and the projects the filter can name, with how many sessions each
-/// holds. `project` is `all` or a project folder's absolute path.
+/// for — and the places the filter can name, with how many sessions each
+/// holds.
 struct ShellSessionFilters: Decodable, Equatable, Sendable {
     let search: String
-    let project: String
+    let place: SessionPlace
     let date: SessionDateFilter
-    let projects: [ShellProjectTally]
+    let places: ShellSessionPlaces
 
-    static let allProjects = "all"
-
-    var isNarrowed: Bool { project != Self.allProjects || date != .all }
+    var isNarrowed: Bool { place != .all || date != .all }
 }
 
-struct ShellProjectTally: Decodable, Identifiable, Hashable, Sendable {
+/// Where the sessions were had — `PlaceFilter` in the SPA's
+/// `chat-filters.functions`: everywhere, the sessions started in one saved
+/// workspace, or the ones whose agent ran in one repository, opened alone
+/// or inside a workspace.
+enum SessionPlace: Hashable, Sendable {
+    case all
+    case workspace(id: String)
+    case repo(path: String)
+}
+
+extension SessionPlace: Decodable {
+    private enum CodingKeys: String, CodingKey { case kind, id, path }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        switch try container.decode(String.self, forKey: .kind) {
+        case "workspace": self = .workspace(id: try container.decode(String.self, forKey: .id))
+        case "repo": self = .repo(path: try container.decode(String.self, forKey: .path))
+        default: self = .all
+        }
+    }
+
+    var payload: [String: Any] {
+        switch self {
+        case .all: return ["kind": "all"]
+        case .workspace(let id): return ["kind": "workspace", "id": id]
+        case .repo(let path): return ["kind": "repo", "path": path]
+        }
+    }
+}
+
+struct ShellSessionPlaces: Decodable, Equatable, Sendable {
+    let workspaces: [ShellWorkspaceTally]
+    let repos: [ShellRepoTally]
+
+    var count: Int { workspaces.count + repos.count }
+}
+
+struct ShellWorkspaceTally: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let count: Int
+}
+
+struct ShellRepoTally: Decodable, Identifiable, Hashable, Sendable {
     let path: String
     let name: String
     let count: Int
@@ -96,7 +138,7 @@ enum SessionAction {
     case delete([String])
     case loadMore
     case search(String)
-    case filter(project: String?, date: SessionDateFilter?)
+    case filter(place: SessionPlace?, date: SessionDateFilter?)
     /// The shell's own conversation moved — a session started, a turn began
     /// or ended, one was opened — so the rows' marks are stale.
     case refetch
@@ -109,9 +151,9 @@ enum SessionAction {
         case .loadMore: return ["kind": "loadMore"]
         case .refetch: return ["kind": "refetch"]
         case .search(let text): return ["kind": "search", "text": text]
-        case .filter(let project, let date):
+        case .filter(let place, let date):
             var payload: [String: Any] = ["kind": "filter"]
-            if let project { payload["project"] = project }
+            if let place { payload["place"] = place.payload }
             if let date { payload["date"] = date.rawValue }
             return payload
         }
