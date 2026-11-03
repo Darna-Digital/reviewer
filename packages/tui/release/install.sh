@@ -222,9 +222,10 @@ fi
 
 # The site's block wordmark (block-wordmark.tsx): its 39×5 grid of cells, #
 # solid and + the 40% shadow, a cell to two columns so they come out square.
-# Only for a terminal; a log gets the plain line.
+# The shadow is a fixed mid grey rather than dim, which light themes (Warp's)
+# leave as dark as the solid. Only for a terminal; a log gets the plain line.
 if [ -t 1 ]; then
-  solid="$(printf '\033[0;1m██')" shadow="$(printf '\033[0;2m██')" reset="$(printf '\033[0m')"
+  solid="$(printf '\033[0m██')" shadow="$(printf '\033[0;38;5;244m██')" reset="$(printf '\033[0m')"
   printf '\n'
   sed -e "s/#/${solid}/g" -e "s/+/${shadow}/g" -e "s/\./${reset}  /g" -e "s/\$/${reset}/" <<'LOGO'
 ####.####.#..#.###.####.#...#.####.####
