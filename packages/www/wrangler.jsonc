@@ -14,6 +14,10 @@
       "custom_domain": true
     }
   ],
+  // The Reviewer Cloud waitlist. No `id`: `wrangler deploy` creates the
+  // namespace on first deploy and keeps it linked, and `pnpm dev` keeps a local
+  // one under .wrangler/.
+  "kv_namespaces": [{ "binding": "WAITLIST" }],
   "observability": {
     "enabled": true
   }
