@@ -61,7 +61,8 @@ If there isn't:
 6. `scripts/appcast.sh` writes `appcast.xml`: one item naming the disk
    image, its EdDSA signature (made with `SPARKLE_PRIVATE_KEY`), and those
    notes for the update window to show.
-7. `gh release create vX.Y.Z` publishes the image, the appcast, the TUI's
+7. Once the app's job and every `tui` job have finished — they run side by
+   side — the `publish` job's `gh release create vX.Y.Z` publishes the image, the appcast, the TUI's
    tarballs and the manifest as the latest release, with the same notes and a compare link to the previous
    version as its body.
 

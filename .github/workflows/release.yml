@@ -112,8 +112,10 @@ jobs:
           path: ${{ steps.package.outputs.path }}
           if-no-files-found: error
 
-  release:
-    needs: [version, check, tui]
+  # The app, built beside the TUI rather than after it: only the publish job
+  # below needs both.
+  mac:
+    needs: [version, check]
     # Xcode 27 and its macOS 27 SDK: the app's tabs take the system's macOS 27
     # tabs role (see `SegmentedTabs`), which the macOS 26 image's Xcode 26
     # cannot build. GitHub still marks this image a preview.
@@ -121,6 +123,8 @@ jobs:
     timeout-minutes: 90
     env:
       VERSION: ${{ needs.version.outputs.version }}
+    outputs:
+      previous: ${{ steps.previous.outputs.previous }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -171,10 +175,12 @@ jobs:
       # since the Electron-era tags sit above the mac app's first versions.
       # Empty for the first release.
       - name: Find the previous release
+        id: previous
         run: |
           previous="$( (git tag -l 'v[0-9]*' | sed 's/^v//'; echo "$VERSION") | sort -uV | grep -B1 -x "$VERSION" | head -1)"
           if [[ "$previous" == "$VERSION" ]]; then previous=""; fi
           echo "PREVIOUS=${previous}" >> "$GITHUB_ENV"
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
 
       # The release's notes are its CHANGELOG.md entry — the section under
       # "## vX.Y.Z", which the release skill writes into the release commit.
@@ -209,6 +215,37 @@ jobs:
           cat "$appcast"
           echo "path=${appcast}" >> "$GITHUB_OUTPUT"
 
+      - name: Gather the release files
+        env:
+          DMG: ${{ steps.dmg.outputs.path }}
+          APPCAST: ${{ steps.appcast.outputs.path }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mac"
+          cp "$DMG" "$APPCAST" "$RUNNER_TEMP/mac/"
+          cp "$NOTES" "$RUNNER_TEMP/mac/notes.md"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: ${{ runner.temp }}/mac
+          if-no-files-found: error
+
+  # Publishes once the app and every TUI tarball exist, so a release never
+  # goes out with part of either.
+  publish:
+    needs: [version, mac, tui]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PREVIOUS: ${{ needs.mac.outputs.previous }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac
+          path: ${{ runner.temp }}/mac
+
       - uses: actions/download-artifact@v4
         with:
           pattern: tui-*
@@ -230,12 +267,11 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DMG: ${{ steps.dmg.outputs.path }}
-          APPCAST: ${{ steps.appcast.outputs.path }}
         run: |
+          mac="$RUNNER_TEMP/mac"
           body="$RUNNER_TEMP/release-body.md"
           {
-            cat "$NOTES"
+            cat "$mac/notes.md"
             echo
             echo "Signed and notarized. For Apple silicon Macs on macOS 26 or later."
             echo
@@ -248,7 +284,7 @@ jobs:
           if [[ "$(gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
             gh release delete "v${VERSION}" --repo "$GITHUB_REPOSITORY" --yes
           fi
-          gh release create "v${VERSION}" "$DMG" "$APPCAST" "$RUNNER_TEMP"/tui/* \
+          gh release create "v${VERSION}" "$mac"/*.dmg "$mac/appcast.xml" "$RUNNER_TEMP"/tui/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Reviewer v${VERSION}" \
@@ -260,7 +296,7 @@ jobs:
   # offer the download by hand. Builds with Sparkle read the appcast above.
   # The check job above already passed on this commit, so it is not rerun.
   announce:
-    needs: release
+    needs: publish
     uses: ./.github/workflows/deploy-www.yml
     with:
       checked: true
