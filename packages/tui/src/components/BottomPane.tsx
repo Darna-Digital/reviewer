@@ -53,7 +53,9 @@ export function BottomPane() {
         backgroundColor={bg}
         onMouseDown={() => captureMouse(renderer, header.current)}
         onMouseDrag={(event) =>
-          workspace.resizeBottom(app.screen.height - 1 - event.y)
+          // The header sits one row below the rule, so it keeps the pane's
+          // height when held still on its own row.
+          workspace.resizeBottom(app.screen.height - event.y)
         }
       >
         <Line
