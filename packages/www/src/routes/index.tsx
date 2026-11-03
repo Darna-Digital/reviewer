@@ -196,15 +196,14 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
     question: "What's Reviewer Cloud going to be?",
     answer: (
       <>
-        The paid part of Reviewer. We'll say what it does and what it costs when
-        it has a date.{" "}
+        A paid service we're building next.{" "}
         <Link
           className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
           to="/cloud"
         >
           Join the waitlist
         </Link>{" "}
-        to hear first.
+        to hear when it opens.
       </>
     ),
   },
@@ -420,51 +419,15 @@ function TerminalSections() {
   return <TerminalFeatures />;
 }
 
-const DECIDED = [
-  "It's paid. The Mac app and the terminal app stay free and MIT-licensed.",
-  "It's next. What it does and what it costs go on its page when it has a date.",
-  "Everything you do in Reviewer today keeps working on your machine without it.",
-];
-
 function CloudSections() {
   return (
     <>
-      <section className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
-        <div className="flex flex-col gap-6">
-          <SectionHeading lead="Reviewer Cloud">
-            is what we're building next.
-          </SectionHeading>
-          <p className="max-w-xl text-lg text-pretty text-neutral-600 dark:text-neutral-400">
-            Leave your email and we'll tell you when it opens.
-          </p>
-          <div className="max-w-md">
-            <WaitlistForm />
-          </div>
-        </div>
-        <div className={`${SURFACE} flex flex-col gap-4 p-6 lg:p-8`}>
-          <h3 className="text-lg font-semibold tracking-[-0.01em]">
-            What's decided
-          </h3>
-          <ul className="flex flex-col gap-3">
-            {DECIDED.map((point) => (
-              <li
-                className="grid grid-cols-[1.5rem_1fr] text-[15px] leading-relaxed text-pretty text-neutral-600 dark:text-neutral-400"
-                key={point}
-              >
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  –
-                </span>
-                {point}
-              </li>
-            ))}
-          </ul>
-          <Link
-            className="mt-auto inline-flex w-fit items-center gap-1 pt-2 text-[15px] font-medium"
-            to="/cloud"
-          >
-            Read about Reviewer Cloud
-            <ChevronRight className="size-4" />
-          </Link>
+      <section className="flex flex-col gap-6">
+        <SectionHeading lead="Reviewer Cloud">
+          is what we're building next.
+        </SectionHeading>
+        <div className="max-w-md">
+          <WaitlistForm />
         </div>
       </section>
 
