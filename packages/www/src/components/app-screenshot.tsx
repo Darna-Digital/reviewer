@@ -8,8 +8,9 @@ import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
  *
  * The `tui-` captures are placeholders: headless renders of the terminal app
  * (packages/tui/scripts/snapshot.tsx) on a demo repository, framed as a
- * terminal window. Replace them with real screenshots under the same names
- * and sizes.
+ * terminal window with transparent corners. Replace them with real
+ * screenshots under the same names and sizes. They sit on the CSS `.noir`
+ * backdrop rather than having one baked in.
  */
 const SCREENSHOT_SIZES = {
   "split-diff": { width: 2560, height: 1477 },
@@ -21,11 +22,11 @@ const SCREENSHOT_SIZES = {
   "branch-picker": { width: 1470, height: 1326 },
   history: { width: 1854, height: 1192 },
   "find-symbol": { width: 2798, height: 1884 },
-  "tui-review": { width: 2659, height: 1714 },
-  "tui-split": { width: 2659, height: 1714 },
-  "tui-palette": { width: 2659, height: 1714 },
-  "tui-history": { width: 2659, height: 1714 },
-  "tui-themes": { width: 2659, height: 1714 },
+  "tui-review": { width: 2403, height: 1466 },
+  "tui-split": { width: 2403, height: 1466 },
+  "tui-palette": { width: 2403, height: 1466 },
+  "tui-history": { width: 2403, height: 1466 },
+  "tui-themes": { width: 2403, height: 1466 },
 } as const;
 
 export type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
@@ -47,7 +48,7 @@ export function AppScreenshot({
   name: ScreenshotName;
   phone?: ScreenshotCrop;
 }) {
-  return (
+  const screenshot = (
     <Screenshot
       alt={label}
       lazy={lazy}
@@ -55,5 +56,13 @@ export function AppScreenshot({
       phone={phone}
       {...SCREENSHOT_SIZES[name]}
     />
+  );
+  if (!name.startsWith("tui-")) return screenshot;
+  return (
+    <div className="noir px-[5%] pt-[4.5%] pb-[5%]">
+      <div className="overflow-hidden rounded-[1%/1.64%] shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.08)]">
+        {screenshot}
+      </div>
+    </div>
   );
 }

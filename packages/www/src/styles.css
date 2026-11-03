@@ -63,24 +63,24 @@ body {
   }
 }
 
-/* The noir backdrop the terminal captures sit on, Raycast style: near-black
-   with a warm glow from the top left and a violet one from the bottom right. */
+/* The noir backdrop the terminal captures sit on, Raycast style: black and
+   white only, lit from above with a fainter glow from each lower corner. */
 .noir {
   background:
     radial-gradient(
-      60% 70% at 12% 0%,
-      rgba(255, 92, 92, 0.38),
+      70% 55% at 50% -5%,
+      rgba(255, 255, 255, 0.2),
       transparent 70%
     ),
     radial-gradient(
-      55% 65% at 95% 100%,
-      rgba(118, 88, 255, 0.32),
+      45% 50% at 0% 100%,
+      rgba(255, 255, 255, 0.07),
       transparent 70%
     ),
     radial-gradient(
-      40% 40% at 50% 0%,
-      rgba(255, 255, 255, 0.06),
+      40% 45% at 100% 100%,
+      rgba(255, 255, 255, 0.05),
       transparent 70%
     ),
-    #08080a;
+    linear-gradient(#141414, #050505);
 }
