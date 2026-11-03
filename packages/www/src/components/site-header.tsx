@@ -2,19 +2,12 @@ import { Link, useLoaderData } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Container } from "#/components/container";
-import {
-  Apple,
-  ChevronDown,
-  Cloud,
-  GitHub,
-  Laptop,
-  Terminal,
-} from "#/components/icons";
+import { Apple, ArrowUpRight, ChevronDown, GitHub } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
 import { cn } from "#/lib/cn";
 import { formatStars } from "#/lib/github-stars";
-import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
+import { DOWNLOAD_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
 
 function TouchTarget() {
   return (
@@ -30,32 +23,39 @@ const NAV_LINK =
 
 const ACTIVE_LINK = { className: "text-neutral-900 dark:text-white" };
 
-const PRODUCTS = [
+type MenuItem = {
+  title: string;
+  badge?: string;
+} & ({ to: "/mac" | "/terminal" | "/cloud" | "/changelog" } | { href: string });
+
+const MENU: { heading: string; items: MenuItem[] }[] = [
   {
-    to: "/mac",
-    title: "Mac app",
-    description: "Read, comment and hand off in one window.",
-    icon: Laptop,
-    badge: null,
+    heading: "Open source",
+    items: [
+      { to: "/mac", title: "Mac app" },
+      { to: "/terminal", title: "Terminal app" },
+    ],
   },
   {
-    to: "/terminal",
-    title: "Terminal app",
-    description: "The same review, from the keyboard.",
-    icon: Terminal,
-    badge: null,
+    heading: "Paid",
+    items: [{ to: "/cloud", title: "Reviewer Cloud", badge: "Waitlist" }],
   },
   {
-    to: "/cloud",
-    title: "Reviewer Cloud",
-    description: "Our paid service. Join the waitlist.",
-    icon: Cloud,
-    badge: "Waitlist",
+    heading: "Resources",
+    items: [
+      { to: "/changelog", title: "Changelog" },
+      { href: REPO_URL, title: "Source code" },
+      { href: RELEASES_URL, title: "Releases" },
+    ],
   },
-] as const;
+];
+
+const MENU_LINK =
+  "inline-flex items-center gap-1.5 py-1 text-[15px] whitespace-nowrap font-medium text-neutral-900 transition-colors hover:text-neutral-500 dark:text-white dark:hover:text-neutral-400";
 
 /**
- * Opens on hover with a mouse and on tap with a finger; Escape or a click
+ * A full-width panel under the header, as devin.ai lays out its menus. It
+ * opens on hover with a mouse and on tap with a finger; Escape or a click
  * outside closes it.
  */
 function ProductMenu() {
@@ -84,10 +84,12 @@ function ProductMenu() {
     hovering.current = entering;
     setOpen(entering);
   };
+  const close = () => setOpen(false);
 
   return (
+    // Spans the header's full height so the pointer can reach the panel.
     <div
-      className="relative"
+      className="flex self-stretch"
       onMouseEnter={() => hover(true)}
       onMouseLeave={() => hover(false)}
       ref={root}
@@ -110,46 +112,53 @@ function ProductMenu() {
       </button>
       <div
         className={cn(
-          "z-50 transition duration-150 ease-out max-sm:fixed max-sm:inset-x-4 max-sm:top-header sm:absolute sm:top-full sm:-left-3 sm:pt-3",
-          open
-            ? "visible translate-y-0 opacity-100"
-            : "invisible -translate-y-1 opacity-0"
+          "fixed inset-x-0 top-header z-50 border-b border-black/[0.06] bg-white shadow-[0_24px_48px_-28px_rgba(0,0,0,0.25)] transition duration-150 ease-out dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-[0_24px_48px_-28px_rgba(0,0,0,0.8)]",
+          open ? "visible opacity-100" : "invisible opacity-0"
         )}
       >
-        <div className="flex flex-col rounded-2xl bg-white p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06] sm:w-[340px] dark:bg-[#1c1c1f] dark:ring-white/[0.08]">
-          {PRODUCTS.map(({ to, title, description, icon: Icon, badge }) => (
-            <Link
-              className="group flex items-center gap-3.5 rounded-xl p-3 transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-              key={to}
-              onClick={() => setOpen(false)}
-              to={to}
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-black/[0.04] text-neutral-600 ring-1 ring-black/[0.05] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.06]">
-                <Icon className="size-5" />
-              </span>
-              <span className="flex flex-col">
-                <span className="flex items-center gap-2 text-[15px] font-semibold text-neutral-900 dark:text-white">
-                  {title}
-                  {badge && (
-                    <span className="rounded-full bg-black/[0.05] px-1.5 py-px text-[11px] font-medium text-neutral-500 dark:bg-white/[0.08] dark:text-neutral-400">
-                      {badge}
-                    </span>
-                  )}
-                </span>
-                <span className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                  {description}
-                </span>
-              </span>
-            </Link>
+        <Container
+          className={cn(
+            "grid gap-x-6 gap-y-6 pt-6 pb-8 transition-transform duration-200 ease-out sm:grid-cols-3 sm:gap-y-8 sm:pt-7 sm:pb-9 lg:grid-cols-4",
+            open ? "translate-y-0" : "-translate-y-1"
+          )}
+        >
+          {MENU.map(({ heading, items }) => (
+            <div className="flex flex-col items-start gap-1" key={heading}>
+              <p className="mb-2 text-[13px] text-neutral-500 dark:text-neutral-400">
+                {heading}
+              </p>
+              {items.map((item) =>
+                "to" in item ? (
+                  <Link
+                    className={MENU_LINK}
+                    key={item.title}
+                    onClick={close}
+                    to={item.to}
+                  >
+                    {item.title}
+                    {item.badge && (
+                      <span className="rounded-full bg-black/[0.05] px-1.5 py-px text-[11px] font-medium text-neutral-500 dark:bg-white/[0.08] dark:text-neutral-400">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                ) : (
+                  <a
+                    className={MENU_LINK}
+                    href={item.href}
+                    key={item.title}
+                    onClick={close}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {item.title}
+                    <ArrowUpRight className="size-3.5 text-neutral-400" />
+                  </a>
+                )
+              )}
+            </div>
           ))}
-          <Link
-            className="mt-1 border-t border-black/[0.06] px-3 pt-3 pb-2 text-[15px] font-medium text-neutral-600 sm:hidden dark:border-white/[0.08] dark:text-neutral-300"
-            onClick={() => setOpen(false)}
-            to="/changelog"
-          >
-            Changelog
-          </Link>
-        </div>
+        </Container>
       </div>
     </div>
   );
@@ -186,16 +195,19 @@ export function SiteHeader() {
   const backdrop = scrolled
     ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
     : "border-transparent bg-transparent";
+  // While the Product menu is open, the header and its panel read as one sheet.
+  const menuOpen =
+    "has-[[aria-expanded=true]]:border-transparent has-[[aria-expanded=true]]:bg-white has-[[aria-expanded=true]]:backdrop-blur-none dark:has-[[aria-expanded=true]]:bg-[#111113]";
 
   return (
     <header
-      className={`sticky top-0 z-40 -mb-header h-header border-b transition-colors duration-200 ${backdrop}`}
+      className={`sticky top-0 z-40 -mb-header h-header border-b transition-colors duration-200 ${backdrop} ${menuOpen}`}
     >
       <Container className="flex h-full items-center gap-5 lg:gap-7">
         <Link aria-label="Reviewer home" className="sm:mr-2" to="/">
           <Logo className="h-4 w-auto lg:h-[18px]" />
         </Link>
-        <nav className="mr-auto flex items-center gap-5 lg:gap-7">
+        <nav className="mr-auto flex items-center gap-5 self-stretch lg:gap-7">
           <ProductMenu />
           <Link
             activeProps={ACTIVE_LINK}

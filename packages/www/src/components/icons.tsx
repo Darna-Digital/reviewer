@@ -260,6 +260,14 @@ export function ChevronDown({ className }: IconProps) {
   );
 }
 
+export function ArrowUpRight({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <path d="M7.5 16.5 16.5 7.5M9 7.5h7.5V15" />
+    </Symbol>
+  );
+}
+
 export function ChevronLeft({ className }: IconProps) {
   return (
     <Symbol className={className}>
