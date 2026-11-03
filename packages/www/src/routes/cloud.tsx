@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { PageHero } from "#/components/card";
 import { Container } from "#/components/container";
-import { Logo } from "#/components/logo";
+import { Cloud } from "#/components/icons";
+import { MARK_PATH } from "#/components/logo";
 import { WaitlistForm } from "#/components/waitlist-form";
 import { SITE_URL } from "#/lib/links";
 
 const TITLE = "Reviewer Cloud · Reviewer";
-const SENTENCE = "Reviewer Cloud is a paid service we're still building.";
-const DESCRIPTION = `${SENTENCE} Join the waitlist to hear when it opens.`;
+const DESCRIPTION =
+  "Reviewer Cloud is a paid service we're still building. Join the waitlist to hear when it opens.";
 
 export const Route = createFileRoute("/cloud")({
   head: () => ({
@@ -22,46 +24,37 @@ export const Route = createFileRoute("/cloud")({
   component: CloudPage,
 });
 
-const RULE = "border-black/[0.08] dark:border-white/[0.08]";
-
 /**
- * Laid out in opencode.ai's marketing language: one monospace column between
- * hairlines, opening on a dark screen in either scheme with the name on a
- * grid of the mark's cells, then one ruled band with the sentence and the form.
+ * The homepage's opening, with the waitlist where its buttons are, then the
+ * stage its screenshots sit on. Reviewer Cloud has no screenshot yet, so the
+ * stage shows the mark on the noir backdrop.
  */
 function CloudPage() {
   return (
-    <Container className="pt-20 sm:pt-28 lg:pt-32">
-      <div className={`border font-mono ${RULE}`}>
-        <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#0b0b0c] sm:aspect-[2/1] lg:aspect-[5/2]">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] mask-radial-from-20% mask-radial-to-75% bg-size-[32px_32px] bg-center"
-          />
-          <h1 className="relative">
-            <span className="sr-only">Reviewer Cloud</span>
-            <span
-              aria-hidden="true"
-              className="flex items-center gap-[0.5em] text-[24px] sm:text-[40px] lg:text-[52px]"
-            >
-              <Logo className="h-[1.4em] text-white" />
-              <span className="border border-white/20 px-[0.4em] py-[0.15em] text-[0.5em] leading-none text-neutral-400">
-                Cloud
-              </span>
-            </span>
-          </h1>
-        </div>
-
-        <section
-          className={`flex flex-col gap-8 border-t px-5 py-12 sm:px-12 sm:py-16 ${RULE}`}
-        >
-          <p className="max-w-2xl text-[20px] leading-snug font-bold tracking-[-0.02em] text-pretty sm:text-[26px]">
-            {SENTENCE}
-          </p>
-          <div className="max-w-xl">
+    <Container>
+      <PageHero
+        actions={
+          <div className="w-full sm:w-[32rem]">
             <WaitlistForm />
           </div>
-        </section>
+        }
+        title="Reviewer Cloud"
+      >
+        It's a paid service we're still building.
+      </PageHero>
+
+      <div
+        aria-hidden="true"
+        className="noir relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[min(2vw,12px)] sm:aspect-[2/1]"
+      >
+        <svg
+          className="absolute h-[80%] w-auto text-white/[0.05]"
+          fill="currentColor"
+          viewBox="0 0 300 400"
+        >
+          <path d={MARK_PATH} />
+        </svg>
+        <Cloud className="relative size-14 text-neutral-300 sm:size-20" />
       </div>
     </Container>
   );

@@ -34,10 +34,9 @@ export function WaitlistForm() {
   if (status.kind === "joined") {
     return (
       <p
-        className="rounded-md bg-black/[0.03] px-4 py-3.5 text-[13px] leading-6 ring-1 ring-black/10 ring-inset dark:bg-white/[0.04] dark:ring-white/10"
+        className="rounded-[20px] bg-black/[0.035] px-5 py-4 text-[15px] leading-relaxed text-pretty ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.04] dark:ring-white/[0.08]"
         role="status"
       >
-        <span className="text-emerald-600 dark:text-emerald-400">[✓]</span>{" "}
         You're on the list. We'll email{" "}
         <span className="font-semibold">{status.email}</span> when Reviewer
         Cloud opens.
@@ -47,7 +46,7 @@ export function WaitlistForm() {
 
   return (
     <form className="flex flex-col gap-2" noValidate onSubmit={submit}>
-      <div className="flex items-center gap-2 rounded-md bg-black/[0.03] p-1.5 ring-1 ring-black/10 ring-inset focus-within:ring-black/30 dark:bg-white/[0.04] dark:ring-white/10 dark:focus-within:ring-white/30">
+      <div className="flex items-center gap-2 rounded-full bg-black/[0.035] p-1.5 ring-1 ring-black/10 ring-inset focus-within:ring-black/30 dark:bg-white/[0.04] dark:ring-white/15 dark:focus-within:ring-white/35">
         <label className="sr-only" htmlFor="waitlist-email">
           Email address
         </label>
@@ -55,7 +54,7 @@ export function WaitlistForm() {
           aria-describedby="waitlist-hint"
           aria-invalid={status.kind === "failed"}
           autoComplete="email"
-          className="h-9 min-w-0 flex-1 bg-transparent px-2.5 text-[13px] outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+          className="h-10 min-w-0 flex-1 bg-transparent pl-3.5 text-base outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
           id="waitlist-email"
           inputMode="email"
           onChange={(event) => {
@@ -67,7 +66,7 @@ export function WaitlistForm() {
           value={email}
         />
         <button
-          className="h-9 shrink-0 rounded bg-neutral-900 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+          className="h-10 shrink-0 rounded-full bg-neutral-900 px-5 text-[15px] font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
           disabled={status.kind === "sending"}
           type="submit"
         >
@@ -76,7 +75,7 @@ export function WaitlistForm() {
       </div>
       <p
         className={cn(
-          "text-[12px]",
+          "pl-5 text-sm",
           status.kind === "failed"
             ? "text-red-600 dark:text-red-400"
             : "text-neutral-500"
@@ -85,7 +84,7 @@ export function WaitlistForm() {
       >
         {status.kind === "failed"
           ? status.message
-          : "One email when it opens. We won't use your address for anything else."}
+          : "We'll email you once, when it opens."}
       </p>
     </form>
   );
