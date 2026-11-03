@@ -31,8 +31,11 @@ curl -fsSL https://reviewer.sh/install | bash
 
 macOS and Linux (arm64 and x64). It installs into `~/.reviewer` with the
 Reviewer server and the Node.js it runs on, so nothing else is needed — not
-the Mac app either; `reviewer upgrade` updates it, `reviewer --version` says
-which it is. See RELEASING.md for what goes where.
+the Mac app either. Like the Mac app it looks for a newer release at launch
+and every few hours, and says when one is out: **update Reviewer** in the
+palette (⌘K) installs it in the background, then **restart Reviewer** reopens
+into it. `reviewer upgrade` does the same from the shell, `reviewer --version`
+says which it is. See RELEASING.md for what goes where.
 
 From a checkout:
 
