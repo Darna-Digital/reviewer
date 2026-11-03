@@ -285,6 +285,10 @@ function PlacePicker({
 
   return (
     <>
+      {/* The spacing sits outside the sticky bar so the bar keeps one height
+          when it sticks. A bar that shrinks as it sticks shortens the page
+          under the reader, and scroll anchoring then pulls them back up. */}
+      <div aria-hidden="true" className="h-6 sm:h-10" />
       <div aria-hidden="true" ref={sentinel} />
       <div
         className={cn(
@@ -297,10 +301,7 @@ function PlacePicker({
         <Container>
           <div
             aria-label="Choose where you work"
-            className={cn(
-              "flex items-center gap-2 overflow-x-auto transition-[padding] duration-200",
-              stuck ? "py-2.5" : "py-8 sm:py-12"
-            )}
+            className={cn("flex items-center gap-2 overflow-x-auto py-2.5")}
             role="group"
           >
             <span
@@ -323,15 +324,14 @@ function PlacePicker({
                 key={value}
                 onClick={() => {
                   onChange(value);
-                  // Switched from further down: start the new page at the top.
-                  if (stuck) {
-                    const top = sentinel.current!.getBoundingClientRect().top;
-                    const header =
-                      parseFloat(
-                        getComputedStyle(document.documentElement).fontSize
-                      ) * 3.25;
-                    window.scrollBy({ top: top - header });
-                  }
+                  // Bring the chosen product's view up under the picker,
+                  // wherever the reader clicked from.
+                  const top = sentinel.current!.getBoundingClientRect().top;
+                  const header =
+                    parseFloat(
+                      getComputedStyle(document.documentElement).fontSize
+                    ) * 3.25;
+                  window.scrollBy({ top: top - header, behavior: "smooth" });
                 }}
                 type="button"
               >
@@ -341,6 +341,7 @@ function PlacePicker({
           </div>
         </Container>
       </div>
+      <div aria-hidden="true" className="h-6 sm:h-10" />
     </>
   );
 }
