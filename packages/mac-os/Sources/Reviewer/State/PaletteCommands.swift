@@ -35,12 +35,16 @@ extension AppModel {
     }
 
     /// The git actions sit in the palette's own Git list rather than the
-    /// root one, so the list you land on stays short.
+    /// root one, so the list you land on stays short. In a workspace of
+    /// several each asks which repository it is for first.
     private var gitCommands: [PaletteCommand] {
         [
             PaletteCommand(
                 id: "git-refresh", label: "Refresh", group: "Git", symbol: "arrow.clockwise", keywords: "reload sync",
-                hint: "⌘R", submenu: .git
+                hint: "⌘R", submenu: .git,
+                choices: repositoryChoices(in: roots, all: { [weak self] in Task { await self?.refresh() } }) {
+                    [weak self] root in Task { await self?.refresh(root: root) }
+                }
             ) { [weak self] in Task { await self?.refresh() } },
             PaletteCommand(
                 id: "git-fetch", label: "Fetch", group: "Git", symbol: "icloud.and.arrow.down", keywords: "remote",
@@ -56,7 +60,10 @@ extension AppModel {
             ) { [weak self] in self?.push() },
             PaletteCommand(
                 id: "git-branch", label: "Create branch…", group: "Git", symbol: "arrow.triangle.branch",
-                keywords: "new checkout", submenu: .git
+                keywords: "new checkout", submenu: .git,
+                choices: repositoryChoices(in: roots, offersAll: false) { [weak self] root in
+                    self?.branchPrompt = .create(startPoint: root.branch, root: root.path)
+                }
             ) { [weak self] in
                 guard let self else { return }
                 branchPrompt = .create(startPoint: currentBranch)
@@ -103,23 +110,44 @@ extension AppModel {
 
     /// Where a workspace of several asks which repository a command is
     /// for: all of them first — what the command does when nothing is
-    /// asked of one — then each by name, under its avatar. Nil while
-    /// there is only one to ask about, and the command simply runs.
+    /// asked of one — then each by name, under its avatar. A command that
+    /// only makes sense in one at a time — a branch made, a branch checked
+    /// out — offers no All row. Nil while there is only one to ask about,
+    /// and the command simply runs.
     private func repositoryChoices(
-        in candidates: [RootModel], all: (@MainActor () -> Void)? = nil, each: @escaping @MainActor (RootModel) -> Void
+        in candidates: [RootModel], offersAll: Bool = true, all: (@MainActor () -> Void)? = nil,
+        each: @escaping @MainActor (RootModel) -> Void
     ) -> [PaletteCommand]? {
         guard roots.count > 1, !candidates.isEmpty else { return nil }
         let everyOne: @MainActor () -> Void = all ?? { candidates.forEach(each) }
         let allRow = PaletteCommand(
             id: "repositories-all", label: "All repositories", group: "Repository", symbol: "square.stack.3d.up",
             run: everyOne)
-        let rows = candidates.map { root in
-            PaletteCommand(
-                id: "repository:\(root.path)", label: root.name, group: "Repository", symbol: "folder",
-                monogram: root.name, hint: root.branch
-            ) { each(root) }
+        let rows = candidates.map { root in repositoryRow(root) { each(root) } }
+        return offersAll && candidates.count > 1 ? [allRow] + rows : rows
+    }
+
+    /// Where a workspace of several asks whose branches Switch branch…
+    /// lists: the repository step Push takes, without its All row. Each row
+    /// leads on to that repository's branches, read afresh as the popover
+    /// does. Nil while there is only one, whose branches the list goes
+    /// straight to.
+    func paletteBranchChoices() -> [PaletteCommand]? {
+        guard roots.count > 1 else { return nil }
+        return roots.map { root in
+            repositoryRow(root, closesOnRun: false) { [weak self] in
+                self?.palette.showBranches(of: root.path)
+                Task { await root.loadBranches() }
+            }
         }
-        return candidates.count > 1 ? [allRow] + rows : rows
+    }
+
+    private func repositoryRow(
+        _ root: RootModel, closesOnRun: Bool = true, run: @escaping @MainActor () -> Void
+    ) -> PaletteCommand {
+        PaletteCommand(
+            id: "repository:\(root.path)", label: root.name, group: "Repository", symbol: "folder",
+            monogram: root.name, hint: root.branch, closesOnRun: closesOnRun, run: run)
     }
 
     /// The window's own: the diff style is the page's preference, asked
@@ -198,11 +226,13 @@ extension AppModel {
         ]
     }
 
-    /// The branches to offer for checkout: the one you are on first, then
-    /// the rest of the local branches, then the remote branches that have
-    /// no local counterpart — a remote you already track is the same
-    /// branch twice.
-    func paletteBranches() -> [PaletteBranch] {
+    /// The branches of `root` — the focused one when nil — to offer for
+    /// checkout: the one you are on first, then the rest of the local
+    /// branches, then the remote branches that have no local counterpart —
+    /// a remote you already track is the same branch twice.
+    func paletteBranches(of root: RootModel?) -> [PaletteBranch] {
+        let root = root ?? focused
+        let branches = root.branches
         let tracked = Set(branches.map(\.name))
         let local = (branches.filter(\.isCurrent) + branches.filter { !$0.isCurrent })
             .map { branch in
@@ -210,7 +240,7 @@ extension AppModel {
                     name: branch.name, ref: branch.name, group: "Local", isCurrent: branch.isCurrent,
                     hint: branch.isCurrent ? "current" : Self.trackingHint(branch))
             }
-        let remote = remoteBranches
+        let remote = root.remoteBranches
             .filter { !tracked.contains($0.shortName) }
             .map { branch in
                 PaletteBranch(name: branch.name, ref: branch.shortName, group: "Remote", isCurrent: false, hint: branch.remote)

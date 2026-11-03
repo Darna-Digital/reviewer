@@ -7,8 +7,9 @@
 // The shape is the web dialog's: one box over a stack of lists. Commands
 // is the root; some of its rows lead deeper rather than acting — Files
 // and Text are the two searches, Git holds the git actions and leads on to
-// Branches, which checks one out — and a breadcrumb over the box says
-// which list is up and walks back. The two searches keep the rules the web
+// Branches, which checks one out, in a workspace of several after asking
+// which repository's, the way Push asks which to push — and a breadcrumb
+// over the box says which list is up and walks back. The two searches keep the rules the web
 // app's have: a file query is a fuzzy subsequence match over every path,
 // scored so tighter and earlier matches win and capped so the whole
 // repository never becomes a result list; a text query is one request to
@@ -61,7 +62,8 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
     /// root. Declared once, so a mode's breadcrumb trail, the row that
     /// opens it and where Backspace on an empty box returns to never drift.
     /// The repository step hangs off whichever list asked it, which the
-    /// palette keeps (see `RepositoryChoice`).
+    /// palette keeps (see `RepositoryChoice`), and a repository's branches
+    /// off that step.
     var parent: PaletteMode? {
         switch self {
         case .commands, .repositories: return nil
@@ -97,6 +99,10 @@ struct PaletteSubmenu {
     /// The chord that opens it directly, on the row's trailing edge.
     let hint: String?
 
+    static let switchBranch = PaletteSubmenu(
+        mode: .branches, label: "Switch branch…", group: "Git", symbol: "arrow.left.arrow.right",
+        keywords: "checkout switch change branch", hint: "⇧⌘B")
+
     static let all: [PaletteSubmenu] = [
         PaletteSubmenu(
             mode: .files, label: "Go to file…", group: "Search", symbol: "doc",
@@ -107,9 +113,7 @@ struct PaletteSubmenu {
         PaletteSubmenu(
             mode: .git, label: "Git actions…", group: "Git", symbol: "arrow.triangle.branch",
             keywords: "fetch pull push branch merge rebase", hint: nil),
-        PaletteSubmenu(
-            mode: .branches, label: "Switch branch…", group: "Git", symbol: "arrow.left.arrow.right",
-            keywords: "checkout switch change branch", hint: "⇧⌘B"),
+        switchBranch,
     ]
 }
 
@@ -134,6 +138,8 @@ struct PaletteCommand: Identifiable {
     /// for: the row leads on to these, one per repository and one for them
     /// all, rather than running.
     var choices: [PaletteCommand]? = nil
+    /// A choice that leads on to another list keeps the palette open.
+    var closesOnRun = true
     let run: @MainActor () -> Void
 }
 
@@ -232,20 +238,28 @@ final class CommandPalette {
     private(set) var isSearching = false
     private(set) var searchError: String?
     private(set) var commands: [PaletteCommand] = []
-    private(set) var branches: [PaletteBranch] = []
     private(set) var repositoryChoice: RepositoryChoice?
+    /// The repository whose branches the list shows, as the repository step
+    /// picked it — nil for the focused one, in a workspace of one.
+    private(set) var branchRoot: String?
 
     /// What a search row opens: a file, at a line when a text hit named one.
     @ObservationIgnored var onOpen: ((String, Int?) -> Void)?
     /// The file the highlighted row would open. Return is a keystroke away
     /// from it, so this is the moment to have the page read and highlight it.
     @ObservationIgnored var onIntent: ((String) -> Void)?
-    /// What a branch row does: the checkout.
-    @ObservationIgnored var onCheckout: ((String) -> Void)?
-    /// The shell's commands and branches, read whenever a list is shown so
-    /// a toggle's label says what it would do next.
+    /// What a branch row does: the checkout, in `branchRoot`.
+    @ObservationIgnored var onCheckout: ((_ ref: String, _ root: String?) -> Void)?
+    /// The shell's commands, read whenever a list is shown so a toggle's
+    /// label says what it would do next.
     @ObservationIgnored var commandSource: (() -> [PaletteCommand])?
-    @ObservationIgnored var branchSource: (() -> [PaletteBranch])?
+    /// A repository's branches, read live so a list that is up fills in as
+    /// they load.
+    @ObservationIgnored var branchSource: ((_ root: String?) -> [PaletteBranch])?
+    /// Where a workspace of several asks whose branches to list: a row per
+    /// repository, each leading on to its branches (see `showBranches(of:)`).
+    /// Nil for a workspace of one, which goes straight to them.
+    @ObservationIgnored var branchChoicesSource: (() -> [PaletteCommand]?)?
 
     /// The server, about the focused root — turned with it, before
     /// `projectChanged` drops what the last one listed.
@@ -291,7 +305,7 @@ final class CommandPalette {
     /// ⌘⇧F over a highlighted word searches for it. An empty seed leaves
     /// the box as the last search left it.
     func open(_ mode: PaletteMode, seed: String = "") {
-        show(mode)
+        enter(mode)
         if !seed.isEmpty { query = seed }
         isShown = true
     }
@@ -312,26 +326,57 @@ final class CommandPalette {
     func show(_ mode: PaletteMode) {
         self.mode = mode
         if mode.isMenu { menuQuery = "" }
+        if mode != .branches { branchRoot = nil }
         commands = commandSource?() ?? []
-        branches = branchSource?() ?? []
         if mode == .files { Task { await loadPathsIfNeeded() } }
+    }
+
+    /// A list brought up afresh — by the row that opens it, or a chord —
+    /// rather than walked back to. Switch branch… in a workspace of several
+    /// asks whose branches first, off the Git list it lives in.
+    private func enter(_ mode: PaletteMode) {
+        guard mode == .branches else { return show(mode) }
+        branchRoot = nil
+        guard let choices = branchChoicesSource?() else { return show(.branches) }
+        chooseRepository(
+            title: PaletteSubmenu.switchBranch.label, returnTo: PaletteMode.branches.parent ?? .commands,
+            options: choices)
+    }
+
+    /// The branches of one repository of the workspace, as its row in the
+    /// repository step leads on to.
+    func showBranches(of root: String) {
+        branchRoot = root
+        show(.branches)
     }
 
     /// The repository step, asked by a command that needs one.
     func chooseRepository(for command: PaletteCommand, options: [PaletteCommand]) {
-        repositoryChoice = RepositoryChoice(title: command.label, returnTo: mode, options: options)
+        chooseRepository(title: command.label, returnTo: mode, options: options)
+    }
+
+    private func chooseRepository(title: String, returnTo: PaletteMode, options: [PaletteCommand]) {
+        repositoryChoice = RepositoryChoice(title: title, returnTo: returnTo, options: options)
         show(.repositories)
     }
 
+    private var isOnRepositoryBranches: Bool { mode == .branches && branchRoot != nil }
+
     /// Where the list on screen sits, root first — the repository step
-    /// after the list that asked it.
+    /// after the list that asked it, and a repository's branches after that.
     var crumbs: [PaletteMode] {
-        guard mode == .repositories else { return mode.crumbs }
-        return (repositoryChoice?.returnTo.crumbs ?? [.commands]) + [.repositories]
+        let repositoryTrail = (repositoryChoice?.returnTo.crumbs ?? [.commands]) + [.repositories]
+        if mode == .repositories { return repositoryTrail }
+        if isOnRepositoryBranches { return repositoryTrail + [.branches] }
+        return mode.crumbs
     }
 
     /// Back up the trail. False at the root, where Backspace is the box's.
     func back() -> Bool {
+        if isOnRepositoryBranches {
+            show(.repositories)
+            return true
+        }
         if mode == .repositories {
             show(repositoryChoice?.returnTo ?? .commands)
             return true
@@ -366,7 +411,7 @@ final class CommandPalette {
                     PaletteRow(
                         id: "repository:\(option.id)", group: repositoryChoice?.title ?? "",
                         content: .command(label: option.label, symbol: option.symbol, monogram: option.monogram),
-                        run: option.run)
+                        closesOnRun: option.closesOnRun, run: option.run)
                 }
         case .files:
             return fileResults.map { path in
@@ -384,12 +429,13 @@ final class CommandPalette {
                 }
             }
         case .branches:
-            return Self.filterBranches(branches, by: menuQuery).map { branch in
+            let root = branchRoot
+            return Self.filterBranches(branchSource?(root) ?? [], by: menuQuery).map { branch in
                 PaletteRow(
                     id: "branch:\(branch.id)", group: branch.group, content: .branch(name: branch.name),
                     hint: branch.hint
                 ) { [weak self] in
-                    self?.onCheckout?(branch.ref)
+                    self?.onCheckout?(branch.ref, root)
                 }
             }
         }
@@ -410,7 +456,7 @@ final class CommandPalette {
                     content: .command(label: submenu.label, symbol: submenu.symbol),
                     hint: submenu.hint, closesOnRun: false
                 ) { [weak self] in
-                    self?.show(submenu.mode)
+                    self?.enter(submenu.mode)
                 }
             }
         let openerKeywords = Dictionary(
