@@ -1,7 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 
-import { formatReleaseDate, type Release } from "#/lib/changelog";
+import {
+  formatReleaseDate,
+  formatReleaseTime,
+  type Release,
+} from "#/lib/changelog";
 import { cn } from "#/lib/cn";
 
 /** The changelog's only inline markup is `code`; everything else is text. */
@@ -70,8 +74,21 @@ export function ReleaseEntry({
         <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
           {release.version}
         </span>
-        <time className="text-sm text-neutral-500" dateTime={release.date}>
-          {formatReleaseDate(release.date)}
+        <time
+          className="flex flex-wrap gap-x-1.5 text-sm text-neutral-500 sm:flex-col"
+          dateTime={release.publishedAt ?? release.date}
+        >
+          {/* The UTC day of the publish time, so the two always agree. */}
+          <span>
+            {formatReleaseDate(
+              release.publishedAt?.slice(0, 10) ?? release.date
+            )}
+          </span>
+          {release.publishedAt && (
+            <span className="tabular-nums">
+              {formatReleaseTime(release.publishedAt)}
+            </span>
+          )}
         </time>
         {latest && (
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">

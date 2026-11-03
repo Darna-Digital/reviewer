@@ -10,6 +10,11 @@ import bundled from "../../../../CHANGELOG.md?raw";
  */
 const SOURCE = `${REPO_URL.replace("github.com", "raw.githubusercontent.com")}/main/CHANGELOG.md`;
 const FRESH_FOR_MS = 5 * 60 * 1000;
+/** Each release's publish time, from GitHub; the notes give only the day. */
+const RELEASES_API =
+  "https://api.github.com/repos/Darna-Digital/reviewer/releases?per_page=100";
+// GitHub allows 60 unauthenticated requests an hour, as for the star count.
+const TIMES_FRESH_FOR_MS = 30 * 60 * 1000;
 
 export type ChangelogSection = { title: string | null; items: Array<string> };
 
@@ -20,6 +25,11 @@ export type Release = {
   date: string;
   /** An optional third part of the heading: `## v1.0.0 — 2026-12-01 — Title`. */
   title: string | null;
+  /**
+   * When its GitHub release was published, as an ISO instant, or null when it
+   * has none yet or GitHub can't be reached.
+   */
+  publishedAt: string | null;
   sections: Array<ChangelogSection>;
 };
 
@@ -34,7 +44,13 @@ export function parseChangelog(markdown: string): Array<Release> {
     const heading = RELEASE_HEADING.exec(line);
     if (heading) {
       const [, version, date, title] = heading;
-      releases.push({ version, date, title: title ?? null, sections: [] });
+      releases.push({
+        version,
+        date,
+        title: title ?? null,
+        publishedAt: null,
+        sections: [],
+      });
       section = null;
     } else if (!release) {
       continue;
@@ -58,24 +74,69 @@ export function parseChangelog(markdown: string): Array<Release> {
 
 // Kept per Worker isolate, so a busy page asks GitHub once every few minutes.
 let cached: { at: number; releases: Array<Release> } | null = null;
+let cachedTimes: { at: number; times: Map<string, string> } | null = null;
+
+/** `0.0.38` → `2026-11-02T21:19:28Z`, keeping the last map on a failure. */
+async function getPublishTimes() {
+  if (cachedTimes && Date.now() - cachedTimes.at < TIMES_FRESH_FOR_MS) {
+    return cachedTimes.times;
+  }
+
+  let times = cachedTimes?.times ?? new Map<string, string>();
+  try {
+    const response = await fetch(RELEASES_API, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "reviewer.sh",
+      },
+    });
+    if (response.ok) {
+      const releases: Array<{ tag_name?: unknown; published_at?: unknown }> =
+        await response.json();
+      times = new Map();
+      for (const { tag_name, published_at } of releases) {
+        if (typeof tag_name === "string" && typeof published_at === "string") {
+          times.set(tag_name.replace(/^v/, ""), published_at);
+        }
+      }
+    }
+  } catch {
+    // Offline or GitHub is down: the releases show their day only.
+  }
+
+  cachedTimes = { at: Date.now(), times };
+  return times;
+}
 
 export const getChangelog = createServerFn({ method: "GET" }).handler(
   async () => {
     if (cached && Date.now() - cached.at < FRESH_FOR_MS) return cached.releases;
 
-    let markdown = bundled;
-    try {
-      const response = await fetch(SOURCE);
-      if (response.ok) markdown = await response.text();
-    } catch {
-      // Offline or GitHub is down: the bundled copy stands in.
-    }
+    const [markdown, times] = await Promise.all([
+      fetch(SOURCE)
+        .then((response) => (response.ok ? response.text() : bundled))
+        // Offline or GitHub is down: the bundled copy stands in.
+        .catch(() => bundled),
+      getPublishTimes(),
+    ]);
 
-    const releases = parseChangelog(markdown);
+    const releases = parseChangelog(markdown).map((release) => ({
+      ...release,
+      publishedAt: times.get(release.version) ?? null,
+    }));
     cached = { at: Date.now(), releases };
     return releases;
   }
 );
+
+/** "21:19 UTC": the publish time, in UTC so every reader sees the same one. */
+export function formatReleaseTime(publishedAt: string) {
+  return `${new Date(publishedAt).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  })} UTC`;
+}
 
 /** "November 2, 2026", read as a calendar date rather than a UTC instant. */
 export function formatReleaseDate(date: string) {
