@@ -220,22 +220,20 @@ if [ -n "$found" ] && [ "$found" != "$link" ] && [ "$(readlink "$found" 2>/dev/n
   say "Note: another reviewer is on PATH (${found}) — remove it, or it may run instead of this release."
 fi
 
-# The site's lockup, the mark and the wordmark, drawn from its SVG at 16px
-# tall (a half block to a pixel, so its rows join up). Only for a terminal;
-# a log gets the plain line.
+# The site's block wordmark (block-wordmark.tsx): its 39×5 grid of cells, #
+# solid and + the 40% shadow, a cell to two columns so they come out square.
+# Only for a terminal; a log gets the plain line.
 if [ -t 1 ]; then
-  printf '\n\033[1m'
-  cat <<'LOGO'
-████████████
-████████████    ▄▄▄▄▄▄                ▄▄
-████    ████    ██   ██               ▀▀
-████    ████    ██▄▄▄█▀ ▄█▀▀█▄ ██  ██ ██ ▄█▀▀█▄ ██ ██ ██ ▄█▀▀█▄ ██▄█▀▀
-████████        ██   ██ ██▀▀▀▀ ▀█▄▄█▀ ██ ██▀▀▀▀ ██ ██ ██ ██▀▀▀▀ ██
-████████        ██   ██ ▀█▄▄█▀  ▀██▀  ██ ▀█▄▄█▀ ▀██▀▀██▀ ▀█▄▄█▀ ██
-████    ████
-████    ████
+  solid="$(printf '\033[0;1m██')" shadow="$(printf '\033[0;2m██')" reset="$(printf '\033[0m')"
+  printf '\n'
+  sed -e "s/#/${solid}/g" -e "s/+/${shadow}/g" -e "s/\./${reset}  /g" -e "s/\$/${reset}/" <<'LOGO'
+####.####.#..#.###.####.#...#.####.####
+#..#.#....#++#.+#+.#....#+#+#.#....#..#
+###..###..#++#.+#+.###..#+#+#.###..###.
+#++#.#+++.#++#.+#+.#+++.#+#+#.#+++.#++#
+#++#.####..##..###.####..#.#..####.#++#
 LOGO
-  printf '\033[0m\n\033[1mReviewer %s\033[0m is installed. Run \033[1mreviewer\033[0m in a repository.\n\n' "$version"
+  printf '\n\033[1mReviewer %s\033[0m is installed. Run \033[1mreviewer\033[0m in a repository.\n\n' "$version"
 else
   say "Reviewer ${version} is installed. Run \`reviewer\` in a repository."
 fi
