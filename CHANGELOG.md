@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.41 — 2026-11-03
+
+### Fixed
+
+- In the terminal UI, clicking the History, Usages, Run or Pull request tab no longer shrinks the bottom pane by a row each time.
+
 ## v0.0.40 — 2026-11-03
 
 ### Added
