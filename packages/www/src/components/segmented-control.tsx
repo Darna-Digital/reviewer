@@ -84,6 +84,9 @@ export function Crossfade<Value extends string>({
         return (
           <div
             aria-hidden={!shown}
+            // The hidden views sit on top of the shown one; keep their links
+            // from taking its clicks and its focus.
+            inert={!shown}
             className={cn(
               "transition-opacity duration-300 ease-out [grid-area:1/1] motion-reduce:transition-none",
               !shown && "opacity-0"
