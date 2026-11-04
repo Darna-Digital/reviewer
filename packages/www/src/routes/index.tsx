@@ -389,7 +389,7 @@ function TerminalSections() {
 function CloudSections() {
   return (
     <>
-      <section className="flex flex-col gap-6">
+      <section className="mt-8 flex flex-col gap-6 sm:mt-20">
         <SectionHeading lead="Reviewer Cloud">
           is what we're building next.
         </SectionHeading>
@@ -453,7 +453,7 @@ function Home() {
         <Stage place={place} />
       </Container>
       <Container
-        className="fade-in mt-10 flex flex-col gap-12 sm:mt-16 sm:gap-16"
+        className="fade-in mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36"
         key={place}
       >
         <Sections />
