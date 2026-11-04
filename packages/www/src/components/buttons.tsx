@@ -30,7 +30,7 @@ export function GetReviewerButtons({ className }: { className?: string }) {
         Download
       </Link>
       <Link className={SECONDARY_BUTTON} to="/about">
-        Read about Reviewer
+        About
       </Link>
     </div>
   );

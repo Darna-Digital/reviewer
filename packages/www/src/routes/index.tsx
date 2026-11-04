@@ -220,24 +220,29 @@ function Questions() {
 function Hero() {
   return (
     <Container>
-      <section className="flex flex-col items-start gap-6 pt-24 sm:pt-36 lg:pt-44">
+      <section className="flex flex-col items-start pt-24 sm:pt-36 lg:pt-44">
         <h1 className="max-w-4xl text-[34px] leading-[1.12] font-semibold tracking-[-0.02em] text-balance sm:text-[52px] lg:text-[68px]">
           Focused system for building software with agents
         </h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-pretty text-neutral-600 sm:text-xl dark:text-neutral-400">
-          Reviewer is an agentic development environment for engineers who care
-          about the quality of their work. Works with{" "}
-          <span className={CHIP}>
-            <ClaudeIcon className="size-[0.95em] text-[#D97757]" />
-            Claude Code
-          </span>{" "}
-          <span className={CHIP}>
-            <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
-            Codex
-          </span>{" "}
-          and any agent that runs skills.
-        </p>
-        <GetReviewerButtons className="mt-2 w-full sm:w-auto" />
+        <div className="mt-5 flex max-w-2xl flex-col gap-4 text-lg leading-relaxed text-pretty text-neutral-600 sm:mt-7 sm:text-xl dark:text-neutral-400">
+          <p>
+            Reviewer is an agentic development environment for engineers who
+            care about the quality of their work.
+          </p>
+          <p>
+            Works with{" "}
+            <span className={CHIP}>
+              <ClaudeIcon className="size-[0.95em] text-[#D97757]" />
+              Claude Code
+            </span>{" "}
+            <span className={CHIP}>
+              <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
+              Codex
+            </span>{" "}
+            and any agent that runs skills.
+          </p>
+        </div>
+        <GetReviewerButtons className="mt-8 w-full sm:mt-10 sm:w-auto" />
       </section>
     </Container>
   );
@@ -278,7 +283,7 @@ function PlacePicker({
       {/* The spacing sits outside the sticky bar so the bar keeps one height
           when it sticks. A bar that shrinks as it sticks shortens the page
           under the reader, and scroll anchoring then pulls them back up. */}
-      <div aria-hidden="true" className="h-6 sm:h-10" />
+      <div aria-hidden="true" className="h-8 sm:h-12" />
       <div aria-hidden="true" ref={sentinel} />
       <div
         className={cn(
