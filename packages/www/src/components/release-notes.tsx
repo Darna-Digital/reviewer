@@ -104,11 +104,11 @@ export function ReleaseEntry({
         )}
       >
         {standalone ? (
-          <h1 className="max-w-2xl text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
+          <h1 className="text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
             {heading}
           </h1>
         ) : (
-          <h2 className="max-w-2xl text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
+          <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
             <Link
               className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
               params={{ version: release.version }}
@@ -118,9 +118,7 @@ export function ReleaseEntry({
             </Link>
           </h2>
         )}
-        <div className="max-w-2xl">
-          <ReleaseNotes release={release} />
-        </div>
+        <ReleaseNotes release={release} />
       </div>
     </article>
   );

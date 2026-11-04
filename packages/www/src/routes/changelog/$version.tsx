@@ -78,7 +78,7 @@ function ReleasePage() {
       <div className={PAST_RAIL}>
         <nav
           aria-label="Other releases"
-          className="flex max-w-2xl justify-between gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
+          className="flex justify-between gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
         >
           {older ? (
             <Link
