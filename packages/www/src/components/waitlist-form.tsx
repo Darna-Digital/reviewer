@@ -84,7 +84,7 @@ export function WaitlistForm() {
       >
         {status.kind === "failed"
           ? status.message
-          : "We'll email you once, when it opens."}
+          : "We'll email you when it opens."}
       </p>
     </form>
   );
