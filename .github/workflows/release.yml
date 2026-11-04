@@ -75,7 +75,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - { runner: macos-15, platform: darwin-arm64 }
+          # The app's image: hosted macos-15 arm64 runners went unavailable
+          # for whole releases, while this pool kept serving the app's job.
+          - { runner: xcode-27, platform: darwin-arm64 }
           - { runner: macos-15-intel, platform: darwin-x64 }
           - { runner: ubuntu-24.04, platform: linux-x64 }
           - { runner: ubuntu-24.04-arm, platform: linux-arm64 }
