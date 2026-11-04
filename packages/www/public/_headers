@@ -1,0 +1,23 @@
+# Cache rules for the static assets Cloudflare serves from public/ and the
+# build. Files under /assets/ carry a content hash in their name, so they never
+# change and can be kept for a year. The fonts rarely change and keep for a
+# month. The rest keep their names across deploys, so browsers reuse them for
+# a day and check for a new copy in the background for a week after that.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+
+/screenshots/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/videos/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/cloud/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/og-image.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

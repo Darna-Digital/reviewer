@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { version } from "../../../../package.json";
 import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { GetReviewerButtons } from "#/components/buttons";
 import { SURFACE, SectionHeading } from "#/components/card";
@@ -15,12 +16,44 @@ import { ShowcaseVideo } from "#/components/showcase-video";
 import { Crossfade, SegmentedControl } from "#/components/segmented-control";
 import { getChangelog } from "#/lib/changelog";
 import { cn } from "#/lib/cn";
-import { REPO_URL } from "#/lib/links";
+import { REPO_URL, SITE_URL } from "#/lib/links";
 
 const RECENT_RELEASES = 6;
 
+/** What search engines read about Reviewer, as schema.org structured data. */
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Reviewer",
+  url: SITE_URL,
+  description:
+    "Reviewer is an agentic development environment for engineers who care about the quality of their work. Works with Claude Code, Codex and any agent that runs skills.",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS 26 or later, Linux",
+  softwareVersion: version,
+  downloadUrl: `${SITE_URL}/download`,
+  license: "https://opensource.org/licenses/MIT",
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  sameAs: [REPO_URL],
+  publisher: {
+    "@type": "Organization",
+    name: "Darna Digital",
+    url: "https://darnadigital.com",
+  },
+};
+
 export const Route = createFileRoute("/")({
   loader: async () => (await getChangelog()).slice(0, RECENT_RELEASES),
+  head: () => ({
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(STRUCTURED_DATA),
+      },
+    ],
+  }),
   component: Home,
 });
 

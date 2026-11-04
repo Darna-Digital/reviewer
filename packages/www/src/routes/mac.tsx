@@ -20,6 +20,7 @@ export const Route = createFileRoute("/mac")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/mac` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/mac` }],
   }),
   component: MacPage,
 });

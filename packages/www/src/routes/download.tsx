@@ -38,6 +38,7 @@ export const Route = createFileRoute("/download")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/download` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/download` }],
   }),
   component: DownloadPage,
 });

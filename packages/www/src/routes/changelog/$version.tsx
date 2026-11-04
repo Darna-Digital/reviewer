@@ -24,15 +24,25 @@ export const Route = createFileRoute("/changelog/$version")({
     if (!loaderData) return {};
     const { release } = loaderData;
     const title = `${release.title ?? `Reviewer ${release.version}`} · Changelog`;
+    const url = `${SITE_URL}/changelog/${release.version}`;
+    // The release's first note, without its Markdown, describes it in search
+    // results and link previews.
+    const first = release.sections[0]?.items[0];
+    const description = first
+      ? first
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/[`*_]/g, "")
+          .slice(0, 300)
+      : `What changed in Reviewer ${release.version}.`;
     return {
       meta: [
         { title },
+        { name: "description", content: description },
         { property: "og:title", content: title },
-        {
-          property: "og:url",
-          content: `${SITE_URL}/changelog/${release.version}`,
-        },
+        { property: "og:description", content: description },
+        { property: "og:url", content: url },
       ],
+      links: [{ rel: "canonical", href: url }],
     };
   },
   notFoundComponent: () => (

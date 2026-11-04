@@ -58,7 +58,12 @@ export const Route = createFileRoute("/docs/$")({
       ],
       // Fumadocs' styles switch Tailwind's `dark:` to a `.dark` class, so they
       // load on the docs alone and leave the rest of the site on the media query.
-      links: [{ rel: "stylesheet", href: docsCss }],
+      links: [
+        { rel: "stylesheet", href: docsCss },
+        ...(loaderData
+          ? [{ rel: "canonical", href: `${SITE_URL}${loaderData.url}` }]
+          : []),
+      ],
     };
   },
   component: Page,

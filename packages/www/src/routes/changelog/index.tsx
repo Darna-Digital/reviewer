@@ -29,23 +29,29 @@ export const Route = createFileRoute("/changelog/")({
       releases: releases.slice((page - 1) * PER_PAGE, page * PER_PAGE),
     };
   },
-  head: () => ({
-    meta: [
-      { title: TITLE },
-      { name: "description", content: DESCRIPTION },
-      { property: "og:title", content: TITLE },
-      { property: "og:description", content: DESCRIPTION },
-      { property: "og:url", content: `${SITE_URL}/changelog` },
-    ],
-    links: [
-      {
-        rel: "alternate",
-        type: "application/atom+xml",
-        title: "Reviewer releases",
-        href: `${RELEASES_URL}.atom`,
-      },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    // Each page of the list is its own URL, so it is its own canonical.
+    const page = loaderData?.page ?? 1;
+    const url = `${SITE_URL}/changelog${page > 1 ? `?page=${page}` : ""}`;
+    return {
+      meta: [
+        { title: page > 1 ? `Changelog, page ${page} · Reviewer` : TITLE },
+        { name: "description", content: DESCRIPTION },
+        { property: "og:title", content: TITLE },
+        { property: "og:description", content: DESCRIPTION },
+        { property: "og:url", content: url },
+      ],
+      links: [
+        { rel: "canonical", href: url },
+        {
+          rel: "alternate",
+          type: "application/atom+xml",
+          title: "Reviewer releases",
+          href: `${RELEASES_URL}.atom`,
+        },
+      ],
+    };
+  },
   component: Changelog,
 });
 

@@ -39,9 +39,9 @@ export const Route = createRootRoute({
       { property: "og:image:width", content: OG_IMAGE.width },
       { property: "og:image:height", content: OG_IMAGE.height },
       { property: "og:image:alt", content: OG_IMAGE.alt },
+      // No twitter:title or twitter:description: X falls back to og:title and
+      // og:description, which each page sets for itself.
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: TITLE },
-      { name: "twitter:description", content: DESCRIPTION },
       { name: "twitter:image", content: OG_IMAGE.url },
       { name: "twitter:image:alt", content: OG_IMAGE.alt },
     ],

@@ -16,6 +16,8 @@ import { Route as DownloadRouteImport } from './routes/download'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
 import { Route as MacRouteImport } from './routes/mac'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ChangelogIndexRouteImport } from './routes/changelog/index'
@@ -57,6 +59,16 @@ const MacRoute = MacRouteImport.update({
   path: '/mac',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TerminalRoute = TerminalRouteImport.update({
   id: '/terminal',
   path: '/terminal',
@@ -91,6 +103,8 @@ export interface FileRoutesByFullPath {
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
@@ -105,6 +119,8 @@ export interface FileRoutesByTo {
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
@@ -120,6 +136,8 @@ export interface FileRoutesById {
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
   '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
@@ -136,6 +154,8 @@ export interface FileRouteTypes {
     | '/install'
     | '/latest.json'
     | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terminal'
     | '/api/search'
     | '/changelog/$version'
@@ -150,6 +170,8 @@ export interface FileRouteTypes {
     | '/install'
     | '/latest.json'
     | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terminal'
     | '/api/search'
     | '/changelog/$version'
@@ -164,6 +186,8 @@ export interface FileRouteTypes {
     | '/install'
     | '/latest.json'
     | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/terminal'
     | '/api/search'
     | '/changelog/$version'
@@ -179,6 +203,8 @@ export interface RootRouteChildren {
   InstallRoute: typeof InstallRoute
   LatestDotjsonRoute: typeof LatestDotjsonRoute
   MacRoute: typeof MacRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TerminalRoute: typeof TerminalRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ChangelogVersionRoute: typeof ChangelogVersionRoute
@@ -237,6 +263,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MacRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terminal': {
       id: '/terminal'
       path: '/terminal'
@@ -283,6 +323,8 @@ const rootRouteChildren: RootRouteChildren = {
   InstallRoute: InstallRoute,
   LatestDotjsonRoute: LatestDotjsonRoute,
   MacRoute: MacRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TerminalRoute: TerminalRoute,
   ApiSearchRoute: ApiSearchRoute,
   ChangelogVersionRoute: ChangelogVersionRoute,

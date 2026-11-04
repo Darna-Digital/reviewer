@@ -19,6 +19,7 @@ export const Route = createFileRoute("/cloud")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/cloud` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/cloud` }],
   }),
   component: CloudPage,
 });

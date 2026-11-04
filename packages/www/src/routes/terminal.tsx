@@ -20,6 +20,7 @@ export const Route = createFileRoute("/terminal")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/terminal` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/terminal` }],
   }),
   component: TerminalPage,
 });

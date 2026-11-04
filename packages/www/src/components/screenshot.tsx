@@ -57,6 +57,8 @@ export function Screenshot({
         alt={alt}
         className={cn("block h-auto w-full", className)}
         decoding="async"
+        // An eager screenshot is a page's hero, its largest paint.
+        fetchPriority={lazy ? undefined : "high"}
         height={height}
         loading={lazy ? "lazy" : "eager"}
         src={`/screenshots/${name}-light.avif`}

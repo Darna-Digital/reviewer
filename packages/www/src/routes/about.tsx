@@ -16,6 +16,7 @@ export const Route = createFileRoute("/about")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/about` },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/about` }],
   }),
   component: AboutPage,
 });
