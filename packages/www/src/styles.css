@@ -52,6 +52,83 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The type scale. Every heading and paragraph on the marketing pages uses one
+   of these, so sizes, weights, line heights and tracking stay consistent.
+   Breakpoints match Tailwind's sm (40rem) and lg (64rem). */
+@utility type-display {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+  @media (width >= 40rem) {
+    font-size: 54px;
+  }
+  @media (width >= 64rem) {
+    font-size: 68px;
+  }
+}
+
+@utility type-title {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.024em;
+  text-wrap: balance;
+  @media (width >= 40rem) {
+    font-size: 38px;
+  }
+  @media (width >= 64rem) {
+    font-size: 46px;
+  }
+}
+
+@utility type-heading {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+  @media (width >= 40rem) {
+    font-size: 26px;
+  }
+  @media (width >= 64rem) {
+    font-size: 28px;
+  }
+}
+
+@utility type-subhead {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.011em;
+  @media (width >= 64rem) {
+    font-size: 18px;
+  }
+}
+
+@utility type-lede {
+  font-size: 18px;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  text-wrap: pretty;
+  @media (width >= 40rem) {
+    font-size: 20px;
+  }
+  @media (width >= 64rem) {
+    font-size: 21px;
+  }
+}
+
+@utility type-body {
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+  @media (width >= 64rem) {
+    font-size: 16px;
+  }
+}
+
 /* drop-shadow rather than box-shadow: the screenshot carries its own rounded
    corners as transparency, and box-shadow would draw a rectangle behind them. */
 .screen-shadow {

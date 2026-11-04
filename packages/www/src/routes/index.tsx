@@ -54,10 +54,8 @@ function SurfaceCard({
       to={to}
     >
       <div className="flex flex-col gap-2 p-6 lg:p-8">
-        <h3 className="text-xl font-semibold tracking-[-0.02em] lg:text-2xl">
-          {name}
-        </h3>
-        <p className="text-[15px] leading-normal text-pretty text-neutral-600 lg:text-base dark:text-neutral-400">
+        <h3 className="type-heading">{name}</h3>
+        <p className="type-body text-neutral-600 dark:text-neutral-400">
           {description}
         </p>
         <span className="mt-2 inline-flex items-center gap-1 text-[15px] font-medium">
@@ -85,9 +83,7 @@ function RecentlyShipped() {
   return (
     <section className="flex flex-col gap-6 sm:gap-8">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
-          Recently shipped
-        </h2>
+        <h2 className="type-title">Recently shipped</h2>
         <Link
           className="inline-flex items-center gap-1 text-[15px] font-medium text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
           to="/changelog"
@@ -191,19 +187,15 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
 function Questions() {
   return (
     <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
-      <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
-        FAQ
-      </h2>
+      <h2 className="type-title">FAQ</h2>
       <dl className="flex flex-col">
         {QUESTIONS.map(({ question, answer }) => (
           <div
             className="flex flex-col gap-2 border-b border-black/[0.06] py-5 first:pt-0 last:border-b-0 last:pb-0 dark:border-white/[0.08]"
             key={question}
           >
-            <dt className="text-[17px] font-semibold tracking-[-0.01em] lg:text-lg">
-              {question}
-            </dt>
-            <dd className="text-[15px] leading-relaxed text-pretty text-neutral-600 lg:text-base dark:text-neutral-400">
+            <dt className="type-subhead">{question}</dt>
+            <dd className="type-body text-neutral-600 dark:text-neutral-400">
               {answer}
             </dd>
           </div>
@@ -221,10 +213,10 @@ function Hero() {
   return (
     <Container>
       <section className="flex flex-col items-start pt-24 sm:pt-36 lg:pt-44">
-        <h1 className="max-w-4xl text-[34px] leading-[1.12] font-semibold tracking-[-0.02em] text-balance sm:text-[52px] lg:text-[68px]">
+        <h1 className="max-w-4xl type-display">
           Focused system for building software with agents
         </h1>
-        <div className="mt-5 flex max-w-2xl flex-col gap-4 text-lg leading-relaxed text-pretty text-neutral-600 sm:mt-7 sm:text-xl dark:text-neutral-400">
+        <div className="mt-5 flex max-w-2xl flex-col gap-4 type-lede text-neutral-600 sm:mt-7 dark:text-neutral-400">
           <p>
             Reviewer is an agentic development environment for engineers who
             care about the quality of their work.

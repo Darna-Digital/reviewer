@@ -82,10 +82,8 @@ function AppPanel({
     >
       <div className="flex w-full max-w-xl flex-col items-start gap-6">
         <div className="flex flex-col gap-3">
-          <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] sm:text-[30px] lg:text-4xl">
-            {name}
-          </h2>
-          <p className="text-pretty text-neutral-600 lg:text-lg dark:text-neutral-400">
+          <h2 className="type-heading">{name}</h2>
+          <p className="type-body text-neutral-600 dark:text-neutral-400">
             {description}
           </p>
         </div>

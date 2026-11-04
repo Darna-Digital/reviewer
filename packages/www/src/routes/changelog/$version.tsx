@@ -37,9 +37,7 @@ export const Route = createFileRoute("/changelog/$version")({
   },
   notFoundComponent: () => (
     <Container className="pt-28 sm:pt-36 lg:pt-44">
-      <h1 className="text-3xl font-bold tracking-[-0.02em]">
-        There’s no release with that version
-      </h1>
+      <h1 className="type-title">There’s no release with that version</h1>
       <Link
         className="mt-4 inline-block text-neutral-600 underline underline-offset-2 dark:text-neutral-400"
         to="/changelog"

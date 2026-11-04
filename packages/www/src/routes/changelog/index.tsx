@@ -120,10 +120,8 @@ function Changelog() {
   return (
     <Container>
       <header className="flex flex-col gap-4 pt-28 pb-12 sm:pt-36 sm:pb-16 lg:pt-44">
-        <h1 className="text-[34px] leading-[1.1] font-bold tracking-[-0.02em] sm:text-[44px] lg:text-[56px]">
-          Changelog
-        </h1>
-        <p className="max-w-xl text-lg text-pretty text-neutral-600 lg:text-xl dark:text-neutral-400">
+        <h1 className="type-display">Changelog</h1>
+        <p className="max-w-xl type-lede text-neutral-600 dark:text-neutral-400">
           Every release of the Mac app and the terminal app, newest first.{" "}
           <a
             className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"

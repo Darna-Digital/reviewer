@@ -26,8 +26,8 @@ export function NoteCard({
     >
       <span className={SYMBOL_TINT}>{icon}</span>
       <div className="flex flex-col gap-2">
-        <p className="font-semibold tracking-[-0.01em] lg:text-xl">{title}</p>
-        <p className="text-base leading-normal text-pretty text-neutral-600 sm:text-[15px] lg:text-[17px] dark:text-neutral-400">
+        <p className="type-subhead">{title}</p>
+        <p className="type-body text-neutral-600 dark:text-neutral-400">
           {children}
         </p>
       </div>
@@ -58,10 +58,8 @@ export function ShowcaseCard({
     <div className={cn(SURFACE, "overflow-hidden")}>
       <div className="flex flex-col gap-3 p-5 sm:gap-4 sm:p-10 lg:gap-5 lg:p-12">
         <span className={SYMBOL_TINT}>{icon}</span>
-        <h2 className="max-w-xl text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[30px] lg:max-w-3xl lg:text-5xl lg:leading-[1.15]">
-          {title}
-        </h2>
-        <p className="max-w-2xl text-pretty text-neutral-600 lg:max-w-3xl lg:text-2xl lg:leading-[1.33] dark:text-neutral-400">
+        <h2 className="max-w-xl type-title lg:max-w-3xl">{title}</h2>
+        <p className="max-w-2xl type-lede text-neutral-600 lg:max-w-3xl dark:text-neutral-400">
           {description}
         </p>
         {controls && <div className="mt-2">{controls}</div>}
@@ -87,12 +85,7 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <h2
-      className={cn(
-        "text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] text-balance sm:text-[40px] lg:text-[52px]",
-        className
-      )}
-    >
+    <h2 className={cn("type-title", className)}>
       <span className="block text-neutral-400 dark:text-neutral-500">
         {lead}
       </span>
@@ -118,11 +111,9 @@ export function PageHero({
   return (
     <section className="flex flex-col items-start gap-6 pt-24 pb-10 sm:pt-36 sm:pb-14 lg:pt-44 lg:pb-16">
       {eyebrow}
-      <h1 className="max-w-3xl text-[36px] leading-[1.05] font-bold tracking-[-0.02em] text-balance sm:text-[52px] lg:max-w-4xl lg:text-[72px]">
-        {title}
-      </h1>
+      <h1 className="max-w-3xl type-display lg:max-w-4xl">{title}</h1>
       {children && (
-        <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">
+        <p className="max-w-2xl type-lede text-neutral-600 dark:text-neutral-400">
           {children}
         </p>
       )}

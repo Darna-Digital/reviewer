@@ -34,12 +34,10 @@ function AboutPage() {
   return (
     <Container>
       <section className="flex max-w-4xl flex-col gap-8 pt-24 pb-10 sm:gap-10 sm:pt-36 sm:pb-14 lg:gap-12 lg:pt-44 lg:pb-16">
-        <h1 className="text-[36px] leading-[1.05] font-bold tracking-[-0.02em] text-balance sm:text-[52px] lg:text-[72px]">
-          {DESCRIPTION}
-        </h1>
+        <h1 className="type-display">{DESCRIPTION}</h1>
         {LINES.map((line) => (
           <p
-            className="text-[22px] leading-snug font-medium tracking-[-0.01em] text-pretty text-neutral-600 sm:text-[28px] lg:text-[36px] dark:text-neutral-400"
+            className="type-heading font-medium text-neutral-600 dark:text-neutral-400"
             key={line}
           >
             {line}

@@ -30,12 +30,8 @@ function ReleaseNotes({ release }: { release: Release }) {
     <div className="flex flex-col gap-7">
       {release.sections.map((section, index) => (
         <section className="flex flex-col gap-3" key={section.title ?? index}>
-          {section.title && (
-            <h3 className="text-[17px] font-semibold tracking-[-0.01em] lg:text-lg">
-              {section.title}
-            </h3>
-          )}
-          <ul className="flex list-disc flex-col gap-2.5 pl-5 text-[15px] leading-relaxed text-pretty text-neutral-700 marker:text-neutral-300 lg:text-base dark:text-neutral-300 dark:marker:text-neutral-600">
+          {section.title && <h3 className="type-subhead">{section.title}</h3>}
+          <ul className="flex list-disc flex-col gap-2.5 pl-5 type-body text-neutral-700 marker:text-neutral-300 dark:text-neutral-300 dark:marker:text-neutral-600">
             {section.items.map((item) => (
               <li className="pl-1" key={item}>
                 <InlineMarkdown text={item} />
@@ -104,11 +100,9 @@ export function ReleaseEntry({
         )}
       >
         {standalone ? (
-          <h1 className="text-[30px] leading-tight font-bold tracking-[-0.02em] text-pretty sm:text-[40px]">
-            {heading}
-          </h1>
+          <h1 className="type-title">{heading}</h1>
         ) : (
-          <h2 className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-pretty sm:text-[28px]">
+          <h2 className="type-heading">
             <Link
               className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
               params={{ version: release.version }}
