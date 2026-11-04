@@ -289,7 +289,7 @@ function PlacePicker({
       >
         <Container>
           <div
-            aria-label="Choose where you work"
+            aria-label="Where do you work?"
             className="flex items-center gap-2 overflow-x-auto py-2 sm:py-2.5"
             role="group"
           >
@@ -297,7 +297,7 @@ function PlacePicker({
               // On phones the label would push the last pill off screen.
               className="mr-1 shrink-0 text-[15px] text-neutral-600 max-sm:hidden lg:text-base dark:text-neutral-400"
             >
-              Choose where you work:
+              Where do you work?
             </span>
             {PLACES.map(({ value, label }) => (
               <button

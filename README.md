@@ -37,7 +37,7 @@ Read the change, comment on what's wrong, hand it back and check the fix.
 
 ## Contents
 
-- [Choose where you work](#choose-where-you-work)
+- [Where do you work?](#where-do-you-work)
 - [The Mac app](#the-mac-app)
 - [The terminal app](#the-terminal-app)
 - [Reviewer Cloud](#reviewer-cloud)
@@ -48,7 +48,7 @@ Read the change, comment on what's wrong, hand it back and check the fix.
 - [Contributing](#contributing)
 - [License](#license)
 
-## Choose where you work
+## Where do you work?
 
 |                                           |                                                                                                        |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
