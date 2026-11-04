@@ -5,6 +5,7 @@ import {
   type ScreenshotName,
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
+import { Kbd } from "#/components/kbd";
 import { ShowcaseVideo } from "#/components/showcase-video";
 import {
   Bubble,
@@ -59,7 +60,12 @@ function DiffLayoutCard() {
           value={layout}
         />
       }
-      description="s switches layouts. Hunks or full files, wrapped or not, with the changed files beside the diff."
+      description={
+        <>
+          <Kbd>s</Kbd> switches layouts. Hunks or full files, wrapped or not,
+          with the changed files beside the diff.
+        </>
+      }
       icon={<PlusMinus className={SECTION_ICON} />}
       title="Side by side or top to bottom"
     >
@@ -92,7 +98,12 @@ export function TerminalFeatures() {
     <div className="flex flex-col gap-4 sm:gap-16">
       <div className="flex flex-col gap-4 sm:gap-16">
         <ShowcaseCard
-          description="Press c on any line and write what's wrong. The comment shows up in the Mac app's diff too."
+          description={
+            <>
+              Press <Kbd>c</Kbd> on any line and write what's wrong. The comment
+              shows up in the Mac app's diff too.
+            </>
+          }
           icon={<Bubble className={SECTION_ICON} />}
           title="Comment on the line that's wrong"
         >
@@ -105,7 +116,13 @@ export function TerminalFeatures() {
         <DiffLayoutCard />
 
         <ShowcaseCard
-          description="⌘K opens the command palette: go to file, search in files, switch branch and every Git action. ? lists every key."
+          description={
+            <>
+              <Kbd>⌘K</Kbd> opens the command palette: go to file, search in
+              files, switch branch and every Git action. <Kbd>?</Kbd> lists
+              every key.
+            </>
+          }
           icon={<Command className={SECTION_ICON} />}
           title="Every action is a keystroke away"
         >
@@ -127,7 +144,12 @@ export function TerminalFeatures() {
         </ShowcaseCard>
 
         <ShowcaseCard
-          description="Press u on a symbol to list every usage in the bottom pane. Open one to jump to it."
+          description={
+            <>
+              Press <Kbd>u</Kbd> on a symbol to list every usage in the bottom
+              pane. Open one to jump to it.
+            </>
+          }
           icon={<Search className={SECTION_ICON} />}
           title="Find every usage of a symbol"
         >
@@ -138,7 +160,13 @@ export function TerminalFeatures() {
         </ShowcaseCard>
 
         <ShowcaseCard
-          description="It draws on your terminal's own background and palette. ⌃T opens the theme picker with every Shiki and Pierre theme from the Mac app."
+          description={
+            <>
+              It draws on your terminal's own background and palette.{" "}
+              <Kbd>⌃T</Kbd> opens the theme picker with every Shiki and Pierre
+              theme from the Mac app.
+            </>
+          }
           icon={<Palette className={SECTION_ICON} />}
           title="Your terminal's colours, in your diffs"
         >
@@ -187,8 +215,8 @@ export function TerminalFeatures() {
           icon={<Checkmark className={NOTE_ICON} />}
           title="Updates itself"
         >
-          It checks for a new release at launch. Run update Reviewer from ⌘K, or
-          reviewer upgrade from the shell.
+          It checks for a new release at launch. Run update Reviewer from{" "}
+          <Kbd>⌘K</Kbd>, or reviewer upgrade from the shell.
         </NoteCard>
         <NoteCard icon={<Folders className={NOTE_ICON} />} title="Workspaces">
           Open several repositories side by side, or a saved workspace with

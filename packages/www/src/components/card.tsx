@@ -49,7 +49,7 @@ export function ShowcaseCard({
 }: {
   icon: ReactNode;
   title: string;
-  description: string;
+  description: ReactNode;
   /** Sits under the paragraph, for switching what the screenshot shows. */
   controls?: ReactNode;
   children: ReactNode;
