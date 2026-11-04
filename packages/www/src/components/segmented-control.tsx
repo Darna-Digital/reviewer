@@ -67,8 +67,9 @@ export function SegmentedControl<Value extends string>({
 }
 
 /**
- * Every view stays mounted in one grid cell and they crossfade, so switching
- * never waits on a download or shifts the page.
+ * Every view stays mounted and they crossfade, so switching never waits on a
+ * download. The hidden ones are stacked over the shown one, which alone sets
+ * the height.
  */
 export function Crossfade<Value extends string>({
   value,
@@ -78,7 +79,9 @@ export function Crossfade<Value extends string>({
   views: ReadonlyArray<{ value: Value; node: React.ReactNode }>;
 }) {
   return (
-    <div className="grid">
+    // Only the shown view takes up space, so views of different heights
+    // don't leave a gap under the shorter ones.
+    <div className="relative">
       {views.map((view) => {
         const shown = view.value === value;
         return (
@@ -88,8 +91,8 @@ export function Crossfade<Value extends string>({
             // from taking its clicks and its focus.
             inert={!shown}
             className={cn(
-              "transition-opacity duration-300 ease-out [grid-area:1/1] motion-reduce:transition-none",
-              !shown && "opacity-0"
+              "transition-opacity duration-300 ease-out motion-reduce:transition-none",
+              !shown && "absolute inset-x-0 top-0 opacity-0"
             )}
             key={view.value}
           >

@@ -452,7 +452,7 @@ function Home() {
         <Stage place={place} />
       </Container>
       <Container
-        className="fade-in mt-24 flex flex-col gap-24 sm:mt-36 sm:gap-36"
+        className="fade-in mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36"
         key={place}
       >
         <Sections />

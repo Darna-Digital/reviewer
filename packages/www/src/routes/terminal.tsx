@@ -54,7 +54,7 @@ function TerminalPage() {
         </div>
       </Container>
 
-      <Container className="mt-10 sm:mt-20">
+      <Container className="mt-10 sm:mt-16">
         <TerminalFeatures />
       </Container>
     </>
