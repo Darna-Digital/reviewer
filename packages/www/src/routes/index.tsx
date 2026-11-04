@@ -32,7 +32,7 @@ const PLACES = [
 type Place = (typeof PLACES)[number]["value"];
 
 const CHIP =
-  "inline-flex items-center gap-1.5 rounded-full align-[0.05em] bg-black/[0.04] px-2.5 py-0.5 font-medium text-neutral-800 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-200 dark:ring-white/[0.08]";
+  "inline-flex items-center gap-1.5 rounded-full align-middle bg-black/[0.04] px-2.5 py-0.5 font-medium text-neutral-800 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-200 dark:ring-white/[0.08]";
 
 function SurfaceCard({
   to,
@@ -147,7 +147,7 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
   {
     question: "Does my code leave my machine?",
     answer:
-      "Not through Reviewer. Both apps read your repository from disk and keep comments in a local database. The agents you hand comments to, and GitHub for pull requests, see what they'd see without Reviewer.",
+      "Reviewer works locally on your machine. It orchestrates GitHub and your locally installed agents, so your code never reaches Reviewer's servers.",
   },
   {
     question: "Which agents work with it?",
@@ -168,7 +168,8 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
     question: "What's Reviewer Cloud going to be?",
     answer: (
       <>
-        A paid service we're building next.{" "}
+        Reviewer Cloud is going to focus on making you and your team more
+        productive through isolated cloud sandboxes.{" "}
         <Link
           className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
           to="/cloud"
@@ -182,7 +183,7 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
   {
     question: "Who isn't it for?",
     answer:
-      "If you write most of your code yourself and review a pull request or two a day, GitHub's review page is probably all you need.",
+      "If you run 100 parallel agents and don't check their work, then Reviewer is not for you. Reviewer is designed for engineers who care about their work deeply and verify it before shipping.",
   },
 ];
 
@@ -235,19 +236,6 @@ function Hero() {
           and any agent that runs skills.
         </p>
         <GetReviewerButtons className="mt-2 w-full sm:w-auto" />
-        <p className="text-sm text-pretty text-neutral-500 lg:text-[15px]">
-          The Mac app needs Apple silicon and macOS 26 or later. Both apps are
-          free and{" "}
-          <a
-            className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
-            href={REPO_URL}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            open source
-          </a>
-          .
-        </p>
       </section>
     </Container>
   );
