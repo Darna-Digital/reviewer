@@ -7,10 +7,10 @@ import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
  * hero's phone crop) keep their native size.
  *
  * The terminal app's captures sit on a wallpaper, like the Mac app's.
- * `tui-palette` and `tui-themes` are still placeholders: headless renders
+ * `tui-themes` is still a placeholder: a headless render
  * (packages/tui/scripts/snapshot.tsx) framed as a window with transparent
- * corners, drawn on the CSS `.noir` backdrop. Replace them with real
- * captures under the same names and drop them from PLACEHOLDERS.
+ * corners, drawn on the CSS `.noir` backdrop. Replace it with a real
+ * capture under the same name and drop it from PLACEHOLDERS.
  */
 const SCREENSHOT_SIZES = {
   "split-diff": { width: 2560, height: 1477 },
@@ -27,13 +27,13 @@ const SCREENSHOT_SIZES = {
   "tui-unified": { width: 2316, height: 1486 },
   "tui-split": { width: 2316, height: 1486 },
   "tui-history": { width: 2316, height: 1486 },
-  "tui-palette": { width: 2403, height: 1466 },
+  "tui-palette": { width: 2316, height: 1195 },
   "tui-themes": { width: 2403, height: 1466 },
 } as const;
 
 export type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
 
-const PLACEHOLDERS = new Set<ScreenshotName>(["tui-palette", "tui-themes"]);
+const PLACEHOLDERS = new Set<ScreenshotName>(["tui-themes"]);
 
 export const HERO_PHONE_CROP: ScreenshotCrop = {
   name: "split-diff-mobile",
