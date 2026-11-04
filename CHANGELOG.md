@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.42 — 2026-11-04
+
+### Changed
+
+- In the terminal UI, ⌃G and the palette's Generate commit message work from any page, as in the Mac app. Away from the commit box, the message is drafted from every change and waits in Review's commit box.
+
+### Fixed
+
+- The terminal UI's empty Review and Browse screens show the keys that actually work, including ⌘K for commands.
+
 ## v0.0.41 — 2026-11-03
 
 ### Fixed
