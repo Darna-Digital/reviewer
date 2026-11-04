@@ -9,7 +9,7 @@ import { SITE_URL } from "#/lib/links";
 
 const TITLE = "The terminal app · Reviewer";
 const DESCRIPTION =
-  "Review a branch, a commit or a pull request without leaving the terminal. A comment you leave here shows up in the Mac app.";
+  "Review your agent's changes without leaving the terminal, on macOS or Linux, on your laptop or on a server over SSH.";
 
 export const Route = createFileRoute("/terminal")({
   head: () => ({
@@ -37,10 +37,10 @@ function TerminalPage() {
             />
           }
           note="macOS and Linux, on arm64 and x64. Free and open source."
-          title="Review a branch without leaving the terminal."
+          title="Review your agent's changes without leaving the terminal"
         >
-          The terminal app reads the same changes and comments as the Mac app.
-          Run it over SSH, in a tmux pane next to your agent, or on Linux.
+          Run it on your laptop, on a server over SSH or in a tmux pane next to
+          your agent. It works the same on macOS and Linux.
         </PageHero>
       </Container>
 

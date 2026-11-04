@@ -188,10 +188,10 @@ export function TerminalFeatures() {
         </NoteCard>
         <NoteCard
           icon={<Terminal className={NOTE_ICON} />}
-          title="Doesn't need the Mac app"
+          title="Runs on any machine"
         >
-          The install brings the Reviewer server and the Node.js it runs on, so
-          it works the same on Linux.
+          macOS or Linux, on your laptop or on a server over SSH. The install
+          brings Node.js and everything else it needs.
         </NoteCard>
         <NoteCard
           icon={<Checkmark className={NOTE_ICON} />}

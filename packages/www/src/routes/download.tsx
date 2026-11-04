@@ -139,7 +139,7 @@ function TerminalPanel() {
           lines={["curl -fsSL https://reviewer.sh/install | bash"]}
         />
       }
-      description="The same diffs and comments from the keyboard, over SSH or in a tmux pane next to your agent."
+      description="Review from the keyboard, on your laptop or on a server over SSH."
       facts={
         <>
           <Fact label="Version">{version}</Fact>

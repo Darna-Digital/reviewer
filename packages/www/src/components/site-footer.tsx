@@ -80,7 +80,7 @@ export function SiteFooter() {
       )}
     >
       <Container>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 sm:gap-x-8">
+        <div className="grid gap-x-6 gap-y-10 max-sm:grid-cols-2 sm:grid-cols-3 sm:gap-x-8">
           {COLUMNS.map((column) => (
             <div className="flex flex-col gap-3" key={column.title}>
               <p className="text-[13px] font-semibold text-neutral-900 lg:text-sm dark:text-white">

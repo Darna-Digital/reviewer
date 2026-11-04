@@ -156,9 +156,9 @@ const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
       "Claude Code and Codex run inside the Mac app. Any other agent can pick up your comments with the resolve-reviewer-comments skill.",
   },
   {
-    question: "Do I need the Mac app to use the terminal app?",
+    question: "Where does the terminal app run?",
     answer:
-      "No. curl -fsSL https://reviewer.sh/install | bash installs the terminal app with everything it needs, on macOS or Linux. If you use both, they share your comments.",
+      "On macOS or Linux, on your laptop or on a server over SSH. curl -fsSL https://reviewer.sh/install | bash installs it with everything it needs. If you also use the Mac app, they share your comments.",
   },
   {
     question: "What does the Mac app need?",
@@ -418,7 +418,7 @@ function CloudSections() {
           </SurfaceCard>
           <SurfaceCard
             action="See the terminal app"
-            description="The same diffs and comments from the keyboard, over SSH or in a tmux pane. Free and open source."
+            description="Review from the keyboard, on your laptop or on a server over SSH. Free and open source."
             name="Terminal app"
             to="/terminal"
           >
@@ -453,7 +453,7 @@ function Home() {
         <Stage place={place} />
       </Container>
       <Container
-        className="fade-in mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36"
+        className="fade-in mt-10 flex flex-col gap-12 sm:mt-16 sm:gap-16"
         key={place}
       >
         <Sections />

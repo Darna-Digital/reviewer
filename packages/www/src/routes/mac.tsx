@@ -33,9 +33,9 @@ function MacPage() {
           note="Apple silicon only, on macOS 26 or later. Free and open source."
           title="Read, comment and hand off in one window."
         >
-          The Mac app puts the change, your comments and your Claude Code and
-          Codex sessions side by side, so a wrong line goes to an agent and
-          comes back fixed without switching tools.
+          Your diff, your comments and your Claude Code and Codex sessions sit
+          side by side. Send a line to an agent and read its fix in the same
+          place.
         </PageHero>
       </Container>
 
