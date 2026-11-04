@@ -289,14 +289,12 @@ function PlacePicker({
         <Container>
           <div
             aria-label="Choose where you work"
-            className={cn("flex items-center gap-2 overflow-x-auto py-2.5")}
+            className="flex items-center gap-2 overflow-x-auto py-2 sm:py-2.5"
             role="group"
           >
             <span
-              className={cn(
-                "mr-1 shrink-0 text-[15px] text-neutral-600 lg:text-base dark:text-neutral-400",
-                stuck && "max-sm:hidden"
-              )}
+              // On phones the label would push the last pill off screen.
+              className="mr-1 shrink-0 text-[15px] text-neutral-600 max-sm:hidden lg:text-base dark:text-neutral-400"
             >
               Choose where you work:
             </span>
@@ -304,7 +302,7 @@ function PlacePicker({
               <button
                 aria-pressed={place === value}
                 className={cn(
-                  "h-9 shrink-0 rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400",
+                  "h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-9 sm:px-4 sm:text-sm",
                   place === value
                     ? "text-neutral-900 ring-2 ring-neutral-900 ring-inset dark:text-white dark:ring-white"
                     : "text-neutral-600 ring-1 ring-black/15 ring-inset hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:ring-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white"

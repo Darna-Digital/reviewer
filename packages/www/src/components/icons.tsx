@@ -268,6 +268,22 @@ export function ArrowUpRight({ className }: IconProps) {
   );
 }
 
+export function Menu({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <path d="M4.5 8h15M4.5 16h15" />
+    </Symbol>
+  );
+}
+
+export function Close({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <path d="m6.5 6.5 11 11M17.5 6.5l-11 11" />
+    </Symbol>
+  );
+}
+
 export function ChevronLeft({ className }: IconProps) {
   return (
     <Symbol className={className}>

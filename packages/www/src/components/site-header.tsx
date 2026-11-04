@@ -2,7 +2,13 @@ import { Link, useLoaderData } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Container } from "#/components/container";
-import { ArrowUpRight, ChevronDown, GitHub } from "#/components/icons";
+import {
+  ArrowUpRight,
+  ChevronDown,
+  Close,
+  GitHub,
+  Menu,
+} from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
 import { cn } from "#/lib/cn";
@@ -105,10 +111,20 @@ function ProductMenu() {
         type="button"
       >
         <TouchTarget />
-        Product
+        {/* On phones the same panel is the whole site menu, behind a
+            hamburger at the right of the header. */}
+        <span className="sm:hidden">
+          <span className="sr-only">Menu</span>
+          {open ? (
+            <Close className="size-6 text-neutral-900 dark:text-white" />
+          ) : (
+            <Menu className="size-6 text-neutral-900 dark:text-white" />
+          )}
+        </span>
+        <span className="max-sm:hidden">Product</span>
         <ChevronDown
           className={cn(
-            "size-3.5 transition-transform duration-200",
+            "size-3.5 transition-transform duration-200 max-sm:hidden",
             open && "rotate-180"
           )}
         />
@@ -210,7 +226,7 @@ export function SiteHeader() {
         <Link aria-label="Reviewer home" className="sm:mr-2" to="/">
           <Logo className="h-4 w-auto lg:h-[18px]" />
         </Link>
-        <nav className="mr-auto flex items-center gap-5 self-stretch lg:gap-7">
+        <nav className="flex items-center gap-5 self-stretch max-sm:order-last sm:mr-auto lg:gap-7">
           <ProductMenu />
           <Link
             activeProps={ACTIVE_LINK}
@@ -222,7 +238,7 @@ export function SiteHeader() {
         </nav>
         <GitHubStars />
         <Link
-          className="relative inline-flex h-8 items-center gap-1.5 rounded-full bg-neutral-900 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700 lg:h-9 lg:px-4 lg:text-sm dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+          className="relative inline-flex h-8 items-center gap-1.5 rounded-full bg-neutral-900 px-3.5 text-[13px] font-semibold text-white transition-colors hover:bg-neutral-700 max-sm:ml-auto lg:h-9 lg:px-4 lg:text-sm dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
           to="/download"
         >
           <TouchTarget />
