@@ -92,7 +92,8 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html className="scheme-light-dark" lang="en">
+    // The docs' theme provider sets a class on <html> before React hydrates.
+    <html className="scheme-light-dark" lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>

@@ -37,6 +37,18 @@ A/AAAA/CNAME on the apex first or the deploy will fail.
 `main` that touches this package, with `CLOUDFLARE_API_TOKEN` and
 `CLOUDFLARE_ACCOUNT_ID` from the repository's secrets.
 
+## Docs
+
+reviewer.sh/docs is [Fumadocs](https://fumadocs.dev): the pages are MDX in
+`content/docs`, in three sections that the sidebar's dropdown switches
+between: `(overview)`, `mac` and `terminal`. Each folder's `meta.json` orders
+its pages and groups them under headings. They are served by
+`src/routes/docs/$.tsx` inside the site's header and footer, as
+conductor.build/docs does; on a phone the docs' own bar stands in for the
+header. Search is `/api/search`. The docs load their own
+stylesheet, `src/docs.css`, because Fumadocs drives dark mode with a class
+while the rest of the site follows the system.
+
 ## Styling
 
 [Tailwind CSS](https://tailwindcss.com/), configured from `src/styles.css`.

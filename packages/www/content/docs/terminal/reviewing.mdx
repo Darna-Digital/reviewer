@@ -1,0 +1,44 @@
+---
+title: Reviewing changes
+description: Choose what to compare, and move through the diff from the keyboard.
+---
+
+## Choosing what to compare
+
+The comparison chip sits under the branch chip in the sidebar. Press `t` to
+open it and choose what your branch is compared against. Press `T` to switch
+between your uncommitted changes and the last branch you compared against.
+
+To remember the comparison for this branch, press ⌃R in the picker. Reviewer
+then opens this branch on the same comparison next time, in both apps.
+
+To read one commit, pick it in History. See [Branches and commits](/docs/terminal/git#history).
+
+## Reading the diff
+
+Press ⌥⌘2 to switch to **Review**, or ⌘G to switch between Browse and Review.
+The sidebar lists the changed files, and the editor shows their diff.
+
+| Key            | Does                                         |
+| -------------- | -------------------------------------------- |
+| `j` `k`        | Next and previous line                       |
+| `⌃D` `⌃U`      | Half a page down and up                      |
+| `]` `[`        | Next and previous file                       |
+| `}` `{`        | Next and previous hunk                       |
+| `z`            | Fold the file                                |
+| `s`            | Switch between split and unified             |
+| `E`            | Switch between changed hunks and full files  |
+| `W`            | Wrap long lines                              |
+
+With wrap off, long lines scroll sideways. Use `←` and `→`, a sideways swipe,
+or ⇧ and the scroll wheel.
+
+In a split diff, `h` and `l` move between the old and new sides.
+
+Press `f` in the sidebar to filter the changed files by name.
+
+## Browsing the project
+
+Press ⌥⌘1 for **Browse**. The sidebar shows the whole project, and files open
+in tabs along the top of the editor. `]` and `[` move between tabs and ⌃W
+closes one. Press `H` on a file in the sidebar to see its history.

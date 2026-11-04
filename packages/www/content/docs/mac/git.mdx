@@ -1,0 +1,52 @@
+---
+title: Branches and commits
+description: Switch branches, commit, and read the history without leaving the review.
+---
+
+## Branches
+
+The branch picker is at the top of the sidebar. Click it to see your recent,
+local and remote branches, and type to filter them. Arrow keys move through
+the list and Return checks out the one you pick.
+
+<Screenshot name="branch-picker" width={1470} height={1326} alt="The branch picker, with recent and local branches" />
+
+Every branch has more actions behind the ellipsis at the end of its row, or a
+right-click. Choose **New branch** at the top of the picker to create one.
+
+The **Branches** surface in the bottom pane shows the same branches with more
+room. Local branches are grouped by folder, and each one shows how far it is
+ahead of or behind its upstream. Double-click a branch to check it out.
+
+## Committing
+
+While you review your own uncommitted changes, the commit box sits under the
+changed files in the sidebar.
+
+1. Tick the files you want in the commit.
+2. Write the message, or click ✦ to have Reviewer write it from what changed.
+3. Click **Commit**, or **Commit & push**.
+
+Fetch, pull and push are in the command palette (⌘K), under Git.
+
+## History
+
+The **History** surface in the bottom pane is the repository's log, with its
+branch graph.
+
+<Screenshot name="history" width={1854} height={1192} alt="The history, with its branch graph and filters" />
+
+The bar above the list filters it by:
+
+- The branch the log follows.
+- A file.
+- Text or a commit hash. Toggle regular expressions and case sensitivity
+  beside it.
+- An author.
+- A start date.
+
+Click a commit to open its diff on the page. The details beside the list show
+its message, author, date and the files it touched.
+
+To follow a single file, right-click it in the tree and choose
+**Show History**. History opens filtered to that file.

@@ -1,0 +1,21 @@
+{
+  "title": "Mac app",
+  "description": "Reviewer as a native window on your Mac",
+  "root": true,
+  "pages": [
+    "index",
+    "---Reviewing---",
+    "reviewing",
+    "comments",
+    "agents",
+    "---Git and GitHub---",
+    "git",
+    "pull-requests",
+    "---Working in the app---",
+    "code-navigation",
+    "running",
+    "workspaces",
+    "settings",
+    "shortcuts"
+  ]
+}

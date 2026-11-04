@@ -1,0 +1,47 @@
+---
+title: Comments
+description: Leave a comment on any line, then hand the comments to an agent.
+---
+
+Comments are how you tell an agent what to change. Each comment is attached
+to one line, so the agent knows exactly where you meant.
+
+## Leaving a comment
+
+Hover over a line in the diff or in a file, and click the button that appears
+in the gutter beside its line number. Write what should change, then save.
+
+Write a comment the way you would write to a colleague. Say what is wrong and,
+if you know it, what you want instead:
+
+```text
+This swallows the error. Let it reach the caller so the request fails.
+```
+
+You can leave comments on uncommitted work, on a branch, on a single commit,
+or on a file you are only browsing.
+
+## Handing comments to an agent
+
+Once a page has comments, a bar appears near the bottom of the window. It
+shows how many comments there are, and where they will go.
+
+<Screenshot name="comment-assign" width={2076} height={1430} alt="A comment on a line, being assigned to a new Claude chat" />
+
+1. Click the count to see all the comments as a list, and jump to any of them.
+2. Choose who gets them: a new chat with Claude Code or Codex, or a session
+   that is already running. Sessions on the same branch are listed first.
+3. If it is a new chat, pick the model.
+4. Click **Assign**.
+
+The agent receives every comment with its file and line. As it fixes each
+one, it resolves it, and the comment leaves the review. Its changes appear as
+a new diff, so you read them before anything is committed.
+
+To get the bar out of the way, fold it down into a small count at the edge of
+the page.
+
+## Using another agent
+
+If you run your agent outside Reviewer, it can still pick up your comments.
+See [Resolving comments with any agent](/docs/agents).

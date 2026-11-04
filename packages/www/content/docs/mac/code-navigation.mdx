@@ -1,0 +1,32 @@
+---
+title: Code navigation
+description: Hover a symbol, jump to its definition, or find everywhere it is used.
+---
+
+When a change calls a function you don't know, you can look it up without
+leaving the review. Reviewer understands TypeScript, Swift, Ruby and PHP,
+through the same language servers your editor uses.
+
+If you don't have a PHP language server, go to **Settings → Languages** and
+Reviewer will install intelephense for you.
+
+## Hovering and jumping
+
+Hover over a symbol to see its signature and documentation. ⌘-click it to go
+to its definition.
+
+## Finding usages
+
+To see everywhere a symbol is used, right-click it and choose **Find usages**.
+The usages open in a drawer under the page, grouped by file. Pick one to jump
+to it.
+
+<Screenshot name="find-symbol" width={2798} height={1884} alt="Find usages listing every use of a class across the codebase" />
+
+## Laravel
+
+In a Laravel app, the strings that name other files become links. Calls to
+`view()`, `config()`, `env()` and `__()`, Blade includes, and `<x-…>`
+components all jump to the file they name.
+
+If the app runs PHPStan, its findings show next to the language server's.

@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from "@tanstack/react-router";
+import { Link, useLoaderData, useMatch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Container } from "#/components/container";
@@ -35,7 +35,9 @@ type MenuItem = {
   /** Shown only where the header hides its own link. */
   mobileOnly?: boolean;
 } & (
-  | { to: "/mac" | "/terminal" | "/cloud" | "/changelog" | "/about" }
+  | {
+      to: "/mac" | "/terminal" | "/cloud" | "/docs/$" | "/changelog" | "/about";
+    }
   | { href: string }
 );
 
@@ -52,6 +54,7 @@ const MENU: { heading: string; items: MenuItem[] }[] = [
     heading: "Resources",
     items: [
       { to: "/about", title: "About" },
+      { to: "/docs/$", title: "Docs", mobileOnly: true },
       { to: "/changelog", title: "Changelog", mobileOnly: true },
       { href: REPO_URL, title: "Source code" },
       { href: RELEASES_URL, title: "Releases" },
@@ -211,16 +214,25 @@ function GitHubStars() {
 
 export function SiteHeader() {
   const scrolled = useScrolled();
-  const backdrop = scrolled
-    ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
-    : "border-transparent bg-transparent";
+  // The docs keep the header solid and in the flow, with the sidebar under it,
+  // as conductor.build/docs does; on a phone the docs' own bar replaces it.
+  const docs = useMatch({ from: "/docs/$", shouldThrow: false }) !== undefined;
+  const backdrop =
+    scrolled || docs
+      ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
+      : "border-transparent bg-transparent";
   // While the Product menu is open, the header and its panel read as one sheet.
   const menuOpen =
     "has-[[aria-expanded=true]]:border-transparent has-[[aria-expanded=true]]:bg-white has-[[aria-expanded=true]]:backdrop-blur-none dark:has-[[aria-expanded=true]]:bg-[#111113]";
 
   return (
     <header
-      className={`sticky top-0 z-40 -mb-header h-header border-b transition-colors duration-200 ${backdrop} ${menuOpen}`}
+      className={cn(
+        "sticky top-0 z-40 h-header border-b transition-colors duration-200",
+        docs ? "max-md:hidden" : "-mb-header",
+        backdrop,
+        menuOpen
+      )}
     >
       <Container className="flex h-full items-center gap-5 lg:gap-7">
         <Link aria-label="Reviewer home" className="sm:mr-2" to="/">
@@ -228,6 +240,13 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-5 self-stretch max-sm:order-last sm:mr-auto lg:gap-7">
           <ProductMenu />
+          <Link
+            activeProps={ACTIVE_LINK}
+            className={cn(NAV_LINK, "max-sm:hidden")}
+            to="/docs/$"
+          >
+            Docs
+          </Link>
           <Link
             activeProps={ACTIVE_LINK}
             className={cn(NAV_LINK, "max-sm:hidden")}

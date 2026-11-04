@@ -1,0 +1,47 @@
+---
+title: Branches and commits
+description: Switch branches, commit, push, and read the history.
+---
+
+## Branches
+
+The branch chip at the top of the sidebar shows your branch, with how many
+commits it is ahead of and behind its upstream. Press ⇧⌘B (or ⌥⌘4) to open the
+branch picker.
+
+In the picker, Return checks out the selected branch. Press `→` or Tab to see
+everything else you can do with it. **New branch…** at the top creates one.
+
+Fetch, pull and push are `F`, `L` and `P`.
+
+## Committing
+
+While you review your uncommitted changes, the commit box sits under the
+changed files.
+
+1. Press `space` on a file to include it or leave it out. `A` includes all of
+   them, or none.
+2. Press `i` to write the message, or ⌃G to have Reviewer write it from what
+   changed.
+3. Press ⌃S (or ⌘Return) to commit. ⌥⌘K commits and pushes.
+
+To throw away the changes to a file, press `x` on it in the sidebar. Reviewer
+asks first.
+
+## History
+
+Press ⌥⌘5 to open History in the bottom pane: the log with its branch graph.
+
+<Screenshot name="tui-history" width={2403} height={1466} alt="The history pane in the terminal app" />
+
+| Key       | Does                                     |
+| --------- | ---------------------------------------- |
+| `j` `k`   | Older and newer commit                   |
+| Return    | Show the commit                          |
+| `a`       | Switch between all branches and HEAD     |
+| `f`       | Filter by text or hash                   |
+| Escape    | Clear the filters                        |
+| `y`       | Copy the hash                            |
+
+Moving through the list opens each commit in the editor. Press Escape to go
+back to your own changes.

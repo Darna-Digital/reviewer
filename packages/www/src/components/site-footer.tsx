@@ -1,7 +1,8 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useMatch } from "@tanstack/react-router";
 
 import { BlockWordmark } from "#/components/block-wordmark";
 import { Container } from "#/components/container";
+import { cn } from "#/lib/cn";
 import { ISSUES_URL, RELEASES_URL, REPO_URL } from "#/lib/links";
 
 const LINK =
@@ -69,8 +70,15 @@ function FooterAnchor({ link }: { link: FooterLink }) {
  * resting on the bottom edge of the page.
  */
 export function SiteFooter() {
+  const docs = useMatch({ from: "/docs/$", shouldThrow: false }) !== undefined;
   return (
-    <footer className="mt-24 overflow-hidden border-t border-black/[0.06] pt-12 sm:mt-36 sm:pt-20 dark:border-white/[0.08]">
+    <footer
+      className={cn(
+        "overflow-hidden border-t border-black/[0.06] pt-12 sm:pt-20 dark:border-white/[0.08]",
+        // The docs' sidebar rule runs down to the footer, so no gap above it.
+        !docs && "mt-24 sm:mt-36"
+      )}
+    >
       <Container>
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 sm:gap-x-8">
           {COLUMNS.map((column) => (

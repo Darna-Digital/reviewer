@@ -17,8 +17,10 @@ import { Route as InstallRouteImport } from './routes/install'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
 import { Route as MacRouteImport } from './routes/mac'
 import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ChangelogIndexRouteImport } from './routes/changelog/index'
 import { Route as ChangelogVersionRouteImport } from './routes/changelog/$version'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +62,11 @@ const TerminalRoute = TerminalRouteImport.update({
   path: '/terminal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangelogIndexRoute = ChangelogIndexRouteImport.update({
   id: '/changelog/',
   path: '/changelog/',
@@ -68,6 +75,11 @@ const ChangelogIndexRoute = ChangelogIndexRouteImport.update({
 const ChangelogVersionRoute = ChangelogVersionRouteImport.update({
   id: '/changelog/$version',
   path: '/changelog/$version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -80,7 +92,9 @@ export interface FileRoutesByFullPath {
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
   '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
   '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRoutesByTo {
@@ -92,7 +106,9 @@ export interface FileRoutesByTo {
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
   '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
   '/changelog': typeof ChangelogIndexRoute
 }
 export interface FileRoutesById {
@@ -105,7 +121,9 @@ export interface FileRoutesById {
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
   '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
   '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
   '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,7 +137,9 @@ export interface FileRouteTypes {
     | '/latest.json'
     | '/mac'
     | '/terminal'
+    | '/api/search'
     | '/changelog/$version'
+    | '/docs/$'
     | '/changelog/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -131,7 +151,9 @@ export interface FileRouteTypes {
     | '/latest.json'
     | '/mac'
     | '/terminal'
+    | '/api/search'
     | '/changelog/$version'
+    | '/docs/$'
     | '/changelog'
   id:
     | '__root__'
@@ -143,7 +165,9 @@ export interface FileRouteTypes {
     | '/latest.json'
     | '/mac'
     | '/terminal'
+    | '/api/search'
     | '/changelog/$version'
+    | '/docs/$'
     | '/changelog/'
   fileRoutesById: FileRoutesById
 }
@@ -156,7 +180,9 @@ export interface RootRouteChildren {
   LatestDotjsonRoute: typeof LatestDotjsonRoute
   MacRoute: typeof MacRoute
   TerminalRoute: typeof TerminalRoute
+  ApiSearchRoute: typeof ApiSearchRoute
   ChangelogVersionRoute: typeof ChangelogVersionRoute
+  DocsSplatRoute: typeof DocsSplatRoute
   ChangelogIndexRoute: typeof ChangelogIndexRoute
 }
 
@@ -218,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TerminalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/changelog/': {
       id: '/changelog/'
       path: '/changelog'
@@ -232,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangelogVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -244,7 +284,9 @@ const rootRouteChildren: RootRouteChildren = {
   LatestDotjsonRoute: LatestDotjsonRoute,
   MacRoute: MacRoute,
   TerminalRoute: TerminalRoute,
+  ApiSearchRoute: ApiSearchRoute,
   ChangelogVersionRoute: ChangelogVersionRoute,
+  DocsSplatRoute: DocsSplatRoute,
   ChangelogIndexRoute: ChangelogIndexRoute,
 }
 export const routeTree = rootRouteImport

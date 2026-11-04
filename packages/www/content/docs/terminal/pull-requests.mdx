@@ -1,0 +1,43 @@
+---
+title: Pull requests
+description: Review, check out, merge or close GitHub pull requests.
+---
+
+The terminal app reads pull requests through the Reviewer server, which uses
+the GitHub access you already have: a token in `GITHUB_TOKEN` or `GH_TOKEN`,
+or the [GitHub CLI](https://cli.github.com)'s login.
+
+## Finding a pull request
+
+Press `M` to list the open pull requests in the sidebar, grouped by target
+branch, with their checks and age. Press `f` or `/` to search by number,
+title, author or branch.
+
+Moving through the list opens each pull request's diff. Press Return to move
+into the diff, and Tab to move from the list to its files.
+
+To go straight to one from the shell:
+
+```bash
+reviewer --pr 42
+```
+
+## Acting on it
+
+These keys work on the selected pull request in the list, and in its pane
+(⌥⌘8):
+
+| Key       | Does                                        |
+| --------- | ------------------------------------------- |
+| `c`       | Check it out                                |
+| `m`       | Merge. You pick the method, then confirm.   |
+| `x`       | Close it, after you confirm                 |
+| `o`       | Open it on GitHub                           |
+| `y` `Y`   | Copy its link, or its branch name           |
+| `r`       | Reload it from GitHub                       |
+
+## Review comments
+
+The pull request's review threads show in the diff beside your own comments.
+On a pull request comment, press `r` to reply on GitHub and `R` to resolve or
+reopen its thread.

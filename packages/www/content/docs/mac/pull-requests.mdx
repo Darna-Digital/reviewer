@@ -1,0 +1,45 @@
+---
+title: Pull requests
+description: Review a GitHub pull request, then merge or close it.
+---
+
+Reviewer reads your repository's open pull requests from GitHub, so you can
+review one the same way you review your own changes.
+
+## Connecting to GitHub
+
+Reviewer uses the GitHub access you already have. It looks for a token in
+`GITHUB_TOKEN` or `GH_TOKEN`, then for the [GitHub CLI](https://cli.github.com)'s
+login. If you have neither, sign in with the CLI:
+
+```bash
+gh auth login
+```
+
+**Settings** shows which GitHub account Reviewer is using.
+
+## Finding a pull request
+
+Open the **Merge requests** surface. The sidebar lists the open pull requests,
+grouped by the branch they target. Each row shows its title, author and
+branch, whether its checks passed, and whether anything blocks the merge.
+
+Search the list, or filter it by target branch and age. The list refreshes
+every time you come back to the app.
+
+## Reviewing it
+
+Click a pull request to open it. The top of the page is its overview: the
+title, description, branches and size, with its checks and reviewers beside
+them. Below that are the files it changes and the diff, which you read and
+comment on like any other.
+
+## Acting on it
+
+The column beside the overview has the actions:
+
+- **Merge**, with a merge commit, a squash or a rebase. Reviewer asks you to
+  confirm first.
+- **Check out**, to run the branch locally.
+- **Close**, after you confirm.
+- **Open on GitHub**.

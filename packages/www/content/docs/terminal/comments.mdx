@@ -1,0 +1,32 @@
+---
+title: Comments
+description: Comment on any line, and hand the comments to your agent.
+---
+
+## Leaving a comment
+
+Move to a line in the diff or in a file and press `c`. Write what should
+change, then press Return to save it. ⇧Return starts a new line, and Escape
+cancels.
+
+| Key        | Does                                |
+| ---------- | ----------------------------------- |
+| `c`        | Comment on the line                 |
+| `n` `N`    | Next and previous comment           |
+| `e`        | Edit the comment you're on          |
+| `x`        | Delete the comment you're on        |
+| `C`        | Show or hide comments               |
+| `m`        | List every comment                  |
+
+The list (`m`) shows the comments on this change first, then any you left on
+other files while browsing. Pick one to jump to it.
+
+## Handing comments to an agent
+
+The terminal app keeps comments in the same place as the Mac app, so a comment
+left here shows up in the Mac app, and the other way round.
+
+To have an agent fix them, install the
+[`resolve-reviewer-comments` skill](/docs/agents) and ask your agent to
+resolve your reviewer comments. Its changes appear as a new diff when it
+finishes. Press `r` to refresh if they haven't shown up yet.

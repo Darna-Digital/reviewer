@@ -1,0 +1,20 @@
+{
+  "title": "Terminal app",
+  "description": "Reviewer in a terminal, on macOS and Linux",
+  "root": true,
+  "pages": [
+    "index",
+    "---Reviewing---",
+    "reviewing",
+    "comments",
+    "---Git and GitHub---",
+    "git",
+    "pull-requests",
+    "---Working in the app---",
+    "code-navigation",
+    "running",
+    "workspaces",
+    "appearance",
+    "keys"
+  ]
+}

@@ -1,0 +1,42 @@
+---
+title: Introduction
+description: What Reviewer is, and where to start reading.
+---
+
+Coding agents write most of the code now, but someone still has to read it.
+Reviewer is where you do that. You read the change, leave a comment on every
+line that is wrong, hand the comments back to the agent, and commit once the
+result is right.
+
+Reviewer comes in two forms:
+
+- The **Mac app**, a native window for Apple silicon Macs.
+- The **terminal app**, which runs in a terminal on macOS and Linux.
+
+Both are free and open source, and both talk to the same small server on your
+machine. A comment you leave in one shows up in the other, and so do your
+workspaces and run commands.
+
+## Where to start
+
+<Cards>
+  <Card title="Installation" href="/docs/installation" description="Install the Mac app or the terminal app." />
+  <Card title="Concepts" href="/docs/concepts" description="Repositories, comparisons, comments and the server underneath." />
+  <Card title="Mac app" href="/docs/mac" description="Review in a native window, with agents beside the diff." />
+  <Card title="Terminal app" href="/docs/terminal" description="Review over SSH or in the terminal you already live in." />
+</Cards>
+
+## A review, start to finish
+
+A typical review looks like this:
+
+1. An agent changes your code, in Reviewer or anywhere else.
+2. You open the repository in Reviewer. It shows the uncommitted work, or your
+   branch compared with the branch it will merge into.
+3. You read the diff and comment on the lines you want changed.
+4. You hand the comments to an agent: from the Mac app directly, or through the
+   [skill](/docs/agents) for any agent you run yourself.
+5. The agent's fix shows up as a new diff. You read it, and commit when you are
+   satisfied.
+
+Nothing is committed for you. Reviewer only commits when you ask it to.
