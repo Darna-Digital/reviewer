@@ -83,8 +83,8 @@ function RecentlyShipped() {
   if (releases.length === 0) return null;
 
   return (
-    <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
-      <div className="flex flex-col items-start gap-4">
+    <section className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
           Recently shipped
         </h2>
@@ -96,7 +96,7 @@ function RecentlyShipped() {
           <ChevronRight className="size-4" />
         </Link>
       </div>
-      <ul className="flex flex-col">
+      <ul className="flex flex-col border-t border-black/[0.06] dark:border-white/[0.08]">
         {releases.map((release) => (
           <li key={release.version}>
             <Link
@@ -197,7 +197,7 @@ function Questions() {
       <dl className="flex flex-col">
         {QUESTIONS.map(({ question, answer }) => (
           <div
-            className="flex flex-col gap-2 border-b border-black/[0.06] py-5 first:pt-0 dark:border-white/[0.08]"
+            className="flex flex-col gap-2 border-b border-black/[0.06] py-5 first:pt-0 last:border-b-0 last:pb-0 dark:border-white/[0.08]"
             key={question}
           >
             <dt className="text-[17px] font-semibold tracking-[-0.01em] lg:text-lg">
