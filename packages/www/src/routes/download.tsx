@@ -3,29 +3,32 @@ import type { ReactNode } from "react";
 
 import { version } from "../../../../package.json";
 import { AppScreenshot } from "#/components/app-screenshot";
+import { CloudIllustration } from "#/components/cloud-illustration";
 import { PRIMARY_BUTTON } from "#/components/buttons";
 import { PageHero, SURFACE } from "#/components/card";
 import { Container } from "#/components/container";
-import { Apple, ChevronRight, Terminal } from "#/components/icons";
+import { Apple, ChevronRight, Cloud, Terminal } from "#/components/icons";
 import { InstallCommand } from "#/components/install-command";
 import { Crossfade, SegmentedControl } from "#/components/segmented-control";
-import { DOWNLOAD_URL, RELEASES_URL, SITE_URL } from "#/lib/links";
+import { WaitlistForm } from "#/components/waitlist-form";
+import { DOWNLOAD_URL, SITE_URL } from "#/lib/links";
 
 const TITLE = "Download · Reviewer";
 const DESCRIPTION =
   "Download the Mac app or install the terminal app. Both are free and open source, and they share your comments.";
 
 const APPS = [
-  { value: "mac", label: "Mac app", icon: Apple },
-  { value: "terminal", label: "Terminal app", icon: Terminal },
+  { value: "mac", label: "Mac", icon: Apple },
+  { value: "terminal", label: "Terminal", icon: Terminal },
+  { value: "cloud", label: "Cloud", icon: Cloud },
 ] as const;
 
 type App = (typeof APPS)[number]["value"];
 
 export const Route = createFileRoute("/download")({
   validateSearch: (search: Record<string, unknown>): { app?: App } =>
-    search.app === "terminal" || search.app === "mac"
-      ? { app: search.app }
+    APPS.some(({ value }) => value === search.app)
+      ? { app: search.app as App }
       : {},
   head: () => ({
     meta: [
@@ -69,8 +72,8 @@ function AppPanel({
   name: string;
   description: string;
   action: ReactNode;
-  facts: ReactNode;
-  more: ReactNode;
+  facts?: ReactNode;
+  more?: ReactNode;
   screenshot: ReactNode;
 }) {
   return (
@@ -87,7 +90,7 @@ function AppPanel({
           </p>
         </div>
         <div className="w-full">{action}</div>
-        <dl className="w-full">{facts}</dl>
+        {facts && <dl className="w-full">{facts}</dl>}
         {more}
       </div>
       <div className="overflow-hidden rounded-xl">{screenshot}</div>
@@ -166,6 +169,21 @@ function TerminalPanel() {
   );
 }
 
+function CloudPanel() {
+  return (
+    <AppPanel
+      action={
+        <div className="sm:w-[32rem]">
+          <WaitlistForm />
+        </div>
+      }
+      description="Reviewer Cloud is what we're building next."
+      name="Reviewer Cloud"
+      screenshot={<CloudIllustration />}
+    />
+  );
+}
+
 function DownloadPage() {
   const { app = "mac" } = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -198,24 +216,9 @@ function DownloadPage() {
         views={[
           { value: "mac", node: <MacPanel /> },
           { value: "terminal", node: <TerminalPanel /> },
+          { value: "cloud", node: <CloudPanel /> },
         ]}
       />
-
-      <div className="mt-10 flex flex-col gap-x-8 gap-y-3 sm:mt-14 sm:flex-row">
-        <a
-          className={TEXT_LINK}
-          href={RELEASES_URL}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Browse every release on GitHub
-          <ChevronRight className="size-4" />
-        </a>
-        <Link className={TEXT_LINK} to="/cloud">
-          Join the Reviewer Cloud waitlist
-          <ChevronRight className="size-4" />
-        </Link>
-      </div>
     </Container>
   );
 }

@@ -58,7 +58,9 @@ export function SegmentedControl<Value extends string>({
             type="button"
           >
             {Icon && <Icon className="size-4 lg:size-4.5" />}
-            {text}
+            {/* Trimmed to cap height, so the icon centres on the letters
+                rather than on the line box. */}
+            <span className="[text-box:trim-both_cap_alphabetic]">{text}</span>
           </button>
         );
       })}

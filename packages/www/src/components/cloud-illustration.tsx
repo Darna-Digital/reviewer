@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 
 /**
  * Reviewer Cloud has no screenshot yet, so its stage shows banks of cloud
- * drawn in diff marks on the noir backdrop: the denser the cloud, the
- * heavier the mark. The layout comes from seeded noise, so it's the same on
+ * drawn in diff marks: white on a baby-blue sky in light mode, on the noir
+ * backdrop in dark mode. The denser the cloud, the heavier the mark. The layout comes from seeded noise, so it's the same on
  * every load, and it's drawn on a canvas at the screen's own resolution.
  */
 
@@ -52,7 +52,13 @@ function cloud(u: number, v: number) {
   return (value - 0.5) * 2 + edge * 0.55 - 0.42 - top;
 }
 
+const LIGHT = "(prefers-color-scheme: light)";
+
 function draw(canvas: HTMLCanvasElement) {
+  // White marks show less against a blue sky than a black one, so they're
+  // drawn more opaque there.
+  const light = window.matchMedia(LIGHT).matches;
+  const [base, range] = light ? [0.25, 0.65] : [0.05, 0.36];
   const { width, height } = canvas.getBoundingClientRect();
   if (!width || !height) return;
   const scale = window.devicePixelRatio || 1;
@@ -87,7 +93,7 @@ function draw(canvas: HTMLCanvasElement) {
           0,
           Math.min(MARKS.length - 1, Math.floor((fill + jitter) * MARKS.length))
         );
-        context.fillStyle = `rgba(255,255,255,${0.05 + fill ** 1.5 * 0.36})`;
+        context.fillStyle = `rgba(255,255,255,${base + fill ** 1.5 * range})`;
         context.fillText(MARKS[level], x, y);
       } else if (hash(column + 7, row + 13) < 0.006) {
         // Specks in the clear sky, the odd one bright.
@@ -105,16 +111,22 @@ export function CloudIllustration() {
   useEffect(() => {
     const node = canvas.current;
     if (!node) return;
-    draw(node);
-    const observer = new ResizeObserver(() => draw(node));
+    const redraw = () => draw(node);
+    redraw();
+    const observer = new ResizeObserver(redraw);
     observer.observe(node);
-    return () => observer.disconnect();
+    const scheme = window.matchMedia(LIGHT);
+    scheme.addEventListener("change", redraw);
+    return () => {
+      observer.disconnect();
+      scheme.removeEventListener("change", redraw);
+    };
   }, []);
 
   return (
-    <div className="noir aspect-[2560/1358]">
+    <div className="sky aspect-[2560/1358]">
       <canvas
-        aria-label="Banks of cloud drawn in diff marks across a dark sky"
+        aria-label="Banks of cloud drawn in diff marks across the sky"
         className="block size-full"
         ref={canvas}
         role="img"

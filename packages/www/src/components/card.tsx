@@ -111,7 +111,7 @@ export function PageHero({
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   actions?: ReactNode;
   note?: ReactNode;
 }) {
@@ -121,9 +121,11 @@ export function PageHero({
       <h1 className="max-w-3xl text-[36px] leading-[1.05] font-bold tracking-[-0.02em] text-balance sm:text-[52px] lg:max-w-4xl lg:text-[72px]">
         {title}
       </h1>
-      <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">
-        {children}
-      </p>
+      {children && (
+        <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">
+          {children}
+        </p>
+      )}
       {actions && <div className="mt-2 w-full sm:w-auto">{actions}</div>}
       {note && (
         <p className="text-sm leading-relaxed text-pretty text-neutral-500 sm:text-[13px] lg:text-[15px]">

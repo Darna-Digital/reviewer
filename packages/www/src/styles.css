@@ -89,9 +89,11 @@ body {
   }
 }
 
-/* The noir backdrop Reviewer Cloud's illustration sits on, Raycast style: black and
-   white only, lit from above with a fainter glow from each lower corner. */
-.noir {
+/* The sky Reviewer Cloud's illustration sits on. In dark mode it's noir,
+   Raycast style: black and white only, lit from above with a fainter glow
+   from each lower corner. In light mode it's a baby-blue sky, deeper at the
+   top and paling towards the horizon. */
+.sky {
   background:
     radial-gradient(
       70% 55% at 50% -5%,
@@ -109,4 +111,16 @@ body {
       transparent 70%
     ),
     linear-gradient(#141414, #050505);
+}
+
+@media (prefers-color-scheme: light) {
+  .sky {
+    background:
+      radial-gradient(
+        70% 60% at 50% 110%,
+        rgba(255, 255, 255, 0.55),
+        transparent 70%
+      ),
+      linear-gradient(#6fb6ee, #a9d6f7 55%, #d6ecfb);
+  }
 }

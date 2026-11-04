@@ -12,7 +12,7 @@ import { InlineMarkdown } from "#/components/release-notes";
 import { WaitlistForm } from "#/components/waitlist-form";
 import { CloudIllustration } from "#/components/cloud-illustration";
 import { ShowcaseVideo } from "#/components/showcase-video";
-import { Crossfade } from "#/components/segmented-control";
+import { Crossfade, SegmentedControl } from "#/components/segmented-control";
 import { getChangelog } from "#/lib/changelog";
 import { cn } from "#/lib/cn";
 import { REPO_URL } from "#/lib/links";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 const PLACES = [
   { value: "mac", label: "Mac" },
   { value: "terminal", label: "Terminal" },
-  { value: "cloud", label: "Reviewer Cloud" },
+  { value: "cloud", label: "Cloud" },
 ] as const;
 
 type Place = (typeof PLACES)[number]["value"];
@@ -110,7 +110,7 @@ function RecentlyShipped() {
               >
                 {shortDate(release.date)}
               </time>
-              <span className="truncate text-[15px] text-neutral-800 transition-colors group-hover:text-neutral-950 lg:text-base dark:text-neutral-200 dark:group-hover:text-white">
+              <span className="truncate text-[15px] text-neutral-800 transition-colors group-hover:text-neutral-950 sm:pr-6 lg:text-base dark:text-neutral-200 dark:group-hover:text-white">
                 {release.title ?? (
                   <InlineMarkdown text={release.sections[0]?.items[0] ?? ""} />
                 )}
@@ -192,7 +192,7 @@ function Questions() {
   return (
     <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
       <h2 className="text-[30px] leading-[1.1] font-semibold tracking-[-0.015em] sm:text-[36px] lg:text-[44px]">
-        Questions
+        FAQ
       </h2>
       <dl className="flex flex-col">
         {QUESTIONS.map(({ question, answer }) => (
@@ -288,43 +288,30 @@ function PlacePicker({
         )}
       >
         <Container>
-          <div
-            aria-label="Where do you work?"
-            className="flex items-center gap-2 overflow-x-auto py-2 sm:py-2.5"
-            role="group"
-          >
+          <div className="flex items-center gap-3 py-2 sm:py-2.5">
             <span
-              // On phones the label would push the last pill off screen.
-              className="mr-1 shrink-0 text-[15px] text-neutral-600 max-sm:hidden lg:text-base dark:text-neutral-400"
+              aria-hidden="true"
+              // On phones the control takes the full width.
+              className="shrink-0 text-[15px] text-neutral-600 max-sm:hidden lg:text-base dark:text-neutral-400"
             >
               Where do you work?
             </span>
-            {PLACES.map(({ value, label }) => (
-              <button
-                aria-pressed={place === value}
-                className={cn(
-                  "h-8 shrink-0 rounded-full px-3.5 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-9 sm:px-4 sm:text-sm",
-                  place === value
-                    ? "text-neutral-900 ring-2 ring-neutral-900 ring-inset dark:text-white dark:ring-white"
-                    : "text-neutral-600 ring-1 ring-black/15 ring-inset hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:ring-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white"
-                )}
-                key={value}
-                onClick={() => {
-                  onChange(value);
-                  // Bring the chosen product's view up under the picker,
-                  // wherever the reader clicked from.
-                  const top = sentinel.current!.getBoundingClientRect().top;
-                  const header =
-                    parseFloat(
-                      getComputedStyle(document.documentElement).fontSize
-                    ) * 3.25;
-                  window.scrollBy({ top: top - header, behavior: "smooth" });
-                }}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+            <SegmentedControl
+              label="Where do you work?"
+              onChange={(value) => {
+                onChange(value);
+                // Bring the chosen product's view up under the picker,
+                // wherever the reader clicked from.
+                const top = sentinel.current!.getBoundingClientRect().top;
+                const header =
+                  parseFloat(
+                    getComputedStyle(document.documentElement).fontSize
+                  ) * 3.25;
+                window.scrollBy({ top: top - header, behavior: "smooth" });
+              }}
+              segments={PLACES}
+              value={place}
+            />
           </div>
         </Container>
       </div>

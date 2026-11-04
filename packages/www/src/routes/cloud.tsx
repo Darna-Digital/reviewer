@@ -37,10 +37,16 @@ function CloudPage() {
               <WaitlistForm />
             </div>
           }
-          title="Reviewer Cloud"
-        >
-          It's a paid service we're still building.
-        </PageHero>
+          title={
+            // Set in two tones, as the homepage's Reviewer Cloud view is.
+            <>
+              <span className="block text-neutral-400 dark:text-neutral-500">
+                Reviewer Cloud
+              </span>
+              <span className="block">is what we're building next.</span>
+            </>
+          }
+        />
       </Container>
       <Container className={HERO_WIDTH}>
         <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">

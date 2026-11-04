@@ -46,7 +46,11 @@ export function InstallCommand({
       </pre>
       <button
         aria-label={copied ? "Copied" : "Copy commands"}
-        className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-neutral-400 lg:top-4 lg:right-4"
+        className={cn(
+          "absolute right-3 inline-flex size-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-neutral-400 lg:right-4",
+          // Centred on a single line; level with the first of several.
+          lines.length === 1 ? "top-1/2 -translate-y-1/2" : "top-3 lg:top-4"
+        )}
         onClick={copy}
         type="button"
       >
