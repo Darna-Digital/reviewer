@@ -355,9 +355,9 @@ function Stage({ place }: { place: Place }) {
           node: (
             <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
               <AppScreenshot
-                label="The terminal app reviewing a branch against main, with a comment on a changed line"
+                label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
                 lazy={false}
-                name="tui-review"
+                name="tui-hero"
               />
             </div>
           ),
@@ -423,8 +423,8 @@ function CloudSections() {
           >
             <div className="overflow-hidden rounded-xl">
               <AppScreenshot
-                label="The terminal app's command palette open over a diff"
-                name="tui-palette"
+                label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
+                name="tui-hero"
               />
             </div>
           </SurfaceCard>

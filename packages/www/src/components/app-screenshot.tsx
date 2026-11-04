@@ -6,11 +6,11 @@ import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
  * widest container, and the close crops (diff layouts, branch picker, the
  * hero's phone crop) keep their native size.
  *
- * The `tui-` captures are placeholders: headless renders of the terminal app
- * (packages/tui/scripts/snapshot.tsx) on a demo repository, framed as a
- * terminal window with transparent corners. Replace them with real
- * screenshots under the same names and sizes. They sit on the CSS `.noir`
- * backdrop rather than having one baked in.
+ * The terminal app's captures sit on a wallpaper, like the Mac app's.
+ * `tui-palette` and `tui-themes` are still placeholders: headless renders
+ * (packages/tui/scripts/snapshot.tsx) framed as a window with transparent
+ * corners, drawn on the CSS `.noir` backdrop. Replace them with real
+ * captures under the same names and drop them from PLACEHOLDERS.
  */
 const SCREENSHOT_SIZES = {
   "split-diff": { width: 2560, height: 1477 },
@@ -22,14 +22,18 @@ const SCREENSHOT_SIZES = {
   "branch-picker": { width: 1470, height: 1326 },
   history: { width: 1854, height: 1192 },
   "find-symbol": { width: 2798, height: 1884 },
-  "tui-review": { width: 2403, height: 1466 },
-  "tui-split": { width: 2403, height: 1466 },
+  "tui-hero": { width: 2560, height: 1358 },
+  "tui-comment": { width: 2316, height: 1486 },
+  "tui-unified": { width: 2316, height: 1486 },
+  "tui-split": { width: 2316, height: 1486 },
+  "tui-history": { width: 2316, height: 1486 },
   "tui-palette": { width: 2403, height: 1466 },
-  "tui-history": { width: 2403, height: 1466 },
   "tui-themes": { width: 2403, height: 1466 },
 } as const;
 
 export type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
+
+const PLACEHOLDERS = new Set<ScreenshotName>(["tui-palette", "tui-themes"]);
 
 export const HERO_PHONE_CROP: ScreenshotCrop = {
   name: "split-diff-mobile",
@@ -57,7 +61,7 @@ export function AppScreenshot({
       {...SCREENSHOT_SIZES[name]}
     />
   );
-  if (!name.startsWith("tui-")) return screenshot;
+  if (!PLACEHOLDERS.has(name)) return screenshot;
   return (
     <div className="noir px-[5%] pt-[4.5%] pb-[5%]">
       <div className="overflow-hidden rounded-[1%/1.64%] shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.08)]">

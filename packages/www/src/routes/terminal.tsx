@@ -47,9 +47,9 @@ function TerminalPage() {
       <Container className={HERO_WIDTH}>
         <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
           <AppScreenshot
-            label="The terminal app reviewing a branch against main, with a comment on a changed line"
+            label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
             lazy={false}
-            name="tui-review"
+            name="tui-hero"
           />
         </div>
       </Container>

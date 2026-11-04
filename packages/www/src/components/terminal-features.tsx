@@ -5,6 +5,7 @@ import {
   type ScreenshotName,
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
+import { ShowcaseVideo } from "#/components/showcase-video";
 import {
   Bubble,
   Bubbles,
@@ -16,6 +17,7 @@ import {
   LayoutRows,
   Palette,
   PlusMinus,
+  Search,
   Terminal,
 } from "#/components/icons";
 import {
@@ -29,7 +31,7 @@ const NOTE_ICON = "size-7 lg:size-8";
 
 const DIFF_LAYOUTS = [
   {
-    value: "tui-review",
+    value: "tui-unified",
     label: "Top to bottom",
     icon: LayoutRows,
     alt: "A branch laid out top to bottom in the terminal app, with the changed files beside it",
@@ -45,7 +47,7 @@ const DIFF_LAYOUTS = [
 type DiffLayout = (typeof DIFF_LAYOUTS)[number]["value"];
 
 function DiffLayoutCard() {
-  const [layout, setLayout] = useState<DiffLayout>("tui-review");
+  const [layout, setLayout] = useState<DiffLayout>("tui-unified");
 
   return (
     <ShowcaseCard
@@ -95,8 +97,8 @@ export function TerminalFeatures() {
           title="Comment on the line that's wrong"
         >
           <AppScreenshot
-            label="A comment under a changed line: Seven days feels long for admin sessions. Can we make this per role?"
-            name="tui-review"
+            label="A comment being written under a changed line: rewrite this to not use ternary"
+            name="tui-comment"
           />
         </ShowcaseCard>
 
@@ -121,6 +123,17 @@ export function TerminalFeatures() {
           <AppScreenshot
             label="The branch's history in the terminal app's bottom pane"
             name="tui-history"
+          />
+        </ShowcaseCard>
+
+        <ShowcaseCard
+          description="Press u on a symbol to list every usage in the bottom pane. Open one to jump to it."
+          icon={<Search className={SECTION_ICON} />}
+          title="Find every usage of a symbol"
+        >
+          <ShowcaseVideo
+            label="The terminal app next to Claude Code, listing the usages of ChatBusy in its bottom pane"
+            name="tui-usages"
           />
         </ShowcaseCard>
 

@@ -284,6 +284,15 @@ export function Close({ className }: IconProps) {
   );
 }
 
+export function Search({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="m15 15 4.5 4.5" />
+    </Symbol>
+  );
+}
+
 export function ChevronLeft({ className }: IconProps) {
   return (
     <Symbol className={className}>
