@@ -6,7 +6,6 @@ import {
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
 import { Kbd } from "#/components/kbd";
-import { ShowcaseVideo } from "#/components/showcase-video";
 import {
   Bubble,
   Bubbles,
@@ -18,7 +17,6 @@ import {
   LayoutRows,
   Palette,
   PlusMinus,
-  Search,
   Terminal,
 } from "#/components/icons";
 import {
@@ -119,8 +117,8 @@ export function TerminalFeatures() {
           description={
             <>
               <Kbd>⌘K</Kbd> opens the command palette: go to file, search in
-              files, switch branch and every Git action. <Kbd>?</Kbd> lists
-              every key.
+              files, switch branch and every Git action. <Kbd>u</Kbd> finds
+              every usage of a symbol and <Kbd>?</Kbd> lists every key.
             </>
           }
           icon={<Command className={SECTION_ICON} />}
@@ -140,22 +138,6 @@ export function TerminalFeatures() {
           <AppScreenshot
             label="The branch's history in the terminal app's bottom pane"
             name="tui-history"
-          />
-        </ShowcaseCard>
-
-        <ShowcaseCard
-          description={
-            <>
-              Press <Kbd>u</Kbd> on a symbol to list every usage in the bottom
-              pane. Open one to jump to it.
-            </>
-          }
-          icon={<Search className={SECTION_ICON} />}
-          title="Find every usage of a symbol"
-        >
-          <ShowcaseVideo
-            label="The terminal app next to Claude Code, listing the usages of ChatBusy in its bottom pane"
-            name="tui-usages"
           />
         </ShowcaseCard>
 

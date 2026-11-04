@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AppScreenshot } from "#/components/app-screenshot";
 import { PageHero } from "#/components/card";
 import { Container, HERO_WIDTH } from "#/components/container";
+import { ShowcaseVideo } from "#/components/showcase-video";
 import { InstallCommand } from "#/components/install-command";
 import { TerminalFeatures } from "#/components/terminal-features";
 import { SITE_URL } from "#/lib/links";
@@ -46,10 +46,9 @@ function TerminalPage() {
 
       <Container className={HERO_WIDTH}>
         <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
-          <AppScreenshot
-            label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
-            lazy={false}
-            name="tui-hero"
+          <ShowcaseVideo
+            label="The terminal app next to Claude Code, with a magnifier passing over the usages of a symbol in its bottom pane"
+            name="tui-usages"
           />
         </div>
       </Container>

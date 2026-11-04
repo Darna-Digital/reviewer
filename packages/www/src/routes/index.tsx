@@ -11,6 +11,7 @@ import { TerminalFeatures } from "#/components/terminal-features";
 import { InlineMarkdown } from "#/components/release-notes";
 import { WaitlistForm } from "#/components/waitlist-form";
 import { CloudIllustration } from "#/components/cloud-illustration";
+import { ShowcaseVideo } from "#/components/showcase-video";
 import { Crossfade } from "#/components/segmented-control";
 import { getChangelog } from "#/lib/changelog";
 import { cn } from "#/lib/cn";
@@ -354,10 +355,10 @@ function Stage({ place }: { place: Place }) {
           value: "terminal",
           node: (
             <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
-              <AppScreenshot
-                label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
-                lazy={false}
-                name="tui-hero"
+              <ShowcaseVideo
+                label="The terminal app next to Claude Code, with a magnifier passing over the usages of a symbol in its bottom pane"
+                name="tui-usages"
+                paused={place !== "terminal"}
               />
             </div>
           ),

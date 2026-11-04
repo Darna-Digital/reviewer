@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * A short, silent screen recording in a showcase card. It plays on a loop
- * while it's on screen and pauses off screen. With reduced motion it waits
+ * A short, silent screen recording. It plays on a loop while it's on screen
+ * and pauses off screen or while `paused`, as in a hidden crossfade view. With reduced motion it waits
  * on its first frame with controls instead. AV1 first, H.264 for Safari
  * before 17 and other browsers without AV1.
  */
 export function ShowcaseVideo({
   label,
   name,
+  paused = false,
 }: {
   label: string;
   name: string;
+  paused?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const [still, setStill] = useState(false);
@@ -19,6 +21,10 @@ export function ShowcaseVideo({
   useEffect(() => {
     const node = video.current;
     if (!node) return;
+    if (paused) {
+      node.pause();
+      return;
+    }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setStill(true);
       return;
@@ -29,7 +35,7 @@ export function ShowcaseVideo({
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [paused]);
 
   return (
     <video
