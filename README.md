@@ -7,23 +7,24 @@
 
 # Reviewer
 
-**Understand AI-generated code.**
+**Focused system for building software with agents.**
 
-In a world where we no longer write code, we spend a lot more time reviewing it.<br>
-Reviewer is a delightful, smooth macOS app built precisely for that.
+Works with the agents you already use: Claude Code, Codex and any agent that runs skills.<br>
+Read the change, comment on what's wrong, hand it back and check the fix.
 
 [![Latest release](https://img.shields.io/github/v/release/Darna-Digital/reviewer?style=flat-square&label=release&color=111)](https://github.com/Darna-Digital/reviewer/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Darna-Digital/reviewer/total?style=flat-square&color=111)](https://github.com/Darna-Digital/reviewer/releases)
 [![Release build](https://img.shields.io/github/actions/workflow/status/Darna-Digital/reviewer/release.yml?branch=main&style=flat-square&label=build)](https://github.com/Darna-Digital/reviewer/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111?style=flat-square)](LICENSE)
 <br>
-[![macOS 26+](https://img.shields.io/badge/macOS-26%2B-111?style=flat-square&logo=apple&logoColor=white)](https://reviewer.sh)
+[![macOS 26+](https://img.shields.io/badge/macOS-26%2B-111?style=flat-square&logo=apple&logoColor=white)](https://reviewer.sh/mac)
+[![Linux](https://img.shields.io/badge/Linux-terminal%20app-111?style=flat-square&logo=linux&logoColor=white)](https://reviewer.sh/terminal)
 [![Apple silicon](https://img.shields.io/badge/Apple%20silicon-arm64-111?style=flat-square)](https://reviewer.sh)
 [![Swift 6.2](https://img.shields.io/badge/Swift-6.2-F05138?style=flat-square&logo=swift&logoColor=white)](packages/mac-os)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](packages)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-111?style=flat-square)](CONTRIBUTING.md)
 
-[**Download for macOS**](https://github.com/Darna-Digital/reviewer/releases/latest) · [Website](https://reviewer.sh) · [Releases](https://github.com/Darna-Digital/reviewer/releases) · [Report a bug](https://github.com/Darna-Digital/reviewer/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/Darna-Digital/reviewer/issues/new?template=feature_request.yml)
+[**Download**](https://reviewer.sh/download) · [Website](https://reviewer.sh) · [Docs](https://reviewer.sh/docs) · [Changelog](https://reviewer.sh/changelog) · [Report a bug](https://github.com/Darna-Digital/reviewer/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/Darna-Digital/reviewer/issues/new?template=feature_request.yml)
 
 </div>
 
@@ -36,19 +37,31 @@ Reviewer is a delightful, smooth macOS app built precisely for that.
 
 ## Contents
 
-- [Features](#features)
+- [Choose where you work](#choose-where-you-work)
+- [The Mac app](#the-mac-app)
+- [The terminal app](#the-terminal-app)
+- [Reviewer Cloud](#reviewer-cloud)
 - [Install](#install)
 - [Resolve review comments with any agent](#resolve-review-comments-with-any-agent)
+- [Questions](#questions)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Features
+## Choose where you work
 
-### A diff viewer that reads the way you do
+|                                           |                                                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [**The Mac app**](#the-mac-app)           | The change, your comments and your Claude Code and Codex sessions in one window. Free and open source. |
+| [**The terminal app**](#the-terminal-app) | The same review from the keyboard, over SSH or on Linux. Free and open source.                         |
+| [**Reviewer Cloud**](#reviewer-cloud)     | Our paid service, in the works. [Join the waitlist](https://reviewer.sh/cloud).                        |
 
-Lay the diff out side by side or top to bottom, whichever reads better for the
-change in front of you. Click any file to open it on its own and read it whole.
+## The Mac app
+
+### Review diffs your way
+
+Toggle between split and unified views. When a hunk isn't enough context, open
+the whole file.
 
 <table>
   <tr>
@@ -138,22 +151,127 @@ installed? Settings → Languages installs intelephense for you.
 
 ### And the rest
 
-- **Terminal** — A built-in terminal for ad hoc work, right next to the code.
-- **Light and dark** — Follows your Mac, or pick the appearance you prefer.
-- **Themes** — Shiki and Pierre themes to make the environment your own.
-- **Native to the Mac** — Built for Apple silicon, macOS 26 and later.
+- **Terminal**: a built-in terminal for ad hoc work, right next to the code.
+- **Light and dark**: follows your Mac, or pick the appearance you prefer.
+- **Themes**: Shiki and Pierre themes to make the environment your own.
+- **Native to the Mac**: built for Apple silicon, macOS 26 and later.
+
+## The terminal app
+
+Review a branch without leaving the terminal. The terminal app reads the same
+changes and comments as the Mac app. Run it over SSH, in a tmux pane next to
+your agent, or on Linux.
+
+```bash
+curl -fsSL https://reviewer.sh/install | bash
+```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-hero-dark.webp">
+  <img alt="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below" src="docs/screenshots/tui-hero-light.webp">
+</picture>
+
+### Comment on the line that's wrong
+
+Press <kbd>c</kbd> on any line and write what's wrong. The comment shows up in
+the Mac app's diff too.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-comment-dark.webp">
+  <img alt="A comment being written under a changed line: rewrite this to not use ternary" src="docs/screenshots/tui-comment-light.webp">
+</picture>
+
+### Side by side or top to bottom
+
+<kbd>s</kbd> switches layouts. Hunks or full files, wrapped or not, with the
+changed files beside the diff.
+
+<table>
+  <tr>
+    <th>Top to bottom</th>
+    <th>Side by side</th>
+  </tr>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-unified-dark.webp">
+        <img alt="A diff laid out top to bottom in the terminal app" src="docs/screenshots/tui-unified-light.webp">
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-split-dark.webp">
+        <img alt="The same kind of change side by side in the terminal app" src="docs/screenshots/tui-split-light.webp">
+      </picture>
+    </td>
+  </tr>
+</table>
+
+### See what changed, and when
+
+The History pane lists the branch's commits. Open one to read it like any other
+change.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tui-history-dark.webp">
+  <img alt="The branch's history in the terminal app's bottom pane" src="docs/screenshots/tui-history-light.webp">
+</picture>
+
+### Every action is a keystroke away
+
+<kbd>⌘K</kbd> opens the command palette: go to file, search in files, switch
+branch and every Git action. <kbd>u</kbd> finds every usage of the symbol under
+the cursor, <kbd>⌃T</kbd> opens the theme picker and <kbd>?</kbd> lists every
+key.
+
+### One command for whatever you're reviewing
+
+| Command                          | Opens                             |
+| -------------------------------- | --------------------------------- |
+| `reviewer`                       | The repository you're in          |
+| `reviewer --against main`        | The branch against main           |
+| `reviewer --commit 3f2a9c1`      | A single commit                   |
+| `reviewer --pr 42`               | A GitHub pull request             |
+| `reviewer ~/code/web ~/code/api` | Several repositories side by side |
+
+### And the rest
+
+- **Shared with the Mac app**: a comment you leave here shows up in the Mac
+  app, and the other way round.
+- **Doesn't need the Mac app**: the install brings the Reviewer server and the
+  Node.js it runs on, so it works the same on Linux.
+- **Updates itself**: it checks for a new release at launch. Run update
+  Reviewer from <kbd>⌘K</kbd>, or `reviewer upgrade` from the shell.
+- **Workspaces**: open several repositories side by side, or a saved workspace
+  with `reviewer -w`.
+
+## Reviewer Cloud
+
+Reviewer Cloud is going to focus on making you and your team more productive
+through isolated cloud sandboxes. It's the paid part of Reviewer.
+[Join the waitlist](https://reviewer.sh/cloud) to hear when it opens.
 
 ## Install
 
+**The Mac app**
+
 1. Download the latest `Reviewer-<version>-arm64.dmg` from
-   [**Releases**](https://github.com/Darna-Digital/reviewer/releases/latest)
-   (or from [reviewer.sh](https://reviewer.sh)).
+   [reviewer.sh/download](https://reviewer.sh/download) or
+   [Releases](https://github.com/Darna-Digital/reviewer/releases/latest).
 2. Open the disk image and drag **Reviewer** into **Applications**.
 
-**Requirements:** an Apple silicon Mac on macOS 26 or later.
+It needs an Apple silicon Mac on macOS 26 or later. Every release is signed
+with a Developer ID and notarized by Apple, and the app offers new versions as
+they ship.
 
-Every release is signed with a Developer ID and notarized by Apple. Reviewer
-keeps itself up to date: new versions are offered in-app as they ship.
+**The terminal app**
+
+```bash
+curl -fsSL https://reviewer.sh/install | bash
+```
+
+It runs on macOS and Linux, on arm64 and x64, and installs into `~/.reviewer`.
+See [packages/tui](packages/tui#readme) for building it from source.
 
 ## Resolve review comments with any agent
 
@@ -169,11 +287,29 @@ npx skills add Darna-Digital/reviewer --skill resolve-reviewer-comments
 
 Then, with Reviewer running, ask the agent to "resolve my reviewer comments".
 
+## Questions
+
+**Is it free?** The Mac app and the terminal app are free and MIT-licensed, and
+they stay that way. Reviewer Cloud will be a paid service.
+
+**Does my code leave my machine?** Reviewer works locally on your machine. It
+orchestrates GitHub and your locally installed agents, so your code never
+reaches Reviewer's servers.
+
+**Which agents work with it?** Claude Code and Codex run inside the Mac app.
+Any other agent can pick up your comments with the
+[`resolve-reviewer-comments`](skills/resolve-reviewer-comments/SKILL.md) skill.
+
+**Who isn't it for?** If you run 100 parallel agents and don't check their
+work, then Reviewer is not for you. Reviewer is designed for engineers who care
+about their work deeply and verify it before shipping.
+
 ## Development
 
-Reviewer is a pnpm monorepo: a native SwiftUI/AppKit shell that hosts parts of
-a React web app as views inside its own layout, beside a local API server that
-does the git and filesystem work.
+Reviewer is a pnpm monorepo. The Mac app is a native SwiftUI/AppKit shell that
+hosts parts of a React web app as views inside its own layout. The terminal app
+is drawn with OpenTUI. Both talk to the same local API server, which does the
+git and filesystem work.
 
 | Package                                                | What it is                                                                      |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------- |
