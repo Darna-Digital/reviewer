@@ -225,7 +225,8 @@ function Hero() {
           Focused system for building software with agents
         </h1>
         <p className="max-w-2xl text-lg leading-relaxed text-pretty text-neutral-600 sm:text-xl dark:text-neutral-400">
-          Works with the agents you already use{" "}
+          Reviewer is an agentic development environment for engineers who care
+          about the quality of their work. Works with{" "}
           <span className={CHIP}>
             <ClaudeIcon className="size-[0.95em] text-[#D97757]" />
             Claude Code
