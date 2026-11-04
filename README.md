@@ -40,7 +40,6 @@ Read the change, comment on what's wrong, hand it back and check the fix.
 - [Where do you work?](#where-do-you-work)
 - [The Mac app](#the-mac-app)
 - [The terminal app](#the-terminal-app)
-- [Reviewer Cloud](#reviewer-cloud)
 - [Install](#install)
 - [Resolve review comments with any agent](#resolve-review-comments-with-any-agent)
 - [Questions](#questions)
@@ -54,7 +53,6 @@ Read the change, comment on what's wrong, hand it back and check the fix.
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [**The Mac app**](#the-mac-app)           | The change, your comments and your Claude Code and Codex sessions in one window. Free and open source. |
 | [**The terminal app**](#the-terminal-app) | The same review from the keyboard, over SSH or on Linux. Free and open source.                         |
-| [**Reviewer Cloud**](#reviewer-cloud)     | Our paid service, in the works. [Join the waitlist](https://reviewer.sh/cloud).                        |
 
 ## The Mac app
 
@@ -245,12 +243,6 @@ key.
 - **Workspaces**: open several repositories side by side, or a saved workspace
   with `reviewer -w`.
 
-## Reviewer Cloud
-
-Reviewer Cloud is going to focus on making you and your team more productive
-through isolated cloud sandboxes. It's the paid part of Reviewer.
-[Join the waitlist](https://reviewer.sh/cloud) to hear when it opens.
-
 ## Install
 
 **The Mac app**
@@ -290,7 +282,7 @@ Then, with Reviewer running, ask the agent to "resolve my reviewer comments".
 ## Questions
 
 **Is it free?** The Mac app and the terminal app are free and MIT-licensed, and
-they stay that way. Reviewer Cloud will be a paid service.
+they stay that way.
 
 **Does my code leave my machine?** Reviewer works locally on your machine. It
 orchestrates GitHub and your locally installed agents, so your code never
