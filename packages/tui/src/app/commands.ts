@@ -378,7 +378,6 @@ export const COMMANDS: Command[] = [
     title: 'generate commit message',
     hint: 'generate',
     palette: true,
-    when: (app) => app.isCommitMode,
     run: (app) => void app.commit.generate(),
   },
   // ⇧⌘K and ⌥⌘K are the Mac app's — ⌘K itself opens the palette — and ⌘⏎

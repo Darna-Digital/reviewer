@@ -69,18 +69,35 @@ export function useCommit(
     onEdit() {
       workspace.setCommitMessage(textarea.current?.plainText ?? '');
     },
+    /**
+     * Drafts from the ticked files while the composer is up; from anywhere
+     * else, as the Mac app does, from every change of every repository, the
+     * message kept for when the composer comes back.
+     */
     async generate() {
-      if (busy || included.length === 0) return;
+      const composer = workspace.surface === 'review' && paths.length > 0;
+      if (busy || (composer && included.length === 0)) return;
       setBusy('generating');
       review.notify('info', `Drafting a message with ${agentLabel(agent)}…`);
       try {
-        const parts = byRepo(review.repos, included).map((group) => ({
-          root: group.repo.root,
-          name: group.repo.name,
-          paths: group.paths,
-        }));
+        const parts = composer
+          ? byRepo(review.repos, included).map((group) => ({
+              root: group.repo.root,
+              name: group.repo.name,
+              paths: group.paths,
+            }))
+          : review.repos.list.map((repo) => ({
+              root: repo.root,
+              name: repo.name,
+              paths: [],
+            }));
         setMessage(await draftCommitMessage(parts, agent));
-        review.notify('success', 'Message drafted');
+        review.notify(
+          'success',
+          composer
+            ? 'Message drafted'
+            : "Message drafted — it's waiting in Review's commit box",
+        );
       } catch (error) {
         review.notify(
           'error',
