@@ -1,3 +1,6 @@
+import { COMMANDS, shownKey } from '../app/commands';
+import { keyLabel } from '../app/keys';
+import type { App } from '../app/useApp';
 import { COMMENTS_POPOVER_WIDTH, commentsToList } from './CommentsPopover';
 import { mix } from '../render/palette';
 import { segsWidth } from '../render/styled';
@@ -58,15 +61,11 @@ function Content() {
                     },
                   ],
                   [],
-                  [
-                    { text: 't', fg: app.palette.accent, bold: true },
-                    {
-                      text: ' compare against a branch    ',
-                      fg: app.palette.faint,
-                    },
-                    { text: '5', fg: app.palette.accent, bold: true },
-                    { text: ' history', fg: app.palette.faint },
-                  ],
+                  keyHints(app, [
+                    ['target.pick', 'compare against a branch'],
+                    ['bottom.history', 'history'],
+                    ['palette', 'commands'],
+                  ]),
                 ]
           }
         />
@@ -87,12 +86,11 @@ function Content() {
             },
           ],
           [],
-          [
-            { text: 'p', fg: app.palette.accent, bold: true },
-            { text: ' go to file    ', fg: app.palette.faint },
-            { text: '/', fg: app.palette.accent, bold: true },
-            { text: ' search in files', fg: app.palette.faint },
-          ],
+          keyHints(app, [
+            ['file.find', 'go to file'],
+            ['search', 'search in files'],
+            ['palette', 'commands'],
+          ]),
         ]}
       />
     );
@@ -107,6 +105,25 @@ function Content() {
       sticky={false}
     />
   );
+}
+
+/**
+ * Each command's key as the command table binds it, so the hints keep up with
+ * it; a command whose keys this terminal cannot send is left out.
+ */
+function keyHints(app: App, hints: Array<[id: string, label: string]>): Seg[] {
+  const segs = hints.flatMap(([id, label]) => {
+    const command = COMMANDS.find((entry) => entry.id === id);
+    const key = command && shownKey(command, app.chords);
+    if (!key) return [];
+    return [
+      { text: keyLabel(key), fg: app.palette.accent, bold: true },
+      { text: ` ${label}    `, fg: app.palette.faint },
+    ];
+  });
+  const last = segs.at(-1);
+  if (last) last.text = last.text.trimEnd();
+  return segs;
 }
 
 function Empty({ lines }: { lines: Seg[][] }) {
