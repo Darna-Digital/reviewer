@@ -6,6 +6,7 @@ import {
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
 import { Kbd } from "#/components/kbd";
+import { ShowcaseVideo } from "#/components/showcase-video";
 import {
   Bubble,
   Bubbles,
@@ -142,18 +143,12 @@ export function TerminalFeatures() {
         </ShowcaseCard>
 
         <ShowcaseCard
-          description={
-            <>
-              It draws on your terminal's own background and palette.{" "}
-              <Kbd>⌃T</Kbd> opens the theme picker with every Shiki and Pierre
-              theme from the Mac app.
-            </>
-          }
+          description="Reviewer TUI works with a wide variety of themes."
           icon={<Palette className={SECTION_ICON} />}
-          title="Your terminal's colours, in your diffs"
+          title="Customize your terminal experience"
         >
-          <AppScreenshot
-            label="The terminal app's theme picker, listing light and dark themes"
+          <ShowcaseVideo
+            label="The terminal app's theme picker, stepping through dark themes as the diff and history repaint in each"
             name="tui-themes"
           />
         </ShowcaseCard>

@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+const VIDEO_SIZES = {
+  "tui-usages": { width: 1600, height: 904 },
+  "tui-themes": { width: 1596, height: 1080 },
+} as const;
+
 /**
  * A short, silent screen recording. It plays on a loop while it's on screen
  * and pauses off screen or while `paused`, as in a hidden crossfade view.
@@ -14,7 +19,7 @@ export function ShowcaseVideo({
   paused = false,
 }: {
   label: string;
-  name: string;
+  name: keyof typeof VIDEO_SIZES;
   paused?: boolean;
 }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -48,14 +53,13 @@ export function ShowcaseVideo({
       aria-label={label}
       className="block h-auto w-full bg-neutral-900"
       controls={still}
-      height={904}
+      {...VIDEO_SIZES[name]}
       loop
       muted
       playsInline
       poster={loaded ? `/videos/${name}-poster.avif` : undefined}
       preload="none"
       ref={video}
-      width={1600}
     >
       {loaded && (
         <>

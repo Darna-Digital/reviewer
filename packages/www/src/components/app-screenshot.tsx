@@ -7,10 +7,6 @@ import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
  * hero's phone crop) keep their native size.
  *
  * The terminal app's captures sit on a wallpaper, like the Mac app's.
- * `tui-themes` is still a placeholder: a headless render
- * (packages/tui/scripts/snapshot.tsx) framed as a window with transparent
- * corners, drawn on the CSS `.noir` backdrop. Replace it with a real
- * capture under the same name and drop it from PLACEHOLDERS.
  */
 const SCREENSHOT_SIZES = {
   "split-diff": { width: 2560, height: 1477 },
@@ -28,12 +24,9 @@ const SCREENSHOT_SIZES = {
   "tui-split": { width: 2316, height: 1486 },
   "tui-history": { width: 2316, height: 1195 },
   "tui-palette": { width: 2316, height: 1195 },
-  "tui-themes": { width: 2403, height: 1466 },
 } as const;
 
 export type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
-
-const PLACEHOLDERS = new Set<ScreenshotName>(["tui-themes"]);
 
 export const HERO_PHONE_CROP: ScreenshotCrop = {
   name: "split-diff-mobile",
@@ -52,7 +45,7 @@ export function AppScreenshot({
   name: ScreenshotName;
   phone?: ScreenshotCrop;
 }) {
-  const screenshot = (
+  return (
     <Screenshot
       alt={label}
       lazy={lazy}
@@ -60,13 +53,5 @@ export function AppScreenshot({
       phone={phone}
       {...SCREENSHOT_SIZES[name]}
     />
-  );
-  if (!PLACEHOLDERS.has(name)) return screenshot;
-  return (
-    <div className="noir px-[5%] pt-[4.5%] pb-[5%]">
-      <div className="overflow-hidden rounded-[1%/1.64%] shadow-[0_24px_60px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.08)]">
-        {screenshot}
-      </div>
-    </div>
   );
 }
