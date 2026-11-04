@@ -26,7 +26,7 @@ const SCREENSHOT_SIZES = {
   "tui-comment": { width: 2316, height: 1486 },
   "tui-unified": { width: 2316, height: 1486 },
   "tui-split": { width: 2316, height: 1486 },
-  "tui-history": { width: 2316, height: 1486 },
+  "tui-history": { width: 2316, height: 1195 },
   "tui-palette": { width: 2316, height: 1195 },
   "tui-themes": { width: 2403, height: 1466 },
 } as const;
