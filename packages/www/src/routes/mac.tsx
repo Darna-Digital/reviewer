@@ -5,7 +5,7 @@ import { DownloadButton } from "#/components/buttons";
 import { PageHero } from "#/components/card";
 import { Container, HERO_WIDTH } from "#/components/container";
 import { MacFeatures } from "#/components/mac-features";
-import { SITE_URL } from "#/lib/links";
+import { REPO_URL, SITE_URL } from "#/lib/links";
 
 const TITLE = "The Mac app · Reviewer";
 const DESCRIPTION =
@@ -30,7 +30,20 @@ function MacPage() {
       <Container>
         <PageHero
           actions={<DownloadButton />}
-          note="Apple silicon only, on macOS 26 or later. Free and open source."
+          note={
+            <>
+              Apple silicon only, on macOS 26 or later. Free and{" "}
+              <a
+                className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
+                href={REPO_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                open source
+              </a>
+              .
+            </>
+          }
           title="Read, comment and hand off in one window."
         >
           Your diff, your comments and your Claude Code and Codex sessions sit

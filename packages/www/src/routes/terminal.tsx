@@ -5,7 +5,7 @@ import { Container, HERO_WIDTH } from "#/components/container";
 import { ShowcaseVideo } from "#/components/showcase-video";
 import { InstallCommand } from "#/components/install-command";
 import { TerminalFeatures } from "#/components/terminal-features";
-import { SITE_URL } from "#/lib/links";
+import { REPO_URL, SITE_URL } from "#/lib/links";
 
 const TITLE = "The terminal app · Reviewer";
 const DESCRIPTION =
@@ -36,7 +36,20 @@ function TerminalPage() {
               lines={["curl -fsSL https://reviewer.sh/install | bash"]}
             />
           }
-          note="macOS and Linux, on arm64 and x64. Free and open source."
+          note={
+            <>
+              macOS and Linux, on arm64 and x64. Free and{" "}
+              <a
+                className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
+                href={REPO_URL}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                open source
+              </a>
+              .
+            </>
+          }
           title="Review your agent's changes without leaving the terminal"
         >
           Run it on your laptop, on a server over SSH or in a tmux pane next to
