@@ -48,7 +48,8 @@ const LETTER = [
   "You want to understand the changes being made now, as well as historical changes made in the past.",
   "I know I was in this position. As a freelance developer I needed to work fast and juggle multiple projects. But I still was responsible for the outcomes and the quality of the code I was putting out.",
   "That’s why I built Reviewer. It combines classic IDE features like code diffs, Git integration, go-to-definition, and LSP support. But it also supports agentic coding powered by Claude Code and Codex.",
-  "Reviewer ships as a native macOS app as well as a terminal app. I would be delighted if you tried these applications and told me what you think.",
+  "Reviewer ships as a native macOS app as well as a terminal app.",
+  "I would be delighted if you tried these applications and told me what you think.",
 ];
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
