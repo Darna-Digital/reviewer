@@ -231,11 +231,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WorkspaceWindow.show()
     }
 
-    /// The Dock's tile pressed with no window up brings the workspace back,
-    /// which hands over to the opener itself if there is no project. Said
-    /// to be handled, so the system does not open a scene of its own.
+    /// The Dock's tile pressed with no window up brings one back: the
+    /// workspace from the Dock if it was minimised, else another minimised
+    /// window, else the workspace afresh — which hands over to the opener
+    /// itself if there is no project. Said to be handled, so the system
+    /// does not open a scene of its own.
+    ///
+    /// The windows are looked at here rather than through `hasVisibleWindows`,
+    /// which counts the borderless panels hung off the workspace and so
+    /// says a window is up while the workspace sits in the Dock.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        if !hasVisibleWindows { WorkspaceWindow.show() }
+        let windows = sender.windows.filter(\.canBecomeMain)
+        guard !windows.contains(where: { $0.isVisible && !$0.isMiniaturized }) else { return false }
+        if !WorkspaceWindow.isMiniaturized, let minimised = windows.first(where: \.isMiniaturized) {
+            minimised.deminiaturize(nil)
+        } else {
+            WorkspaceWindow.show()
+        }
         return false
     }
 

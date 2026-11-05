@@ -4,9 +4,12 @@
 // label here is drawn in a borderless panel hung under the window as a
 // child — the way `RowTooltip` hangs its own — that lets every click
 // through to the page under it. The panel spans the window's width and
-// stays up, empty, once it has been shown: the label comes and goes
-// inside it, and springs from control to control across it on the rail's
-// own curves, which a panel moved by its frame could not do.
+// stays up while the label is: the label comes and goes inside it, and
+// springs from control to control across it on the rail's own curves,
+// which a panel moved by its frame could not do. Once the label has faded
+// out the panel is taken off screen, so it is never a window the app
+// counts as up — the Dock's tile would think the workspace showing while
+// it sits minimised (see `AppDelegate.applicationShouldHandleReopen`).
 //
 // It keeps the rail's timing across the whole bar: it comes up once the
 // pointer has rested on a control, then follows the pointer from control
@@ -41,6 +44,9 @@ final class ToolbarGlassLabel {
     /// How long the pointer can be off every control — crossing the air
     /// between two — before the label is put away.
     private static let crossing: Duration = .milliseconds(120)
+    /// How long the label takes to fade out, before its panel goes off
+    /// screen — a little over its 0.2 s snap (see `ToolbarGlassLabelView`).
+    private static let fadeOut: Duration = .milliseconds(300)
 
     private let panel: NSPanel
     private let state = ToolbarGlassLabelState()
@@ -51,6 +57,7 @@ final class ToolbarGlassLabel {
     private var labelled = false
     private var wait: Task<Void, Never>?
     private var leaving: Task<Void, Never>?
+    private var retiring: Task<Void, Never>?
     /// The control and segment just pressed, which the label keeps quiet
     /// over until the pointer moves to another.
     private var pressed: (view: ObjectIdentifier, segment: Int)?
@@ -137,13 +144,28 @@ final class ToolbarGlassLabel {
         wait?.cancel()
         wait = nil
         labelled = false
+        guard state.shown != nil else { return }
         state.shown = nil
+        retire()
+    }
+
+    private func retire() {
+        retiring?.cancel()
+        retiring = Task {
+            try? await Task.sleep(for: Self.fadeOut)
+            guard !Task.isCancelled, state.shown == nil else { return }
+            retiring = nil
+            panel.parent?.removeChildWindow(panel)
+            panel.orderOut(nil)
+        }
     }
 
     private func present() {
         guard let view = hovered, let window = view.window, window.isVisible,
             view.labels.indices.contains(segment)
         else { return }
+        retiring?.cancel()
+        retiring = nil
         let frame = NSRect(
             x: window.frame.minX - Self.side, y: window.frame.maxY - Self.reach,
             width: window.frame.width + Self.side * 2, height: Self.reach)

@@ -47,6 +47,8 @@ final class WorkspaceWindow: NSObject, NSWindowDelegate {
 
     static var isVisible: Bool { shared?.window.isVisible ?? false }
 
+    static var isMiniaturized: Bool { shared?.window.isMiniaturized ?? false }
+
     private init(model: AppModel) {
         self.model = model
         window = NSWindow(
@@ -79,6 +81,7 @@ final class WorkspaceWindow: NSObject, NSWindowDelegate {
             window.contentViewController = hosting()
             window.setFrame(frame, display: false)
         }
+        if window.isMiniaturized { window.deminiaturize(nil) }
         window.makeKeyAndOrderFront(nil)
     }
 
