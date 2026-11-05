@@ -85,9 +85,10 @@ const LINK =
   "underline-offset-4 decoration-current/30 transition-colors hover:text-neutral-950 hover:underline dark:hover:text-neutral-50";
 
 /**
- * The letter in large type, left-aligned like the other pages' heroes. Each paragraph rises in
- * tilted back like the Star Wars opening crawl and settles flat as it
- * reaches reading height (`.crawl` in styles.css).
+ * The letter, set like the intro above it and left-aligned like the other
+ * pages' heroes. Each paragraph rises in tilted back like the Star Wars
+ * opening crawl and settles flat as it reaches reading height (`.crawl` in
+ * styles.css). Its chips are sized in em, so they follow the text.
  */
 function AboutPage() {
   return (
@@ -100,10 +101,10 @@ function AboutPage() {
           </p>
         </div>
         <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
-        <article className="crawl flex flex-col gap-8 lg:gap-10">
+        <article className="crawl flex max-w-2xl flex-col gap-5 sm:gap-6">
           {LETTER.map((paragraph) => (
             <p
-              className="type-heading leading-[1.45] font-medium text-neutral-600 dark:text-neutral-400"
+              className="type-lede text-neutral-600 dark:text-neutral-400"
               key={paragraph}
             >
               {withChips(paragraph)}
