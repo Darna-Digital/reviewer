@@ -16,6 +16,7 @@ import { Logo } from "#/components/logo";
 import { useMDXComponents } from "#/components/mdx";
 import { docs, source } from "#/lib/docs-source";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 import docsCss from "../../docs.css?url";
 
 const serverLoader = createServerFn({ method: "GET" })
@@ -49,6 +50,7 @@ export const Route = createFileRoute("/docs/$")({
         { title },
         { property: "og:title", content: title },
         { property: "og:url", content: `${SITE_URL}${loaderData?.url ?? ""}` },
+        ...ogImage("docs", "Docs, above a file open in the Mac app"),
         ...(description
           ? [
               { name: "description", content: description },

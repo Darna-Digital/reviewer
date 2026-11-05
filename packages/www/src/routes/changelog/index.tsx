@@ -10,6 +10,7 @@ import {
 } from "#/components/release-notes";
 import { getChangelog } from "#/lib/changelog";
 import { RELEASES_URL, SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 import { cn } from "#/lib/cn";
 
 const PER_PAGE = 10;
@@ -45,6 +46,10 @@ export const Route = createFileRoute("/changelog/")({
         { property: "og:title", content: TITLE },
         { property: "og:description", content: DESCRIPTION },
         { property: "og:url", content: url },
+        ...ogImage(
+          "changelog",
+          "Changelog, above the terminal app's commit history"
+        ),
       ],
       links: [
         { rel: "canonical", href: url },

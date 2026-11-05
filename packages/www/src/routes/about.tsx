@@ -16,6 +16,7 @@ import {
 import { Logo } from "#/components/logo";
 import { cn } from "#/lib/cn";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 
 const TITLE = "About · Reviewer";
 const DESCRIPTION =
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/about")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/about` },
+      ...ogImage("about", "About Reviewer, signed by Rūtenis Raila"),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/about` }],
   }),

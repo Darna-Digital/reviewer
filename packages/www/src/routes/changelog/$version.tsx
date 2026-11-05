@@ -11,6 +11,7 @@ import {
 import { cn } from "#/lib/cn";
 import { getChangelog } from "#/lib/changelog";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 
 export const Route = createFileRoute("/changelog/$version")({
   loader: async ({ params }) => {
@@ -47,6 +48,10 @@ export const Route = createFileRoute("/changelog/$version")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: url },
+        ...ogImage(
+          "changelog",
+          "Changelog, above the terminal app's commit history"
+        ),
       ],
       links: [{ rel: "canonical", href: url }],
     };

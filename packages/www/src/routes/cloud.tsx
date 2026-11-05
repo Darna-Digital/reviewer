@@ -5,6 +5,7 @@ import { CloudIllustration } from "#/components/cloud-illustration";
 import { Container, HERO_WIDTH } from "#/components/container";
 import { WaitlistForm } from "#/components/waitlist-form";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 
 const TITLE = "Reviewer Cloud · Reviewer";
 const DESCRIPTION =
@@ -18,6 +19,10 @@ export const Route = createFileRoute("/cloud")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/cloud` },
+      ...ogImage(
+        "cloud",
+        "Reviewer Cloud is what we're building next, above a blue sky"
+      ),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/cloud` }],
   }),

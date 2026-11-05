@@ -6,6 +6,7 @@ import { PageHero } from "#/components/card";
 import { Container, HERO_WIDTH } from "#/components/container";
 import { MacFeatures } from "#/components/mac-features";
 import { REPO_URL, SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 
 const TITLE = "The Mac app · Reviewer";
 const DESCRIPTION =
@@ -19,6 +20,10 @@ export const Route = createFileRoute("/mac")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/mac` },
+      ...ogImage(
+        "mac",
+        "Native Mac app for reviewing agent code, above a side-by-side diff in the Mac app"
+      ),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/mac` }],
   }),

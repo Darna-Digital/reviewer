@@ -5,17 +5,12 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { SiteLayout } from "#/components/site-layout";
 import { getStarCount } from "#/lib/github-stars";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 import appCss from "../styles.css?url";
 
 const TITLE = "Reviewer: focused system for building software with agents";
 const DESCRIPTION =
   "Read the change, comment on what's wrong and hand it back to Claude Code or Codex. Commit when you're sure.";
-const OG_IMAGE = {
-  url: `${SITE_URL}/og-image.png`,
-  width: "1200",
-  height: "630",
-  alt: "Reviewer above a side-by-side diff in the Mac app",
-};
 
 export const Route = createRootRoute({
   loader: async () => ({ stars: await getStarCount() }),
@@ -35,15 +30,13 @@ export const Route = createRootRoute({
       { property: "og:url", content: SITE_URL },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
-      { property: "og:image", content: OG_IMAGE.url },
-      { property: "og:image:width", content: OG_IMAGE.width },
-      { property: "og:image:height", content: OG_IMAGE.height },
-      { property: "og:image:alt", content: OG_IMAGE.alt },
+      ...ogImage(
+        "site",
+        "Focused system for building software with agents, above a side-by-side diff in the Mac app"
+      ),
       // No twitter:title or twitter:description: X falls back to og:title and
       // og:description, which each page sets for itself.
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: OG_IMAGE.url },
-      { name: "twitter:image:alt", content: OG_IMAGE.alt },
     ],
     links: [
       {

@@ -19,5 +19,5 @@
 /cloud/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/og-image.png
+/og/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800

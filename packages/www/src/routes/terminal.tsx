@@ -6,6 +6,7 @@ import { ShowcaseVideo } from "#/components/showcase-video";
 import { InstallCommand } from "#/components/install-command";
 import { TerminalFeatures } from "#/components/terminal-features";
 import { REPO_URL, SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 
 const TITLE = "The terminal app · Reviewer";
 const DESCRIPTION =
@@ -19,6 +20,10 @@ export const Route = createFileRoute("/terminal")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:url", content: `${SITE_URL}/terminal` },
+      ...ogImage(
+        "terminal",
+        "Review your agent's changes without leaving the terminal, above the terminal app"
+      ),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/terminal` }],
   }),
