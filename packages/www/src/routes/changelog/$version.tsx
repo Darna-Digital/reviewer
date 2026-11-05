@@ -2,7 +2,13 @@ import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 
 import { Container } from "#/components/container";
 import { ChevronLeft, ChevronRight } from "#/components/icons";
-import { PAST_RAIL, ReleaseEntry } from "#/components/release-notes";
+import {
+  PAGE_LINK,
+  PAGE_STEP,
+  PAGE_STEP_DISABLED,
+  ReleaseEntry,
+} from "#/components/release-notes";
+import { cn } from "#/lib/cn";
 import { getChangelog } from "#/lib/changelog";
 import { SITE_URL } from "#/lib/links";
 
@@ -59,69 +65,68 @@ export const Route = createFileRoute("/changelog/$version")({
   component: ReleasePage,
 });
 
-const STEP =
-  "group flex flex-col gap-0.5 text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white";
-
 /**
- * One release on its own, as conductor.build shows them: the way back above
- * the notes, then the entry, then the releases either side of it.
+ * One release on its own, laid out like an entry in the list: the way back
+ * above it and Newer and Older below, as the list's pagination is.
  */
 function ReleasePage() {
   const { release, latest, newer, older } = Route.useLoaderData();
 
   return (
     <Container className="pt-20 sm:pt-28 lg:pt-36">
-      <div className={PAST_RAIL}>
-        <Link
-          className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
-          to="/changelog"
-        >
-          <ChevronLeft className="size-4" />
-          Back to changelog
-        </Link>
-      </div>
+      <Link
+        className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
+        to="/changelog"
+      >
+        <ChevronLeft className="size-4" />
+        Back to changelog
+      </Link>
 
       <ReleaseEntry latest={latest} release={release} standalone />
 
-      <div className={PAST_RAIL}>
-        <nav
-          aria-label="Other releases"
-          className="flex justify-between gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
-        >
-          {older ? (
-            <Link
-              className={STEP}
-              params={{ version: older }}
-              to="/changelog/$version"
-            >
-              <span className="inline-flex items-center gap-1 text-sm">
-                <ChevronLeft className="size-4" />
-                Older
-              </span>
-              <span className="pl-5 font-mono text-[15px] text-neutral-900 dark:text-white">
-                {older}
-              </span>
-            </Link>
-          ) : (
-            <span />
-          )}
-          {newer && (
-            <Link
-              className={`${STEP} items-end`}
-              params={{ version: newer }}
-              to="/changelog/$version"
-            >
-              <span className="inline-flex items-center gap-1 text-sm">
-                Newer
-                <ChevronRight className="size-4" />
-              </span>
-              <span className="pr-5 font-mono text-[15px] text-neutral-900 dark:text-white">
-                {newer}
-              </span>
-            </Link>
-          )}
-        </nav>
-      </div>
+      <nav
+        aria-label="Other releases"
+        className="flex items-center justify-between gap-4 pt-8"
+      >
+        {newer ? (
+          <Link
+            className={cn(PAGE_LINK, PAGE_STEP, "-ml-3")}
+            params={{ version: newer }}
+            title={`Reviewer ${newer}`}
+            to="/changelog/$version"
+          >
+            <ChevronLeft className="size-4" />
+            Newer
+          </Link>
+        ) : (
+          <span
+            aria-disabled
+            className={cn(PAGE_LINK, PAGE_STEP_DISABLED, "-ml-3")}
+          >
+            <ChevronLeft className="size-4" />
+            Newer
+          </span>
+        )}
+        {older ? (
+          <Link
+            className={cn(PAGE_LINK, PAGE_STEP, "-mr-3")}
+            params={{ version: older }}
+            title={`Reviewer ${older}`}
+            to="/changelog/$version"
+          >
+            Older
+            <ChevronRight className="size-4" />
+          </Link>
+        ) : (
+          <span
+            aria-disabled
+            className={cn(PAGE_LINK, PAGE_STEP_DISABLED, "-mr-3")}
+          >
+            Older
+            <ChevronRight className="size-4" />
+          </span>
+        )}
+      </nav>
     </Container>
   );
 }

@@ -2,7 +2,12 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { Container } from "#/components/container";
 import { ChevronLeft, ChevronRight } from "#/components/icons";
-import { ReleaseEntry } from "#/components/release-notes";
+import {
+  PAGE_LINK,
+  PAGE_STEP,
+  PAGE_STEP_DISABLED,
+  ReleaseEntry,
+} from "#/components/release-notes";
 import { getChangelog } from "#/lib/changelog";
 import { RELEASES_URL, SITE_URL } from "#/lib/links";
 import { cn } from "#/lib/cn";
@@ -55,14 +60,9 @@ export const Route = createFileRoute("/changelog/")({
   component: Changelog,
 });
 
-const PAGE_LINK =
-  "inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-full px-3 text-sm font-medium tabular-nums transition-colors";
-
 function Pagination({ page, pages }: { page: number; pages: number }) {
   if (pages < 2) return null;
   const search = (to: number) => (to > 1 ? { page: to } : {});
-  const step =
-    "text-neutral-600 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.06] dark:hover:text-white";
 
   return (
     <nav
@@ -71,7 +71,7 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
     >
       {page > 1 ? (
         <Link
-          className={cn(PAGE_LINK, step, "-ml-3")}
+          className={cn(PAGE_LINK, PAGE_STEP, "-ml-3")}
           search={search(page - 1)}
           to="/changelog"
         >
@@ -79,7 +79,13 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
           Newer
         </Link>
       ) : (
-        <span />
+        <span
+          aria-disabled
+          className={cn(PAGE_LINK, PAGE_STEP_DISABLED, "-ml-3")}
+        >
+          <ChevronLeft className="size-4" />
+          Newer
+        </span>
       )}
       <ol className="flex items-center gap-1">
         {Array.from({ length: pages }, (_, index) => index + 1).map((to) => (
@@ -90,7 +96,7 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
                 PAGE_LINK,
                 to === page
                   ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                  : step
+                  : PAGE_STEP
               )}
               search={search(to)}
               to="/changelog"
@@ -102,7 +108,7 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
       </ol>
       {page < pages ? (
         <Link
-          className={cn(PAGE_LINK, step, "-mr-3")}
+          className={cn(PAGE_LINK, PAGE_STEP, "-mr-3")}
           search={search(page + 1)}
           to="/changelog"
         >
@@ -110,7 +116,13 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
           <ChevronRight className="size-4" />
         </Link>
       ) : (
-        <span />
+        <span
+          aria-disabled
+          className={cn(PAGE_LINK, PAGE_STEP_DISABLED, "-mr-3")}
+        >
+          Older
+          <ChevronRight className="size-4" />
+        </span>
       )}
     </nav>
   );

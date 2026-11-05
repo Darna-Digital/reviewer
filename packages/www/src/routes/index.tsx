@@ -6,6 +6,7 @@ import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { GetReviewerButtons } from "#/components/buttons";
 import { SURFACE, SectionHeading } from "#/components/card";
 import { Container, HERO_WIDTH } from "#/components/container";
+import { CHIP } from "#/components/chip";
 import { ClaudeIcon, CodexIcon, ChevronRight } from "#/components/icons";
 import { MacFeatures } from "#/components/mac-features";
 import { TerminalFeatures } from "#/components/terminal-features";
@@ -64,9 +65,6 @@ const PLACES = [
 ] as const;
 
 type Place = (typeof PLACES)[number]["value"];
-
-const CHIP =
-  "inline-flex items-center gap-1.5 rounded-full align-middle bg-black/[0.04] px-2.5 py-0.5 font-medium text-neutral-800 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-200 dark:ring-white/[0.08]";
 
 function SurfaceCard({
   to,

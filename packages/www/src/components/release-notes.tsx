@@ -44,8 +44,14 @@ function ReleaseNotes({ release }: { release: Release }) {
   );
 }
 
-/** Moves something into the notes' column, past the rail and its gap. */
-export const PAST_RAIL = "sm:pl-[220px] lg:pl-[308px]";
+/** The changelog's Newer and Older steps and page numbers. */
+export const PAGE_LINK =
+  "inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-full px-3 text-sm font-medium tabular-nums transition-colors";
+export const PAGE_STEP =
+  "text-neutral-600 hover:bg-black/[0.04] hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/[0.06] dark:hover:text-white";
+/** A step with nowhere to go: still shown, greyed out and inert. */
+export const PAGE_STEP_DISABLED =
+  "cursor-default text-neutral-300 dark:text-neutral-600";
 
 /**
  * One release, as conductor.build sets them: its version and date in a rail,
@@ -70,16 +76,25 @@ export function ReleaseEntry({
         "grid grid-cols-1 gap-4 pt-10 pb-10 sm:grid-cols-[180px_1fr] sm:gap-10 sm:pt-14 sm:pb-14 lg:grid-cols-[260px_1fr] lg:gap-12",
         // The rule between the two columns, centred in the gap. It runs the
         // entry's full height, so consecutive entries join into one line.
-        !standalone &&
-          "relative sm:before:absolute sm:before:inset-y-0 sm:before:left-[200px] sm:before:w-px sm:before:bg-black/[0.06] lg:before:left-[284px] dark:sm:before:bg-white/[0.08]",
+        "relative sm:before:absolute sm:before:inset-y-0 sm:before:left-[200px] sm:before:w-px sm:before:bg-black/[0.06] lg:before:left-[284px] dark:sm:before:bg-white/[0.08]",
         !standalone &&
           "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
       )}
     >
       <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
-        <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
-          {release.version}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* A smaller version of the shortcut pills (Kbd). */}
+          <span className="inline-flex h-6 items-center rounded-full bg-black/[0.04] px-2.5 text-xs font-medium text-neutral-800 tabular-nums ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-200 dark:ring-white/[0.08]">
+            <span className="[text-box:trim-both_cap_alphabetic]">
+              {release.version}
+            </span>
+          </span>
+          {latest && (
+            <span className="inline-flex h-6 items-center rounded-full bg-sky-400/15 px-2.5 text-xs font-medium text-sky-700 dark:bg-sky-300/15 dark:text-sky-300">
+              Latest
+            </span>
+          )}
+        </div>
         <time
           className="flex flex-wrap gap-x-1.5 text-sm text-neutral-500 sm:flex-col lg:flex-row"
           dateTime={release.publishedAt ?? release.date}
@@ -101,15 +116,10 @@ export function ReleaseEntry({
             </span>
           )}
         </time>
-        {latest && (
-          <span className="rounded-full bg-sky-400/15 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-300/15 dark:text-sky-300">
-            Latest
-          </span>
-        )}
       </div>
       <div className="flex min-w-0 flex-col gap-6">
         {standalone ? (
-          <h1 className="type-title">{heading}</h1>
+          <h1 className="type-heading">{heading}</h1>
         ) : (
           <h2 className="type-heading">
             <Link

@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import type { ReactNode } from "react";
+
+import { CHIP } from "#/components/chip";
 import { Container } from "#/components/container";
+import { Apple, ClaudeIcon, CodexIcon } from "#/components/icons";
+import { MARK_PATH } from "#/components/logo";
 import { SITE_URL } from "#/lib/links";
 
 const TITLE = "About · Reviewer";
@@ -41,6 +46,40 @@ const LETTER = [
 ];
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
+/** The names the letter shows as chips, each with its icon. */
+const CHIPS: Record<string, ReactNode> = {
+  macOS: <Apple className="size-[0.85em] text-neutral-900 dark:text-white" />,
+  Reviewer: (
+    <svg
+      aria-hidden
+      className="h-[0.8em] w-auto text-neutral-900 dark:text-white"
+      viewBox="0 0 300 400"
+    >
+      <path d={MARK_PATH} fill="currentColor" />
+    </svg>
+  ),
+  "Claude Code": <ClaudeIcon className="size-[0.95em] text-[#D97757]" />,
+  Codex: (
+    <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
+  ),
+};
+
+/** A paragraph of the letter, with its product and agent names as chips. */
+function withChips(paragraph: string) {
+  return paragraph
+    .split(/(macOS|Reviewer|Claude Code|Codex)/)
+    .map((part, index) =>
+      part in CHIPS ? (
+        <span className={CHIP} key={index}>
+          {CHIPS[part]}
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+}
+
 const LINK =
   "underline-offset-4 decoration-current/30 transition-colors hover:text-neutral-950 hover:underline dark:hover:text-neutral-50";
 
@@ -63,7 +102,7 @@ function AboutPage() {
         <article className="crawl flex flex-col gap-8 lg:gap-10">
           {LETTER.map((paragraph) => (
             <p className="type-heading font-medium" key={paragraph}>
-              {paragraph}
+              {withChips(paragraph)}
             </p>
           ))}
           <footer className="mt-8 flex flex-col items-start gap-3 lg:mt-10">
