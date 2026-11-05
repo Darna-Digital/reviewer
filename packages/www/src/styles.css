@@ -166,14 +166,26 @@ body {
   }
 }
 
-/* /about's letter: each paragraph rises from the bottom of the screen tilted
-   back, like the Star Wars opening crawl, and is flat and fully opaque by the
-   time it is a third of the way up. Static where scroll-driven animations
-   aren't supported or motion is reduced. */
+/* /about's letter: each paragraph rises from the bottom of the screen
+   leaning back slightly, like the Star Wars opening crawl, and settles flat
+   by the time it is a third of the way up. The sign-off only fades up, so the
+   photo is never tilted. Static where scroll-driven animations aren't
+   supported or motion is reduced. */
 @keyframes crawl-in {
   from {
-    opacity: 0.15;
-    transform: perspective(600px) rotateX(55deg) scale(0.9);
+    opacity: 0;
+    transform: perspective(1200px) translateY(2rem) rotateX(24deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
   }
   to {
     opacity: 1;
@@ -185,9 +197,12 @@ body {
   @media (prefers-reduced-motion: no-preference) {
     .crawl > * {
       transform-origin: 0% 100%;
-      animation: crawl-in linear both;
+      animation: crawl-in cubic-bezier(0.22, 1, 0.36, 1) both;
       animation-timeline: view();
-      animation-range: entry 0% cover 40%;
+      animation-range: entry 5% cover 30%;
+    }
+    .crawl > footer {
+      animation-name: rise-in;
     }
   }
 }
