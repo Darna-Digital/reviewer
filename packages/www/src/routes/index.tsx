@@ -27,7 +27,7 @@ const STRUCTURED_DATA = {
   name: "Reviewer",
   url: SITE_URL,
   description:
-    "Reviewer is an agentic development environment for engineers who care about the quality of their work. Works with Claude Code, Codex and any agent that runs skills.",
+    "Reviewer is an agentic development environment for engineers who deeply care about the quality of their work. Works with Claude Code, Codex and any agent that runs skills.",
   applicationCategory: "DeveloperApplication",
   operatingSystem: "macOS 26 or later, Linux",
   softwareVersion: version,
@@ -252,7 +252,7 @@ function Hero() {
         <div className="mt-5 flex max-w-2xl flex-col gap-4 type-lede text-neutral-600 sm:mt-7 dark:text-neutral-400">
           <p>
             Reviewer is an agentic development environment for engineers who
-            care about the quality of their work.
+            deeply care about the quality of their work.
           </p>
           <p>
             Works with{" "}

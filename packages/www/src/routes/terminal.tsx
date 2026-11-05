@@ -53,8 +53,8 @@ function TerminalPage() {
           }
           title="Review your agent's changes without leaving the terminal"
         >
-          Run it on your laptop, on a server over SSH or in a tmux pane next to
-          your agent. It works the same on macOS and Linux.
+          Run it on your laptop, on a server over SSH or in a terminal
+          multiplexer next to your agent. It works the same on macOS and Linux.
         </PageHero>
       </Container>
 
