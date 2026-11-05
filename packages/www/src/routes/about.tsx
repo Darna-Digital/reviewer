@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Container } from "#/components/container";
@@ -12,6 +12,7 @@ import {
   Terminal,
 } from "#/components/icons";
 import { Logo } from "#/components/logo";
+import { cn } from "#/lib/cn";
 import { SITE_URL } from "#/lib/links";
 
 const TITLE = "About · Reviewer";
@@ -54,6 +55,15 @@ const LETTER = [
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
 const ICON = `${CHIP_ICON} text-neutral-900 dark:text-white`;
+
+/** An emoji as a chip's icon: the icons' size, before the label. */
+function Emoji({ children }: { children: string }) {
+  return (
+    <span aria-hidden className="mr-[0.3em] text-[0.9em]">
+      {children}
+    </span>
+  );
+}
 /** A chip that is a link: the same pill, a little darker on hover. */
 const CHIP_LINK = `${CHIP} transition-colors hover:bg-black/[0.08] dark:hover:bg-white/[0.12]`;
 
@@ -76,17 +86,124 @@ const CHIPS: Record<
     icon: <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />,
   },
   Codex: { icon: <CodexIcon className={ICON} /> },
+  "code monkey": { icon: <Emoji>🐒</Emoji> },
   "told me": {
     icon: <Mail className={ICON} />,
     href: "mailto:rutenis@darnadigital.com",
   },
 };
 
+/** The tooltip's width, and its margin from the edges of the screen. */
+const TIP_WIDTH = 256;
+const TIP_MARGIN = 12;
+
+/**
+ * "business value" as a chip, and on hover, focus or tap a
+ * tooltip above it: Michael Scott quoting Wayne Gretzky quoting himself.
+ * The clip is The Office's Giphy GIF as a 114 KB MP4 with the Peacock logo
+ * removed (public/videos), and only loads the first time the tooltip opens. The tooltip shifts sideways to stay on
+ * screen.
+ */
+function BusinessValue({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [shift, setShift] = useState(0);
+  const wrapper = useRef<HTMLSpanElement>(null);
+
+  const show = () => {
+    const rect = wrapper.current!.getBoundingClientRect();
+    const left = rect.left + rect.width / 2 - TIP_WIDTH / 2;
+    const max = window.innerWidth - TIP_WIDTH - TIP_MARGIN;
+    setShift(Math.min(Math.max(left, TIP_MARGIN), max) - left);
+    setLoaded(true);
+    setOpen(true);
+  };
+
+  // A tap elsewhere or Escape closes it, as hover and blur don't on touch.
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: Event) => {
+      if (
+        event instanceof KeyboardEvent
+          ? event.key === "Escape"
+          : !wrapper.current?.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+
+  return (
+    <span
+      className="relative"
+      onBlur={() => setOpen(false)}
+      onFocus={show}
+      // Only a mouse opens it on hover; a tap also fires these, then click.
+      onPointerEnter={(event) => event.pointerType === "mouse" && show()}
+      onPointerLeave={(event) =>
+        event.pointerType === "mouse" && setOpen(false)
+      }
+      ref={wrapper}
+    >
+      <button
+        aria-describedby="business-value-tip"
+        // A button lays out as inline-block, taking the line's full height;
+        // Inter's glyph box as its line height draws it like the span chips.
+        className={`${CHIP_LINK} cursor-help leading-[1.19]`}
+        onClick={show}
+        type="button"
+      >
+        <Emoji>📈</Emoji>
+        {children}
+      </button>
+      {loaded && (
+        <span
+          className={cn(
+            "absolute bottom-full left-1/2 z-10 mb-3 block overflow-hidden rounded-xl bg-black shadow-xl ring-1 ring-black/10 transition duration-150 dark:ring-white/15",
+            open
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-1 opacity-0"
+          )}
+          id="business-value-tip"
+          role="tooltip"
+          style={{
+            width: TIP_WIDTH,
+            marginLeft: shift - TIP_WIDTH / 2,
+          }}
+        >
+          <video
+            aria-label="Michael Scott from The Office, pensive in the conference room under his whiteboard quote: You miss 100% of the shots you don't take. Wayne Gretzky. Michael Scott."
+            autoPlay
+            className="block aspect-[480/400] w-full"
+            height={400}
+            loop
+            muted
+            playsInline
+            src="/videos/business-value.mp4"
+            width={480}
+          />
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** A paragraph of the letter, with the names in CHIPS as chips. */
 function withChips(paragraph: string) {
   return paragraph
-    .split(/(Reviewer|macOS app|terminal app|Claude Code|Codex|told me)/)
+    .split(
+      /(Reviewer|macOS app|terminal app|Claude Code|Codex|told me|business value|code monkey)/
+    )
     .map((part, index) => {
+      if (part === "business value") {
+        return <BusinessValue key={index}>{part}</BusinessValue>;
+      }
       const chip = CHIPS[part];
       if (!chip) return part;
       // The lockup already spells the name.
