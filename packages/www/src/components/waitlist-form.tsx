@@ -1,7 +1,23 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { cn } from "#/lib/cn";
-import { joinWaitlist } from "#/lib/waitlist";
+import { getTurnstileSiteKey, joinWaitlist } from "#/lib/waitlist";
+
+let turnstileScript: Promise<void> | undefined;
+
+/** Loads Turnstile's script once per page, the first time a form needs it. */
+function loadTurnstile() {
+  turnstileScript ??= new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Turnstile didn't load."));
+    document.head.append(script);
+  });
+  return turnstileScript;
+}
 
 type Status =
   | { kind: "idle" }
@@ -14,13 +30,72 @@ export function WaitlistForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
+  // Turnstile's spam check. It starts when someone first focuses or points at
+  // the form, runs invisibly, and only shows a checkbox when it needs one.
+  const widget = useRef<HTMLDivElement>(null);
+  const check = useRef<{
+    started?: boolean;
+    id?: string;
+    token?: string;
+    waiting: Array<(token: string) => void>;
+  }>({ waiting: [] });
+
+  const settle = (token: string) => {
+    check.current.token = token || undefined;
+    for (const resolve of check.current.waiting.splice(0)) resolve(token);
+  };
+
+  const startCheck = () => {
+    if (check.current.started) return;
+    check.current.started = true;
+    Promise.all([getTurnstileSiteKey(), loadTurnstile()])
+      .then(([sitekey]) => {
+        if (!sitekey || !widget.current || !window.turnstile) {
+          settle("");
+          return;
+        }
+        check.current.id = window.turnstile.render(widget.current, {
+          sitekey,
+          appearance: "interaction-only",
+          action: "waitlist",
+          callback: settle,
+          "error-callback": () => settle(""),
+          "expired-callback": () => {
+            check.current.token = undefined;
+          },
+        });
+      })
+      .catch(() => settle(""));
+  };
+
+  useEffect(
+    () => () => {
+      if (check.current.id) window.turnstile?.remove(check.current.id);
+    },
+    []
+  );
+
+  /** The current token, waiting for Turnstile if it hasn't finished. */
+  const getToken = () => {
+    startCheck();
+    const { token } = check.current;
+    if (token) return Promise.resolve(token);
+    return new Promise<string>((resolve) =>
+      check.current.waiting.push(resolve)
+    );
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setStatus({ kind: "sending" });
     try {
-      await joinWaitlist({ data: { email } });
+      const token = await getToken();
+      await joinWaitlist({ data: { email, token } });
       setStatus({ kind: "joined", email: email.trim() });
     } catch (error) {
+      // A token works once, so a failed attempt needs a fresh one.
+      check.current.token = undefined;
+      if (check.current.id) window.turnstile?.reset(check.current.id);
       setStatus({
         kind: "failed",
         message:
@@ -45,7 +120,13 @@ export function WaitlistForm() {
   }
 
   return (
-    <form className="flex flex-col gap-2" noValidate onSubmit={submit}>
+    <form
+      className="flex flex-col gap-2"
+      noValidate
+      onFocus={startCheck}
+      onPointerEnter={startCheck}
+      onSubmit={submit}
+    >
       <div className="flex items-center gap-2 rounded-full bg-black/[0.035] p-1.5 ring-1 ring-black/10 ring-inset focus-within:ring-black/30 dark:bg-white/[0.04] dark:ring-white/15 dark:focus-within:ring-white/35">
         <label className="sr-only" htmlFor="waitlist-email">
           Email address
@@ -73,6 +154,7 @@ export function WaitlistForm() {
           {status.kind === "sending" ? "Joining…" : "Join the waitlist"}
         </button>
       </div>
+      <div className="empty:hidden" ref={widget} />
       <p
         className={cn(
           "pl-5 text-sm",
