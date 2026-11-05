@@ -75,7 +75,7 @@ function ReleasePage() {
   return (
     <Container className="pt-20 sm:pt-28 lg:pt-36">
       <Link
-        className="inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:hover:text-white"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-neutral-500 transition-colors hover:text-neutral-900 sm:mb-8 dark:hover:text-white"
         to="/changelog"
       >
         <ChevronLeft className="size-4" />

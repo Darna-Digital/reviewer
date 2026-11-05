@@ -77,8 +77,10 @@ export function ReleaseEntry({
         // The rule between the two columns, centred in the gap. It runs the
         // entry's full height, so consecutive entries join into one line.
         "relative sm:before:absolute sm:before:inset-y-0 sm:before:left-[200px] sm:before:w-px sm:before:bg-black/[0.06] lg:before:left-[284px] dark:sm:before:bg-white/[0.08]",
-        !standalone &&
-          "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
+        // Rules between entries, and above the first and below the last;
+        // a release on its own page has both.
+        "border-b border-black/[0.06] dark:border-white/[0.08]",
+        standalone ? "border-t" : "group-first:border-t"
       )}
     >
       <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
