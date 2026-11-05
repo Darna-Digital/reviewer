@@ -100,9 +100,9 @@ const TIP_MARGIN = 12;
 /**
  * "business value" as a chip, and on hover, focus or tap a
  * tooltip above it: Michael Scott quoting Wayne Gretzky quoting himself.
- * The clip is The Office's Giphy GIF as a 114 KB MP4 with the Peacock logo
- * removed (public/videos), and only loads the first time the tooltip opens. The tooltip shifts sideways to stay on
- * screen.
+ * The clip is The Office's Giphy GIF as a 105 KB MP4, cropped above the
+ * Peacock logo (public/videos), and only loads the first time the tooltip
+ * opens. The tooltip shifts sideways to stay on screen.
  */
 function BusinessValue({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -180,8 +180,8 @@ function BusinessValue({ children }: { children: ReactNode }) {
           <video
             aria-label="Michael Scott from The Office, pensive in the conference room under his whiteboard quote: You miss 100% of the shots you don't take. Wayne Gretzky. Michael Scott."
             autoPlay
-            className="block aspect-[480/400] w-full"
-            height={400}
+            className="block aspect-[480/360] w-full"
+            height={360}
             loop
             muted
             playsInline
