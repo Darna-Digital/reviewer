@@ -6,7 +6,7 @@ import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
 import { GetReviewerButtons } from "#/components/buttons";
 import { SURFACE, SectionHeading } from "#/components/card";
 import { Container, HERO_WIDTH } from "#/components/container";
-import { CHIP } from "#/components/chip";
+import { CHIP, CHIP_ICON } from "#/components/chip";
 import { ClaudeIcon, CodexIcon, ChevronRight } from "#/components/icons";
 import { MacFeatures } from "#/components/mac-features";
 import { TerminalFeatures } from "#/components/terminal-features";
@@ -255,11 +255,13 @@ function Hero() {
           <p>
             Works with{" "}
             <span className={CHIP}>
-              <ClaudeIcon className="size-[0.95em] text-[#D97757]" />
+              <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />
               Claude Code
             </span>{" "}
             <span className={CHIP}>
-              <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
+              <CodexIcon
+                className={`${CHIP_ICON} text-neutral-900 dark:text-white`}
+              />
               Codex
             </span>{" "}
             and any agent that runs skills.

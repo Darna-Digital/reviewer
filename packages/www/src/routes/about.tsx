@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import type { ReactNode } from "react";
 
-import { CHIP } from "#/components/chip";
+import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Container } from "#/components/container";
 import { Apple, ClaudeIcon, CodexIcon } from "#/components/icons";
 import { Logo } from "#/components/logo";
@@ -49,10 +49,10 @@ const LETTER = [
 /** The names the letter shows as chips, each with its icon. Reviewer is
  * the header's lockup instead of an icon and text. */
 const CHIPS: Record<string, ReactNode> = {
-  macOS: <Apple className="size-[0.85em] text-neutral-900 dark:text-white" />,
-  "Claude Code": <ClaudeIcon className="size-[0.95em] text-[#D97757]" />,
+  macOS: <Apple className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />,
+  "Claude Code": <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />,
   Codex: (
-    <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
+    <CodexIcon className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />
   ),
 };
 
@@ -63,11 +63,9 @@ function withChips(paragraph: string) {
     .map((part, index) =>
       part === "Reviewer" ? (
         <span className={CHIP} key={index}>
-          {/* A zero-width space gives the chip a line box, so it is as tall
-              as the chips with text. The lockup's capitals are two thirds of
-              its height, so 1.05em matches Inter's cap height. */}
-          <Logo className="h-[1.05em] w-auto" />
-          {"\u200b"}
+          {/* The lockup's capitals are two thirds of its height and centred
+              in it, so at 1.09em they match Inter's, centred on its caps. */}
+          <Logo className="inline-block h-[1.09em] w-auto align-[-0.185em]" />
         </span>
       ) : part in CHIPS ? (
         <span className={CHIP} key={index}>
@@ -101,7 +99,10 @@ function AboutPage() {
         <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
         <article className="crawl flex flex-col gap-8 lg:gap-10">
           {LETTER.map((paragraph) => (
-            <p className="type-heading font-medium" key={paragraph}>
+            <p
+              className="type-heading leading-[1.45] font-medium"
+              key={paragraph}
+            >
               {withChips(paragraph)}
             </p>
           ))}
