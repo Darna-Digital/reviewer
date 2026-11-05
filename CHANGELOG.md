@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.43 — 2026-11-05
+
+### Fixed
+
+- Clicking Reviewer's Dock icon brings the window back when it's minimised, not only clicking the minimised window itself.
+
 ## v0.0.42 — 2026-11-04
 
 ### Changed
