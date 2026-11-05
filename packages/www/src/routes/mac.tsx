@@ -45,11 +45,11 @@ function MacPage() {
               .
             </>
           }
-          title="Read, comment and hand off in one window."
+          title="Native Mac app for reviewing agent code"
         >
-          Your diff, your comments and your Claude Code and Codex sessions sit
-          side by side. Send a line to an agent and read its fix in the same
-          place.
+          See what your agent changed, comment where it's wrong and send it back
+          to Claude Code or Codex. The fix shows up right where you left the
+          comment.
         </PageHero>
       </Container>
 
