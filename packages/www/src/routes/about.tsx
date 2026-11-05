@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 
 import type { ReactNode } from "react";
 
@@ -52,51 +52,67 @@ const LETTER = [
 ];
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
-/** The names the letter shows as chips, each with its icon. Reviewer is
- * the header's lockup instead of an icon and text. */
-const CHIPS: Record<string, ReactNode> = {
-  macOS: <Apple className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />,
-  "terminal app": (
-    <Terminal className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />
-  ),
-  "Claude Code": <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />,
-  Codex: (
-    <CodexIcon className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />
-  ),
-};
+const ICON = `${CHIP_ICON} text-neutral-900 dark:text-white`;
+/** A chip that is a link: the same pill, a little darker on hover. */
+const CHIP_LINK = `${CHIP} transition-colors hover:bg-black/[0.08] dark:hover:bg-white/[0.12]`;
 
 /**
- * A paragraph of the letter, with its product and agent names as chips and
- * "told me" as a chip that emails Rūtenis.
+ * The names the letter shows as chips, each with its icon. The apps link to
+ * their pages and "told me" emails Rūtenis. Reviewer is the header's lockup,
+ * at the icons' 0.9em and centred on the caps like them, so the chip is no
+ * bigger than the others.
  */
+const CHIPS: Record<
+  string,
+  { icon: ReactNode; to?: "/mac" | "/terminal"; href?: string }
+> = {
+  Reviewer: {
+    icon: <Logo className="inline-block h-[0.9em] w-auto align-[-0.09em]" />,
+  },
+  "macOS app": { icon: <Apple className={ICON} />, to: "/mac" },
+  "terminal app": { icon: <Terminal className={ICON} />, to: "/terminal" },
+  "Claude Code": {
+    icon: <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />,
+  },
+  Codex: { icon: <CodexIcon className={ICON} /> },
+  "told me": {
+    icon: <Mail className={ICON} />,
+    href: "mailto:rutenis@darnadigital.com",
+  },
+};
+
+/** A paragraph of the letter, with the names in CHIPS as chips. */
 function withChips(paragraph: string) {
   return paragraph
-    .split(/(macOS|Reviewer|Claude Code|Codex|terminal app|told me)/)
-    .map((part, index) =>
-      part === "Reviewer" ? (
+    .split(/(Reviewer|macOS app|terminal app|Claude Code|Codex|told me)/)
+    .map((part, index) => {
+      const chip = CHIPS[part];
+      if (!chip) return part;
+      // The lockup already spells the name.
+      const label = part === "Reviewer" ? null : part;
+      if (chip.to) {
+        return (
+          <Link className={CHIP_LINK} key={index} to={chip.to}>
+            {chip.icon}
+            {label}
+          </Link>
+        );
+      }
+      if (chip.href) {
+        return (
+          <a className={CHIP_LINK} href={chip.href} key={index}>
+            {chip.icon}
+            {label}
+          </a>
+        );
+      }
+      return (
         <span className={CHIP} key={index}>
-          {/* The lockup at the icons' 0.9em, centred on the caps like them,
-              so the chip is no bigger than the others. */}
-          <Logo className="inline-block h-[0.9em] w-auto align-[-0.09em]" />
+          {chip.icon}
+          {label}
         </span>
-      ) : part === "told me" ? (
-        <a
-          className={`${CHIP} transition-colors hover:bg-black/[0.08] dark:hover:bg-white/[0.12]`}
-          href="mailto:rutenis@darnadigital.com"
-          key={index}
-        >
-          <Mail className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />
-          {part}
-        </a>
-      ) : part in CHIPS ? (
-        <span className={CHIP} key={index}>
-          {CHIPS[part]}
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
+      );
+    });
 }
 
 const LINK =
