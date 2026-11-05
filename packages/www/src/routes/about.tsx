@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Container } from "#/components/container";
@@ -102,19 +103,24 @@ const TIP_MARGIN = 12;
  * tooltip above it: Michael Scott quoting Wayne Gretzky quoting himself.
  * The clip is The Office's Giphy GIF as a 105 KB MP4, cropped above the
  * Peacock logo (public/videos), and only loads the first time the tooltip
- * opens. The tooltip shifts sideways to stay on screen.
+ * opens. The tooltip shifts sideways to stay on screen. It renders on
+ * <body>, as inside the letter it would take on the crawl's fade and blur.
  */
 function BusinessValue({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [shift, setShift] = useState(0);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
   const wrapper = useRef<HTMLSpanElement>(null);
+  const tip = useRef<HTMLSpanElement>(null);
 
   const show = () => {
     const rect = wrapper.current!.getBoundingClientRect();
     const left = rect.left + rect.width / 2 - TIP_WIDTH / 2;
     const max = window.innerWidth - TIP_WIDTH - TIP_MARGIN;
-    setShift(Math.min(Math.max(left, TIP_MARGIN), max) - left);
+    setPosition({
+      left: Math.min(Math.max(left, TIP_MARGIN), max) + window.scrollX,
+      top: rect.top + window.scrollY,
+    });
     setLoaded(true);
     setOpen(true);
   };
@@ -126,7 +132,9 @@ function BusinessValue({ children }: { children: ReactNode }) {
       if (
         event instanceof KeyboardEvent
           ? event.key === "Escape"
-          : !wrapper.current?.contains(event.target as Node)
+          : ![wrapper.current, tip.current].some((node) =>
+              node?.contains(event.target as Node)
+            )
       ) {
         setOpen(false);
       }
@@ -162,34 +170,34 @@ function BusinessValue({ children }: { children: ReactNode }) {
         <Emoji>📈</Emoji>
         {children}
       </button>
-      {loaded && (
-        <span
-          className={cn(
-            "absolute bottom-full left-1/2 z-10 mb-3 block overflow-hidden rounded-xl bg-black shadow-xl ring-1 ring-black/10 transition duration-150 dark:ring-white/15",
-            open
-              ? "translate-y-0 opacity-100"
-              : "pointer-events-none translate-y-1 opacity-0"
-          )}
-          id="business-value-tip"
-          role="tooltip"
-          style={{
-            width: TIP_WIDTH,
-            marginLeft: shift - TIP_WIDTH / 2,
-          }}
-        >
-          <video
-            aria-label="Michael Scott from The Office, pensive in the conference room under his whiteboard quote: You miss 100% of the shots you don't take. Wayne Gretzky. Michael Scott."
-            autoPlay
-            className="block aspect-[480/360] w-full"
-            height={360}
-            loop
-            muted
-            playsInline
-            src="/videos/business-value.mp4"
-            width={480}
-          />
-        </span>
-      )}
+      {loaded &&
+        createPortal(
+          <span
+            className={cn(
+              "absolute z-50 block overflow-hidden rounded-xl bg-black shadow-xl ring-1 ring-black/10 transition duration-150 dark:ring-white/15",
+              open
+                ? "translate-y-[calc(-100%-12px)] opacity-100"
+                : "pointer-events-none translate-y-[calc(-100%-8px)] opacity-0"
+            )}
+            id="business-value-tip"
+            ref={tip}
+            role="tooltip"
+            style={{ width: TIP_WIDTH, ...position }}
+          >
+            <video
+              aria-label="Michael Scott from The Office, pensive in the conference room under his whiteboard quote: You miss 100% of the shots you don't take. Wayne Gretzky. Michael Scott."
+              autoPlay
+              className="block aspect-[480/360] w-full"
+              height={360}
+              loop
+              muted
+              playsInline
+              src="/videos/business-value.mp4"
+              width={480}
+            />
+          </span>,
+          document.body
+        )}
     </span>
   );
 }
