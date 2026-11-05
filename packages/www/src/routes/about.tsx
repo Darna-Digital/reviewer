@@ -4,7 +4,13 @@ import type { ReactNode } from "react";
 
 import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Container } from "#/components/container";
-import { Apple, ClaudeIcon, CodexIcon, Terminal } from "#/components/icons";
+import {
+  Apple,
+  ClaudeIcon,
+  CodexIcon,
+  Mail,
+  Terminal,
+} from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { SITE_URL } from "#/lib/links";
 
@@ -59,10 +65,13 @@ const CHIPS: Record<string, ReactNode> = {
   ),
 };
 
-/** A paragraph of the letter, with its product and agent names as chips. */
+/**
+ * A paragraph of the letter, with its product and agent names as chips and
+ * "told me" as a chip that emails Rūtenis.
+ */
 function withChips(paragraph: string) {
   return paragraph
-    .split(/(macOS|Reviewer|Claude Code|Codex|terminal app)/)
+    .split(/(macOS|Reviewer|Claude Code|Codex|terminal app|told me)/)
     .map((part, index) =>
       part === "Reviewer" ? (
         <span className={CHIP} key={index}>
@@ -70,6 +79,15 @@ function withChips(paragraph: string) {
               so the chip is no bigger than the others. */}
           <Logo className="inline-block h-[0.9em] w-auto align-[-0.09em]" />
         </span>
+      ) : part === "told me" ? (
+        <a
+          className={`${CHIP} transition-colors hover:bg-black/[0.08] dark:hover:bg-white/[0.12]`}
+          href="mailto:rutenis@darnadigital.com"
+          key={index}
+        >
+          <Mail className={`${CHIP_ICON} text-neutral-900 dark:text-white`} />
+          {part}
+        </a>
       ) : part in CHIPS ? (
         <span className={CHIP} key={index}>
           {CHIPS[part]}

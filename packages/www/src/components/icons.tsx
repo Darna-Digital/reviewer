@@ -75,6 +75,15 @@ export function Terminal({ className }: IconProps) {
   );
 }
 
+export function Mail({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <rect x="3" y="5" width="18" height="14" rx="3.5" />
+      <path d="m4 7.5 8 5.5 8-5.5" />
+    </Symbol>
+  );
+}
+
 export function Branch({ className }: IconProps) {
   return (
     <Symbol className={className}>
