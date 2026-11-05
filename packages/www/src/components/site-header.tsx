@@ -53,7 +53,7 @@ const MENU: { heading: string; items: MenuItem[] }[] = [
   {
     heading: "Resources",
     items: [
-      { to: "/about", title: "About" },
+      { to: "/about", title: "About", mobileOnly: true },
       { to: "/docs/$", title: "Docs", mobileOnly: true },
       { to: "/changelog", title: "Changelog", mobileOnly: true },
       { href: REPO_URL, title: "Source code" },
@@ -253,6 +253,13 @@ export function SiteHeader() {
             to="/changelog"
           >
             Changelog
+          </Link>
+          <Link
+            activeProps={ACTIVE_LINK}
+            className={cn(NAV_LINK, "max-sm:hidden")}
+            to="/about"
+          >
+            About
           </Link>
         </nav>
         <GitHubStars />
