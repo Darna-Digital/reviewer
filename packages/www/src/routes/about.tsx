@@ -40,8 +40,9 @@ const LETTER = [
   "Reviewer ships as a native macOS app as well as a terminal app. I would be delighted if you tried these applications and told me what you think.",
 ];
 
+/** Sign-off links: the line's own colour, darkening and underlined on hover. */
 const LINK =
-  "underline underline-offset-4 opacity-60 transition-opacity hover:opacity-100";
+  "underline-offset-4 decoration-current/30 transition-colors hover:text-neutral-950 hover:underline dark:hover:text-neutral-50";
 
 /** Laid out like the letter on darnadigital.com: one centred column. */
 function AboutPage() {
