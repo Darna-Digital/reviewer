@@ -65,7 +65,7 @@ export function ReleaseEntry({
   const heading = release.title ?? `Reviewer ${release.version}`;
 
   return (
-    <article className="grid grid-cols-1 gap-4 pt-10 sm:grid-cols-[160px_1fr] sm:gap-10 sm:pt-14">
+    <article className="grid grid-cols-1 gap-4 pt-10 sm:grid-cols-[180px_1fr] sm:gap-10 sm:pt-14 lg:grid-cols-[260px_1fr] lg:gap-12">
       <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
         <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
           {release.version}
