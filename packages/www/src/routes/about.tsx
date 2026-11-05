@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { CHIP } from "#/components/chip";
 import { Container } from "#/components/container";
 import { Apple, ClaudeIcon, CodexIcon } from "#/components/icons";
-import { MARK_PATH } from "#/components/logo";
+import { Logo } from "#/components/logo";
 import { SITE_URL } from "#/lib/links";
 
 const TITLE = "About · Reviewer";
@@ -46,18 +46,10 @@ const LETTER = [
 ];
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
-/** The names the letter shows as chips, each with its icon. */
+/** The names the letter shows as chips, each with its icon. Reviewer is
+ * the header's lockup instead of an icon and text. */
 const CHIPS: Record<string, ReactNode> = {
   macOS: <Apple className="size-[0.85em] text-neutral-900 dark:text-white" />,
-  Reviewer: (
-    <svg
-      aria-hidden
-      className="h-[0.8em] w-auto text-neutral-900 dark:text-white"
-      viewBox="0 0 300 400"
-    >
-      <path d={MARK_PATH} fill="currentColor" />
-    </svg>
-  ),
   "Claude Code": <ClaudeIcon className="size-[0.95em] text-[#D97757]" />,
   Codex: (
     <CodexIcon className="size-[0.95em] text-neutral-900 dark:text-white" />
@@ -69,7 +61,15 @@ function withChips(paragraph: string) {
   return paragraph
     .split(/(macOS|Reviewer|Claude Code|Codex)/)
     .map((part, index) =>
-      part in CHIPS ? (
+      part === "Reviewer" ? (
+        <span className={CHIP} key={index}>
+          {/* A zero-width space gives the chip a line box, so it is as tall
+              as the chips with text. The lockup's capitals are two thirds of
+              its height, so 1.05em matches Inter's cap height. */}
+          <Logo className="h-[1.05em] w-auto" />
+          {"\u200b"}
+        </span>
+      ) : part in CHIPS ? (
         <span className={CHIP} key={index}>
           {CHIPS[part]}
           {part}
