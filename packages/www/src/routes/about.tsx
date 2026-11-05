@@ -44,39 +44,43 @@ const LETTER = [
 const LINK =
   "underline-offset-4 decoration-current/30 transition-colors hover:text-neutral-950 hover:underline dark:hover:text-neutral-50";
 
-/** Laid out like the letter on darnadigital.com: one centred column. */
+/**
+ * The letter in large type, left-aligned like the other pages' heroes. Each paragraph rises in
+ * tilted back like the Star Wars opening crawl and settles flat as it
+ * reaches reading height (`.crawl` in styles.css).
+ */
 function AboutPage() {
   return (
     <Container>
-      <section className="mx-auto flex max-w-2xl flex-col items-center gap-10 pt-24 pb-10 text-center sm:pt-36 sm:pb-14 lg:gap-12 lg:pt-44 lg:pb-16">
-        <div className="flex flex-col items-center gap-5">
-          <h1 className="type-title">About</h1>
-          <p className="max-w-[39rem] type-lede text-balance text-neutral-600 dark:text-neutral-400">
+      <section className="flex max-w-3xl flex-col gap-10 pt-24 pb-24 sm:pt-36 lg:gap-12 lg:pt-44 lg:pb-32">
+        <div className="flex flex-col gap-5">
+          <h1 className="type-display">About</h1>
+          <p className="max-w-2xl type-lede text-neutral-600 dark:text-neutral-400">
             {DESCRIPTION}
           </p>
         </div>
-        <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/15" />
-        <article className="flex w-full max-w-[39rem] flex-col gap-10 rounded-2xl bg-neutral-950/[0.03] px-6 py-10 text-left text-neutral-950 lg:px-10 lg:py-12 dark:bg-neutral-50/5 dark:text-neutral-50">
-          <div className="flex flex-col gap-5 text-sm leading-6 tracking-[-0.01em]">
-            {LETTER.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
-          </div>
-          <footer className="flex flex-col items-start gap-3">
+        <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
+        <article className="crawl flex flex-col gap-8 lg:gap-10">
+          {LETTER.map((paragraph) => (
+            <p className="type-heading font-medium" key={paragraph}>
+              {paragraph}
+            </p>
+          ))}
+          <footer className="mt-8 flex flex-col items-start gap-3 lg:mt-10">
             <img
               alt="Rūtenis Raila"
-              className="size-12 rounded-full object-cover object-top ring-1 ring-neutral-950/10 dark:ring-neutral-50/10"
+              className="size-14 rounded-full object-cover object-top ring-1 ring-neutral-950/10 dark:ring-neutral-50/10"
               decoding="async"
-              height={48}
+              height={56}
               loading="lazy"
               src="/about/rutenis-raila.webp"
-              width={48}
+              width={56}
             />
             <div className="flex flex-col gap-1 tracking-[-0.01em]">
-              <span className="text-sm leading-5 font-medium">
+              <span className="text-base leading-6 font-medium">
                 Rūtenis Raila
               </span>
-              <span className="text-xs leading-5 text-neutral-950/70 dark:text-neutral-400">
+              <span className="text-sm leading-5 text-neutral-950/70 dark:text-neutral-400">
                 Founder of{" "}
                 <a className={LINK} href="/">
                   reviewer.sh

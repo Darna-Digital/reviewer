@@ -165,3 +165,29 @@ body {
     animation: none;
   }
 }
+
+/* /about's letter: each paragraph rises from the bottom of the screen tilted
+   back, like the Star Wars opening crawl, and is flat and fully opaque by the
+   time it is a third of the way up. Static where scroll-driven animations
+   aren't supported or motion is reduced. */
+@keyframes crawl-in {
+  from {
+    opacity: 0.15;
+    transform: perspective(600px) rotateX(55deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .crawl > * {
+      transform-origin: 0% 100%;
+      animation: crawl-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 40%;
+    }
+  }
+}
