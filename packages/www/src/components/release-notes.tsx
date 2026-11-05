@@ -65,13 +65,19 @@ export function ReleaseEntry({
   const heading = release.title ?? `Reviewer ${release.version}`;
 
   return (
-    <article className="grid grid-cols-1 gap-4 pt-10 sm:grid-cols-[180px_1fr] sm:gap-10 sm:pt-14 lg:grid-cols-[260px_1fr] lg:gap-12">
+    <article
+      className={cn(
+        "grid grid-cols-1 gap-4 pt-10 pb-10 sm:grid-cols-[180px_1fr] sm:gap-10 sm:pt-14 sm:pb-14 lg:grid-cols-[260px_1fr] lg:gap-12",
+        !standalone &&
+          "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
+      )}
+    >
       <div className="flex items-center gap-3 sm:sticky sm:top-24 sm:flex-col sm:items-start sm:gap-2 sm:self-start">
         <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 font-mono text-xs text-neutral-600 ring-1 ring-black/[0.06] ring-inset dark:bg-white/[0.06] dark:text-neutral-300 dark:ring-white/[0.08]">
           {release.version}
         </span>
         <time
-          className="flex flex-wrap gap-x-1.5 text-sm text-neutral-500 sm:flex-col"
+          className="flex flex-wrap gap-x-1.5 text-sm text-neutral-500 sm:flex-col lg:flex-row"
           dateTime={release.publishedAt ?? release.date}
         >
           {/* The UTC day of the publish time, so the two always agree. */}
@@ -81,24 +87,23 @@ export function ReleaseEntry({
             )}
           </span>
           {release.publishedAt && (
+            <span aria-hidden className="sm:max-lg:hidden">
+              ·
+            </span>
+          )}
+          {release.publishedAt && (
             <span className="tabular-nums">
               {formatReleaseTime(release.publishedAt)}
             </span>
           )}
         </time>
         {latest && (
-          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          <span className="rounded-full bg-sky-400/15 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-300/15 dark:text-sky-300">
             Latest
           </span>
         )}
       </div>
-      <div
-        className={cn(
-          "flex min-w-0 flex-col gap-6 pb-10 sm:pb-14",
-          !standalone &&
-            "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
-        )}
-      >
+      <div className="flex min-w-0 flex-col gap-6">
         {standalone ? (
           <h1 className="type-title">{heading}</h1>
         ) : (
