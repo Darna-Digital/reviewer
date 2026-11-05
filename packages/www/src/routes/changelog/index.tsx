@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { Container } from "#/components/container";
 import { ChevronLeft, ChevronRight } from "#/components/icons";
-import { PAST_RAIL, ReleaseEntry } from "#/components/release-notes";
+import { ReleaseEntry } from "#/components/release-notes";
 import { getChangelog } from "#/lib/changelog";
 import { RELEASES_URL, SITE_URL } from "#/lib/links";
 import { cn } from "#/lib/cn";
@@ -67,11 +67,11 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
   return (
     <nav
       aria-label="Changelog pages"
-      className="flex items-center justify-between gap-4 border-t border-black/[0.06] pt-8 dark:border-white/[0.08]"
+      className="flex items-center justify-between gap-4 pt-8"
     >
       {page > 1 ? (
         <Link
-          className={cn(PAGE_LINK, step)}
+          className={cn(PAGE_LINK, step, "-ml-3")}
           search={search(page - 1)}
           to="/changelog"
         >
@@ -102,7 +102,7 @@ function Pagination({ page, pages }: { page: number; pages: number }) {
       </ol>
       {page < pages ? (
         <Link
-          className={cn(PAGE_LINK, step)}
+          className={cn(PAGE_LINK, step, "-mr-3")}
           search={search(page + 1)}
           to="/changelog"
         >
@@ -150,9 +150,7 @@ function Changelog() {
         ))}
       </ol>
 
-      <div className={PAST_RAIL}>
-        <Pagination page={page} pages={pages} />
-      </div>
+      <Pagination page={page} pages={pages} />
     </Container>
   );
 }

@@ -45,7 +45,7 @@ function ReleaseNotes({ release }: { release: Release }) {
 }
 
 /** Moves something into the notes' column, past the rail and its gap. */
-export const PAST_RAIL = "sm:pl-[200px]";
+export const PAST_RAIL = "sm:pl-[220px] lg:pl-[308px]";
 
 /**
  * One release, as conductor.build sets them: its version and date in a rail,
@@ -68,6 +68,10 @@ export function ReleaseEntry({
     <article
       className={cn(
         "grid grid-cols-1 gap-4 pt-10 pb-10 sm:grid-cols-[180px_1fr] sm:gap-10 sm:pt-14 sm:pb-14 lg:grid-cols-[260px_1fr] lg:gap-12",
+        // The rule between the two columns, centred in the gap. It runs the
+        // entry's full height, so consecutive entries join into one line.
+        !standalone &&
+          "relative sm:before:absolute sm:before:inset-y-0 sm:before:left-[200px] sm:before:w-px sm:before:bg-black/[0.06] lg:before:left-[284px] dark:sm:before:bg-white/[0.08]",
         !standalone &&
           "border-b border-black/[0.06] group-last:border-b-0 dark:border-white/[0.08]"
       )}
