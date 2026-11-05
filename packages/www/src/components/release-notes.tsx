@@ -90,7 +90,7 @@ export function ReleaseEntry({
             </span>
           </span>
           {latest && (
-            <span className="inline-flex h-6 items-center rounded-full bg-sky-400/15 px-2.5 text-xs font-medium text-sky-700 dark:bg-sky-300/15 dark:text-sky-300">
+            <span className="inline-flex h-6 items-center rounded-full bg-sky-400/15 px-2.5 text-xs font-medium text-sky-700 ring-1 ring-sky-500/25 ring-inset dark:bg-sky-300/15 dark:text-sky-300 dark:ring-sky-300/25">
               Latest
             </span>
           )}

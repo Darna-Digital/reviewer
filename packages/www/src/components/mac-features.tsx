@@ -5,8 +5,15 @@ import {
   type ScreenshotName,
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
+import { CHIP } from "#/components/chip";
 import {
   Braces,
+  DockerIcon,
+  NpmIcon,
+  PhpIcon,
+  RubyIcon,
+  SwiftIcon,
+  TypeScriptIcon,
   Branch,
   Bubble,
   Contrast,
@@ -107,7 +114,27 @@ export function MacFeatures() {
         </ShowcaseCard>
 
         <ShowcaseCard
-          description="Set up your local services once from a macOS widget and start them with a single click. Ruby, NPM, Docker or any other development service you use."
+          description={
+            <>
+              Set up your local services once from a macOS widget and start them
+              with a single click.{" "}
+              <span className={CHIP}>
+                <RubyIcon className="size-[0.85em] text-[#CC342D]" />
+                Ruby
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <NpmIcon className="size-[0.85em] text-[#CB3837]" />
+                NPM
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <DockerIcon className="size-[0.95em] text-[#2496ED]" />
+                Docker
+              </span>{" "}
+              or any other development service you use.
+            </>
+          }
           icon={<Play className={SECTION_ICON} />}
           title="Run your services in one click"
         >
@@ -140,7 +167,32 @@ export function MacFeatures() {
         </ShowcaseCard>
 
         <ShowcaseCard
-          description="Language server protocol integration for TypeScript, Swift and Ruby. Hover a symbol for its signature and docs, or find every usage of it across the codebase."
+          description={
+            <>
+              Language server protocol integration for{" "}
+              <span className={CHIP}>
+                <TypeScriptIcon className="size-[0.85em] text-[#3178C6]" />
+                TypeScript
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <SwiftIcon className="size-[0.85em] text-[#F05138]" />
+                Swift
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <RubyIcon className="size-[0.85em] text-[#CC342D]" />
+                Ruby
+              </span>{" "}
+              and{" "}
+              <span className={CHIP}>
+                <PhpIcon className="size-[1.1em] text-[#777BB4]" />
+                PHP
+              </span>
+              . Hover a symbol for its signature and docs, or find every usage
+              of it across the codebase.
+            </>
+          }
           icon={<Braces className={SECTION_ICON} />}
           title="Follow a code symbol to its source"
         >

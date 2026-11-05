@@ -336,7 +336,7 @@ function PlacePicker({
                   parseFloat(
                     getComputedStyle(document.documentElement).fontSize
                   ) * 3.25;
-                window.scrollBy({ top: top - header, behavior: "smooth" });
+                window.scrollBy({ top: top - header, behavior: "instant" });
               }}
               segments={PLACES}
               value={place}
