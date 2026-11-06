@@ -222,8 +222,10 @@ export function SiteHeader() {
       ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
       : "border-transparent bg-transparent";
   // While the Product menu is open, the header and its panel read as one sheet.
+  // The blur stays on: dropping it at once while the background fades to
+  // opaque lets dark content under the header show through for a moment.
   const menuOpen =
-    "has-[[aria-expanded=true]]:border-transparent has-[[aria-expanded=true]]:bg-white has-[[aria-expanded=true]]:backdrop-blur-none dark:has-[[aria-expanded=true]]:bg-[#111113]";
+    "has-[[aria-expanded=true]]:border-transparent has-[[aria-expanded=true]]:bg-white dark:has-[[aria-expanded=true]]:bg-[#111113]";
 
   return (
     <header
