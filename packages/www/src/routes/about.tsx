@@ -107,7 +107,7 @@ const TIP_MARGIN = 12;
  * The clip is The Office's Giphy GIF as a 105 KB MP4, cropped above the
  * Peacock logo (public/videos), and only loads the first time the tooltip
  * opens. The tooltip shifts sideways to stay on screen. It renders on
- * <body>, as inside the letter it would take on the crawl's fade and blur.
+ * <body>, so nothing in the letter can clip or cover it.
  */
 function BusinessValue({
   children,
@@ -460,9 +460,7 @@ const LINK =
 
 /**
  * The letter, set like the intro above it and left-aligned like the other
- * pages' heroes. Each paragraph rises in tilted back like the Star Wars
- * opening crawl and settles flat as it reaches reading height (`.crawl` in
- * styles.css). Its chips are sized in em, so they follow the text.
+ * pages' heroes. Its chips are sized in em, so they follow the text.
  */
 function AboutPage() {
   const [note, setNote] = useState<{
@@ -496,7 +494,7 @@ function AboutPage() {
         </div>
         <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
         <div className="relative" ref={column}>
-          <article className="crawl flex max-w-2xl flex-col gap-5 sm:gap-6">
+          <article className="flex max-w-2xl flex-col gap-5 sm:gap-6">
             {LETTER.map((paragraph) => (
               <p
                 className="type-lede text-neutral-600 dark:text-neutral-400"
