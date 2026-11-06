@@ -169,8 +169,8 @@ body {
 /* /about's letter, as the Star Wars opening crawl: each paragraph enters at
    the bottom of the screen tipped back on its baseline, frosted like text
    behind glass and faint, then sharpens, brightens and lies flat by the time
-   it is halfway up. Linear, so the lower half of the screen reads as a
-   surface tipping away. The sign-off only fades up, so the photo is
+   it is a quarter of the way up. Linear, so the bottom quarter of the screen
+   reads as a surface tipping away. The sign-off only fades up, so the photo is
    never tilted. Static where scroll-driven animations aren't supported or
    motion is reduced. */
 @keyframes crawl-in {
@@ -206,7 +206,7 @@ body {
       transform-origin: 50% 100%;
       animation: crawl-in linear both;
       animation-timeline: view();
-      animation-range: entry 0% cover 50%;
+      animation-range: entry 0% cover 25%;
     }
     .crawl > footer {
       animation-name: rise-in;
