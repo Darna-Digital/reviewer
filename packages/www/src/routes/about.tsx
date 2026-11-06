@@ -56,7 +56,7 @@ const LETTER: (string | string[])[] = [
     "‘You need to bring business value instead of just code.’",
     "‘Code is now cheap’.",
     "‘You’re a code monkey if you still care about the code’.",
-    "‘Coding is solved’…",
+    "‘Coding is solved…’",
   ],
   "On the one hand, the hype is incredibly annoying.",
   "It’s obnoxious. It’s even disrespectful.",
