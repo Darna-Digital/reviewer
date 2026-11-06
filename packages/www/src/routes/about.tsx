@@ -194,7 +194,12 @@ function withChips(
       }
       return (
         // Focusable, so its note opens from the keyboard too.
-        <span className={CHIP} key={index} tabIndex={0} {...handlers}>
+        <span
+          className={`${CHIP} cursor-help`}
+          key={index}
+          tabIndex={0}
+          {...handlers}
+        >
           {chip.icon}
           {label}
         </span>
