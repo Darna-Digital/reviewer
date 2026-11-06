@@ -1,10 +1,16 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useRef, useState, type ReactNode } from "react";
 
+import { PRIMARY_BUTTON } from "#/components/buttons";
 import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Container } from "#/components/container";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "#/components/ui/drawer";
 import { Screenshot } from "#/components/screenshot";
 import {
   Apple,
@@ -97,130 +103,28 @@ const CHIPS: Record<
   },
 };
 
-/** The tooltip's width, and its margin from the edges of the screen. */
-const TIP_WIDTH = 256;
-const TIP_MARGIN = 12;
-
-/**
- * "business value" as a chip, and on hover, focus or tap a
- * tooltip above it: Michael Scott quoting Wayne Gretzky quoting himself.
- * The clip is The Office's Giphy GIF as a 105 KB MP4, cropped above the
- * Peacock logo (public/videos), and only loads the first time the tooltip
- * opens. The tooltip shifts sideways to stay on screen. It renders on
- * <body>, so nothing in the letter can clip or cover it.
- */
-function BusinessValue({
-  children,
-  onNote,
-}: {
-  children: ReactNode;
-  onNote: (element: HTMLElement | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [position, setPosition] = useState({ left: 0, top: 0 });
-  const wrapper = useRef<HTMLSpanElement>(null);
-  const tip = useRef<HTMLSpanElement>(null);
-
-  const show = () => {
-    const rect = wrapper.current!.getBoundingClientRect();
-    const left = rect.left + rect.width / 2 - TIP_WIDTH / 2;
-    const max = window.innerWidth - TIP_WIDTH - TIP_MARGIN;
-    setPosition({
-      left: Math.min(Math.max(left, TIP_MARGIN), max) + window.scrollX,
-      top: rect.top + window.scrollY,
-    });
-    setLoaded(true);
-    setOpen(true);
-    onNote(wrapper.current);
-  };
-  const hide = () => {
-    setOpen(false);
-    onNote(null);
-  };
-
-  // A tap elsewhere or Escape closes it, as hover and blur don't on touch.
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: Event) => {
-      if (
-        event instanceof KeyboardEvent
-          ? event.key === "Escape"
-          : ![wrapper.current, tip.current].some((node) =>
-              node?.contains(event.target as Node)
-            )
-      ) {
-        setOpen(false);
-        onNote(null);
-      }
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open, onNote]);
-
-  return (
-    <span
-      className="relative"
-      onBlur={hide}
-      onFocus={show}
-      // Only a mouse opens it on hover; a tap also fires these, then click.
-      onPointerEnter={(event) => event.pointerType === "mouse" && show()}
-      onPointerLeave={(event) => event.pointerType === "mouse" && hide()}
-      ref={wrapper}
-    >
-      <button
-        aria-describedby="business-value-tip"
-        // A button lays out as inline-block, taking the line's full height;
-        // Inter's glyph box as its line height draws it like the span chips.
-        className={`${CHIP_LINK} cursor-help leading-[1.19]`}
-        onClick={show}
-        type="button"
-      >
-        <Emoji>📈</Emoji>
-        {children}
-      </button>
-      {loaded &&
-        createPortal(
-          <span
-            className={cn(
-              "absolute z-50 block overflow-hidden rounded-xl bg-black shadow-xl ring-1 ring-black/10 transition duration-150 xl:hidden dark:ring-white/15",
-              open
-                ? "translate-y-[calc(-100%-12px)] opacity-100"
-                : "pointer-events-none translate-y-[calc(-100%-8px)] opacity-0"
-            )}
-            id="business-value-tip"
-            ref={tip}
-            role="tooltip"
-            style={{ width: TIP_WIDTH, ...position }}
-          >
-            <video
-              aria-label="Michael Scott from The Office, pensive in the conference room under his whiteboard quote: You miss 100% of the shots you don't take. Wayne Gretzky. Michael Scott."
-              autoPlay
-              className="block aspect-[480/360] w-full"
-              height={360}
-              loop
-              muted
-              playsInline
-              src="/videos/business-value.mp4"
-              width={480}
-            />
-          </span>,
-          document.body
-        )}
-    </span>
-  );
-}
-
 /** Shows a pill's note for the pill, or hides it for null. */
 type ShowNote = (key: string | null, element?: HTMLElement | null) => void;
 
-/** Opens a pill's note on mouse hover or keyboard focus. */
-function noteHandlers(key: string, showNote: ShowNote) {
+/** Where the letter has the empty column for notes: Tailwind's `xl`. */
+const NOTE_COLUMN = "(min-width: 80rem)";
+
+/**
+ * Opens a pill's note beside the letter on mouse hover or keyboard focus.
+ * Without that column, a tap or click opens it in a drawer instead, in
+ * place of following the pill's link; the drawer has the link.
+ */
+function noteHandlers(
+  key: string,
+  showNote: ShowNote,
+  openDrawer: (key: string) => void
+) {
   return {
+    onClick: (event: React.MouseEvent<HTMLElement>) => {
+      if (window.matchMedia(NOTE_COLUMN).matches) return;
+      event.preventDefault();
+      openDrawer(key);
+    },
     onBlur: () => showNote(null),
     onFocus: (event: React.FocusEvent<HTMLElement>) =>
       showNote(key, event.currentTarget),
@@ -232,27 +136,37 @@ function noteHandlers(key: string, showNote: ShowNote) {
 }
 
 /** A paragraph of the letter, with the names in CHIPS as chips. */
-function withChips(paragraph: string, showNote: ShowNote) {
+function withChips(
+  paragraph: string,
+  showNote: ShowNote,
+  openDrawer: (key: string) => void
+) {
   return paragraph
     .split(
       /(Reviewer|macOS app|terminal app|Claude Code|Codex|told me|business value|code monkey)/
     )
     .map((part, index) => {
+      const handlers = noteHandlers(part, showNote, openDrawer);
       if (part === "business value") {
         return (
-          <BusinessValue
+          <button
+            // A button lays out as inline-block, taking the line's full
+            // height; Inter's glyph box as its line height draws it like the
+            // span chips.
+            className={`${CHIP_LINK} cursor-help leading-[1.19]`}
             key={index}
-            onNote={(element) => showNote(element && part, element)}
+            type="button"
+            {...handlers}
           >
+            <Emoji>📈</Emoji>
             {part}
-          </BusinessValue>
+          </button>
         );
       }
       const chip = CHIPS[part];
       if (!chip) return part;
       // The lockup already spells the name.
       const label = part === "Reviewer" ? null : part;
-      const handlers = noteHandlers(part, showNote);
       if (chip.to) {
         return (
           <Link className={CHIP_LINK} key={index} to={chip.to} {...handlers}>
@@ -306,8 +220,11 @@ function Target({ children }: { children: ReactNode }) {
 
 const NOTE_ICON = "size-7";
 
-/** What each pill means, shown beside the letter when it is hovered. */
-const NOTES: Record<string, { title: string; body: string; art: ReactNode }> = {
+/** What each pill means: beside the letter on hover, or in a drawer. */
+const NOTES: Record<
+  string,
+  { title: string; body: string; art: ReactNode; action?: string }
+> = {
   Reviewer: {
     title: "Reviewer",
     body: "Read the diff, comment on any line and hand the comment to an agent. Then review its fix in the same place.",
@@ -317,11 +234,13 @@ const NOTES: Record<string, { title: string; body: string; art: ReactNode }> = {
     title: "The macOS app",
     body: "A native app for Apple silicon. The diff, your comments and your agents' sessions in one window.",
     art: <Shot name="comment-assign" width={2076} height={1430} />,
+    action: "See the macOS app",
   },
   "terminal app": {
     title: "The terminal app",
     body: "The same review in a terminal: on your laptop, on a server over SSH or in a multiplexer pane. macOS and Linux.",
     art: <Shot name="tui-hero" width={2560} height={1358} />,
+    action: "See the terminal app",
   },
   "Claude Code": {
     title: "Claude Code",
@@ -334,7 +253,7 @@ const NOTES: Record<string, { title: string; body: string; art: ReactNode }> = {
   },
   Codex: {
     title: "Codex",
-    body: "OpenAI's coding agent. Reviewer works with it the same way as with Claude Code.",
+    body: "OpenAI's coding agent. Reviewer runs the one you have installed and hands it the comments you assign.",
     art: (
       <Target>
         <CodexIcon className={NOTE_ICON} />
@@ -371,8 +290,57 @@ const NOTES: Record<string, { title: string; body: string; art: ReactNode }> = {
         <Mail className={NOTE_ICON} />
       </Target>
     ),
+    action: "Email me",
   },
 };
+
+/**
+ * A pill's note as a bottom sheet, for screens without the column beside
+ * the letter. It keeps the last pill while it slides away.
+ */
+function PillDrawer({
+  pill,
+  open,
+  onOpenChange,
+}: {
+  pill: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const note = pill ? NOTES[pill] : null;
+  const chip = pill ? CHIPS[pill] : undefined;
+  return (
+    <Drawer onOpenChange={onOpenChange} open={open}>
+      <DrawerContent>
+        {note && (
+          <div className="mx-auto flex w-full max-w-lg flex-col gap-5 px-5 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div className="aspect-[16/10] overflow-hidden rounded-xl bg-neutral-50 ring-1 ring-black/[0.06] dark:bg-neutral-950 dark:ring-white/[0.08]">
+              {note.art}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <DrawerTitle>{note.title}</DrawerTitle>
+              <DrawerDescription>{note.body}</DrawerDescription>
+            </div>
+            {note.action && chip?.to && (
+              <Link
+                className={PRIMARY_BUTTON}
+                onClick={() => onOpenChange(false)}
+                to={chip.to}
+              >
+                {note.action}
+              </Link>
+            )}
+            {note.action && chip?.href && (
+              <a className={PRIMARY_BUTTON} href={chip.href}>
+                {note.action}
+              </a>
+            )}
+          </div>
+        )}
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
 /** A note's screenshot: the top left of the window, where the detail is. */
 function Shot(props: { name: string; width: number; height: number }) {
@@ -470,6 +438,11 @@ function AboutPage() {
     moving: boolean;
   } | null>(null);
   const column = useRef<HTMLDivElement>(null);
+  const [drawer, setDrawer] = useState<{ pill: string | null; open: boolean }>({
+    pill: null,
+    open: false,
+  });
+  const openDrawer = (pill: string) => setDrawer({ pill, open: true });
 
   const showNote: ShowNote = (key, element) => {
     if (!key || !element) {
@@ -500,7 +473,7 @@ function AboutPage() {
                 className="type-lede text-neutral-600 dark:text-neutral-400"
                 key={paragraph}
               >
-                {withChips(paragraph, showNote)}
+                {withChips(paragraph, showNote, openDrawer)}
               </p>
             ))}
             <footer className="mt-8 flex flex-col items-start gap-3 lg:mt-10">
@@ -536,6 +509,13 @@ function AboutPage() {
             </footer>
           </article>
           <PillNote note={note} />
+          <PillDrawer
+            onOpenChange={(open) =>
+              setDrawer((current) => ({ ...current, open }))
+            }
+            open={drawer.open}
+            pill={drawer.pill}
+          />
         </div>
       </section>
     </Container>
