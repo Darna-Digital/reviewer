@@ -470,10 +470,7 @@ function Home() {
       <Container className={HERO_WIDTH}>
         <Stage place={place} />
       </Container>
-      <Container
-        className="fade-in mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36"
-        key={place}
-      >
+      <Container className="mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36">
         <Sections />
         <RecentlyShipped />
         <Questions />

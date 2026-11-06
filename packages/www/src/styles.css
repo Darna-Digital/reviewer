@@ -147,21 +147,3 @@ body {
     filter: none;
   }
 }
-
-/* The homepage's sections fade in when you choose another place to work. */
-.fade-in {
-  animation: fade-in 300ms ease-out;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fade-in {
-    animation: none;
-  }
-}
