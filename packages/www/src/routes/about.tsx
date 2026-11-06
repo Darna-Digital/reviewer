@@ -50,10 +50,10 @@ export const Route = createFileRoute("/about")({
 const LETTER: (string | string[])[] = [
   "Tell me if this sounds like you:",
   "You hear every tech influencer saying you need to ship faster.",
+  "You’re told that:",
   [
-    "You’re told that:",
-    "You need to stop reading the code.",
-    "You need to bring ‘business value’ instead of just code.",
+    "‘You need to stop reading the code.’",
+    "‘You need to bring business value instead of just code.’",
     "‘Code is now cheap’.",
     "‘You’re a code monkey if you still care about the code’.",
     "‘Coding is solved’…",
