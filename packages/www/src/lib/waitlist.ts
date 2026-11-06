@@ -55,7 +55,8 @@ export const joinWaitlist = createServerFn({ method: "POST" })
     const { getRequestHeader } = await import("@tanstack/react-start/server");
 
     const secret =
-      env.TURNSTILE_SECRET_KEY || (import.meta.env.DEV ? TEST_SECRET : null);
+      // The real keys only work on reviewer.sh, so dev always uses the test ones.
+      import.meta.env.DEV ? TEST_SECRET : env.TURNSTILE_SECRET_KEY;
     if (!secret) throw new Error("Signups are closed right now. Try later.");
     const human =
       data.token !== "" &&
@@ -78,6 +79,6 @@ export const joinWaitlist = createServerFn({ method: "POST" })
 export const getTurnstileSiteKey = createServerFn({ method: "GET" }).handler(
   async () => {
     const { env } = await import("cloudflare:workers");
-    return env.TURNSTILE_SITE_KEY || (import.meta.env.DEV ? TEST_SITE_KEY : "");
+    return import.meta.env.DEV ? TEST_SITE_KEY : (env.TURNSTILE_SITE_KEY ?? "");
   }
 );

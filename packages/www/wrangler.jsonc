@@ -20,10 +20,10 @@
   "d1_databases": [
     { "binding": "WAITLIST", "database_name": "reviewer-waitlist" },
   ],
-  // Turnstile guards the waitlist form. The site key is public; the secret
-  // goes in with `wrangler secret put TURNSTILE_SECRET_KEY`. Without them,
-  // `pnpm dev` uses Cloudflare's always-passing test keys.
-  "vars": { "TURNSTILE_SITE_KEY": "" },
+  // Turnstile guards the waitlist form, in Managed mode. The site key is
+  // public; the secret is a Worker secret, `TURNSTILE_SECRET_KEY`, set in the
+  // Cloudflare dashboard. `pnpm dev` always uses Cloudflare's test keys.
+  "vars": { "TURNSTILE_SITE_KEY": "0x4AAAAAAF2LxJRUCXm_Y475" },
   "observability": {
     "enabled": true,
   },
