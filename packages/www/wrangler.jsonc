@@ -14,11 +14,15 @@
       "custom_domain": true,
     },
   ],
-  // The Reviewer Cloud waitlist, a D1 database. No `database_id`: `wrangler
-  // deploy` creates it on first deploy and keeps it linked, and `pnpm dev`
-  // keeps a local one under .wrangler/. The table is created on first use.
+  // The Reviewer Cloud waitlist, a D1 database (created with `wrangler d1
+  // create`). `pnpm dev` keeps a local one under .wrangler/. The table is
+  // created on first use.
   "d1_databases": [
-    { "binding": "WAITLIST", "database_name": "reviewer-waitlist" },
+    {
+      "binding": "WAITLIST",
+      "database_name": "reviewer-waitlist",
+      "database_id": "066aec5e-c3bb-44a3-a105-7ab8a85139b2",
+    },
   ],
   // Turnstile guards the waitlist form, in Managed mode. The site key is
   // public; the secret is a Worker secret, `TURNSTILE_SECRET_KEY`, set in the
