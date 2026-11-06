@@ -10,12 +10,38 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as CloudRouteImport } from './routes/cloud'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as InstallRouteImport } from './routes/install'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
+import { Route as MacRouteImport } from './routes/mac'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TerminalRouteImport } from './routes/terminal'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
+import { Route as ChangelogIndexRouteImport } from './routes/changelog/index'
+import { Route as ChangelogVersionRouteImport } from './routes/changelog/$version'
+import { Route as DocsSplatRouteImport } from './routes/docs/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CloudRoute = CloudRouteImport.update({
+  id: '/cloud',
+  path: '/cloud',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstallRoute = InstallRouteImport.update({
@@ -28,35 +54,162 @@ const LatestDotjsonRoute = LatestDotjsonRouteImport.update({
   path: '/latest.json',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MacRoute = MacRouteImport.update({
+  id: '/mac',
+  path: '/mac',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminalRoute = TerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogIndexRoute = ChangelogIndexRouteImport.update({
+  id: '/changelog/',
+  path: '/changelog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogVersionRoute = ChangelogVersionRouteImport.update({
+  id: '/changelog/$version',
+  path: '/changelog/$version',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSplatRoute = DocsSplatRouteImport.update({
+  id: '/docs/$',
+  path: '/docs/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/changelog': typeof ChangelogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cloud': typeof CloudRoute
+  '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
   '/latest.json': typeof LatestDotjsonRoute
+  '/mac': typeof MacRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terminal': typeof TerminalRoute
+  '/api/search': typeof ApiSearchRoute
+  '/changelog/$version': typeof ChangelogVersionRoute
+  '/docs/$': typeof DocsSplatRoute
+  '/changelog/': typeof ChangelogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/install' | '/latest.json'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/cloud'
+    | '/download'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/terminal'
+    | '/api/search'
+    | '/changelog/$version'
+    | '/docs/$'
+    | '/changelog/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/install' | '/latest.json'
-  id: '__root__' | '/' | '/install' | '/latest.json'
+  to:
+    | '/'
+    | '/about'
+    | '/cloud'
+    | '/download'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/terminal'
+    | '/api/search'
+    | '/changelog/$version'
+    | '/docs/$'
+    | '/changelog'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/cloud'
+    | '/download'
+    | '/install'
+    | '/latest.json'
+    | '/mac'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/terminal'
+    | '/api/search'
+    | '/changelog/$version'
+    | '/docs/$'
+    | '/changelog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  CloudRoute: typeof CloudRoute
+  DownloadRoute: typeof DownloadRoute
   InstallRoute: typeof InstallRoute
   LatestDotjsonRoute: typeof LatestDotjsonRoute
+  MacRoute: typeof MacRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TerminalRoute: typeof TerminalRoute
+  ApiSearchRoute: typeof ApiSearchRoute
+  ChangelogVersionRoute: typeof ChangelogVersionRoute
+  DocsSplatRoute: typeof DocsSplatRoute
+  ChangelogIndexRoute: typeof ChangelogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +219,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cloud': {
+      id: '/cloud'
+      path: '/cloud'
+      fullPath: '/cloud'
+      preLoaderRoute: typeof CloudRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/install': {
@@ -82,13 +256,80 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LatestDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mac': {
+      id: '/mac'
+      path: '/mac'
+      fullPath: '/mac'
+      preLoaderRoute: typeof MacRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminal': {
+      id: '/terminal'
+      path: '/terminal'
+      fullPath: '/terminal'
+      preLoaderRoute: typeof TerminalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog/': {
+      id: '/changelog/'
+      path: '/changelog'
+      fullPath: '/changelog/'
+      preLoaderRoute: typeof ChangelogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog/$version': {
+      id: '/changelog/$version'
+      path: '/changelog/$version'
+      fullPath: '/changelog/$version'
+      preLoaderRoute: typeof ChangelogVersionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$': {
+      id: '/docs/$'
+      path: '/docs/$'
+      fullPath: '/docs/$'
+      preLoaderRoute: typeof DocsSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  CloudRoute: CloudRoute,
+  DownloadRoute: DownloadRoute,
   InstallRoute: InstallRoute,
   LatestDotjsonRoute: LatestDotjsonRoute,
+  MacRoute: MacRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TerminalRoute: TerminalRoute,
+  ApiSearchRoute: ApiSearchRoute,
+  ChangelogVersionRoute: ChangelogVersionRoute,
+  DocsSplatRoute: DocsSplatRoute,
+  ChangelogIndexRoute: ChangelogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

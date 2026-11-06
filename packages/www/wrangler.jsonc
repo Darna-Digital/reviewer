@@ -11,10 +11,24 @@
   "routes": [
     {
       "pattern": "reviewer.sh",
-      "custom_domain": true
-    }
+      "custom_domain": true,
+    },
   ],
+  // The Reviewer Cloud waitlist, a D1 database (created with `wrangler d1
+  // create`). `pnpm dev` keeps a local one under .wrangler/. The table is
+  // created on first use.
+  "d1_databases": [
+    {
+      "binding": "WAITLIST",
+      "database_name": "reviewer-waitlist",
+      "database_id": "066aec5e-c3bb-44a3-a105-7ab8a85139b2",
+    },
+  ],
+  // Turnstile guards the waitlist form, in Managed mode. The site key is
+  // public; the secret is a Worker secret, `TURNSTILE_SECRET_KEY`, set in the
+  // Cloudflare dashboard. `pnpm dev` always uses Cloudflare's test keys.
+  "vars": { "TURNSTILE_SITE_KEY": "0x4AAAAAAF2LxJRUCXm_Y475" },
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }

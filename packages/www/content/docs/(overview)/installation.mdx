@@ -1,0 +1,97 @@
+---
+title: Installation
+description: Install the Mac app, the terminal app, or both.
+---
+
+## Mac app
+
+### Requirements
+
+The Mac app runs on Apple silicon Macs with macOS 26 or later.
+
+### Installing
+
+<Steps>
+<Step>
+Download the latest disk image from [reviewer.sh/download](/download). It is
+also attached to every [GitHub release](https://github.com/Darna-Digital/reviewer/releases/latest).
+</Step>
+<Step>
+Open the disk image and drag **Reviewer** into **Applications**.
+</Step>
+<Step>
+Open Reviewer. It asks which repository to open first.
+</Step>
+</Steps>
+
+Every release is signed with a Developer ID and notarized by Apple, so macOS
+opens it without a warning.
+
+The app brings its own copy of Node.js and of the Reviewer server. You don't
+need to install anything else.
+
+### Updating
+
+The app checks for new versions on its own and offers each one as it ships.
+The [changelog](/changelog) lists what every release changed.
+
+## Terminal app
+
+### Requirements
+
+The terminal app runs on macOS and Linux, on both arm64 and x64. It works in
+any terminal, but a few things are better in some than others:
+
+- **⌘ shortcuts** need a terminal that supports the kitty keyboard protocol,
+  such as Ghostty, kitty, WezTerm, or iTerm2 with CSI u turned on. Every ⌘
+  shortcut has a ⌃ or plain-key alternative for other terminals.
+- **File icons** need a [Nerd Font](https://www.nerdfonts.com), version 3.0 or
+  later.
+
+### Installing
+
+Run the install script:
+
+```bash
+curl -fsSL https://reviewer.sh/install | bash
+```
+
+It installs Reviewer into `~/.reviewer`, along with the Reviewer server and
+the Node.js it runs on. You don't need the Mac app, Node.js or Bun installed.
+
+Then, inside any repository:
+
+```bash
+reviewer
+```
+
+### Updating
+
+The terminal app checks for a newer release when it starts and every few
+hours after that, and tells you when one is out. To update, choose
+**Update Reviewer** in the command palette (⌘K), then **Restart Reviewer**
+once it has installed. From the shell, you can do the same with:
+
+```bash
+reviewer upgrade
+reviewer --version
+```
+
+### Building from source
+
+If you have a checkout of the repository, you can build the terminal app
+yourself. It is compiled into one self-contained binary and placed in
+`~/.local/bin`:
+
+```bash
+pnpm install
+pnpm install:tui
+```
+
+To install it somewhere else, set `BIN_DIR`:
+
+```bash
+BIN_DIR=/usr/local/bin pnpm install:tui
+```
+
+Run the same command again to update it.

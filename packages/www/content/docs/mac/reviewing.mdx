@@ -1,0 +1,52 @@
+---
+title: Reviewing changes
+description: Choose what to compare, then read the diff the way that suits the change.
+---
+
+## Choosing what to compare
+
+The comparison picker sits in the sidebar, across from the branch picker. It
+has two kinds of comparison:
+
+- **Uncommitted changes**: your working tree against the last commit,
+  including files git doesn't track yet.
+- **Against a branch**: everything your branch has changed since it left
+  another branch, plus anything uncommitted.
+
+Reviewer remembers the comparison you chose for each branch, so you only pick
+it once.
+
+To read a single commit instead, pick it in **History** in the bottom pane.
+See [Branches and commits](/docs/mac/git#history).
+
+## Reading the diff
+
+While you review, the sidebar lists only the changed files, marked with their
+git status. Type in the search above them to narrow the list. Click a file to
+jump to it in the diff.
+
+### Side by side or stacked
+
+Lay the diff out side by side, or with the old lines above the new ones. The
+toggle is at the end of the bar above the diff, and **Toggle Diff Style** in
+the command palette does the same.
+
+<Screenshot name="diff-split" width={1772} height={1290} alt="A diff laid out side by side" />
+
+Side by side is easier for small edits to existing lines. Stacked is easier
+for long new code, because each line gets the full width.
+
+### Reading a whole file
+
+A diff only shows the lines around each change. To read the rest, click
+**Full file** above any file in the diff, or click the file anywhere else to
+open it on its own page.
+
+## Browsing the project
+
+Click **Code** in the tabs and choose the browse view to see the project's
+whole file tree. Files open in tabs along the top of the page. Right-click a
+file in the tree to see its history, copy its path, reveal it in Finder,
+rename it or delete it.
+
+You can comment on a file you are browsing, too. See [Comments](/docs/mac/comments).

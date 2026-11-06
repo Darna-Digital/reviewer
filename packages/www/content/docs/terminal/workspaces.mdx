@@ -1,0 +1,38 @@
+---
+title: Workspaces
+description: Open several repositories side by side.
+---
+
+A workspace opens several repositories at once, and is shared with the Mac
+app. Read [Concepts](/docs/concepts#repositories-and-workspaces) for what a
+workspace is.
+
+## Opening one
+
+Pass several paths, or the name of a saved workspace:
+
+```bash
+reviewer ~/code/web ~/code/api
+reviewer -w platform
+```
+
+Press ⌘O (or `O`) inside the app to see the open workspace, the saved ones,
+and recent repositories. Type a path to open that folder. ⌥⌘O adds a
+repository to the workspace you have open.
+
+If you start `reviewer` in a folder that holds several repositories, it opens
+the saved workspace made of them, or saves a new one named after the folder.
+
+## The focused repository
+
+Most things cover every repository: the tree, search, comments, pull requests
+and Run. Branches, commits and History belong to one repository at a time,
+the focused one, shown on the branch chip.
+
+Press `p` to choose the focused repository, and `>` and `<` to step through
+them. Fetch, pull and push ask which repository to use, or all of them.
+
+## Editing a workspace
+
+From the ⌘O list, press `→` on a workspace to edit it. `j` and `k` move,
+`J` and `K` reorder, `x` removes a repository, `a` adds one, and Return saves.

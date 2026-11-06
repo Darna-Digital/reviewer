@@ -2,20 +2,18 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
+import { SiteLayout } from "#/components/site-layout";
+import { getStarCount } from "#/lib/github-stars";
 import { SITE_URL } from "#/lib/links";
+import { ogImage } from "#/lib/og-image";
 import appCss from "../styles.css?url";
 
-const TITLE = "Reviewer: Understand AI-generated code";
+const TITLE = "Reviewer: focused system for building software with agents";
 const DESCRIPTION =
-  "In a world where we no longer write code, we spend a lot more time reviewing it. Reviewer is a delightful, smooth macOS app built precisely for that.";
-const OG_IMAGE = {
-  url: `${SITE_URL}/og-image.png`,
-  width: "1200",
-  height: "630",
-  alt: "Reviewer: Understand AI-generated code, above a side-by-side diff in the app",
-};
+  "Read the change, comment on what's wrong and hand it back to Claude Code or Codex. Commit when you're sure.";
 
 export const Route = createRootRoute({
+  loader: async () => ({ stars: await getStarCount() }),
   head: () => ({
     meta: [
       {
@@ -32,17 +30,22 @@ export const Route = createRootRoute({
       { property: "og:url", content: SITE_URL },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
-      { property: "og:image", content: OG_IMAGE.url },
-      { property: "og:image:width", content: OG_IMAGE.width },
-      { property: "og:image:height", content: OG_IMAGE.height },
-      { property: "og:image:alt", content: OG_IMAGE.alt },
+      ...ogImage(
+        "site",
+        "Focused system for building software with agents, above a side-by-side diff in the Mac app"
+      ),
+      // No twitter:title or twitter:description: X falls back to og:title and
+      // og:description, which each page sets for itself.
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: TITLE },
-      { name: "twitter:description", content: DESCRIPTION },
-      { name: "twitter:image", content: OG_IMAGE.url },
-      { name: "twitter:image:alt", content: OG_IMAGE.alt },
     ],
     links: [
+      {
+        rel: "preload",
+        href: "/fonts/inter-latin-opsz-normal.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -82,12 +85,13 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html className="scheme-light-dark" lang="en">
+    // The docs' theme provider sets a class on <html> before React hydrates.
+    <html className="scheme-light-dark" lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <SiteLayout>{children}</SiteLayout>
         <TanStackDevtools
           config={{
             position: "bottom-right",

@@ -1,0 +1,64 @@
+---
+title: Resolving comments with any agent
+description: Hand the comments you leave in Reviewer to Claude Code, Codex, Cursor or any agent that runs skills.
+---
+
+The Mac app can hand comments straight to Claude Code or Codex. If you prefer
+another agent, or you run your agent outside Reviewer, use the
+`resolve-reviewer-comments` skill. It works with any agent that supports
+skills, including Claude Code, Codex, Cursor and OpenCode.
+
+## Installing the skill
+
+Run this in the repository you review, or wherever your agent looks for
+skills:
+
+```bash
+npx skills add Darna-Digital/reviewer --skill resolve-reviewer-comments
+```
+
+## Using it
+
+With Reviewer running, ask your agent:
+
+```text
+Resolve my reviewer comments.
+```
+
+The agent then:
+
+1. Fetches the comments you left on the repository.
+2. Reads each file around the line a comment points at.
+3. Makes the change the comment asks for.
+4. Resolves the comment right after its change, so Reviewer shows it as done.
+
+If a comment is unclear or contradicts another one, the agent asks you
+instead of guessing.
+
+Once it finishes, open Reviewer again. The agent's changes are a new diff,
+ready to read before you commit.
+
+<Callout title="Reviewer has to be running">
+  The skill reads comments from the Reviewer server. If neither app is open,
+  the agent will tell you it couldn't reach Reviewer and stop.
+</Callout>
+
+## How it works
+
+The skill is a short set of instructions that calls the Reviewer server's
+API. You can use the same two endpoints from your own scripts:
+
+```bash
+# List the comments on this repository
+curl -sfG http://127.0.0.1:41811/api/comments \
+  --data-urlencode "repo=$(git rev-parse --show-toplevel)"
+
+# Resolve one
+curl -sfG -X DELETE "http://127.0.0.1:41811/api/comments/<id>" \
+  --data-urlencode "repo=$(git rev-parse --show-toplevel)"
+```
+
+Each comment carries the file, the line, the side of the diff, your text, and
+the comparison it was left on. You can read the
+[skill itself](https://github.com/Darna-Digital/reviewer/blob/main/skills/resolve-reviewer-comments/SKILL.md)
+on GitHub.

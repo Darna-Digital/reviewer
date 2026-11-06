@@ -1,0 +1,6 @@
+{
+  "title": "Overview",
+  "description": "What Reviewer is and how it fits together",
+  "root": true,
+  "pages": ["index", "installation", "concepts", "agents"]
+}

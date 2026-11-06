@@ -1,0 +1,8 @@
+services:
+  www:
+    cwd: packages/www
+    command: pnpm dev --port "$PORT" --strictPort
+    # The port packages/www/vite.config.ts and its README use.
+    port: 41822
+    portal:
+      title: reviewer.sh (www)

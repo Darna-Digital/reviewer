@@ -1,0 +1,46 @@
+---
+title: Code navigation
+description: Jump to definitions and find usages, from the keyboard or the mouse.
+---
+
+The terminal app uses the same language support as the Mac app: TypeScript,
+Swift, Ruby and PHP. It works on any file you browse, and on the new side of a
+diff of uncommitted or branch changes.
+
+## From the keyboard
+
+Navigation works with a word cursor that moves between symbols.
+
+| Key           | Does                                          |
+| ------------- | --------------------------------------------- |
+| `w` `b`       | Next and previous symbol                      |
+| `0` `$`       | First and last symbol on the line             |
+| `*` `#`       | Next and previous use of the symbol           |
+| Return        | Go to the definition                          |
+| `K`           | Show the symbol's signature and docs          |
+| `u`           | Find usages                                   |
+| `.`           | List the symbols on this line                 |
+| `@`           | Go to a symbol in the open file               |
+| `{` `}`       | Previous and next definition in the file      |
+| ⌃O            | Go back to where you jumped from              |
+| ⌥→            | Go forward again                              |
+
+## With the mouse
+
+Hover over a symbol to see its signature and docs. Right-click it for **Go to
+definition**, **Find usages**, **Show info**, **Comment** and **Copy**.
+
+⌘-click goes straight to the definition in terminals that pass ⌘ through. ⌥-click
+and ⌃-click do the same in any terminal.
+
+## Usages
+
+Usages open in the bottom pane (⌥⌘6), grouped by file, next to a preview of
+the selected one. `j` and `k` move through them, Return opens one, and `r`
+searches again.
+
+## Searching files
+
+Press ⇧⌘F, or choose Search in the palette, to search the text of every file.
+Toggle case sensitivity, whole words and regular expressions with ⌥C, ⌥W
+and ⌥R. ⇧⌘O finds a file by name.

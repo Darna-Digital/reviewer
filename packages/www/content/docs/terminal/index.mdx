@@ -1,0 +1,77 @@
+---
+title: Getting started
+description: Start the terminal app and find your way around the screen.
+---
+
+<Screenshot name="tui-review" width={2403} height={1466} alt="The terminal app reviewing a change" />
+
+If you haven't installed it yet, start with [Installation](/docs/installation#terminal-app).
+
+## Starting Reviewer
+
+Run `reviewer` from anywhere inside a repository:
+
+```bash
+reviewer
+```
+
+It opens where the Mac app would: your branch compared with the branch you
+compared it against last time, or your uncommitted work.
+
+You can also tell it what to open:
+
+```bash
+reviewer ~/code/app                  # another repository
+reviewer ~/code/app --against main   # a branch against main
+reviewer --commit 4f2a9c1            # one commit
+reviewer --pr 42                     # a GitHub pull request
+reviewer ~/code/web ~/code/api       # two repositories side by side
+reviewer -w platform                 # a saved workspace
+```
+
+| Option            | Does                                                       |
+| ----------------- | ---------------------------------------------------------- |
+| `[path…]`         | Open a repository. Several paths open side by side.        |
+| `-w <name>`       | Open a saved workspace. The long form is `--workspace`.    |
+| `--workspaces`    | List the saved workspaces.                                 |
+| `--against <ref>` | Compare the branch against `<ref>`.                        |
+| `--commit <sha>`  | Read one commit.                                           |
+| `--pr <number>`   | Review a GitHub pull request.                              |
+| `--theme <name>`  | Use a theme for this run only.                             |
+| `--light`         | Use the light default theme for this run only.             |
+| `--no-server`     | Don't start the Reviewer server.                           |
+
+## The screen
+
+The terminal app is laid out like the Mac app:
+
+- **The sidebar** on the left starts with the surface tabs, **Browse**,
+  **Review** and **Search**. Under them are the branch chip, the comparison
+  chip, and the files, with the commit box under the files while you review.
+- **The editor** in the middle shows the diff or a file.
+- **The bottom pane** holds History, Run and Usages. Press ⌘B or ⌃B to show
+  or hide it.
+- **The bottom bar** shows the keys that work where you are.
+
+Press Tab to move between the sidebar, the editor and the bottom pane.
+
+## The command palette
+
+Press ⌘K, ⌃K or `:` to open the command palette. Every action is in it,
+including the few with no key of their own. ⇧⌘O goes straight to file search,
+and ⇧⌘F to text search.
+
+## Finding your keys
+
+Press `?` at any time to see the keys for where you are. The most-used ones
+are in [Keys](/docs/terminal/keys).
+
+The app uses vim-style keys throughout: `j` and `k` move, `g` and `G` go to
+the top and bottom, and a number typed first repeats a move, so `10j` moves
+down ten lines.
+
+## The mouse
+
+The mouse works everywhere. Click to select, double-click to open, and
+right-click for a menu on files, branches, commits and services. Drag the
+edges between panes to resize them.

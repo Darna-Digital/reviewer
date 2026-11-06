@@ -1,0 +1,33 @@
+---
+title: Workspaces
+description: Open several repositories side by side in one window.
+---
+
+When one change spans several repositories, such as a frontend and its API,
+open them together as a **workspace**.
+
+## Creating a workspace
+
+Open the first repository, then press ⌥⌘O to add another one beside it.
+Repeat for as many as you need. To keep the set, choose
+**File → Save as workspace** and give it a name.
+
+Saved workspaces appear at the top of the opener (⌘O), above the
+repositories. Edit or delete a workspace from its row menu there.
+
+## Working in a workspace
+
+Most of the window covers every repository at once:
+
+- The file tree shows each repository under a header that names its branch.
+- File search and text search look through all of them.
+- Run lists every repository's commands, and Start all starts them all.
+- A commit that includes files from several repositories makes one commit in
+  each, with the same message.
+
+Some things belong to one repository at a time: the branch picker, History,
+Branches and Terminal. They follow the **focused** repository, which is shown
+by the repository chip next to the branch picker. Click it to focus another.
+
+Workspaces are saved by the Reviewer server, so the terminal app opens the
+same ones.

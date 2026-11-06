@@ -1,0 +1,67 @@
+---
+title: Concepts
+description: The handful of ideas both apps are built on.
+---
+
+Both apps are built on the same few ideas. Learn these once and both apps will
+make sense.
+
+## Repositories and workspaces
+
+A **repository** is any git repository on your machine. Reviewer opens one at
+a time by default.
+
+A **workspace** is several repositories opened side by side under one name,
+for example a web app and the API behind it. In a workspace, the file tree
+shows each repository as a folder, search reaches into all of them, and a
+commit across several repositories makes one commit in each. Workspaces are
+saved by the Reviewer server, so one made in the Mac app opens in the terminal
+app, and the other way round.
+
+## What you compare
+
+Every review compares two versions of your code. You choose which:
+
+| Comparison                | Shows                                                         |
+| ------------------------- | ------------------------------------------------------------- |
+| **Uncommitted changes**   | Your working tree against the last commit, untracked files included. |
+| **Against a branch**      | Everything since your branch left another branch (its merge base), through to the working tree. |
+| **A commit**              | What one commit changed.                                       |
+| **A pull request**        | A GitHub pull request's changes.                               |
+
+Reviewer remembers the branch you compared each branch against. The next time
+you open that branch, it opens on the same comparison.
+
+## Comments
+
+A comment belongs to a line, and to the comparison you left it on. A comment
+left on your uncommitted work stays with your working tree. A comment left on
+a commit stays with that commit. This is what lets an agent find the exact
+line you meant, even after the code has moved.
+
+Comments stay until they are resolved. When an agent fixes what a comment
+asked for, it resolves the comment and it disappears from the review.
+
+## The Reviewer server
+
+Both apps rely on a small local server for git, files, comments and language
+features. It listens on `127.0.0.1:41811`. To use another port, set
+`REVIEWER_PORT`.
+
+You never start the server yourself. Whichever app opens first starts it, and
+any app that opens after that reuses it. The [agent skill](/docs/agents) talks
+to the same server.
+
+## Where your data lives
+
+Everything Reviewer keeps is in `~/.reviewer` in your home folder:
+
+| Path                         | Holds                                              |
+| ---------------------------- | -------------------------------------------------- |
+| `~/.reviewer/reviewer.db`    | Comments, run commands, layouts and settings.      |
+| `~/.reviewer/repos.json`     | The repositories found on your machine.            |
+| `~/.reviewer/server.log`     | The server's output, when the terminal app started it. |
+
+Nothing is sent anywhere. The only network requests Reviewer makes are to
+GitHub when you work with pull requests, and to an agent's provider when you
+run an agent.

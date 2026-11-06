@@ -1,349 +1,483 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { NoteCard, ShowcaseCard } from "#/components/card";
-import { Container } from "#/components/container";
-import {
-  Braces,
-  Branch,
-  Bubble,
-  Contrast,
-  Apple,
-  History,
-  Laptop,
-  Palette,
-  PaperPlane,
-  Play,
-  PlusMinus,
-  LayoutColumns,
-  LayoutRows,
-  Terminal,
-} from "#/components/icons";
-import { Screenshot, type ScreenshotCrop } from "#/components/screenshot";
+import { version } from "../../../../package.json";
+import { AppScreenshot, HERO_PHONE_CROP } from "#/components/app-screenshot";
+import { GetReviewerButtons } from "#/components/buttons";
+import { SURFACE, SectionHeading } from "#/components/card";
+import { Container, HERO_WIDTH } from "#/components/container";
+import { CHIP, CHIP_ICON } from "#/components/chip";
+import { ClaudeIcon, CodexIcon, ChevronRight } from "#/components/icons";
+import { MacFeatures } from "#/components/mac-features";
+import { TerminalFeatures } from "#/components/terminal-features";
+import { InlineMarkdown } from "#/components/release-notes";
+import { WaitlistForm } from "#/components/waitlist-form";
+import { CloudIllustration } from "#/components/cloud-illustration";
+import { ShowcaseVideo } from "#/components/showcase-video";
+import { Crossfade, SegmentedControl } from "#/components/segmented-control";
+import { getChangelog } from "#/lib/changelog";
 import { cn } from "#/lib/cn";
-import { SiteFooter } from "#/components/site-footer";
-import { SiteHeader } from "#/components/site-header";
-import { DOWNLOAD_URL, REPO_URL } from "#/lib/links";
+import { REPO_URL, SITE_URL } from "#/lib/links";
 
-/**
- * Display captures are encoded at half their Retina resolution, still more
- * pixels than the widest layout draws. The hero is scaled to nearly 2× its
- * widest container, and the close crops (diff layouts, branch picker, the
- * hero's phone crop) keep their native size.
- */
-const SCREENSHOT_SIZES = {
-  "split-diff": { width: 2560, height: 1477 },
-  "diff-split": { width: 1772, height: 1290 },
-  "diff-stacked": { width: 1772, height: 1290 },
-  "agent-models": { width: 2492, height: 1564 },
-  "comment-assign": { width: 2076, height: 1430 },
-  "run-services": { width: 2456, height: 942 },
-  "branch-picker": { width: 1470, height: 1326 },
-  history: { width: 1854, height: 1192 },
-  "find-symbol": { width: 2798, height: 1884 },
-} as const;
+const RECENT_RELEASES = 6;
 
-type ScreenshotName = keyof typeof SCREENSHOT_SIZES;
-
-const SECTION_ICON = "size-7 lg:size-10";
-const NOTE_ICON = "size-7 lg:size-8";
-
-const HERO_PHONE_CROP: ScreenshotCrop = {
-  name: "split-diff-mobile",
-  width: 1060,
-  height: 1232,
+/** What search engines read about Reviewer, as schema.org structured data. */
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Reviewer",
+  url: SITE_URL,
+  description:
+    "Reviewer is an agentic development environment for engineers who deeply care about the quality of their work. Works with Claude Code, Codex and any agent that runs skills.",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS 26 or later, Linux",
+  softwareVersion: version,
+  downloadUrl: `${SITE_URL}/download`,
+  license: "https://opensource.org/licenses/MIT",
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  sameAs: [REPO_URL],
+  publisher: {
+    "@type": "Organization",
+    name: "Darna Digital",
+    url: "https://darnadigital.com",
+  },
 };
 
 export const Route = createFileRoute("/")({
+  loader: async () => (await getChangelog()).slice(0, RECENT_RELEASES),
+  head: () => ({
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(STRUCTURED_DATA),
+      },
+    ],
+  }),
   component: Home,
 });
 
-function AppScreenshot({
-  label,
-  lazy = false,
+const PLACES = [
+  { value: "mac", label: "Mac" },
+  { value: "terminal", label: "Terminal" },
+  { value: "cloud", label: "Cloud" },
+] as const;
+
+type Place = (typeof PLACES)[number]["value"];
+
+function SurfaceCard({
+  to,
   name,
-  phone,
+  description,
+  action,
+  children,
 }: {
-  label: string;
-  lazy?: boolean;
-  name: ScreenshotName;
-  phone?: ScreenshotCrop;
+  to: "/mac" | "/terminal" | "/cloud";
+  name: string;
+  description: string;
+  action: string;
+  children: ReactNode;
 }) {
   return (
-    <Screenshot
-      alt={label}
-      lazy={lazy}
-      name={name}
-      phone={phone}
-      {...SCREENSHOT_SIZES[name]}
-    />
-  );
-}
-
-function SectionScreenshot(props: { label: string; name: ScreenshotName }) {
-  return <AppScreenshot lazy {...props} />;
-}
-
-const DIFF_LAYOUTS = [
-  {
-    name: "diff-split",
-    label: "Horizontal",
-    icon: LayoutColumns,
-    alt: "A diff laid out side by side, with the old and new lines joined across the gutter",
-  },
-  {
-    name: "diff-stacked",
-    label: "Vertical",
-    icon: LayoutRows,
-    alt: "The same diff laid out top to bottom, removed lines above the lines that replaced them",
-  },
-] as const satisfies ReadonlyArray<{
-  name: ScreenshotName;
-  label: string;
-  icon: typeof LayoutColumns;
-  alt: string;
-}>;
-
-type DiffLayout = (typeof DIFF_LAYOUTS)[number]["name"];
-
-/**
- * A segmented control in the style of the app's own: a recessed track with a
- * raised pill that slides under the chosen option. Both options share one
- * width so the pill only ever has to translate, never resize.
- */
-function DiffLayoutSwitcher({
-  value,
-  onChange,
-}: {
-  value: DiffLayout;
-  onChange: (layout: DiffLayout) => void;
-}) {
-  const selectedIndex = DIFF_LAYOUTS.findIndex(
-    (layout) => layout.name === value
-  );
-
-  return (
-    <div
-      aria-label="Diff layout"
-      className="relative grid w-full grid-cols-2 rounded-full bg-black/[0.05] p-1 ring-1 ring-black/[0.04] ring-inset sm:inline-grid sm:w-auto dark:bg-white/[0.06] dark:ring-white/[0.06]"
-      role="group"
+    <Link
+      className={`${SURFACE} group flex flex-col overflow-hidden transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]`}
+      to={to}
     >
-      <span
-        aria-hidden="true"
-        className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.1),0_0_0_0.5px_rgba(0,0,0,0.06)] transition-transform duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none dark:bg-white/[0.14] dark:shadow-[0_1px_3px_rgba(0,0,0,0.3),inset_0_0.5px_0_rgba(255,255,255,0.08)]"
-        style={{ transform: `translateX(${selectedIndex * 100}%)` }}
-      />
-      {DIFF_LAYOUTS.map(({ name, label, icon: Icon }) => {
-        const selected = name === value;
-        return (
-          <button
-            aria-pressed={selected}
-            className={cn(
-              "relative inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-8 sm:px-4 sm:text-[13px] lg:h-10 lg:px-5 lg:text-[15px]",
-              selected
-                ? "text-neutral-900 dark:text-white"
-                : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-            )}
-            key={name}
-            onClick={() => onChange(name)}
-            type="button"
-          >
-            <Icon className="size-4 lg:size-4.5" />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Both layouts stay mounted in one grid cell and crossfade, so switching never
- * waits on a download or shifts the page.
- */
-function DiffLayoutCard() {
-  const [layout, setLayout] = useState<DiffLayout>("diff-split");
-
-  return (
-    <ShowcaseCard
-      controls={<DiffLayoutSwitcher onChange={setLayout} value={layout} />}
-      description="Toggle between split and unified views. When a hunk isn't enough context, open the whole file."
-      icon={<PlusMinus className={SECTION_ICON} />}
-      title="Review diffs your way"
-    >
-      <div className="grid">
-        {DIFF_LAYOUTS.map(({ name, alt }) => {
-          const shown = name === layout;
-          return (
-            <div
-              aria-hidden={!shown}
-              className={cn(
-                "transition-opacity duration-300 ease-out [grid-area:1/1] motion-reduce:transition-none",
-                !shown && "opacity-0"
-              )}
-              key={name}
-            >
-              <SectionScreenshot label={alt} name={name} />
-            </div>
-          );
-        })}
+      <div className="flex flex-col gap-2 p-6 lg:p-8">
+        <h3 className="type-heading">{name}</h3>
+        <p className="type-body text-neutral-600 dark:text-neutral-400">
+          {description}
+        </p>
+        <span className="mt-2 inline-flex items-center gap-1 text-[15px] font-medium">
+          {action}
+          <ChevronRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+        </span>
       </div>
-    </ShowcaseCard>
+      <div className="mt-auto px-2 pb-2 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+        {children}
+      </div>
+    </Link>
   );
 }
 
-function Hero() {
+/** "11.02", the way devin.ai dates the rows of its shipped list. */
+function shortDate(date: string) {
+  const [, month, day] = date.split("-");
+  return `${month}.${day}`;
+}
+
+function RecentlyShipped() {
+  const releases = Route.useLoaderData();
+  if (releases.length === 0) return null;
+
   return (
-    <section className="flex flex-col items-center gap-6 pt-24 pb-10 text-center sm:pt-36 sm:pb-16 lg:pt-44 lg:pb-20">
-      <h1 className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px] lg:max-w-4xl lg:text-[62px]">
-        Understand <span className="whitespace-nowrap">AI-generated</span> code.
-      </h1>
-
-      <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] lg:max-w-3xl lg:text-2xl lg:leading-[1.4] dark:text-neutral-400">
-        In a world where we no longer write code, we spend a lot more time
-        reviewing it. Reviewer is a delightful, smooth macOS app built precisely
-        for that.
-      </p>
-
-      <a
-        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-neutral-900 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-neutral-700 lg:h-14 lg:px-8 lg:text-lg dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-        href={DOWNLOAD_URL}
-      >
-        <Apple className="size-5 lg:size-6" />
-        Download for macOS
-      </a>
-
-      <p className="text-sm leading-relaxed text-pretty text-neutral-500 sm:text-[13px] lg:text-[15px]">
-        For Apple silicon Macs, on macOS 26 or later. Free and{" "}
-        <a
-          className="underline decoration-neutral-300 underline-offset-2 transition-colors hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
-          href={REPO_URL}
-          rel="noopener noreferrer"
-          target="_blank"
+    <section className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <h2 className="type-title">Recently shipped</h2>
+        <Link
+          className="inline-flex items-center gap-1 text-[15px] font-medium text-neutral-600 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          to="/changelog"
         >
-          open source
-        </a>
-        .
-      </p>
+          Read the changelog
+          <ChevronRight className="size-4" />
+        </Link>
+      </div>
+      <ul className="flex flex-col border-t border-black/[0.06] dark:border-white/[0.08]">
+        {releases.map((release) => (
+          <li key={release.version}>
+            <Link
+              className="group grid grid-cols-[3rem_1fr] items-center gap-4 border-b border-black/[0.06] py-4 sm:grid-cols-[3.5rem_1fr_4.5rem_1rem] sm:gap-6 dark:border-white/[0.08]"
+              params={{ version: release.version }}
+              to="/changelog/$version"
+            >
+              <time
+                className="text-sm text-neutral-400 tabular-nums dark:text-neutral-500"
+                dateTime={release.date}
+              >
+                {shortDate(release.date)}
+              </time>
+              <span className="truncate text-[15px] text-neutral-800 transition-colors group-hover:text-neutral-950 sm:pr-6 lg:text-base dark:text-neutral-200 dark:group-hover:text-white">
+                {release.title ?? (
+                  <InlineMarkdown text={release.sections[0]?.items[0] ?? ""} />
+                )}
+              </span>
+              <span className="hidden font-mono text-xs text-neutral-400 sm:block dark:text-neutral-500">
+                {release.version}
+              </span>
+              <ChevronRight className="hidden size-4 text-neutral-400 transition-transform group-hover:translate-x-0.5 sm:block" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
-function Home() {
+const QUESTIONS: Array<{ question: string; answer: ReactNode }> = [
+  {
+    question: "Is it free?",
+    answer: (
+      <>
+        The Mac app and the terminal app are free and{" "}
+        <a
+          className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
+          href={`${REPO_URL}/blob/main/LICENSE`}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          MIT-licensed
+        </a>
+        , and they stay that way. Reviewer Cloud will be a paid service.
+      </>
+    ),
+  },
+  {
+    question: "Does my code leave my machine?",
+    answer:
+      "Reviewer works locally on your machine. It orchestrates GitHub and your locally installed agents, so your code never reaches Reviewer's servers.",
+  },
+  {
+    question: "Which agents work with it?",
+    answer:
+      "Claude Code and Codex run inside the Mac app. Any other agent can pick up your comments with the resolve-reviewer-comments skill.",
+  },
+  {
+    question: "Where does the terminal app run?",
+    answer:
+      "On macOS or Linux, on your laptop or on a server over SSH. curl -fsSL https://reviewer.sh/install | bash installs it with everything it needs. If you also use the Mac app, they share your comments.",
+  },
+  {
+    question: "What does the Mac app need?",
+    answer:
+      "An Apple silicon Mac on macOS 26 or later. There's no Intel build.",
+  },
+  {
+    question: "What's Reviewer Cloud going to be?",
+    answer: (
+      <>
+        Reviewer Cloud is going to focus on making you and your team more
+        productive through isolated cloud sandboxes.{" "}
+        <Link
+          className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 dark:decoration-neutral-600 dark:hover:text-white"
+          to="/cloud"
+        >
+          Join the waitlist
+        </Link>{" "}
+        to hear when it opens.
+      </>
+    ),
+  },
+  {
+    question: "Who isn't it for?",
+    answer:
+      "If you run 100 parallel agents and don't check their work, then Reviewer is not for you. Reviewer is designed for engineers who care about their work deeply and verify it before shipping.",
+  },
+];
+
+function Questions() {
+  return (
+    <section className="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_2.4fr] sm:gap-12">
+      <h2 className="type-title">FAQ</h2>
+      <dl className="flex flex-col">
+        {QUESTIONS.map(({ question, answer }) => (
+          <div
+            className="flex flex-col gap-2 border-b border-black/[0.06] py-5 first:pt-0 last:border-b-0 last:pb-0 dark:border-white/[0.08]"
+            key={question}
+          >
+            <dt className="type-subhead">{question}</dt>
+            <dd className="type-body text-neutral-600 dark:text-neutral-400">
+              {answer}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/**
+ * Laid out as jetbrains.com/air opens: the name in its own type inside the
+ * claim, the agents it works with, and how to get it.
+ */
+function Hero() {
+  return (
+    <Container>
+      <section className="flex flex-col items-start pt-24 sm:pt-36 lg:pt-44">
+        <h1 className="max-w-4xl type-display">
+          Focused system for building software with agents
+        </h1>
+        <div className="mt-5 flex max-w-2xl flex-col gap-4 type-lede text-neutral-600 sm:mt-7 dark:text-neutral-400">
+          <p>
+            Reviewer is an agentic development environment for engineers who
+            deeply care about the quality of their work.
+          </p>
+          <p>
+            Works with{" "}
+            <span className={CHIP}>
+              <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />
+              Claude Code
+            </span>{" "}
+            <span className={CHIP}>
+              <CodexIcon
+                className={`${CHIP_ICON} text-neutral-900 dark:text-white`}
+              />
+              Codex
+            </span>{" "}
+            and any agent that runs skills.
+          </p>
+        </div>
+        <GetReviewerButtons className="mt-8 w-full sm:mt-10 sm:w-auto" />
+      </section>
+    </Container>
+  );
+}
+
+/**
+ * The row of places. Once scrolled past it pins under the header, on the
+ * header's own frosted backdrop, so the page can be switched from anywhere.
+ */
+function PlacePicker({
+  place,
+  onChange,
+}: {
+  place: Place;
+  onChange: (place: Place) => void;
+}) {
+  const sentinel = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+
+  useEffect(() => {
+    const node = sentinel.current;
+    if (!node) return;
+    const header =
+      parseFloat(getComputedStyle(document.documentElement).fontSize) * 3.25;
+    const observer = new IntersectionObserver(
+      ([entry]) =>
+        setStuck(
+          !entry.isIntersecting && entry.boundingClientRect.top < header
+        ),
+      { rootMargin: `-${header}px 0px 0px 0px` }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
-      <SiteHeader />
-
-      <main className="flex flex-col gap-6">
+      {/* The spacing sits outside the sticky bar so the bar keeps one height
+          when it sticks. A bar that shrinks as it sticks shortens the page
+          under the reader, and scroll anchoring then pulls them back up. */}
+      <div aria-hidden="true" className="h-8 sm:h-12" />
+      <div aria-hidden="true" ref={sentinel} />
+      <div
+        className={cn(
+          "sticky top-header z-30 border-b transition-colors duration-200",
+          stuck
+            ? "border-black/[0.06] bg-white/75 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111113]/75"
+            : "border-transparent"
+        )}
+      >
         <Container>
-          <Hero />
-        </Container>
-
-        <Container className="max-w-[1440px] lg:max-w-[1440px]">
-          <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)] ring-1 ring-black/10 dark:ring-white/10">
-            <AppScreenshot
-              label="Reviewer showing a side-by-side diff of uncommitted changes, with the changed files beside it"
-              name="split-diff"
-              phone={HERO_PHONE_CROP}
+          <div className="flex items-center gap-3 py-2 sm:py-2.5">
+            <span
+              aria-hidden="true"
+              // On phones the control takes the full width.
+              className="shrink-0 text-[15px] text-neutral-600 max-sm:hidden lg:text-base dark:text-neutral-400"
+            >
+              Where do you work?
+            </span>
+            <SegmentedControl
+              label="Where do you work?"
+              onChange={(value) => {
+                onChange(value);
+                // Bring the chosen product's view up under the picker,
+                // wherever the reader clicked from.
+                const top = sentinel.current!.getBoundingClientRect().top;
+                const header =
+                  parseFloat(
+                    getComputedStyle(document.documentElement).fontSize
+                  ) * 3.25;
+                window.scrollBy({ top: top - header, behavior: "instant" });
+              }}
+              segments={PLACES}
+              value={place}
             />
           </div>
         </Container>
+      </div>
+      <div aria-hidden="true" className="h-6 sm:h-10" />
+    </>
+  );
+}
 
-        <Container className="mt-6 flex flex-col gap-4 sm:mt-10 sm:gap-16">
-          <ShowcaseCard
-            description="Leave a comment on any line, then assign it to an agent to pick up and fix."
-            icon={<Bubble className={SECTION_ICON} />}
-            title="Comment, then hand it off"
-          >
-            <SectionScreenshot
-              label="A comment on a line of code, being assigned to a new Claude chat with its model picker open"
-              name="comment-assign"
-            />
-          </ShowcaseCard>
+function Stage({ place }: { place: Place }) {
+  return (
+    <Crossfade
+      value={place}
+      views={[
+        {
+          value: "mac",
+          node: (
+            <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
+              <AppScreenshot
+                label="The Mac app showing a side-by-side diff of uncommitted changes, with the changed files beside it"
+                lazy={false}
+                name="split-diff"
+                phone={HERO_PHONE_CROP}
+              />
+            </div>
+          ),
+        },
+        {
+          value: "terminal",
+          node: (
+            <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
+              <ShowcaseVideo
+                label="The terminal app next to Claude Code, with a magnifier passing over the usages of a symbol in its bottom pane"
+                name="tui-usages"
+                paused={place !== "terminal"}
+              />
+            </div>
+          ),
+        },
+        {
+          value: "cloud",
+          node: (
+            <div className="screen-shadow overflow-hidden rounded-[min(2vw,12px)]">
+              <CloudIllustration />
+            </div>
+          ),
+        },
+      ]}
+    />
+  );
+}
 
-          <DiffLayoutCard />
+/** The Mac app view is the homepage as it was before the terminal app. */
+function MacSections() {
+  return <MacFeatures />;
+}
 
-          <ShowcaseCard
-            description="Use popular harnesses directly in Reviewer, or use skills to connect to any harness you have on your machine."
-            icon={<PaperPlane className={SECTION_ICON} />}
-            title="Work with Claude Code and Codex from the same interface"
-          >
-            <SectionScreenshot
-              label="Picking the model for an agent chat, with Claude and Codex models side by side"
-              name="agent-models"
-            />
-          </ShowcaseCard>
+/** The Terminal app view, in the same structure as the Mac app view. */
+function TerminalSections() {
+  return <TerminalFeatures />;
+}
 
-          <ShowcaseCard
-            description="Set up your local services once from a macOS widget and start them with a single click. Ruby, NPM, Docker or any other development service you use."
-            icon={<Play className={SECTION_ICON} />}
-            title="Run your services in one click"
-          >
-            <SectionScreenshot
-              label="The Run panel, with local services running and the dev server's logs"
-              name="run-services"
-            />
-          </ShowcaseCard>
-
-          <ShowcaseCard
-            description="Create new branches, and let Reviewer write the commit message from what actually changed."
-            icon={<Branch className={SECTION_ICON} />}
-            title="Intuitive Git integration"
-          >
-            <SectionScreenshot
-              label="The branch picker, with recent and local branches"
-              name="branch-picker"
-            />
-          </ShowcaseCard>
-
-          <ShowcaseCard
-            description="Filter the history by author, date or branch. Click any entry to see what changed and when, or open a single file's history to follow how it got to where it is."
-            icon={<History className={SECTION_ICON} />}
-            title="Know what changed, and when"
-          >
-            <SectionScreenshot
-              label="The version control history, with its branch graph and filters"
-              name="history"
-            />
-          </ShowcaseCard>
-
-          <ShowcaseCard
-            description="Language server protocol integration for TypeScript, Swift and Ruby. Hover a symbol for its signature and docs, or find every usage of it across the codebase."
-            icon={<Braces className={SECTION_ICON} />}
-            title="Follow a code symbol to its source"
-          >
-            <SectionScreenshot
-              label="Find symbol listing every usage of a class across the codebase"
-              name="find-symbol"
-            />
-          </ShowcaseCard>
-        </Container>
-
-        <Container className="grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-8">
-          <NoteCard icon={<Terminal className={NOTE_ICON} />} title="Terminal">
-            A built-in terminal for ad hoc work, right next to the code.
-          </NoteCard>
-          <NoteCard
-            icon={<Contrast className={NOTE_ICON} />}
-            title="Light and dark"
-          >
-            Follows your Mac, or pick the appearance you prefer.
-          </NoteCard>
-          <NoteCard icon={<Palette className={NOTE_ICON} />} title="Themes">
-            Shiki and Pierre themes to make the environment your own.
-          </NoteCard>
-          <NoteCard
-            icon={<Laptop className={NOTE_ICON} />}
-            title="Native to the Mac"
-          >
-            Built for Apple silicon macOS 26 and later.
-          </NoteCard>
-        </Container>
-
-        <div className="mt-4 sm:mt-10">
-          <SiteFooter />
+function CloudSections() {
+  return (
+    <>
+      <section className="mt-8 flex flex-col gap-6 sm:mt-20">
+        <SectionHeading lead="Reviewer Cloud">
+          is what we're building next.
+        </SectionHeading>
+        <div className="max-w-md">
+          <WaitlistForm />
         </div>
-      </main>
+      </section>
+
+      <section className="flex flex-col gap-10 sm:gap-14">
+        <SectionHeading lead="Until then,">
+          use Reviewer on your own machine.
+        </SectionHeading>
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+          <SurfaceCard
+            action="See the Mac app"
+            description="The change, your comments and your agent sessions in one window. Free and open source."
+            name="Mac app"
+            to="/mac"
+          >
+            <div className="overflow-hidden rounded-xl">
+              <AppScreenshot
+                label="A comment on a line of code, being assigned to a new Claude session"
+                name="comment-assign"
+              />
+            </div>
+          </SurfaceCard>
+          <SurfaceCard
+            action="See the terminal app"
+            description="Review from the keyboard, on your laptop or on a server over SSH. Free and open source."
+            name="Terminal app"
+            to="/terminal"
+          >
+            <div className="overflow-hidden rounded-xl">
+              <AppScreenshot
+                label="The terminal app showing a side-by-side diff, with the changed files beside it and the branch's history below"
+                name="tui-hero"
+              />
+            </div>
+          </SurfaceCard>
+        </div>
+      </section>
+    </>
+  );
+}
+
+const SECTIONS: Record<Place, () => ReactNode> = {
+  mac: MacSections,
+  terminal: TerminalSections,
+  cloud: CloudSections,
+};
+
+function Home() {
+  const [place, setPlace] = useState<Place>("mac");
+  const Sections = SECTIONS[place];
+
+  return (
+    <>
+      <Hero />
+      <PlacePicker onChange={setPlace} place={place} />
+      <Container className={HERO_WIDTH}>
+        <Stage place={place} />
+      </Container>
+      <Container
+        className="fade-in mt-10 flex flex-col gap-24 sm:mt-16 sm:gap-36"
+        key={place}
+      >
+        <Sections />
+        <RecentlyShipped />
+        <Questions />
+      </Container>
     </>
   );
 }

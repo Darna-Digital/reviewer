@@ -1,11 +1,37 @@
 @import "tailwindcss";
 
+/* Latin and Latin Extended subsets of Inter's variable font, from Fontsource
+   (OFL, see public/fonts/Inter-LICENSE.txt). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-ext-opsz-normal.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/fonts/inter-latin-opsz-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
-  /* The macOS system face: SF Pro on Apple platforms, with Display's optical
-     sizing picked up automatically by -apple-system at large sizes. */
+  /* Inter, self-hosted (public/fonts), so every platform renders the same
+     face. The opsz axis switches to Inter Display at large sizes. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif, system-ui,
-    "Helvetica Neue", sans-serif;
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue",
+    sans-serif;
   --spacing-header: 3.25rem;
 }
 
@@ -26,6 +52,83 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The type scale. Every heading and paragraph on the marketing pages uses one
+   of these, so sizes, weights, line heights and tracking stay consistent.
+   Breakpoints match Tailwind's sm (40rem) and lg (64rem). */
+@utility type-display {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+  @media (width >= 40rem) {
+    font-size: 54px;
+  }
+  @media (width >= 64rem) {
+    font-size: 68px;
+  }
+}
+
+@utility type-title {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.024em;
+  text-wrap: balance;
+  @media (width >= 40rem) {
+    font-size: 38px;
+  }
+  @media (width >= 64rem) {
+    font-size: 46px;
+  }
+}
+
+@utility type-heading {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+  @media (width >= 40rem) {
+    font-size: 26px;
+  }
+  @media (width >= 64rem) {
+    font-size: 28px;
+  }
+}
+
+@utility type-subhead {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.011em;
+  @media (width >= 64rem) {
+    font-size: 18px;
+  }
+}
+
+@utility type-lede {
+  font-size: 18px;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+  text-wrap: pretty;
+  @media (width >= 40rem) {
+    font-size: 20px;
+  }
+  @media (width >= 64rem) {
+    font-size: 21px;
+  }
+}
+
+@utility type-body {
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+  @media (width >= 64rem) {
+    font-size: 16px;
+  }
+}
+
 /* drop-shadow rather than box-shadow: the screenshot carries its own rounded
    corners as transparency, and box-shadow would draw a rectangle behind them. */
 .screen-shadow {
@@ -42,5 +145,23 @@ body {
 
   .screen-shadow {
     filter: none;
+  }
+}
+
+/* The homepage's sections fade in when you choose another place to work. */
+.fade-in {
+  animation: fade-in 300ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in {
+    animation: none;
   }
 }

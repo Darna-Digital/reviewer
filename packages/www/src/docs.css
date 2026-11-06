@@ -1,0 +1,30 @@
+/* The docs' stylesheet, linked from routes/docs/$.tsx. Fumadocs' preset makes
+   `dark:` follow a `.dark` class, while the rest of the site follows the media
+   query. React keeps a route's stylesheet once it has loaded, so this one stays
+   on the page after you leave the docs. It therefore builds only the classes
+   that the docs and Fumadocs use, not the site's own. styles.css still applies
+   to the docs for the font and the page colours. */
+@import "tailwindcss" source(none);
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source "./routes/docs";
+@source "./components/mdx.tsx";
+@source "./components/logo.tsx";
+@source "./components/screenshot.tsx";
+@source "../content/docs";
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue",
+    sans-serif;
+}
+
+/* The site's own page colours, so the docs sit on the same white and near-black. */
+:root {
+  --color-fd-background: white;
+}
+
+.dark {
+  --color-fd-background: #111113;
+}

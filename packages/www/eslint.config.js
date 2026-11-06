@@ -19,6 +19,8 @@ export default [
       // Snippets evaluated inside the captured page, not modules of this app.
       "scripts/capture-spa/prepare/**",
       "src/routeTree.gen.ts",
+      // Vendored from Canvas UI, kept as upstream ships it.
+      "src/components/asciify/**",
     ],
   },
 ];

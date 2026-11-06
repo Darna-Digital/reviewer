@@ -1,0 +1,32 @@
+---
+title: Appearance
+description: Themes, light and dark, and file icons.
+---
+
+<Screenshot name="tui-themes" width={2403} height={1466} alt="The theme picker in the terminal app" />
+
+## Themes
+
+By default, Reviewer draws on your terminal's own background and uses its
+colours, so it fits whatever theme your terminal has. Code is highlighted
+with Reviewer's light or dark colours, to match.
+
+Press ⌘, (or ⌃T) to open the theme picker. Each theme previews as you move
+through the list. Press Tab to switch between **System**, **Light** and
+**Dark**.
+
+As in the Mac app, you choose one theme for light and one for dark. With
+System, Reviewer follows your computer's appearance as it changes.
+
+To try a theme for one run only:
+
+```bash
+reviewer --theme terminal
+reviewer --light
+```
+
+## File icons
+
+Files show icons by type in the tree, tabs, diff and palette. They need a
+[Nerd Font](https://www.nerdfonts.com) in your terminal. To turn them off,
+choose **show / hide file icons** in the command palette.
