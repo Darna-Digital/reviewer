@@ -7,8 +7,7 @@
 
 # Reviewer
 
-A code review app for changes written by coding agents, as a native Mac app and
-a terminal app. Open source under the MIT License.
+Reviewer is an agentic development environment for engineers who deeply care about the quality of their work.
 
 [![Latest release](https://img.shields.io/github/v/release/Darna-Digital/reviewer?style=flat-square&label=release&color=111)](https://github.com/Darna-Digital/reviewer/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Darna-Digital/reviewer/total?style=flat-square&color=111)](https://github.com/Darna-Digital/reviewer/releases)
