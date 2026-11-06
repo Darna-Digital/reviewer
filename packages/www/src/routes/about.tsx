@@ -43,12 +43,21 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
-/** Rūtenis's letter, one paragraph per entry, as he wrote it. */
-const LETTER = [
+/**
+ * Rūtenis's letter, one paragraph per entry, as he wrote it. A list of
+ * lines is a run of short ones set closer together.
+ */
+const LETTER: (string | string[])[] = [
   "Tell me if this sounds like you:",
-  "You hear every tech influencer talking about how you need to ship faster.",
-  "You need to stop reading the code.",
-  "You need to bring ‘business value’ instead of just code. ‘Code is cheap’. ‘You’re a code monkey if you still care about the code’; ‘coding is solved’…",
+  "You hear every tech influencer saying you need to ship faster.",
+  [
+    "You’re told that:",
+    "You need to stop reading the code.",
+    "You need to bring ‘business value’ instead of just code.",
+    "‘Code is now cheap’.",
+    "‘You’re a code monkey if you still care about the code’.",
+    "‘Coding is solved’…",
+  ],
   "On the one hand, the hype is incredibly annoying.",
   "It’s obnoxious. It’s even disrespectful.",
   "It ignores the intricacies of the day-to-day work you’re doing.",
@@ -468,14 +477,21 @@ function AboutPage() {
         <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
         <div className="relative" ref={column}>
           <article className="flex max-w-2xl flex-col gap-5 sm:gap-6">
-            {LETTER.map((paragraph) => (
-              <p
-                className="type-lede text-neutral-600 dark:text-neutral-400"
-                key={paragraph}
-              >
-                {withChips(paragraph, showNote, openDrawer)}
-              </p>
-            ))}
+            {LETTER.map((entry) => {
+              const lines = typeof entry === "string" ? [entry] : entry;
+              return (
+                <div className="flex flex-col gap-2" key={lines[0]}>
+                  {lines.map((line) => (
+                    <p
+                      className="type-lede text-neutral-600 dark:text-neutral-400"
+                      key={line}
+                    >
+                      {withChips(line, showNote, openDrawer)}
+                    </p>
+                  ))}
+                </div>
+              );
+            })}
             <footer className="mt-8 flex flex-col items-start gap-3 lg:mt-10">
               <img
                 alt="Rūtenis Raila"
