@@ -24,6 +24,7 @@ const SCREENSHOT_SIZES = {
   "tui-split": { width: 2316, height: 1486 },
   "tui-history": { width: 2316, height: 1195 },
   "tui-palette": { width: 2316, height: 1195 },
+  "tui-lsp": { width: 2316, height: 1195 },
 } as const;
 
 export type ScreenshotName = keyof typeof SCREENSHOT_SIZES;

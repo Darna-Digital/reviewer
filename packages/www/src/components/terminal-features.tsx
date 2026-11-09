@@ -5,9 +5,11 @@ import {
   type ScreenshotName,
 } from "#/components/app-screenshot";
 import { NoteCard, ShowcaseCard } from "#/components/card";
+import { CHIP, CHIP_ICON } from "#/components/chip";
 import { Kbd } from "#/components/kbd";
 import { ShowcaseVideo } from "#/components/showcase-video";
 import {
+  Braces,
   Bubble,
   Bubbles,
   Checkmark,
@@ -17,8 +19,12 @@ import {
   LayoutColumns,
   LayoutRows,
   Palette,
+  PhpIcon,
   PlusMinus,
+  RubyIcon,
+  SwiftIcon,
   Terminal,
+  TypeScriptIcon,
 } from "#/components/icons";
 import {
   Crossfade,
@@ -128,6 +134,41 @@ export function TerminalFeatures() {
           <AppScreenshot
             label="The terminal app's command palette open over a diff"
             name="tui-palette"
+          />
+        </ShowcaseCard>
+
+        <ShowcaseCard
+          description={
+            <>
+              Language server protocol integration for{" "}
+              <span className={CHIP}>
+                <TypeScriptIcon className={`${CHIP_ICON} text-[#3178C6]`} />
+                TypeScript
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <SwiftIcon className={`${CHIP_ICON} text-[#F05138]`} />
+                Swift
+              </span>
+              ,{" "}
+              <span className={CHIP}>
+                <RubyIcon className={`${CHIP_ICON} text-[#CC342D]`} />
+                Ruby
+              </span>{" "}
+              and{" "}
+              <span className={CHIP}>
+                <PhpIcon className={`${CHIP_ICON} text-[#777BB4]`} />
+                PHP
+              </span>
+              .
+            </>
+          }
+          icon={<Braces className={SECTION_ICON} />}
+          title="Follow a code symbol to its source"
+        >
+          <AppScreenshot
+            label="A symbol's signature and docs in a hover card over the diff, with its usages in the bottom pane"
+            name="tui-lsp"
           />
         </ShowcaseCard>
 
