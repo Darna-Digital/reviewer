@@ -1,4 +1,14 @@
 @import "tailwindcss";
+/* The docs' styles are part of this one build. A second Tailwind stylesheet
+   for the docs stayed on the page once loaded (React never unloads a
+   stylesheet with a precedence) and its utilities overrode this build's
+   responsive ones. */
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Fumadocs' preset makes `dark:` follow a `.dark` class. The whole site, the
+   docs included, follows the system instead. */
+@custom-variant dark (@media (prefers-color-scheme: dark));
 
 /* Latin and Latin Extended subsets of Inter's variable font, from Fontsource
    (OFL, see public/fonts/Inter-LICENSE.txt). */
@@ -137,7 +147,16 @@ body {
     drop-shadow(0 2px 4px rgba(0, 0, 0, 0.04));
 }
 
+/* The docs sit on the site's white and near-black. */
+:root {
+  --color-fd-background: white;
+}
+
 @media (prefers-color-scheme: dark) {
+  :root {
+    --color-fd-background: #111113;
+  }
+
   body {
     background-color: #111113;
     color: rgba(255, 255, 255, 0.9);

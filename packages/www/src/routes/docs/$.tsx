@@ -17,7 +17,6 @@ import { useMDXComponents } from "#/components/mdx";
 import { docs, source } from "#/lib/docs-source";
 import { SITE_URL } from "#/lib/links";
 import { ogImage } from "#/lib/og-image";
-import docsCss from "../../docs.css?url";
 
 const serverLoader = createServerFn({ method: "GET" })
   .validator((slugs: string[]) => slugs)
@@ -58,14 +57,9 @@ export const Route = createFileRoute("/docs/$")({
             ]
           : []),
       ],
-      // Fumadocs' styles switch Tailwind's `dark:` to a `.dark` class, so they
-      // load on the docs alone and leave the rest of the site on the media query.
-      links: [
-        { rel: "stylesheet", href: docsCss },
-        ...(loaderData
-          ? [{ rel: "canonical", href: `${SITE_URL}${loaderData.url}` }]
-          : []),
-      ],
+      links: loaderData
+        ? [{ rel: "canonical", href: `${SITE_URL}${loaderData.url}` }]
+        : [],
     };
   },
   component: Page,

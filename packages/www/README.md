@@ -45,9 +45,8 @@ between: `(overview)`, `mac` and `terminal`. Each folder's `meta.json` orders
 its pages and groups them under headings. They are served by
 `src/routes/docs/$.tsx` inside the site's header and footer, as
 conductor.build/docs does; on a phone the docs' own bar stands in for the
-header. Search is `/api/search`. The docs load their own
-stylesheet, `src/docs.css`, because Fumadocs drives dark mode with a class
-while the rest of the site follows the system.
+header. Search is `/api/search`. Fumadocs' styles are part of
+`src/styles.css`, with its `dark:` switched back to the system appearance.
 
 ## Styling
 
