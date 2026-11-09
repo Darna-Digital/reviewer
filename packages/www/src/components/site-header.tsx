@@ -2,14 +2,14 @@ import { Link, useLoaderData, useMatch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Container } from "#/components/container";
-import {
-  ArrowUpRight,
-  ChevronDown,
-  Close,
-  GitHub,
-  Menu,
-} from "#/components/icons";
+import { ArrowUpRight, ChevronDown, GitHub, Menu } from "#/components/icons";
 import { Logo } from "#/components/logo";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "#/components/ui/sheet";
 import { useScrolled } from "#/hooks/use-scrolled";
 import { cn } from "#/lib/cn";
 import { formatStars } from "#/lib/github-stars";
@@ -32,7 +32,7 @@ const ACTIVE_LINK = { className: "text-neutral-900 dark:text-white" };
 type MenuItem = {
   title: string;
   badge?: string;
-  /** Shown only where the header hides its own link. */
+  /** Shown only in the phone menu, where the header hides its own link. */
   mobileOnly?: boolean;
 } & (
   | {
@@ -65,10 +65,42 @@ const MENU: { heading: string; items: MenuItem[] }[] = [
 const MENU_LINK =
   "inline-flex items-center gap-1.5 py-1 text-[15px] whitespace-nowrap font-medium text-neutral-900 transition-colors hover:text-neutral-500 dark:text-white dark:hover:text-neutral-400";
 
+function MenuItemLink({
+  item,
+  className,
+  onClick,
+}: {
+  item: MenuItem;
+  className: string;
+  onClick: () => void;
+}) {
+  return "to" in item ? (
+    <Link className={className} onClick={onClick} to={item.to}>
+      {item.title}
+      {item.badge && (
+        <span className="rounded-full bg-black/[0.05] px-1.5 py-px text-[11px] font-medium text-neutral-500 dark:bg-white/[0.08] dark:text-neutral-400">
+          {item.badge}
+        </span>
+      )}
+    </Link>
+  ) : (
+    <a
+      className={className}
+      href={item.href}
+      onClick={onClick}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      {item.title}
+      <ArrowUpRight className="size-3.5 text-neutral-400" />
+    </a>
+  );
+}
+
 /**
  * A full-width panel under the header, as devin.ai lays out its menus. It
  * opens on hover with a mouse and on tap with a finger; Escape or a click
- * outside closes it.
+ * outside closes it. Phones get the MobileMenu sheet instead.
  */
 function ProductMenu() {
   const [open, setOpen] = useState(false);
@@ -101,7 +133,7 @@ function ProductMenu() {
   return (
     // Spans the header's full height so the pointer can reach the panel.
     <div
-      className="flex self-stretch"
+      className="flex self-stretch max-sm:hidden"
       onMouseEnter={() => hover(true)}
       onMouseLeave={() => hover(false)}
       ref={root}
@@ -114,20 +146,10 @@ function ProductMenu() {
         type="button"
       >
         <TouchTarget />
-        {/* On phones the same panel is the whole site menu, behind a
-            hamburger at the right of the header. */}
-        <span className="sm:hidden">
-          <span className="sr-only">Menu</span>
-          {open ? (
-            <Close className="size-6 text-neutral-900 dark:text-white" />
-          ) : (
-            <Menu className="size-6 text-neutral-900 dark:text-white" />
-          )}
-        </span>
-        <span className="max-sm:hidden">Product</span>
+        Product
         <ChevronDown
           className={cn(
-            "size-3.5 transition-transform duration-200 max-sm:hidden",
+            "size-3.5 transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -140,7 +162,7 @@ function ProductMenu() {
       >
         <Container
           className={cn(
-            "grid gap-x-6 gap-y-6 pt-6 pb-8 transition-transform duration-200 ease-out sm:grid-cols-3 sm:gap-y-8 sm:pt-7 sm:pb-9 lg:grid-cols-4",
+            "grid grid-cols-3 gap-x-6 gap-y-8 pt-7 pb-9 transition-transform duration-200 ease-out lg:grid-cols-4",
             open ? "translate-y-0" : "-translate-y-1"
           )}
         >
@@ -149,40 +171,91 @@ function ProductMenu() {
               <p className="mb-2 text-[13px] text-neutral-500 dark:text-neutral-400">
                 {heading}
               </p>
-              {items.map((item) =>
-                "to" in item ? (
-                  <Link
-                    className={cn(MENU_LINK, item.mobileOnly && "sm:hidden")}
-                    key={item.title}
-                    onClick={close}
-                    to={item.to}
-                  >
-                    {item.title}
-                    {item.badge && (
-                      <span className="rounded-full bg-black/[0.05] px-1.5 py-px text-[11px] font-medium text-neutral-500 dark:bg-white/[0.08] dark:text-neutral-400">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                ) : (
-                  <a
+              {items
+                .filter((item) => !item.mobileOnly)
+                .map((item) => (
+                  <MenuItemLink
                     className={MENU_LINK}
-                    href={item.href}
+                    item={item}
                     key={item.title}
                     onClick={close}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {item.title}
-                    <ArrowUpRight className="size-3.5 text-neutral-400" />
-                  </a>
-                )
-              )}
+                  />
+                ))}
             </div>
           ))}
         </Container>
       </div>
     </div>
+  );
+}
+
+/** A soft, offset keyboard ring in place of the browser's. No outline-none:
+    in Tailwind 4 it would zero the ring's style. */
+const FOCUS_RING =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-300 dark:focus-visible:outline-neutral-600";
+
+// The rows bleed into the gutter so a ring or a press tint has room around
+// the text while the text stays aligned with the headings.
+const SHEET_LINK = cn(
+  "relative -mx-3 flex items-center gap-2 rounded-lg px-3 py-2.5 text-[17px] font-medium text-neutral-900 transition-colors active:bg-black/[0.04] dark:text-white dark:active:bg-white/[0.06]",
+  FOCUS_RING
+);
+
+/**
+ * The whole site menu on phones: a hamburger at the right of the header opens
+ * a sheet from the right edge with every page, in large rows a thumb can hit.
+ */
+function MobileMenu() {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+
+  return (
+    <Sheet onOpenChange={setOpen} open={open}>
+      <SheetTrigger
+        className={cn(
+          NAV_LINK,
+          FOCUS_RING,
+          "rounded-full focus-visible:outline-offset-4 sm:hidden"
+        )}
+      >
+        <TouchTarget />
+        <span className="sr-only">Menu</span>
+        <Menu className="size-6 text-neutral-900 dark:text-white" />
+      </SheetTrigger>
+      <SheetContent>
+        <div className="flex h-header shrink-0 items-center px-6">
+          <SheetTitle className="sr-only">Menu</SheetTitle>
+          <Link
+            aria-label="Reviewer home"
+            className={cn(
+              FOCUS_RING,
+              "rounded-sm focus-visible:outline-offset-4"
+            )}
+            onClick={close}
+            to="/"
+          >
+            <Logo className="h-4 w-auto" />
+          </Link>
+        </div>
+        <nav className="flex flex-col gap-7 px-6 pt-4 pb-8">
+          {MENU.map(({ heading, items }) => (
+            <div className="flex flex-col" key={heading}>
+              <p className="mb-1 text-[13px] text-neutral-500 dark:text-neutral-400">
+                {heading}
+              </p>
+              {items.map((item) => (
+                <MenuItemLink
+                  className={SHEET_LINK}
+                  item={item}
+                  key={item.title}
+                  onClick={close}
+                />
+              ))}
+            </div>
+          ))}
+        </nav>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -224,8 +297,9 @@ export function SiteHeader() {
   // While the Product menu is open, the header and its panel read as one sheet.
   // The blur stays on: dropping it at once while the background fades to
   // opaque lets dark content under the header show through for a moment.
+  // The phone menu's trigger (aria-haspopup="dialog") must not match.
   const menuOpen =
-    "has-[[aria-expanded=true]]:border-transparent has-[[aria-expanded=true]]:bg-white dark:has-[[aria-expanded=true]]:bg-[#111113]";
+    "has-[[aria-haspopup=true][aria-expanded=true]]:border-transparent has-[[aria-haspopup=true][aria-expanded=true]]:bg-white dark:has-[[aria-haspopup=true][aria-expanded=true]]:bg-[#111113]";
 
   return (
     <header
@@ -242,6 +316,7 @@ export function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-5 self-stretch max-sm:order-last sm:mr-auto lg:gap-7">
           <ProductMenu />
+          <MobileMenu />
           <Link
             activeProps={ACTIVE_LINK}
             className={cn(NAV_LINK, "max-sm:hidden")}
