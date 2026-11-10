@@ -26,11 +26,13 @@ export function InstallCommand({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl bg-[#17171a] text-[13px] leading-6 text-neutral-200 ring-1 ring-black/10 lg:text-sm lg:leading-7 dark:ring-white/10",
+        "flex overflow-hidden rounded-2xl bg-[#17171a] text-[13px] leading-6 text-neutral-200 ring-1 ring-black/10 lg:text-sm lg:leading-7 dark:ring-white/10",
         className
       )}
     >
-      <pre className="overflow-x-auto px-5 py-4 pr-14 font-mono lg:px-6 lg:py-5">
+      {/* The button sits beside the scroll area, not over it, so a command
+          wider than a phone scrolls clear of it. */}
+      <pre className="min-w-0 flex-1 overflow-x-auto py-4 pr-3 pl-5 font-mono lg:py-5 lg:pl-6">
         {lines.map((line) =>
           line.startsWith("#") ? (
             <span className="block text-neutral-500" key={line}>
@@ -47,9 +49,9 @@ export function InstallCommand({
       <button
         aria-label={copied ? "Copied" : "Copy commands"}
         className={cn(
-          "absolute right-3 inline-flex size-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-neutral-400 lg:right-4",
+          "mr-3 inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-neutral-400 lg:mr-4",
           // Centred on a single line; level with the first of several.
-          lines.length === 1 ? "top-1/2 -translate-y-1/2" : "top-3 lg:top-4"
+          lines.length === 1 ? "self-center" : "mt-3 lg:mt-4"
         )}
         onClick={copy}
         type="button"
