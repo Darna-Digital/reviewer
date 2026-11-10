@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { claimUsageDay } from './usage';
 
 /** Stamped in by `release/package.sh`. */
 declare const REVIEWER_VERSION: string | undefined;
@@ -9,8 +10,8 @@ export const VERSION =
   typeof REVIEWER_VERSION === 'string' ? REVIEWER_VERSION : 'dev';
 
 export const INSTALL_URL = 'https://reviewer.sh/install';
-const RELEASES = 'https://github.com/Darna-Digital/reviewer/releases';
-const MANIFEST = 'install-manifest.txt';
+/** The latest release's install-manifest.txt, by way of reviewer.sh. */
+const UPDATE_CHECK = 'https://reviewer.sh/install-manifest.txt';
 const CHECK_TIMEOUT_MS = 3000;
 
 /**
@@ -105,25 +106,41 @@ function installer(args: string[]): string[] {
 }
 
 /** The latest release's version, when it is newer than this one. */
-export async function newerRelease(): Promise<string | null> {
+export async function newerRelease(count: boolean): Promise<string | null> {
   if (!installedRelease()) return null;
   try {
-    const latest = await latestRelease();
+    const latest = await latestRelease(count);
     return isNewer(latest, VERSION) ? latest : null;
   } catch {
     return null;
   }
 }
 
-/** The latest release's version, as its manifest gives it. */
-export async function latestRelease(): Promise<string> {
-  const response = await fetch(`${RELEASES}/latest/download/${MANIFEST}`, {
-    signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
-  });
-  if (!response.ok)
+/**
+ * The latest release's version, as its manifest gives it — asked of
+ * reviewer.sh, which redirects to the latest release's copy. With `count`,
+ * the day's first check also carries the usage flags (see usage.ts).
+ */
+export async function latestRelease(count: boolean): Promise<string> {
+  const home = installedRelease()?.home;
+  const claim = count && home && VERSION !== 'dev' ? claimUsageDay(home) : null;
+  let response: Response;
+  try {
+    response = await fetch(`${UPDATE_CHECK}${claim ? `?${claim.query}` : ''}`, {
+      headers: { 'User-Agent': `reviewer-tui/${VERSION}` },
+      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+    });
+  } catch (error) {
+    claim?.release();
+    throw error;
+  }
+  if (!response.ok) {
+    claim?.release();
     throw new Error(
-      `GitHub answered ${response.status} for the latest release`,
+      `The update check answered ${response.status} for the latest release`,
     );
+  }
+  claim?.commit();
   const latest = /^version (\S+)$/m.exec(await response.text())?.[1];
   if (!latest) throw new Error("The latest release's manifest is unreadable");
   return latest;

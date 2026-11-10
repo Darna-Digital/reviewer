@@ -26,6 +26,7 @@ import type { MergeMethod } from '../github/client';
 import { mergeBlockedReason, mergeCaution } from '../github/pullStatus';
 import { stopAllSessions } from '../process/ptySession';
 import { installedRelease, linkedBinary } from '../release/install';
+import { usageOffByEnvironment } from '../release/usage';
 import { fileIcons } from '../render/fileIcons';
 import type { PaletteMode } from '../search/paletteModes';
 import type { Store } from '../store/createStore';
@@ -209,7 +210,10 @@ export function useApp(props: AppProps) {
     props.focus,
   );
   useServer(review, props.startServer ?? false);
-  const update = useUpdate(review);
+  const update = useUpdate(
+    review,
+    themes.settings.usageCounting && !usageOffByEnvironment(),
+  );
   const pulls = usePulls(review);
   const [now, setNow] = React.useState(Date.now);
   const [focus, setFocusState] = React.useState<Focus>('main');
