@@ -12,7 +12,13 @@ type FooterLink =
   | {
       label: string;
       to:
-        "/mac" | "/terminal" | "/cloud" | "/download" | "/changelog" | "/about";
+        | "/mac"
+        | "/terminal"
+        | "/cloud"
+        | "/download"
+        | "/changelog"
+        | "/about"
+        | "/privacy";
     }
   | { label: string; href: string };
 
@@ -38,6 +44,7 @@ const COLUMNS: Array<{ title: string; links: Array<FooterLink> }> = [
     title: "Project",
     links: [
       { label: "About", to: "/about" },
+      { label: "Privacy", to: "/privacy" },
       { label: "Source code", href: REPO_URL },
       { label: "License", href: `${REPO_URL}/blob/main/LICENSE` },
       { label: "Security", href: `${REPO_URL}/blob/main/SECURITY.md` },

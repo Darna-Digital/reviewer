@@ -58,6 +58,7 @@ Both apps share the same comments, so you can use either or both.
 
 - [Install](#install)
 - [Resolve review comments with any agent](#resolve-review-comments-with-any-agent)
+- [Privacy](#privacy)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
@@ -98,6 +99,49 @@ npx skills add Darna-Digital/reviewer --skill resolve-reviewer-comments
 ```
 
 Then, with Reviewer running, ask the agent to "resolve my reviewer comments".
+
+## Privacy
+
+Reviewer runs on your machine, and your code never leaves it through us. The
+one thing the apps tell us is that they were used today, so we know how many
+people run Reviewer and on which versions.
+
+Both apps already check for updates. The check goes to reviewer.sh, which
+redirects it to the latest GitHub release. The first check of each day also
+carries:
+
+| Field | Example |
+| --- | --- |
+| App | `mac` or `tui` |
+| Version, from the user-agent | `0.0.42` |
+| OS: macOS major version, or `linux` / `darwin` | `26` |
+| Your local date | `2026-11-05` |
+| First counted day of this week / month (yes or no) | `w=1`, `m=0` |
+| First counted day ever (yes or no) | `new=0` |
+| Install month | `2026-10` |
+
+Cloudflare adds the country. Later checks that day carry nothing.
+
+There's no install ID, and no IP address is stored. Nothing about your code,
+repositories, paths, accounts or what you do in the app is ever sent. Each app
+works out the yes-or-no answers itself from the dates it last counted, so two
+days from the same install can't be linked to each other.
+
+The checks are kept for three months in Cloudflare Workers Analytics Engine,
+then only as daily totals in Cloudflare D1. The code is
+[packages/www/src/lib/usage.ts](packages/www/src/lib/usage.ts).
+
+**To turn it off** (updates keep working):
+
+- **Mac app:** Settings (⌘,) → Privacy → turn off **Share anonymous usage
+  counts**.
+- **Terminal app:** run **Turn usage counting off / on** from the command palette,
+  or set `REVIEWER_DISABLE_ANALYTICS=1` or `DO_NOT_TRACK=1`.
+
+Development builds never count. The full policy, including the
+website, is at [reviewer.sh/privacy](https://reviewer.sh/privacy). Questions
+about your data go to
+[rutenis@darnadigital.com](mailto:rutenis@darnadigital.com).
 
 ## Development
 
