@@ -2,7 +2,10 @@
 
 /** The Worker's bindings, as wrangler.jsonc declares them. */
 declare module "cloudflare:workers" {
-  export const env: {
+  import type { UsageDataset } from "#/lib/usage";
+  import type { RollupEnv } from "#/lib/usage-rollup";
+
+  export const env: RollupEnv & {
     /** A D1 database; only the calls the waitlist makes. */
     WAITLIST: {
       exec: (query: string) => Promise<unknown>;
@@ -12,6 +15,8 @@ declare module "cloudflare:workers" {
     };
     TURNSTILE_SITE_KEY?: string;
     TURNSTILE_SECRET_KEY?: string;
+    /** The update checks counted (see lib/usage.ts). */
+    USAGE?: UsageDataset;
   };
 }
 
