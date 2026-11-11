@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.45 — 2026-11-11
+
+### Added
+
+- In a workspace with several repositories, Compare first lets you pick a repository, then a branch in it to compare against.
+
+### Changed
+
+- The chat box takes the keyboard when you switch tabs, move to another page, or start a new session with ⌘T, so you can type right away.
+
 ## v0.0.44 — 2026-11-11
 
 ### Added
