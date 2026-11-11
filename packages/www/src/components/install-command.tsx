@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Check, Copy } from "#/components/icons";
 import { cn } from "#/lib/cn";
@@ -16,6 +16,22 @@ export function InstallCommand({
 }) {
   const [copied, setCopied] = useState(false);
   const commands = lines.filter((line) => !line.startsWith("#"));
+  const scrollRef = useRef<HTMLPreElement>(null);
+  const [clippedRight, setClippedRight] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () =>
+      setClippedRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    el.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", measure);
+    };
+  }, []);
 
   const copy = async () => {
     await navigator.clipboard.writeText(commands.join("\n"));
@@ -32,20 +48,34 @@ export function InstallCommand({
     >
       {/* The button sits beside the scroll area, not over it, so a command
           wider than a phone scrolls clear of it. */}
-      <pre className="min-w-0 flex-1 overflow-x-auto py-4 pr-3 pl-5 font-mono lg:py-5 lg:pl-6">
-        {lines.map((line) =>
-          line.startsWith("#") ? (
-            <span className="block text-neutral-500" key={line}>
-              {line}
-            </span>
-          ) : (
-            <span className="block" key={line}>
-              <span className="text-neutral-500 select-none">$ </span>
-              {line}
-            </span>
-          )
-        )}
-      </pre>
+      <div className="relative min-w-0 flex-1">
+        <pre
+          className="overflow-x-auto py-4 pr-3 pl-5 font-mono lg:py-5 lg:pl-6"
+          ref={scrollRef}
+        >
+          {lines.map((line) =>
+            line.startsWith("#") ? (
+              <span className="block text-neutral-500" key={line}>
+                {line}
+              </span>
+            ) : (
+              <span className="block" key={line}>
+                <span className="text-neutral-500 select-none">$ </span>
+                {line}
+              </span>
+            )
+          )}
+        </pre>
+        {/* Fades the command out before the button while more of it is
+            hidden to the right. */}
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-14 bg-linear-to-l from-[#17171a] transition-opacity",
+            clippedRight ? "opacity-100" : "opacity-0"
+          )}
+        />
+      </div>
       <button
         aria-label={copied ? "Copied" : "Copy commands"}
         className={cn(
