@@ -1,5 +1,5 @@
 // The settings window — ⌘, and the app menu's Settings…: the system's
-// grouped form, one section for each of the four things it holds.
+// grouped form, one section for each of the five things it holds.
 // Appearance is the one the window owns — the scheme, the theme for
 // each scheme, from the server's catalog, and the face the code is set in,
 // from the shell's own list; git is read from the server and said as it stands,
@@ -8,7 +8,8 @@
 // code shown here and the page it goes on opened (see `AppSettings`);
 // languages are the servers behind the code views' definitions, usages and
 // problems, each said as it stands, with an install offered where reviewer
-// can fetch a missing one itself.
+// can fetch a missing one itself; privacy is whether the day's first update
+// check also counts the day (see `UsageCounting`).
 //
 // The form says as little as it can: where a row would want a sentence
 // under it — where the identity comes from, how to change it — the
@@ -22,6 +23,7 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var settings = model.settings
+        @Bindable var usage = UsageCounting.shared
         Form {
             Section {
                 // The row to itself, under the section's own title rather
@@ -82,6 +84,20 @@ struct SettingsView: View {
                     .buttonStyle(.borderless)
                     .help("Check again")
                     .disabled(model.settings.isInstallingLanguageServer)
+                }
+            }
+            Section {
+                Toggle("Share anonymous usage counts", isOn: $usage.isOn)
+            } header: {
+                SectionHeader(
+                    "Privacy",
+                    help: "Once a day, the update check also says Reviewer was used: its version, the macOS version, the date, the month it was first counted, and whether this is the first day this week, this month or ever. No ID, IP address, code or account. Updates keep working with this off."
+                ) {
+                    Button { NSWorkspace.shared.open(URL(string: "https://reviewer.sh/privacy")!) } label: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("What is sent, on reviewer.sh")
                 }
             }
         }

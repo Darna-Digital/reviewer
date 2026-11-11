@@ -7,7 +7,7 @@
   "name": "reviewer-www",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  "main": "./src/server.ts",
   "routes": [
     {
       "pattern": "reviewer.sh",
@@ -23,6 +23,13 @@
       "database_name": "reviewer-waitlist",
       "database_id": "066aec5e-c3bb-44a3-a105-7ab8a85139b2",
     },
+    // The usage rollup's daily totals (src/lib/usage-rollup.ts), created in
+    // the Cloudflare dashboard. The table is created on the rollup's first run.
+    {
+      "binding": "USAGE_DB",
+      "database_name": "reviewer-usage",
+      "database_id": "f9c260f2-f506-4e5c-834d-a52622c1dec0",
+    },
   ],
   // Turnstile guards the waitlist form, in Managed mode. The site key is
   // public; the secret is a Worker secret, `TURNSTILE_SECRET_KEY`, set in the
@@ -30,5 +37,20 @@
   "vars": { "TURNSTILE_SITE_KEY": "0x4AAAAAAF2LxJRUCXm_Y475" },
   "observability": {
     "enabled": true,
+  },
+  // Usage, counted from the apps' update checks (src/lib/usage.ts), and kept
+  // past Analytics Engine's three months by the daily rollup into the
+  // USAGE_DB database above (src/lib/usage-rollup.ts). The rollup reads the
+  // dataset through the SQL API, with the secrets CF_ACCOUNT_ID and
+  // ANALYTICS_API_TOKEN, which deploy-www.yml uploads from the repository's
+  // GitHub secrets.
+  "analytics_engine_datasets": [
+    {
+      "binding": "USAGE",
+      "dataset": "reviewer_usage",
+    },
+  ],
+  "triggers": {
+    "crons": ["0 3 * * *"],
   },
 }

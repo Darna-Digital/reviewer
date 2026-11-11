@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AppcastDotxmlRouteImport } from './routes/appcast[.]xml'
 import { Route as CloudRouteImport } from './routes/cloud'
 import { Route as DownloadRouteImport } from './routes/download'
 import { Route as InstallRouteImport } from './routes/install'
+import { Route as InstallManifestDottxtRouteImport } from './routes/install-manifest[.]txt'
 import { Route as LatestDotjsonRouteImport } from './routes/latest[.]json'
 import { Route as MacRouteImport } from './routes/mac'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TerminalRouteImport } from './routes/terminal'
@@ -34,6 +37,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppcastDotxmlRoute = AppcastDotxmlRouteImport.update({
+  id: '/appcast.xml',
+  path: '/appcast.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CloudRoute = CloudRouteImport.update({
   id: '/cloud',
   path: '/cloud',
@@ -49,6 +57,11 @@ const InstallRoute = InstallRouteImport.update({
   path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InstallManifestDottxtRoute = InstallManifestDottxtRouteImport.update({
+  id: '/install-manifest.txt',
+  path: '/install-manifest.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LatestDotjsonRoute = LatestDotjsonRouteImport.update({
   id: '/latest.json',
   path: '/latest.json',
@@ -57,6 +70,11 @@ const LatestDotjsonRoute = LatestDotjsonRouteImport.update({
 const MacRoute = MacRouteImport.update({
   id: '/mac',
   path: '/mac',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -98,11 +116,14 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/appcast.xml': typeof AppcastDotxmlRoute
   '/cloud': typeof CloudRoute
   '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
+  '/install-manifest.txt': typeof InstallManifestDottxtRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
@@ -114,11 +135,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/appcast.xml': typeof AppcastDotxmlRoute
   '/cloud': typeof CloudRoute
   '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
+  '/install-manifest.txt': typeof InstallManifestDottxtRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
@@ -131,11 +155,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/appcast.xml': typeof AppcastDotxmlRoute
   '/cloud': typeof CloudRoute
   '/download': typeof DownloadRoute
   '/install': typeof InstallRoute
+  '/install-manifest.txt': typeof InstallManifestDottxtRoute
   '/latest.json': typeof LatestDotjsonRoute
   '/mac': typeof MacRoute
+  '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminal': typeof TerminalRoute
@@ -149,11 +176,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/appcast.xml'
     | '/cloud'
     | '/download'
     | '/install'
+    | '/install-manifest.txt'
     | '/latest.json'
     | '/mac'
+    | '/privacy'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminal'
@@ -165,11 +195,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/appcast.xml'
     | '/cloud'
     | '/download'
     | '/install'
+    | '/install-manifest.txt'
     | '/latest.json'
     | '/mac'
+    | '/privacy'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminal'
@@ -181,11 +214,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/appcast.xml'
     | '/cloud'
     | '/download'
     | '/install'
+    | '/install-manifest.txt'
     | '/latest.json'
     | '/mac'
+    | '/privacy'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/terminal'
@@ -198,11 +234,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AppcastDotxmlRoute: typeof AppcastDotxmlRoute
   CloudRoute: typeof CloudRoute
   DownloadRoute: typeof DownloadRoute
   InstallRoute: typeof InstallRoute
+  InstallManifestDottxtRoute: typeof InstallManifestDottxtRoute
   LatestDotjsonRoute: typeof LatestDotjsonRoute
   MacRoute: typeof MacRoute
+  PrivacyRoute: typeof PrivacyRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TerminalRoute: typeof TerminalRoute
@@ -228,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/appcast.xml': {
+      id: '/appcast.xml'
+      path: '/appcast.xml'
+      fullPath: '/appcast.xml'
+      preLoaderRoute: typeof AppcastDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cloud': {
       id: '/cloud'
       path: '/cloud'
@@ -249,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/install-manifest.txt': {
+      id: '/install-manifest.txt'
+      path: '/install-manifest.txt'
+      fullPath: '/install-manifest.txt'
+      preLoaderRoute: typeof InstallManifestDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/latest.json': {
       id: '/latest.json'
       path: '/latest.json'
@@ -261,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/mac'
       fullPath: '/mac'
       preLoaderRoute: typeof MacRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -318,11 +378,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AppcastDotxmlRoute: AppcastDotxmlRoute,
   CloudRoute: CloudRoute,
   DownloadRoute: DownloadRoute,
   InstallRoute: InstallRoute,
+  InstallManifestDottxtRoute: InstallManifestDottxtRoute,
   LatestDotjsonRoute: LatestDotjsonRoute,
   MacRoute: MacRoute,
+  PrivacyRoute: PrivacyRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TerminalRoute: TerminalRoute,

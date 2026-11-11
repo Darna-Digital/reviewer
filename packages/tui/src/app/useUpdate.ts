@@ -20,8 +20,11 @@ export type Update = ReturnType<typeof useUpdate>;
  * Newer releases of this install: said once each, then installed in the
  * background and restarted into from the palette.
  */
-export function useUpdate(review: Review) {
+export function useUpdate(review: Review, counting: boolean) {
   const { notify } = review;
+  // Read when a check goes out, so turning counting off does not restart the timers.
+  const countingRef = React.useRef(counting);
+  countingRef.current = counting;
   const fail = (error: unknown) =>
     notify('error', error instanceof Error ? error.message : String(error));
   const managed = React.useMemo(() => installedRelease() !== null, []);
@@ -44,7 +47,7 @@ export function useUpdate(review: Review) {
     if (!managed) return;
     let cancelled = false;
     const check = () =>
-      void newerRelease().then(
+      void newerRelease(countingRef.current).then(
         (version) => !cancelled && version && announce(version),
       );
     const first = setTimeout(check, SETTLE_MS);
@@ -71,7 +74,7 @@ export function useUpdate(review: Review) {
     async check() {
       notify('info', 'Checking for updates…');
       try {
-        const latest = await latestRelease();
+        const latest = await latestRelease(countingRef.current);
         if (isNewer(latest, installed ?? VERSION)) {
           announced.current = null;
           announce(latest);

@@ -1,5 +1,6 @@
 import type { RepoPull } from './usePulls';
 import type { App } from './useApp';
+import { usageOffByEnvironment } from '../release/usage';
 
 export type Scope =
   | 'global'
@@ -505,6 +506,26 @@ export const COMMANDS: Command[] = [
       app.themes.updateSettings({
         fileIcons: !app.themes.settings.fileIcons,
       }),
+  },
+  {
+    id: 'privacy.usage',
+    scope: 'global',
+    keys: [],
+    title: 'turn usage counting off / on',
+    palette: true,
+    run: (app) => {
+      const variable = usageOffByEnvironment();
+      if (variable) {
+        app.review.notify('info', `Usage counting is off: ${variable} is set`);
+        return;
+      }
+      const usageCounting = !app.themes.settings.usageCounting;
+      app.themes.updateSettings({ usageCounting });
+      app.review.notify(
+        'info',
+        `Usage counting: ${usageCounting ? 'on' : 'off'} — reviewer.sh/privacy`,
+      );
+    },
   },
   {
     id: 'git.fetch',

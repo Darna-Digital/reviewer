@@ -17,7 +17,8 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,css}\"",
-    "typecheck": "tsc --noEmit && tsc -p scripts --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p scripts --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -53,6 +54,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.5",
+    "vitest": "^5.0.5",
     "wrangler": "^4.152.0"
   }
 }

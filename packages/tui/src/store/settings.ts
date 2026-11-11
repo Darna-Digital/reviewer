@@ -16,6 +16,8 @@ export interface Settings {
   commitAgent: CommitAgent | null;
   /** File-type icons beside file names; they need a Nerd Font. */
   fileIcons: boolean;
+  /** The day's first update check says it was used (reviewer.sh/privacy). */
+  usageCounting: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   darkTheme: TERMINAL_THEME,
   commitAgent: null,
   fileIcons: true,
+  usageCounting: true,
 };
 
 /** Kept in the shared database, `tui_settings`. */

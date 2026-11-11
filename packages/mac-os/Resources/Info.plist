@@ -50,13 +50,14 @@
 	     exempts literal IP addresses, which is why the client dials 127.0.0.1
 	     rather than localhost; this keeps `.local`/unqualified hosts open too. -->
 	<!-- Sparkle (see UpdateCheck). The feed is the appcast.xml release.yml
-	     attaches to every GitHub release; /latest/ follows the newest one.
+	     attaches to every GitHub release, by way of reviewer.sh, which
+	     redirects to the newest one's and counts the day's first check.
 	     The public key checks the disk image the feed names — its private
 	     half is the SPARKLE_PRIVATE_KEY secret, and the "reviewer" account
 	     in the release manager's login keychain (generate_keys -x exports it).
 	     bundle.sh turns the scheduled checks off for debug builds. -->
 	<key>SUFeedURL</key>
-	<string>https://github.com/Darna-Digital/reviewer/releases/latest/download/appcast.xml</string>
+	<string>https://reviewer.sh/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>jdNd/hL5GdeFe51aOmF/5GID01GZkUWjE8c42Ao8EnA=</string>
 	<key>SUEnableAutomaticChecks</key>
