@@ -63,13 +63,20 @@ jobs:
       # analytics — never the deploy token, which could redeploy the site.
       # Until CLOUDFLARE_ANALYTICS_TOKEN is set the token is left out, and the
       # rollup skips with a warning in the Worker's logs.
+      #
+      # No secret is in this file: GitHub fills in `secrets.*` at run time,
+      # only for this job (pull requests, forks included, never run it), and
+      # masks the values in the log. The file wrangler reads them from is
+      # readable by the runner's user only and removed even if the deploy
+      # fails.
       - name: Deploy
         run: |
+          umask 077
           secrets="$RUNNER_TEMP/worker-secrets.json"
+          trap 'rm -f "$secrets"' EXIT
           jq -n '{CF_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID}
             + if env.ANALYTICS_API_TOKEN != "" then {ANALYTICS_API_TOKEN: env.ANALYTICS_API_TOKEN} else {} end' > "$secrets"
           pnpm --filter www run deploy --secrets-file "$secrets"
-          rm "$secrets"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
