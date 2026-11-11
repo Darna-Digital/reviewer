@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.0.44 — 2026-11-11
+
+### Added
+
+- Reviewer counts daily, weekly and monthly users through its update check, without IDs or project details. Turn it off in Settings → Privacy, or with "Turn usage counting off" in the terminal UI's ⌘K palette. More at reviewer.sh/privacy.
+
 ## v0.0.43 — 2026-11-05
 
 ### Fixed
