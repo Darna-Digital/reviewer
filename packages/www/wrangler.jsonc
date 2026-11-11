@@ -23,11 +23,12 @@
       "database_name": "reviewer-waitlist",
       "database_id": "066aec5e-c3bb-44a3-a105-7ab8a85139b2",
     },
-    // The usage rollup's daily totals (src/lib/usage-rollup.ts). No
-    // `database_id`: `wrangler deploy` creates it on the first deploy.
+    // The usage rollup's daily totals (src/lib/usage-rollup.ts), created in
+    // the Cloudflare dashboard. The table is created on the rollup's first run.
     {
       "binding": "USAGE_DB",
       "database_name": "reviewer-usage",
+      "database_id": "f9c260f2-f506-4e5c-834d-a52622c1dec0",
     },
   ],
   // Turnstile guards the waitlist form, in Managed mode. The site key is
