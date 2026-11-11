@@ -1444,9 +1444,11 @@ final class AppModel {
     private func take(_ strip: WindowTabStrip) {
         if !windowTabsReported { windowTabsReported = true }
         guard strip != windowTabs else { return }
+        let switchedTab = strip.activeId != windowTabs.activeId
         windowTabs = strip
         WindowTabStrip.lastReported = strip
         chats.follow(tabs: strip)
+        if switchedTab, chats.page != nil { chats.focusComposer() }
     }
 
     func newSession() {
@@ -1455,6 +1457,7 @@ final class AppModel {
             return
         }
         page.send(WindowTabAction.newSession)
+        chats.focusComposer()
     }
 
     func closeCurrentTab() {

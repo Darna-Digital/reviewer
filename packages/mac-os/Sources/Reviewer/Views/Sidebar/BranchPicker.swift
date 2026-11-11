@@ -35,7 +35,7 @@ struct BranchPicker: View {
     var body: some View {
         label
             .disabled(!model.hasProject)
-            .popover(isPresented: $open, arrowEdge: .bottom) { popover }
+            .popover(isPresented: $open, arrowEdge: look == .title ? .bottom : .top) { popover }
             .closesOnNavigation($open)
             .onChange(of: model.branchPickerRequests) {
                 if inFront { open.toggle() }

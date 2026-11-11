@@ -27,7 +27,7 @@ struct WorkspaceBranchPopover<Footer: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             if single == nil, let shownRoot {
-                back(from: shownRoot)
+                RepositoryBackRow(root: shownRoot) { drilled = nil }
             }
             BranchPopover(
                 sections: sections, placeholder: placeholder, pick: pick, dismiss: dismiss,
@@ -92,10 +92,25 @@ struct WorkspaceBranchPopover<Footer: View>: View {
         }
     }
 
-    /// The way back to the repositories, over the branches of one.
-    private func back(from root: RootModel) -> some View {
+    private static func branchSections(of root: RootModel) -> [BranchChoiceSection] {
+        let local = root.branches.map { BranchChoice.branch(BranchRef($0), badge: branchDistance($0)) }
+        return [
+            BranchChoiceSection(id: "recent", title: "Recent", rows: Array(local.prefix(5)), hiddenWhileSearching: true),
+            BranchChoiceSection(id: "local", title: "Local", rows: local),
+            BranchChoiceSection(id: "remote", title: "Remote", rows: root.remoteBranches.map { .branch(BranchRef($0)) }),
+        ]
+    }
+}
+
+/// The way back to a workspace's repositories, over the branches of one —
+/// in every picker that steps from a repository into its branches.
+struct RepositoryBackRow: View {
+    let root: RootModel
+    let back: () -> Void
+
+    var body: some View {
         VStack(spacing: 0) {
-            Button { drilled = nil } label: {
+            Button { back() } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 11, weight: .semibold))
@@ -113,14 +128,5 @@ struct WorkspaceBranchPopover<Footer: View>: View {
             .help("Back to the repositories")
             ThemedDivider()
         }
-    }
-
-    private static func branchSections(of root: RootModel) -> [BranchChoiceSection] {
-        let local = root.branches.map { BranchChoice.branch(BranchRef($0), badge: branchDistance($0)) }
-        return [
-            BranchChoiceSection(id: "recent", title: "Recent", rows: Array(local.prefix(5)), hiddenWhileSearching: true),
-            BranchChoiceSection(id: "local", title: "Local", rows: local),
-            BranchChoiceSection(id: "remote", title: "Remote", rows: root.remoteBranches.map { .branch(BranchRef($0)) }),
-        ]
     }
 }

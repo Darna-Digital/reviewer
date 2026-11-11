@@ -201,11 +201,13 @@ extension AppModel {
     /// address, as in the web app, so it is something the page can go back
     /// out of; written even when empty, since an absent target would only
     /// let the branch's aim answer again, and this is how you say otherwise.
-    func readChanges(against target: String?) {
+    /// A comparison is one repository's: named, the page turns to `root`
+    /// and reads its changes there.
+    func readChanges(against target: String?, in root: RootModel? = nil) {
         var components = URLComponents()
         components.path = Href.review
         components.queryItems = [URLQueryItem(name: "target", value: target ?? "")]
-        showOnCodeTab(components.string ?? Href.review)
+        showOnCodeTab(components.string ?? Href.review, in: root)
     }
 
     /// The action as a notice, `pending` while it runs and then `done` or

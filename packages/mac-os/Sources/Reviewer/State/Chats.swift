@@ -104,6 +104,13 @@ final class Chats {
         didSet { defaults.set(Double(composerHeight), forKey: Keys.composerHeight) }
     }
 
+    /// Counts the times the composer on the page in front is to take the
+    /// keyboard: the surface coming up, moving to another of its pages or
+    /// tabs, ⌘T. A composer built for the move takes it as it appears; one
+    /// already standing — kept behind Code, or the same new-session page
+    /// on another tab — takes it on the count (see `ChatComposer`).
+    private(set) var composerFocusRequests = 0
+
     @ObservationIgnored var onListChanged: (() -> Void)?
 
     /// The server, about the focused root — the repository a new session
@@ -115,6 +122,9 @@ final class Chats {
     @ObservationIgnored private var recent: [(id: String, chat: Chat)] = []
     @ObservationIgnored private var prefetches: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var agentReads: Set<String> = []
+    /// The address last followed: the shell reports each move twice, once
+    /// as it asks for it and once as the island confirms it.
+    @ObservationIgnored private var followedHref: String?
 
     private static let recentLimit = 24
 
@@ -152,7 +162,10 @@ final class Chats {
     /// thread as read (see `ChatSession.isShown`).
     func follow(href: String) {
         let next = SessionsPage.page(for: href)
+        let moved = href != followedHref
+        followedHref = href
         page = next
+        if moved, next != nil { focusComposer() }
         session?.isShown = next != nil
         guard let next else { return }
         guard case .conversation(let id) = next else {
@@ -164,6 +177,10 @@ final class Chats {
         let session = ChatSession(id: id, client: client, seed: recent.first { $0.id == id }?.chat)
         session.onListChanged = { [weak self] in self?.onListChanged?() }
         self.session = session
+    }
+
+    func focusComposer() {
+        composerFocusRequests += 1
     }
 
     /// Sessions about to be deleted: the open one among them stops

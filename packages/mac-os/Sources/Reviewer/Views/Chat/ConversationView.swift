@@ -304,7 +304,7 @@ struct SessionContextBar: View {
             .buttonStyle(.accessoryBar)
             .controlSize(.small)
             .help("Branches of \(workspace.roots.map(\.name).joined(separator: ", "))")
-            .popover(isPresented: $open, arrowEdge: .bottom) {
+            .popover(isPresented: $open, arrowEdge: .top) {
                 WorkspaceBranchPopover(dismiss: { open = false }) { _ in EmptyView() }
             }
             .closesOnNavigation($open)
