@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.0.46 — 2026-11-11
+
+### Changed
+
+- Browse opens faster: the file tree loads in a fraction of the time, most of all in projects with installed dependencies, and keeps up just as quickly when files change.
+- The file tree now shows every file your .gitignore ignores by name, such as `.env` or local settings files, not just `.env` files. Nothing inside an ignored folder like `node_modules`, `vendor` or `dist` is listed.
+
 ## v0.0.45 — 2026-11-11
 
 ### Added
