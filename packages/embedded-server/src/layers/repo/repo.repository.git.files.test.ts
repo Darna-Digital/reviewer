@@ -17,6 +17,17 @@ const NEW_DIR_FILES = [
  */
 const ROOT = "/repos/reviewer";
 
+/**
+ * What `--ignored --directory` answers: the files ignored one by one, and each
+ * folder ignored whole named once rather than walked.
+ */
+const IGNORED_LISTING = [
+  ".env.local",
+  "node_modules/",
+  "packages/api/.env",
+  "vendor/",
+];
+
 const fakeGit = (): GitExecShape => {
   const notUsed = () => Effect.succeed("");
   return {
@@ -25,6 +36,9 @@ const fakeGit = (): GitExecShape => {
     runVerbose: notUsed,
     runTolerant: notUsed,
     lines: (...args) => {
+      if (args[0] === "ls-files" && args.includes("--ignored")) {
+        return Effect.succeed(IGNORED_LISTING);
+      }
       if (args[0] === "ls-files" && args[1] === "--others") {
         return Effect.succeed(
           args.includes("--exclude-standard") ? NEW_DIR_FILES : []
@@ -66,6 +80,14 @@ describe("files", () => {
     const { gitStatus } = await runFiles();
 
     expect(gitStatus.filter((entry) => entry.path.endsWith("/"))).toEqual([]);
+  });
+
+  it("lists files ignored one by one, but nothing of a folder ignored whole", async () => {
+    const { paths } = await runFiles();
+
+    expect(paths).toContain(".env.local");
+    expect(paths).toContain("packages/api/.env");
+    expect(paths.filter((path) => path.endsWith("/"))).toEqual([]);
   });
 
   it("names the repository it lists, so a client can tell whose listing it is", async () => {

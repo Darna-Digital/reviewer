@@ -326,24 +326,34 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     };
   });
 
+  // The files git ignores one by one — a `.env`, an editor's local settings —
+  // which the tree still lists so they can be opened. A folder ignored whole
+  // (`node_modules`, `vendor`, `dist`, whatever the repository's `.gitignore`
+  // says) is a different thing: `--directory` has git name it and stop there
+  // rather than walk every file inside, which on a repository with its
+  // dependencies installed took ten times as long as everything else the file
+  // list reads. Those folders' own entries are dropped, so nothing in them is
+  // listed.
+  const ignoredFiles = lines(
+    "ls-files",
+    "--others",
+    "--ignored",
+    "--exclude-standard",
+    "--directory"
+  ).pipe(Effect.map((paths) => paths.filter((path) => !path.endsWith("/"))));
+
   // Five independent reads of the same tree, so they go out together: run one
   // after another they add up to the slowest thing the file list waits on, and
   // the file list is what every page in the app opens with.
   const files: RepoRepo["files"] = Effect.gen(function* () {
-    const [root, tracked, untracked, envFiles, statusLines] = yield* Effect.all(
+    const [root, tracked, untracked, ignored, statusLines] = yield* Effect.all(
       [
         run("rev-parse", "--show-toplevel").pipe(
           Effect.map((out) => out.trim())
         ),
         lines("ls-files"),
         lines("ls-files", "--others", "--exclude-standard"),
-        lines(
-          "ls-files",
-          "--others",
-          "--",
-          ":(glob)**/.env*",
-          ":(exclude,glob)**/node_modules/**"
-        ),
+        ignoredFiles,
         // `--untracked-files=all` is load-bearing: by default git collapses a
         // wholly-untracked directory into one `?? dir/` entry, so every new
         // file inside it would be counted as changed but never resolve to a
@@ -355,7 +365,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     const gitStatus = statusLines
       .map(parseStatusLine)
       .filter((entry): entry is GitStatusEntry => entry !== null);
-    const paths = [...new Set([...tracked, ...untracked, ...envFiles])];
+    const paths = [...new Set([...tracked, ...untracked, ...ignored])];
     return { root, paths, gitStatus };
   });
 
