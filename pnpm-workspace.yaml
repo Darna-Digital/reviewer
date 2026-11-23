@@ -23,7 +23,15 @@ patchedDependencies:
 # Security floors for transitive pins the advisories flagged. Each parent pins
 # its dependency exactly, so the floor is the only way up: miniflare pins
 # sharp@0.35.4 and undici@7.29.1, and solid-js@1.9.15 pins seroval ~1.5.4.
+# hono and @hono/node-server come in through shadcn's MCP SDK. minimatch 10
+# comes in through typescript-eslint, eslint-plugin-import-x and shadcn's
+# ts-morph; the fix is only on 11, which drops the `makeRe` export that
+# eslint-plugin-import-x read before 4.18.1, so that floor rides along.
 overrides:
+  '@hono/node-server@<2.1.6': ^2.1.6
+  hono@<4.13.16: ^4.13.16
+  eslint-plugin-import-x@<4.18.1: ^4.18.1
+  minimatch@>=7.0.0 <11.0.1: ^11.0.1
   sharp@<0.35.5: ^0.35.5
   seroval@<1.6.3: ^1.6.8
   seroval-plugins@<1.6.3: ^1.6.8
