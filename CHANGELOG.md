@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.0.47 — 2026-11-23
+
+### Changed
+
+- Updated the third-party libraries Reviewer is built with to versions that close eight published security advisories, in Hono, Hono's Node.js server and minimatch. None of them could be reached from the app: they only run on developers' machines while Reviewer is built and checked. Updating them keeps the project's security alerts clear.
+- Moved the code-checking tools (ESLint and its plugins) to their latest releases, and refreshed several other development libraries to their newest compatible versions.
+- No change to how the app looks or works. This release is maintenance only.
+
 ## v0.0.46 — 2026-11-11
 
 ### Changed
