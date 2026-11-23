@@ -26,7 +26,7 @@ import { ogImage } from "#/lib/og-image";
 
 const TITLE = "About · Reviewer";
 const DESCRIPTION =
-  "Reviewer is an agentic development environment for engineers who deeply care about the quality of their work.";
+  "Reviewer is a macOS app and a terminal app for reviewing the changes your coding agents make and sending your comments back to them.";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -44,45 +44,37 @@ export const Route = createFileRoute("/about")({
 });
 
 /**
- * Rūtenis's letter, one paragraph per entry, as he wrote it. A list of
- * lines is a run of short ones set closer together.
+ * Rūtenis's letter, one paragraph per entry. A list is set as bullets: what
+ * each app does.
  */
 const LETTER: (string | string[])[] = [
-  "Tell me if this sounds like you:",
-  "You hear every tech influencer saying you need to ship faster.",
-  "You’re told that:",
+  "Reviewer is for reading and reviewing the code your coding agents write.",
+  "Agents like Claude Code and Codex make changes quickly, but you’re still the one responsible for what ships. Reviewer gives you one place to read those changes, comment on what’s wrong and send it back to the agent to fix.",
+  "It comes as a macOS app and a terminal app. Comments are shared between them, so you can leave one in either and pick it up in the other.",
+  "The macOS app:",
   [
-    "‘You need to stop reading the code.’",
-    "‘You need to bring business value instead of just code.’",
-    "‘Code is now cheap’.",
-    "‘You’re a code monkey if you still care about the code’.",
-    "‘Coding is solved…’",
+    "Shows the diff side by side or top to bottom, and opens the whole file when a hunk isn’t enough context.",
+    "Lets you comment on any line and assign the comment to an agent session to fix.",
+    "Runs Claude Code and Codex sessions in the same window as the diff.",
+    "Follows a symbol to its definition or lists every usage, in TypeScript, Swift, Ruby and PHP.",
+    "Creates branches, writes commit messages from what changed, and filters history by author, date or branch.",
+    "Starts your local services in one click.",
   ],
-  "On the one hand, the hype is incredibly annoying.",
-  "It’s obnoxious. It’s even disrespectful.",
-  "It ignores the intricacies of the day-to-day work you’re doing.",
-  "It ignores the fact that ultimately you are responsible for the code you ship, not the AI agents you use, however powerful they are.",
-  "On the other hand, you don’t want to feel like your skills as a programmer are getting obsolete.",
-  "You do see the value in agents.",
-  "But you still want to be involved in the design process of the systems you’re building.",
-  "You want to understand the changes being made now, as well as historical changes made in the past.",
-  "I know I was in this position. As a freelance developer I needed to work fast and juggle multiple projects. But I still was responsible for the outcomes and the quality of the code I was putting out.",
-  "That’s why I built Reviewer. It combines classic IDE features like code diffs, Git integration, go-to-definition, and LSP support. But it also supports agentic coding powered by Claude Code and Codex.",
-  "Reviewer ships as a native macOS app as well as a terminal app.",
-  "I would be delighted if you tried these applications and told me what you think.",
+  "The terminal app:",
+  [
+    "Opens your branch, a single commit or a GitHub pull request with one command.",
+    "Lets you comment on any line from the keyboard. Any agent can pick the comments up with the resolve-reviewer-comments skill.",
+    "Runs on macOS and Linux, on your laptop or on a server over SSH.",
+    "Puts every action in a command palette: go to file, search, switch branch and Git.",
+    "Supports opening several repositories side by side.",
+  ],
+  "I built Reviewer while freelancing across several projects at once. I wanted to move fast with agents and still understand every change I shipped.",
+  "Both apps are free and open source. I’d be glad if you tried them and told me what you think.",
 ];
 
 /** Sign-off links: the line's own colour, darkening and underlined on hover. */
 const ICON = `${CHIP_ICON} text-neutral-900 dark:text-white`;
 
-/** An emoji as a chip's icon: the icons' size, before the label. */
-function Emoji({ children }: { children: string }) {
-  return (
-    <span aria-hidden className="mr-[0.3em] text-[0.9em]">
-      {children}
-    </span>
-  );
-}
 /** A chip that is a link: the same pill, a little darker on hover. */
 const CHIP_LINK = `${CHIP} transition-colors hover:bg-black/[0.08] dark:hover:bg-white/[0.12]`;
 
@@ -105,7 +97,6 @@ const CHIPS: Record<
     icon: <ClaudeIcon className={`${CHIP_ICON} text-[#D97757]`} />,
   },
   Codex: { icon: <CodexIcon className={ICON} /> },
-  "code monkey": { icon: <Emoji>🐒</Emoji> },
   "told me": {
     icon: <Mail className={ICON} />,
     href: "mailto:rutenis@darnadigital.com",
@@ -151,27 +142,9 @@ function withChips(
   openDrawer: (key: string) => void
 ) {
   return paragraph
-    .split(
-      /(Reviewer|macOS app|terminal app|Claude Code|Codex|told me|business value|code monkey)/
-    )
+    .split(/(Reviewer|macOS app|terminal app|Claude Code|Codex|told me)/)
     .map((part, index) => {
       const handlers = noteHandlers(part, showNote, openDrawer);
-      if (part === "business value") {
-        return (
-          <button
-            // A button lays out as inline-block, taking the line's full
-            // height; Inter's glyph box as its line height draws it like the
-            // span chips.
-            className={`${CHIP_LINK} cursor-help leading-[1.19]`}
-            key={index}
-            type="button"
-            {...handlers}
-          >
-            <Emoji>📈</Emoji>
-            {part}
-          </button>
-        );
-      }
       const chip = CHIPS[part];
       if (!chip) return part;
       // The lockup already spells the name.
@@ -273,28 +246,6 @@ const NOTES: Record<
         <CodexIcon className={NOTE_ICON} />
       </Target>
     ),
-  },
-  "business value": {
-    title: "Business value",
-    body: "What you're asked to ship instead of code, usually by someone who won't read it.",
-    art: (
-      <video
-        aria-hidden
-        autoPlay
-        className="block size-full object-cover"
-        height={360}
-        loop
-        muted
-        playsInline
-        src="/videos/business-value.mp4"
-        width={480}
-      />
-    ),
-  },
-  "code monkey": {
-    title: "Code monkey",
-    body: "Someone who types out what they're told. Reading your own code doesn't make you one.",
-    art: <Target>🐒</Target>,
   },
   "told me": {
     title: "Tell me",
@@ -482,21 +433,30 @@ function AboutPage() {
         <div aria-hidden className="h-px w-40 bg-black/10 dark:bg-white/20" />
         <div className="relative" ref={column}>
           <article className="flex max-w-2xl flex-col gap-5 sm:gap-6">
-            {LETTER.map((entry) => {
-              const lines = typeof entry === "string" ? [entry] : entry;
-              return (
-                <div className="flex flex-col gap-2" key={lines[0]}>
-                  {lines.map((line) => (
-                    <p
+            {LETTER.map((entry) =>
+              typeof entry === "string" ? (
+                <p
+                  className="type-lede text-neutral-600 dark:text-neutral-400"
+                  key={entry}
+                >
+                  {withChips(entry, showNote, openDrawer)}
+                </p>
+              ) : (
+                <ul
+                  className="-mt-2 flex list-disc flex-col gap-2 pl-[1.2em] marker:text-neutral-400 sm:-mt-3 dark:marker:text-neutral-600"
+                  key={entry[0]}
+                >
+                  {entry.map((line) => (
+                    <li
                       className="type-lede text-neutral-600 dark:text-neutral-400"
                       key={line}
                     >
                       {withChips(line, showNote, openDrawer)}
-                    </p>
+                    </li>
                   ))}
-                </div>
-              );
-            })}
+                </ul>
+              )
+            )}
             <footer className="mt-8 flex flex-col items-start gap-3 lg:mt-10">
               <img
                 alt="Rūtenis Raila"
